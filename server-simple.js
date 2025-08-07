@@ -1,10 +1,10 @@
 const express = require('express');
-const session = require('express-session');
 const path = require('path');
-const cors = require('cors');
+const fs = require('fs');
+const session = require('express-session');
+const { pool, initializeDatabase } = require('./database');
 const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
-const fs = require('fs-extra');
 const bcrypt = require('bcryptjs');
 const jsonDB = require('./utils/jsonDB');
 
@@ -1637,8 +1637,25 @@ app.put('/admin/api/partner-applications/:id/status', requireAuth, (req, res) =>
 
 
 // 서버 시작
-app.listen(PORT, () => {
-    console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`🌐 메인 페이지: http://localhost:${PORT}`);
-    console.log(`🔧 관리자: http://localhost:${PORT}/admin`);
-});
+// 서버 시작 및 데이터베이스 초기화
+async function startServer() {
+    try {
+        // 데이터베이스 초기화
+        await initializeDatabase();
+        console.log('✅ 데이터베이스 연결 및 초기화 완료');
+        
+        // 서버 시작
+        app.listen(PORT, () => {
+            console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
+            console.log(`🌐 메인 페이지: http://localhost:${PORT}`);
+            console.log(`🔧 관리자: http://localhost:${PORT}/admin`);
+            console.log('💾 데이터베이스: PostgreSQL 연동 완료');
+        });
+    } catch (error) {
+        console.error('❌ 서버 시작 오류:', error);
+        process.exit(1);
+    }
+}
+
+// 서버 시작
+startServer();

@@ -8,23 +8,31 @@
     "dev": "nodemon server-simple.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["qr", "discount", "card", "guam", "travel"],
+  "keywords": [
+    "qr",
+    "discount",
+    "card",
+    "guam",
+    "travel"
+  ],
   "author": "Guam Save Card Team",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.6.0",
-    "ejs": "^3.1.9",
-    "express-session": "^1.17.3",
     "bcryptjs": "^2.4.3",
-    "uuid": "^9.0.0",
-    "qrcode": "^1.5.3",
-    "multer": "^1.4.5-lts.1",
-    "path": "^0.12.7",
-    "fs-extra": "^11.1.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.8.1",
+    "express-session": "^1.17.3",
+    "fs-extra": "^11.1.1",
     "helmet": "^7.0.0",
-    "express-rate-limit": "^6.8.1"
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.6.0",
+    "path": "^0.12.7",
+    "pg": "^8.11.3",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
