@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 스크린샷 방지 메타태그 -->
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="screen-capture" content="disabled">
+    <meta name="screenshot" content="disabled">
     <title><%= title %> - 괌세이브카드</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -12,6 +18,43 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px 0;
+        }
+        
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #ecf0f1;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 스크린샷 방지 CSS */
+        body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 보안 오버레이 */
+        .security-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 18px;
+            text-align: center;
         }
         
         .success-card {
@@ -541,6 +584,14 @@
     </style>
 </head>
 <body>
+    <!-- 보안 오버레이 -->
+    <div class="security-overlay" id="securityOverlay">
+        <div>
+            <i class="fas fa-shield-alt fa-3x mb-3"></i>
+            <div>보안 모드가 활성화되었습니다</div>
+            <div>스크린샷이 차단되었습니다</div>
+        </div>
+    </div>
     <!-- 비밀번호 인증 모달 -->
     <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
@@ -672,7 +723,7 @@
                 </div>
                 <div class="important-content">
                     <p class="important-text">
-                        해당 링크는 토큰값이 적용된 모바일카드 고유링크이며 발급후 북마크나 링크를 알기쉬게 보관하셔서 제휴업체 사용시 설정하신 패스워드 입력후 사용하세요.
+                        해당 링크는 고유 토큰값이 포함된 본인 전용 모바일카드입니다. 제휴업체 이용 시 패스워드 입력 후 사용 가능하며, 북마크 등으로 보관해 주세요.
                     </p>
                     <div class="link-container">
                         <div class="copy-link-important" id="cardLink"><%= cardUrl %></div>
@@ -683,10 +734,7 @@
                 </div>
             </div>
 
-            <div class="mt-4">
-                <a href="<%= cardUrl %>" class="btn-action">
-                    <i class="fas fa-credit-card me-2"></i>내 카드 보기
-                </a>
+
 
             </div>
 
@@ -1052,6 +1100,105 @@
             window.setAuthenticated = function() {
                 isAuthenticated = true;
             };
+        }
+        
+        // 스크린샷 방지 기능
+        function initScreenshotProtection() {
+            // 키보드 단축키 차단 (스크린샷 관련)
+            document.addEventListener('keydown', function(e) {
+                // Print Screen 키 차단
+                if (e.key === 'PrintScreen') {
+                    e.preventDefault();
+                    showSecurityOverlay();
+                    return false;
+                }
+                
+                // Ctrl+Shift+S (일부 브라우저 스크린샷)
+                if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                    e.preventDefault();
+                    showSecurityOverlay();
+                    return false;
+                }
+                
+                // F12 (개발자 도구) 차단
+                if (e.key === 'F12') {
+                    e.preventDefault();
+                    showSecurityOverlay();
+                    return false;
+                }
+                
+                // Ctrl+Shift+I (개발자 도구)
+                if (e.ctrlKey && e.shiftKey && e.key === 'I') {
+                    e.preventDefault();
+                    showSecurityOverlay();
+                    return false;
+                }
+                
+                // Ctrl+U (소스 보기)
+                if (e.ctrlKey && e.key === 'u') {
+                    e.preventDefault();
+                    showSecurityOverlay();
+                    return false;
+                }
+            });
+            
+            // 우클릭 차단
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showSecurityOverlay();
+                return false;
+            });
+            
+            // 드래그 차단
+            document.addEventListener('dragstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // 텍스트 선택 차단
+            document.addEventListener('selectstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // 모바일 장기 터치 차단
+            let touchTimer;
+            document.addEventListener('touchstart', function(e) {
+                touchTimer = setTimeout(function() {
+                    showSecurityOverlay();
+                }, 500);
+            });
+            
+            document.addEventListener('touchend', function(e) {
+                clearTimeout(touchTimer);
+            });
+            
+            document.addEventListener('touchmove', function(e) {
+                clearTimeout(touchTimer);
+            });
+            
+            // 페이지 숨김/표시 감지 (스크린샷 시도 감지)
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    // 페이지가 숨겨질 때 (스크린샷 가능성)
+                    setTimeout(function() {
+                        if (!document.hidden) {
+                            showSecurityOverlay();
+                        }
+                    }, 100);
+                }
+            });
+        }
+        
+        // 보안 오버레이 표시
+        function showSecurityOverlay() {
+            const overlay = document.getElementById('securityOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                setTimeout(function() {
+                    overlay.style.display = 'none';
+                }, 2000);
+            }
         }
         
         // 페이지 로드 시 초기화
