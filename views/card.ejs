@@ -363,6 +363,39 @@
             padding-left: 5px;
         }
         
+        .staff-instructions {
+            margin: 20px 0;
+        }
+        
+        .instruction-card {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border: 2px solid #2196f3;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .instruction-card h6 {
+            color: #1976d2;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .instruction-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instruction-list li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        .instruction-list strong {
+            color: #1976d2;
+        }
+        
         .search-result-more {
             padding: 10px 20px;
             background: #f8f9fa;
@@ -477,6 +510,49 @@
             .discount-card, .usage-section {
                 padding: 20px;
             }
+            
+            /* 모바일 최적화 */
+            .form-control {
+                font-size: 18px !important;
+                padding: 18px !important;
+                border-width: 3px !important;
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+            }
+            
+            .instruction-card {
+                padding: 15px;
+                font-size: 16px;
+            }
+            
+            .instruction-list li {
+                font-size: 15px;
+                margin-bottom: 12px;
+            }
+            
+            .btn-use {
+                font-size: 22px !important;
+                padding: 20px !important;
+                min-height: 70px;
+                touch-action: manipulation;
+            }
+            
+            /* iOS Safari 호환성 */
+            select {
+                background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+                background-repeat: no-repeat;
+                background-position: right 15px center;
+                background-size: 16px;
+                padding-right: 50px !important;
+            }
+        }
+        
+        /* 안드로이드 호환성 */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            select {
+                background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+            }
         }
     </style>
 </head>
@@ -526,6 +602,16 @@
             <div class="usage-section">
                 <h5><i class="fas fa-store me-2"></i>Process Discount Usage</h5>
                 <p class="text-muted">Partner store staff can select store and process discount usage.</p>
+                <div class="staff-instructions">
+                    <div class="instruction-card">
+                        <h6><i class="fas fa-info-circle me-2"></i>For Store Staff / 직원 안내</h6>
+                        <ol class="instruction-list">
+                            <li><strong>Select your store</strong> from the dropdown below / 아래에서 업체를 선택하세요</li>
+                            <li><strong>Check the discount</strong> that appears / 표시되는 할인 내용을 확인하세요</li>
+                            <li><strong>Click "Apply Discount"</strong> to complete / "Apply Discount" 버튼을 클릭하세요</li>
+                        </ol>
+                    </div>
+                </div>
 
                 <% if (success) { %>
                     <div class="alert alert-success">
@@ -544,48 +630,47 @@
                         <input type="hidden" id="token" value="<%= user.token %>">
                         
                         <label for="store_code" class="form-label">
-                            <i class="fas fa-store me-2"></i>Select Partner Store
+                            <i class="fas fa-store me-2"></i><strong>Select Your Store / 업체 선택</strong>
                         </label>
                         <div class="form-group">
-                            <div class="search-input-container">
-                                <input type="text" 
-                                       class="form-control form-control-lg" 
-                                       id="store_code" 
-                                       name="store_code" 
-                                       placeholder="🔍 제휴업체명을 입력하세요... (예: TGI, 스타벅스, 맥도날드)"
-                                       autocomplete="off"
-                                       required>
-                                <div class="search-icon">
-                                    <i class="fas fa-search"></i>
-                                </div>
-                            </div>
-                            <div class="search-help-text">
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    업체명의 일부만 입력해도 검색됩니다 (예: "TGI", "스타" 등)
-                                </small>
-                            </div>
-                            <div id="search_results" class="search-results"></div>
+                            <select class="form-control form-control-lg" 
+                                    id="store_code" 
+                                    name="store_code" 
+                                    required
+                                    style="font-size: 18px; padding: 15px; border: 3px solid #007bff; border-radius: 10px;">
+                                <option value="">👆 Choose Your Store / 업체를 선택하세요</option>
+                                <% if (typeof stores !== 'undefined' && stores) { %>
+                                    <% stores.filter(store => store.is_active).forEach(store => { %>
+                                        <option value="<%= store.name %>" data-discount="<%= store.discount_info %>">
+                                            🏪 <%= store.name %>
+                                        </option>
+                                    <% }); %>
+                                <% } %>
+                            </select>
                         </div>
                         
                         <!-- 할인혜택 표시 영역 -->
                         <div id="discount_benefit_display" class="discount-benefit-display" style="display: none;">
                             <div class="benefit-card">
-                                <h6><i class="fas fa-gift me-2"></i>Discount Benefit</h6>
+                                <h6><i class="fas fa-gift me-2"></i><strong>Discount Available / 할인 혜택</strong></h6>
                                 <div id="benefit_content" class="benefit-content">
                                     <!-- 선택된 제휴업체의 할인혜택이 여기에 표시됨 -->
                                 </div>
                                 <div class="benefit-instruction">
-                                    <small class="text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Please confirm the discount benefit above and click the button below to apply.
-                                    </small>
+                                    <div class="alert alert-info" style="margin: 15px 0; padding: 15px; border-radius: 10px;">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <strong>Ready to Apply!</strong> Click the button below to process this discount.
+                                        <br><small>준비 완료! 아래 버튼을 클릭하여 할인을 처리하세요.</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <button type="submit" class="btn btn-use" id="apply_discount_btn" disabled>
-                            <i class="fas fa-check me-2"></i>Apply Discount
+                        <button type="submit" class="btn btn-use" id="apply_discount_btn" disabled
+                                style="font-size: 20px; padding: 18px 30px; width: 100%; margin-top: 20px; border-radius: 15px; font-weight: bold;">
+                            <i class="fas fa-check-circle me-3"></i>
+                            <span>APPLY DISCOUNT</span>
+                            <br><small style="font-size: 14px; opacity: 0.9;">할인 적용하기</small>
                         </button>
                     </form>
                 </div>
@@ -715,125 +800,22 @@
             return `Special Discount Available (${koreanDiscount})`;
         }
         
-        // 검색 기능 초기화
-        function initializeSearch() {
-            const input = document.getElementById('store_code');
-            const searchResults = document.getElementById('search_results');
-            let selectedIndex = -1;
+        // 제휴업체 선택 기능 초기화
+        function initializeStoreSelection() {
+            const selectElement = document.getElementById('store_code');
             
-            // 키보드 네비게이션
-            input.addEventListener('keydown', function(e) {
-                const items = searchResults.querySelectorAll('.search-result-item:not(.no-results)');
+            selectElement.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
                 
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                    updateSelection(items, selectedIndex);
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    selectedIndex = Math.max(selectedIndex - 1, -1);
-                    updateSelection(items, selectedIndex);
-                } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (selectedIndex >= 0 && items[selectedIndex]) {
-                        items[selectedIndex].click();
-                    }
-                } else if (e.key === 'Escape') {
-                    searchResults.style.display = 'none';
-                    selectedIndex = -1;
-                }
-            });
-            
-            function updateSelection(items, index) {
-                items.forEach((item, i) => {
-                    if (i === index) {
-                        item.classList.add('selected');
-                        item.scrollIntoView({ block: 'nearest' });
-                    } else {
-                        item.classList.remove('selected');
-                    }
-                });
-            }
-            
-            input.addEventListener('input', function() {
-                selectedIndex = -1; // 입력 시 선택 초기화
-                const query = this.value.toLowerCase().trim();
-                
-                if (query.length === 0) {
-                    searchResults.style.display = 'none';
-                    hideDiscountBenefit();
-                    return;
-                }
-                
-                // 정확한 매칭 확인
-                const exactMatch = stores.find(store => 
-                    store.name.toLowerCase() === query
-                );
-                
-                if (exactMatch) {
-                    showDiscountBenefit(exactMatch.name, exactMatch.discount);
-                } else {
-                    hideDiscountBenefit();
-                }
-                
-                const filteredStores = stores.filter(store => 
-                    store.name.toLowerCase().includes(query)
-                ).slice(0, 8); // 최대 8개까지만 표시
-                
-                if (filteredStores.length === 0) {
-                    searchResults.innerHTML = `
-                        <div class="search-result-item no-results">
-                            <div class="store-name">
-                                <i class="fas fa-search me-2"></i>
-                                "${query}" 검색 결과가 없습니다
-                            </div>
-                            <div class="store-discount">
-                                다른 업체명으로 다시 검색해보세요
-                            </div>
-                        </div>
-                    `;
-                    searchResults.style.display = 'block';
-                    return;
-                }
-                
-                searchResults.innerHTML = filteredStores.map((store, index) => {
-                    const categoryIcon = getCategoryIcon(store.category);
-                    const englishDiscount = translateDiscountToEnglish(store.discount);
+                if (selectedOption.value) {
+                    const storeName = selectedOption.value;
+                    const discountInfo = selectedOption.getAttribute('data-discount');
                     
-                    return `
-                        <div class="search-result-item" onclick="selectStore('${store.name}', '${store.discount}')">
-                            <div class="store-name">
-                                ${categoryIcon} ${store.name}
-                            </div>
-                            <div class="store-discount">
-                                ${englishDiscount}
-                            </div>
-                            <div class="store-category">
-                                ${store.category || '일반'}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                // 검색 결과 개수 표시
-                if (stores.filter(store => store.name.toLowerCase().includes(query)).length > 8) {
-                    searchResults.innerHTML += `
-                        <div class="search-result-more">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                더 많은 결과가 있습니다. 더 구체적으로 검색해보세요.
-                            </small>
-                        </div>
-                    `;
-                }
-                
-                searchResults.style.display = 'block';
-            });
-            
-            // 외부 클릭 시 검색 결과 숨기기
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.form-group')) {
-                    searchResults.style.display = 'none';
+                    // 할인혜택 표시
+                    showDiscountBenefit(storeName, discountInfo);
+                } else {
+                    // 선택 해제 시 할인혜택 숨김
+                    hideDiscountBenefit();
                 }
             });
         }
@@ -869,27 +851,7 @@
             applyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Apply Discount';
         }
         
-        // 업체 선택 함수
-        function selectStore(storeName, discountInfo) {
-            const input = document.getElementById('store_code');
-            const searchResults = document.getElementById('search_results');
-            
-            // 입력필드 업데이트
-            input.value = storeName;
-            searchResults.style.display = 'none';
-            
-            // 할인혜택 표시
-            showDiscountBenefit(storeName, discountInfo);
-            
-            // 스크롤로 할인혜택 영역으로 이동
-            setTimeout(() => {
-                const discountDisplay = document.getElementById('discount_benefit_display');
-                discountDisplay.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'center' 
-                });
-            }, 100);
-        }
+
         
         // 사용 처리 함수
         async function processUsage(event) {
@@ -936,10 +898,12 @@
             }
         }
         
+
+        
         // DOM 로드 완료 후 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            // 검색 기능 초기화
-            initializeSearch();
+            // 제휴업체 선택 기능 초기화
+            initializeStoreSelection();
             
             // 폼 이벤트 리스너 등록
             const form = document.getElementById('usageForm');
