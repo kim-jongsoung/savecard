@@ -1659,3 +1659,10 @@ app.listen(PORT, () => {
     });
     console.log('');
 });
+
+// 서버 시작
+app.listen(PORT, () => {
+    console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
+    console.log(`🌐 메인 페이지: http://localhost:${PORT}`);
+    console.log(`🔧 관리자: http://localhost:${PORT}/admin`);
+});
