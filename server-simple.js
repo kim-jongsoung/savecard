@@ -502,9 +502,9 @@ app.post('/admin/login', async (req, res) => {
     const { username, password } = req.body;
 
     // 간단한 하드코딩된 관리자 계정
-    if (username === 'admin' && password === 'admin123') {
+    if (username === 'luxfind01' && password === 'vasco01@') {
         req.session.adminId = 1;
-        req.session.adminUsername = 'admin';
+        req.session.adminUsername = 'luxfind01';
         res.redirect('/admin');
     } else {
         res.render('admin/login', {
