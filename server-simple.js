@@ -1634,31 +1634,7 @@ app.put('/admin/api/partner-applications/:id/status', requireAuth, (req, res) =>
 
 
 
-// 서버 시작
-app.listen(PORT, () => {
-    console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`📱 웹사이트: http://localhost:${PORT}`);
-    console.log(`🔧 관리자: http://localhost:${PORT}/admin (admin/admin123)`);
-    console.log(`💾 데이터 저장: JSON 파일 기반 (MySQL 불필요)`);
-    
-    // 등록된 라우트 디버깅
-    console.log('\n🔍 등록된 라우트 목록:');
-    app._router.stack.forEach((middleware, index) => {
-        if (middleware.route) {
-            const methods = Object.keys(middleware.route.methods).join(', ').toUpperCase();
-            console.log(`  ${methods} ${middleware.route.path}`);
-        } else if (middleware.name === 'router') {
-            // Express Router 미들웨어인 경우
-            middleware.handle.stack.forEach((handler) => {
-                if (handler.route) {
-                    const methods = Object.keys(handler.route.methods).join(', ').toUpperCase();
-                    console.log(`  ${methods} ${handler.route.path}`);
-                }
-            });
-        }
-    });
-    console.log('');
-});
+
 
 // 서버 시작
 app.listen(PORT, () => {
