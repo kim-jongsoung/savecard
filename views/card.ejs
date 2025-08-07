@@ -396,6 +396,54 @@
             color: #1976d2;
         }
         
+        /* 자동완성 검색 결과 스타일 */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #007bff;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .suggestion-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+        
+        .suggestion-item:hover {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-item .store-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .suggestion-item .store-category {
+            font-size: 14px;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .form-group {
+            position: relative;
+        }
+        
         .search-result-more {
             padding: 10px 20px;
             background: #f8f9fa;
@@ -602,16 +650,7 @@
             <div class="usage-section">
                 <h5><i class="fas fa-store me-2"></i>Process Discount Usage</h5>
                 <p class="text-muted">Partner store staff can select store and process discount usage.</p>
-                <div class="staff-instructions">
-                    <div class="instruction-card">
-                        <h6><i class="fas fa-info-circle me-2"></i>For Store Staff / 직원 안내</h6>
-                        <ol class="instruction-list">
-                            <li><strong>Select your store</strong> from the dropdown below / 아래에서 업체를 선택하세요</li>
-                            <li><strong>Check the discount</strong> that appears / 표시되는 할인 내용을 확인하세요</li>
-                            <li><strong>Click "Apply Discount"</strong> to complete / "Apply Discount" 버튼을 클릭하세요</li>
-                        </ol>
-                    </div>
-                </div>
+
 
                 <% if (success) { %>
                     <div class="alert alert-success">
@@ -630,23 +669,22 @@
                         <input type="hidden" id="token" value="<%= user.token %>">
                         
                         <label for="store_code" class="form-label">
-                            <i class="fas fa-store me-2"></i><strong>Select Your Store / 업체 선택</strong>
+                            <i class="fas fa-search me-2"></i><strong>Search Store Name</strong>
                         </label>
                         <div class="form-group">
-                            <select class="form-control form-control-lg" 
-                                    id="store_code" 
-                                    name="store_code" 
-                                    required
-                                    style="font-size: 18px; padding: 15px; border: 3px solid #007bff; border-radius: 10px;">
-                                <option value="">👆 Choose Your Store / 업체를 선택하세요</option>
-                                <% if (typeof stores !== 'undefined' && stores) { %>
-                                    <% stores.filter(store => store.is_active).forEach(store => { %>
-                                        <option value="<%= store.name %>" data-discount="<%= store.discount_info %>">
-                                            🏪 <%= store.name %>
-                                        </option>
-                                    <% }); %>
-                                <% } %>
-                            </select>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="store_code" 
+                                   name="store_code" 
+                                   placeholder="Type store name (e.g. abc, ABC Mart)" 
+                                   autocomplete="off"
+                                   required
+                                   style="font-size: 18px; padding: 15px; border: 3px solid #007bff; border-radius: 10px;">
+                            
+                            <!-- 자동완성 결과 영역 -->
+                            <div id="search_suggestions" class="search-suggestions" style="display: none;">
+                                <!-- 자동완성 결과가 여기에 표시됨 -->
+                            </div>
                         </div>
                         
                         <!-- 할인혜택 표시 영역 -->
@@ -800,24 +838,94 @@
             return `Special Discount Available (${koreanDiscount})`;
         }
         
-        // 제휴업체 선택 기능 초기화
+        // 제휴업체 검색 기능 초기화
         function initializeStoreSelection() {
-            const selectElement = document.getElementById('store_code');
+            const storeInput = document.getElementById('store_code');
+            const suggestionsDiv = document.getElementById('search_suggestions');
+            const discountDisplay = document.getElementById('discount_benefit_display');
+            const applyBtn = document.getElementById('apply_discount_btn');
             
-            selectElement.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
+            if (!storeInput) return;
+            
+            // 전체 제휴업체 데이터
+            const allStores = <%- JSON.stringify(stores ? stores.filter(store => store.is_active).map(store => ({
+                name: store.name,
+                discount: store.discount_info,
+                category: store.category || ''
+            })) : []) %>;
+            
+            let selectedStore = null;
+            
+            // 입력 이벤트 처리
+            storeInput.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
                 
-                if (selectedOption.value) {
-                    const storeName = selectedOption.value;
-                    const discountInfo = selectedOption.getAttribute('data-discount');
-                    
-                    // 할인혜택 표시
-                    showDiscountBenefit(storeName, discountInfo);
-                } else {
-                    // 선택 해제 시 할인혜택 숨김
+                if (query.length === 0) {
+                    suggestionsDiv.style.display = 'none';
                     hideDiscountBenefit();
+                    return;
+                }
+                
+                // 검색 결과 필터링
+                const matches = allStores.filter(store => 
+                    store.name.toLowerCase().includes(query)
+                );
+                
+                if (matches.length > 0) {
+                    showSuggestions(matches);
+                } else {
+                    suggestionsDiv.style.display = 'none';
                 }
             });
+            
+            // 제안 결과 표시
+            function showSuggestions(matches) {
+                suggestionsDiv.innerHTML = '';
+                
+                matches.slice(0, 5).forEach(store => {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-item';
+                    item.innerHTML = `
+                        <span class="store-name">🏪 ${store.name}</span>
+                        <span class="store-category">${store.category}</span>
+                    `;
+                    
+                    item.addEventListener('click', function() {
+                        selectStore(store);
+                    });
+                    
+                    suggestionsDiv.appendChild(item);
+                });
+                
+                suggestionsDiv.style.display = 'block';
+            }
+            
+            // 업체 선택 처리
+            function selectStore(store) {
+                selectedStore = store;
+                storeInput.value = store.name;
+                suggestionsDiv.style.display = 'none';
+                
+                // 할인혜택 표시
+                showDiscountBenefit(store.name, store.discount);
+                
+                // 버튼 활성화
+                applyBtn.disabled = false;
+            }
+            
+            // 클릭 외부 영역 처리
+            document.addEventListener('click', function(e) {
+                if (!storeInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.style.display = 'none';
+                }
+            });
+            
+            // 할인혜택 숨기기
+            function hideDiscountBenefit() {
+                discountDisplay.style.display = 'none';
+                applyBtn.disabled = true;
+                selectedStore = null;
+            }
         }
         
         // 할인혜택 표시 함수
@@ -831,24 +939,17 @@
             
             // 할인혜택 표시
             benefitContent.innerHTML = `
-                <div class="benefit-text">${englishDiscount}</div>
-                <div class="benefit-original">Original: ${discountInfo}</div>
+                <div class="benefit-text" style="font-size: 18px; font-weight: bold; color: #1976d2; margin-bottom: 10px;">
+                    ${englishDiscount}
+                </div>
+                <div class="benefit-original" style="font-size: 14px; color: #666;">
+                    Original: ${discountInfo}
+                </div>
             `;
             
             // 할인혜택 영역 표시 및 버튼 활성화
             discountDisplay.style.display = 'block';
             applyBtn.disabled = false;
-            applyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Apply Discount';
-        }
-        
-        // 할인혜택 숨김 함수
-        function hideDiscountBenefit() {
-            const discountDisplay = document.getElementById('discount_benefit_display');
-            const applyBtn = document.getElementById('apply_discount_btn');
-            
-            discountDisplay.style.display = 'none';
-            applyBtn.disabled = true;
-            applyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Apply Discount';
         }
         
 
