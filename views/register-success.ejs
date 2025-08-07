@@ -56,6 +56,44 @@
             font-size: 18px;
             text-align: center;
         }
+
+        /* 동적 보안 블러 효과 */
+        .security-blur {
+            filter: blur(20px);
+            transition: filter 0.3s ease;
+        }
+
+        /* 워터마크 오버레이 */
+        .watermark-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            background-image: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 100px,
+                    rgba(255, 255, 255, 0.1) 100px,
+                    rgba(255, 255, 255, 0.1) 120px
+                );
+        }
+
+        .watermark-overlay::before {
+            content: '괌세이브카드 보안';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 48px;
+            color: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: none;
+        }
         
         .success-card {
             background: white;
@@ -592,6 +630,9 @@
             <div>스크린샷이 차단되었습니다</div>
         </div>
     </div>
+    
+    <!-- 워터마크 오버레이 -->
+    <div class="watermark-overlay" id="watermarkOverlay"></div>
     <!-- 비밀번호 인증 모달 -->
     <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
@@ -1180,13 +1221,92 @@
             // 페이지 숨김/표시 감지 (스크린샷 시도 감지)
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
-                    // 페이지가 숨겨질 때 (스크린샷 가능성)
+                    // 페이지가 숨겨질 때 블러 효과 적용
+                    applySecurityBlur();
                     setTimeout(function() {
                         if (!document.hidden) {
                             showSecurityOverlay();
+                            removeSecurityBlur();
                         }
                     }, 100);
+                } else {
+                    // 페이지가 다시 보일 때 블러 제거
+                    removeSecurityBlur();
                 }
+            });
+            
+            // 갤럭시 스크린샷 감지 (볼륨 버튼 + 전원 버튼)
+            let volumeDownPressed = false;
+            let powerButtonPressed = false;
+            
+            // 볼륨 다운 감지 (근사치)
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'VolumeDown' || e.keyCode === 174) {
+                    volumeDownPressed = true;
+                    setTimeout(() => {
+                        if (volumeDownPressed && powerButtonPressed) {
+                            triggerScreenshotDetection();
+                        }
+                        volumeDownPressed = false;
+                    }, 1000);
+                }
+                if (e.key === 'Power' || e.keyCode === 26) {
+                    powerButtonPressed = true;
+                    setTimeout(() => {
+                        powerButtonPressed = false;
+                    }, 1000);
+                }
+            });
+            
+            // 새로고침 감지 (스크린샷 후 사용자 행동)
+            let lastRefreshTime = Date.now();
+            window.addEventListener('beforeunload', function() {
+                const now = Date.now();
+                if (now - lastRefreshTime < 2000) {
+                    // 2초 이내 새로고침 = 스크린샷 가능성
+                    triggerScreenshotDetection();
+                }
+            });
+            
+            // 터치 제스처 감지 (갤럭시 스크린샷 제스처)
+            let touchStartTime = 0;
+            let touchCount = 0;
+            
+            document.addEventListener('touchstart', function(e) {
+                touchStartTime = Date.now();
+                touchCount++;
+                
+                // 3개 손가락 동시 터치 (갤럭시 스크린샷)
+                if (e.touches.length >= 3) {
+                    triggerScreenshotDetection();
+                }
+                
+                // 빠른 연속 터치 감지
+                setTimeout(() => {
+                    if (touchCount > 5) {
+                        triggerScreenshotDetection();
+                    }
+                    touchCount = 0;
+                }, 1000);
+            });
+            
+            // 화면 방향 변경 감지
+            window.addEventListener('orientationchange', function() {
+                setTimeout(() => {
+                    triggerScreenshotDetection();
+                }, 500);
+            });
+            
+            // 브라우저 포커스 잃음 감지
+            window.addEventListener('blur', function() {
+                applySecurityBlur();
+                setTimeout(() => {
+                    triggerScreenshotDetection();
+                }, 200);
+            });
+            
+            window.addEventListener('focus', function() {
+                removeSecurityBlur();
             });
         }
         
@@ -1199,6 +1319,48 @@
                     overlay.style.display = 'none';
                 }, 2000);
             }
+        }
+        
+        // 보안 블러 효과 적용
+        function applySecurityBlur() {
+            const mainContent = document.querySelector('.container');
+            if (mainContent) {
+                mainContent.classList.add('security-blur');
+            }
+        }
+        
+        // 보안 블러 효과 제거
+        function removeSecurityBlur() {
+            const mainContent = document.querySelector('.container');
+            if (mainContent) {
+                mainContent.classList.remove('security-blur');
+            }
+        }
+        
+        // 스크린샷 감지 트리거
+        function triggerScreenshotDetection() {
+            // 블러 효과 적용
+            applySecurityBlur();
+            
+            // 보안 오버레이 표시
+            showSecurityOverlay();
+            
+            // 워터마크 강화
+            const watermark = document.getElementById('watermarkOverlay');
+            if (watermark) {
+                watermark.style.opacity = '0.8';
+                setTimeout(() => {
+                    watermark.style.opacity = '0.1';
+                }, 3000);
+            }
+            
+            // 3초 후 블러 제거
+            setTimeout(() => {
+                removeSecurityBlur();
+            }, 3000);
+            
+            // 콘솔 경고 메시지
+            console.warn('⚠️ 보안 경고: 스크린샷 시도가 감지되었습니다.');
         }
         
         // 페이지 로드 시 초기화
