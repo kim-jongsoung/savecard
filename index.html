@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>괌세이브카드 QR 스캐너</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border-radius: 10px;
+            background: #f0f0f0;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            background: #4CAF50;
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 20px;
+            font-weight: bold;
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .start-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .start-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏝️ 괌세이브카드 QR 스캐너</h1>
+        
+        <video id="video" autoplay muted playsinline></video>
+        
+        <div class="message" id="message">
+            Save Card Expiration Date 12/1/25~12/30/25
+        </div>
+        
+        <button id="startBtn" class="start-btn">QR 스캔 시작</button>
+        
+        <div class="status" id="status">카메라 권한을 허용해주세요</div>
+    </div>
+
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script>
+        const video = document.getElementById('video');
+        const message = document.getElementById('message');
+        const startBtn = document.getElementById('startBtn');
+        const status = document.getElementById('status');
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        let scanning = false;
+        let stream = null;
+
+        startBtn.addEventListener('click', async () => {
+            if (!scanning) {
+                await startScanning();
+            } else {
+                stopScanning();
+            }
+        });
+
+        async function startScanning() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                
+                video.srcObject = stream;
+                video.play();
+                
+                scanning = true;
+                startBtn.textContent = '스캔 중지';
+                startBtn.style.background = '#f44336';
+                status.textContent = 'QR 코드를 카메라에 비춰주세요';
+                
+                requestAnimationFrame(scanQRCode);
+                
+            } catch (err) {
+                console.error('카메라 접근 오류:', err);
+                status.textContent = '카메라에 접근할 수 없습니다';
+            }
+        }
+
+        function stopScanning() {
+            scanning = false;
+            
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            video.srcObject = null;
+            startBtn.textContent = 'QR 스캔 시작';
+            startBtn.style.background = '#667eea';
+            status.textContent = '스캔이 중지되었습니다';
+            message.style.display = 'none';
+        }
+
+        function scanQRCode() {
+            if (!scanning) return;
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    // QR 코드가 감지되면 항상 같은 메시지 표시
+                    showMessage();
+                    return; // 스캔 중지
+                }
+            }
+            
+            requestAnimationFrame(scanQRCode);
+        }
+
+        function showMessage() {
+            message.style.display = 'block';
+            status.textContent = '';
+            
+            // 5초 후 메시지 숨기기
+            setTimeout(() => {
+                message.style.display = 'none';
+                status.textContent = 'QR 코드를 카메라에 비춰주세요';
+                if (scanning) {
+                    requestAnimationFrame(scanQRCode);
+                }
+            }, 5000);
+        }
+
+        // 페이지 언로드 시 카메라 정리
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+업체명	영문명	카테고리	혜택 내역	혜택 내역 (영문)	노출 순서	설명	설명 (영문)	주소	주소 (영문)	전화번호	웹사이트
+민즈 오사카 마트	Min's Osaka Mart	마트	0% 할인	0% discount	1	담배 및 주류 할인 제외, 기타 할인과 중복 불가	Excludes tobacco and alcohol; not valid with other offers	Tumon	Tumon, Guam		
+셀프픽스 카페	Selfpix Cafe	카페	$20당 무료 음료 1잔 제공	1 free drink per $20 spent	2	이외의 할인 및 프로모션과 중복 할인 불가능	Not valid with other discounts or promotions	Tumon	Tumon, Guam		
+돈키호테	Don Don Donki Guam	마트	$50 이상 결제 시 5% 할인	5% discount on purchases over $50	3	$80 이상 구매 시 사은품 증정 (랜덤 증정)	Free gift on $80+ purchases (random bonus)	Tamuning	Tamuning, Guam		
+인퓨전 커피&티 DFS점	Infusion Coffee & Tea	카페	음료만 10% 할인	10% off drinks only	4	음식 및 소매품은 할인 제외	Food and retail items excluded	Tamuning	Tamuning, Guam		
+티지아이 프라이데이	TGI Friday's	레스토랑	15% 할인 (행사 중인 테이블 및 전체 금액)	15% off entire bill for participating tables	5	주문 전 카드 제시 필요	Must present card before ordering	Tumon	Tumon, Guam		
+고메 괌	Gourmet Guam	레스토랑	5% 할인	5% discount	6	타 할인과 중복 불가	Not valid with other discounts	Tamuning	Tamuning, Guam		
+치킨 펍 & 카페	Chicken Pub & Cafe	카페	$45 이상 결제 시 아이스 커피 2잔 제공	2 iced coffees with $45 purchase	7	이외의 할인과 중복 불가	Not valid with other discounts	Tumon	Tumon, Guam		
+마루가메 우동	Marugame Udon	레스토랑	10% 할인 + 11세 미만 아동 과일 주스 무료 제공	10% off + free juice for kids under 11	8	메인 주문 시 아동 주스 제공	Juice only provided with main order	Tamuning	Tamuning, Guam		

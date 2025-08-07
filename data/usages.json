@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "token": "f96f5a95-4aa3-45b7-bf13-50b7f1246efb",
+    "store_code": "면세점",
+    "used_at": "2025-08-06T04:58:34.387Z",
+    "ip_address": "::1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "created_at": "2025-08-06T04:58:34.388Z"
+  },
+  {
+    "id": 2,
+    "token": "f96f5a95-4aa3-45b7-bf13-50b7f1246efb",
+    "store_code": "레스토랑",
+    "used_at": "2025-08-06T04:58:59.028Z",
+    "ip_address": "::1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "created_at": "2025-08-06T04:58:59.029Z"
+  },
+  {
+    "id": 3,
+    "token": "ab0204c5-cb2b-46ba-a590-747cbf0c9412",
+    "store_code": "라이스 & 라멘(Rice & Ramen)",
+    "used_at": "2025-08-06T09:40:16.201Z",
+    "ip_address": "::1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "created_at": "2025-08-06T09:40:16.202Z"
+  },
+  {
+    "id": 4,
+    "token": "f96f5a95-4aa3-45b7-bf13-50b7f1246efb",
+    "store_code": "CRC 루프탑(CRC Rooftop)",
+    "used_at": "2025-08-06T13:27:33.762Z",
+    "ip_address": "::1",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "created_at": "2025-08-06T13:27:33.763Z"
+  }
+]
