@@ -2,8 +2,8 @@
 const { Pool } = require('pg');
 
 async function testNeonConnection() {
-    // Neon에서 제공받은 DATABASE_URL을 여기에 입력하세요
-    const DATABASE_URL = 'postgresql://username:password@hostname/database';
+    // Neon PostgreSQL 연결 정보
+    const DATABASE_URL = 'postgresql://neondb_owner:npg_5HBYZ8iXVQbo@ep-odd-cell-adupd91j-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
     
     const pool = new Pool({
         connectionString: DATABASE_URL,
