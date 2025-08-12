@@ -188,8 +188,10 @@
             border-bottom: 1px solid #f0f0f0;
         }
         
-        .search-result-item:hover {
-            background-color: #f8f9fa;
+        .search-result-item:hover,
+        .search-result-item.highlighted {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
         }
         
         .search-result-item:last-child {
@@ -479,16 +481,13 @@
                                    id="store_code" 
                                    name="store_code" 
                                    placeholder="Type store name to search..."
-                                   list="store_list"
                                    autocomplete="off"
+                                   autocapitalize="off"
+                                   autocorrect="off"
+                                   spellcheck="false"
+                                   readonly
+                                   onfocus="this.removeAttribute('readonly')"
                                    required>
-                            <datalist id="store_list">
-                                <% if (typeof stores !== 'undefined' && stores) { %>
-                                    <% stores.filter(store => store.is_active).forEach(store => { %>
-                                        <option value="<%= store.name %>">
-                                    <% }); %>
-                                <% } %>
-                            </datalist>
                             <div id="search_results" class="search-results"></div>
                         </div>
                         
@@ -686,8 +685,15 @@
             const input = document.getElementById('store_code');
             const searchResults = document.getElementById('search_results');
             
+            if (!input || !searchResults) return;
+            
+            let selectedIndex = -1;
+            let filteredStores = [];
+            
+            // 입력 이벤트 처리
             input.addEventListener('input', function() {
                 const query = this.value.toLowerCase().trim();
+                selectedIndex = -1;
                 
                 if (query.length === 0) {
                     searchResults.style.display = 'none';
@@ -695,7 +701,7 @@
                     return;
                 }
                 
-                // 정확한 매칭 확인
+                // 정확히 일치하는 업체가 있는지 확인
                 const exactMatch = stores.find(store => 
                     store.name.toLowerCase() === query
                 );
@@ -706,7 +712,7 @@
                     hideDiscountBenefit();
                 }
                 
-                const filteredStores = stores.filter(store => 
+                filteredStores = stores.filter(store => 
                     store.name.toLowerCase().includes(query)
                 );
                 
@@ -715,24 +721,144 @@
                     return;
                 }
                 
-                searchResults.innerHTML = filteredStores.map(store => 
-                    `<div class="search-result-item" onclick="selectStore('${store.name}', '${store.discount}')">
-                        <div class="store-name">${store.name}</div>
-                        <div class="store-discount">${store.discount}</div>
-                    </div>`
-                ).join('');
-                
+                updateSearchResults(filteredStores, selectedIndex);
                 searchResults.style.display = 'block';
+            });
+            
+            // 키보드 이벤트 처리 (위/아래 화살표, 엔터)
+            input.addEventListener('keydown', function(e) {
+                const items = searchResults.querySelectorAll('.search-result-item');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSearchResults(filteredStores, selectedIndex);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateSearchResults(filteredStores, selectedIndex);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && filteredStores[selectedIndex]) {
+                        const store = filteredStores[selectedIndex];
+                        selectStore(store.name, store.discount);
+                    }
+                } else if (e.key === 'Escape') {
+                    searchResults.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+            
+            // 포커스 시 검색 결과 다시 표시
+            input.addEventListener('focus', function() {
+                if (this.value.trim() && filteredStores.length > 0) {
+                    searchResults.style.display = 'block';
+                }
             });
             
             // 외부 클릭 시 검색 결과 숨기기
             document.addEventListener('click', function(e) {
                 if (!e.target.closest('.form-group')) {
                     searchResults.style.display = 'none';
+                    selectedIndex = -1;
                 }
             });
+            
+            // 검색 결과 업데이트 함수
+            function updateSearchResults(stores, highlightIndex) {
+                searchResults.innerHTML = stores.map((store, index) => 
+                    `<div class="search-result-item ${index === highlightIndex ? 'highlighted' : ''}" 
+                          onclick="selectStore('${store.name}', '${store.discount}')"
+                          onmouseenter="this.classList.add('highlighted')"
+                          onmouseleave="this.classList.remove('highlighted')">
+                        <div class="store-name">${store.name}</div>
+                        <div class="store-discount">${store.discount || 'Discount available'}</div>
+                    </div>`
+                ).join('');
+            }
         }
         
+        // 한글 할인정보를 영어로 번역하는 함수
+        function translateDiscountToEnglish(koreanText) {
+            if (!koreanText || koreanText === 'undefined') {
+                return 'Special Discount Available';
+            }
+            
+            // 번역 매핑 테이블
+            const translations = {
+                // 할인율 패턴
+                '10% 할인': '10% Discount',
+                '15% 할인': '15% Discount', 
+                '20% 할인': '20% Discount',
+                '25% 할인': '25% Discount',
+                '30% 할인': '30% Discount',
+                '50% 할인': '50% Discount',
+                
+                // 일반적인 할인 표현
+                '전 품목': 'All Items',
+                '전품목': 'All Items',
+                '모든 상품': 'All Products',
+                '전체 상품': 'All Products',
+                '전 메뉴': 'All Menu Items',
+                '전메뉴': 'All Menu Items',
+                '모든 메뉴': 'All Menu Items',
+                
+                // 특정 품목
+                '음료': 'Beverages',
+                '커피': 'Coffee',
+                '디저트': 'Desserts',
+                '케이크': 'Cakes',
+                '빵': 'Bread',
+                '샐러드': 'Salads',
+                '파스타': 'Pasta',
+                '피자': 'Pizza',
+                '햄버거': 'Burgers',
+                '치킨': 'Chicken',
+                '스테이크': 'Steaks',
+                
+                // 할인 유형
+                '할인': 'Discount',
+                '세일': 'Sale',
+                '특가': 'Special Price',
+                '이벤트': 'Event',
+                '프로모션': 'Promotion',
+                
+                // 기타 표현
+                '이상': 'or more',
+                '구매시': 'on purchase',
+                '구매 시': 'on purchase',
+                '적용': 'applied',
+                '제공': 'offered',
+                '혜택': 'benefit',
+                '서비스': 'service',
+                '무료': 'Free',
+                '증정': 'Complimentary',
+                
+                // 숫자 + 원
+                '만원': '10,000 KRW',
+                '천원': '1,000 KRW',
+                '원': 'KRW'
+            };
+            
+            let englishText = koreanText;
+            
+            // 번역 매핑 적용
+            for (const [korean, english] of Object.entries(translations)) {
+                const regex = new RegExp(korean, 'g');
+                englishText = englishText.replace(regex, english);
+            }
+            
+            // 숫자% 패턴 처리
+            englishText = englishText.replace(/(\d+)%/g, '$1%');
+            
+            // 만약 번역이 잘 안된 경우 기본 메시지
+            if (englishText === koreanText && /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(koreanText)) {
+                return `Special Discount Available (${koreanText})`;
+            }
+            
+            return englishText;
+        }
+
         // 할인혜택 표시 함수
         function showDiscountBenefit(storeName, discountInfo) {
             const discountDisplay = document.getElementById('discount_benefit_display');
@@ -745,7 +871,7 @@
             // 할인혜택 표시
             benefitContent.innerHTML = `
                 <div class="benefit-text">${englishDiscount}</div>
-                <div class="benefit-original">Original: ${discountInfo}</div>
+                <div class="benefit-original">Original: ${discountInfo || 'Not specified'}</div>
             `;
             
             // 할인혜택 영역 표시 및 버튼 활성화
