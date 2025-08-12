@@ -310,39 +310,32 @@ app.get('/db-test', async (req, res) => {
 
 // 메인 페이지
 app.get('/', async (req, res) => {
+    // 데이터 조회 (오류 발생 시 빈 배열로 대체하여 페이지는 항상 렌더)
+    let agencies = [];
+    let banners = [];
     try {
-        // 먼저 데이터베이스 연결 확인
-        await pool.query('SELECT 1');
-        
-        // 데이터 조회 (오류 발생 시 빈 배열 반환)
-        let agencies = [];
-        let banners = [];
-        
-        try {
-            agencies = await dbHelpers.getAgencies();
-        } catch (err) {
-            console.warn('여행사 데이터 조회 실패:', err.message);
-        }
-        
-        try {
-            banners = await dbHelpers.getBanners();
-        } catch (err) {
-            console.warn('배너 데이터 조회 실패:', err.message);
-        }
-        
+        agencies = await dbHelpers.getAgencies();
+    } catch (err) {
+        console.warn('여행사 데이터 조회 실패:', err.message);
+    }
+    try {
+        banners = await dbHelpers.getBanners();
+    } catch (err) {
+        console.warn('배너 데이터 조회 실패:', err.message);
+    }
+
+    try {
         res.render('index', {
             title: '괌세이브카드',
-            agencies: agencies,
-            banners: banners
+            agencies,
+            banners
         });
-    } catch (error) {
-        console.error('메인 페이지 오류:', error);
-        
-        // 데이터베이스 연결 실패 시 에러 페이지 렌더링
+    } catch (renderErr) {
+        console.error('메인 페이지 렌더링 오류:', renderErr);
         res.status(500).render('error', {
             title: '서버 오류',
-            message: '데이터베이스 연결에 실패했습니다.',
-            error: { status: 500, message: error.message }
+            message: '페이지 렌더링 중 오류가 발생했습니다.',
+            error: { status: 500, message: renderErr.message }
         });
     }
 });
@@ -379,6 +372,19 @@ app.get('/partner/:agencyCode', async (req, res) => {
             message: '페이지를 불러오는 중 오류가 발생했습니다.',
             error: { status: 500 }
         });
+    }
+});
+
+// 배너 클릭 추적 API
+app.post('/banner/click/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await dbHelpers.incrementBannerClick(id);
+        res.json({ success: true });
+    } catch (e) {
+        console.warn('배너 클릭 집계 실패:', e.message);
+        // 실패해도 사용자 UX에 영향 없도록 200 반환
+        res.json({ success: false });
     }
 });
 
