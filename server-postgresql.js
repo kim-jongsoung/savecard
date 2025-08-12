@@ -42,7 +42,7 @@ try {
     } = process.env;
 
     if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
-        mailTransporter = nodemailer.createTransporter({
+        mailTransporter = nodemailer.createTransport({
             host: SMTP_HOST,
             port: Number(SMTP_PORT),
             secure: String(SMTP_SECURE || '').toLowerCase() === 'true',
@@ -337,6 +337,24 @@ app.get('/', async (req, res) => {
             message: '페이지 렌더링 중 오류가 발생했습니다.',
             error: { status: 500, message: renderErr.message }
         });
+    }
+});
+
+// 진단용 라우트 (임시)
+app.get('/__diag', async (req, res) => {
+    try {
+        const [agencies, banners] = await Promise.all([
+            dbHelpers.getAgencies().catch(e => { console.warn('diag agencies fail', e.message); return []; }),
+            dbHelpers.getBanners().catch(e => { console.warn('diag banners fail', e.message); return []; })
+        ]);
+        res.json({
+            ok: true,
+            mode: dbMode,
+            agencies_count: agencies.length,
+            banners_count: banners.length
+        });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message, mode: dbMode });
     }
 });
 
