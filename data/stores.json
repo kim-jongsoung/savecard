@@ -18,15 +18,15 @@
     "name": "셀프픽스 카페(Selfpix Cafe)",
     "category": "카페",
     "description": "사진 촬영 카페",
-    "discount_info": "$50 이상 구매 시 음료 1잔 제공",
     "address": "Tumon, Guam",
     "phone": "+1-671-XXXX-XXXX",
     "website": null,
     "image_url": "https://s3-media0.fl.yelpcdn.com/bphoto/sHxF3v7Vvui0uNJ8UGBDog/o.jpg",
     "is_active": true,
     "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2025-08-06T13:27:55.506Z",
-    "usage_count": 21
+    "updated_at": "2025-08-12T08:19:38.630Z",
+    "usage_count": 23,
+    "discount_info": "$50 이상 구매 시 음료 1잔 제공"
   },
   {
     "id": 3,

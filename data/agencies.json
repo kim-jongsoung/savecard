@@ -3,11 +3,13 @@
     "id": 1,
     "name": "개별여행",
     "agency_code": "individual",
-    "contact_email": null,
-    "contact_phone": null,
-    "sort_order": 2,
+    "contact_email": "",
+    "contact_phone": "",
+    "sort_order": 1,
     "created_at": "2025-08-06T10:33:00.000Z",
-    "updated_at": "2025-08-06T13:20:08.057Z"
+    "updated_at": "2025-08-12T08:45:39.322Z",
+    "logo_url": "",
+    "show_banners_on_landing": false
   },
   {
     "id": 2,
@@ -22,21 +24,25 @@
   {
     "id": 5,
     "name": "예약의신",
-    "agency_code": "res100",
+    "agency_code": "yeyak",
     "contact_email": "res@lux-find.com",
-    "contact_phone": null,
-    "sort_order": 3,
+    "contact_phone": "",
+    "sort_order": 2,
     "created_at": "2025-08-06T09:04:22.539Z",
-    "updated_at": "2025-08-06T13:20:07.004Z"
+    "updated_at": "2025-08-12T08:44:59.013Z",
+    "logo_url": "",
+    "show_banners_on_landing": true
   },
   {
     "id": 6,
     "name": "고고괌",
-    "agency_code": "gogo10",
-    "contact_email": null,
-    "contact_phone": null,
-    "sort_order": 1,
+    "agency_code": "gogoguam",
+    "contact_email": "",
+    "contact_phone": "",
+    "sort_order": 3,
     "created_at": "2025-08-06T13:19:58.958Z",
-    "updated_at": "2025-08-06T13:20:08.054Z"
+    "updated_at": "2025-08-12T08:42:23.867Z",
+    "logo_url": "https://shop-phinf.pstatic.net/20250416_166/1744783615623jRCyW_PNG/PC_%B9%F6%C0%FC.png?type=w640",
+    "show_banners_on_landing": true
   }
 ]

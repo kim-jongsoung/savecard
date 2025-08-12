@@ -144,14 +144,24 @@
                     <label for="agency_code" class="form-label">
                         <i class="fas fa-building me-2"></i>여행사
                     </label>
-                    <select class="form-select" id="agency_code" name="agency_code" required>
-                        <option value="">여행사를 선택해주세요</option>
+                    <select class="form-select" id="agency_code" name="agency_code" required <% if (selectedAgency) { %>disabled<% } %>>
+                        <% if (!selectedAgency) { %>
+                            <option value="">여행사를 선택해주세요</option>
+                        <% } %>
                         <% agencies.forEach(agency => { %>
-                            <option value="<%= agency.agency_code %>">
+                            <option value="<%= agency.agency_code %>" <% if (selectedAgency && selectedAgency.agency_code === agency.agency_code) { %>selected<% } %>>
                                 <%= agency.name %> (<%= agency.agency_code %>)
                             </option>
                         <% }); %>
                     </select>
+                    <% if (selectedAgency) { %>
+                        <!-- 제휴 여행사가 선택된 경우 숨겨진 필드로 값 전송 -->
+                        <input type="hidden" name="agency_code" value="<%= selectedAgency.agency_code %>">
+                        <div class="form-text text-success">
+                            <i class="fas fa-check-circle me-1"></i>
+                            <strong><%= selectedAgency.name %></strong> 제휴 여행사로 자동 선택되었습니다.
+                        </div>
+                    <% } %>
                 </div>
 
                 <div class="mb-3">

@@ -7,9 +7,37 @@ const QRCode = require('qrcode');
 const fs = require('fs-extra');
 const bcrypt = require('bcryptjs');
 const jsonDB = require('./utils/jsonDB');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// 메일 발송 설정 (환경변수 기반)
+let mailTransporter = null;
+try {
+    const {
+        SMTP_HOST,
+        SMTP_PORT,
+        SMTP_USER,
+        SMTP_PASS,
+        SMTP_SECURE,
+        MAIL_FROM
+    } = process.env;
+
+    if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
+        mailTransporter = nodemailer.createTransport({
+            host: SMTP_HOST,
+            port: Number(SMTP_PORT),
+            secure: String(SMTP_SECURE || '').toLowerCase() === 'true',
+            auth: { user: SMTP_USER, pass: SMTP_PASS }
+        });
+        console.log('✉️ 이메일 발송 설정이 구성되었습니다.');
+    } else {
+        console.warn('⚠️ SMTP 환경변수가 설정되지 않았습니다. 이메일 대신 검증 링크를 콘솔에 출력합니다.');
+    }
+} catch (e) {
+    console.warn('⚠️ 이메일 발송 설정 중 경고:', e.message);
+}
 
 // QR 코드 저장 디렉토리 생성
 const qrDir = path.join(__dirname, 'qrcodes');
@@ -46,6 +74,7 @@ function requireAuth(req, res, next) {
         adminId: req.session.adminId,
         sessionExists: !!req.session
     });
+    
     if (!req.session.adminId) {
         console.log('❌ 인증 실패 - 로그인 페이지로 리디렉션');
         return res.redirect('/admin/login');
@@ -54,26 +83,121 @@ function requireAuth(req, res, next) {
     next();
 }
 
+
+// 사용자 로그인 페이지
+app.get('/login', (req, res) => {
+    if (req.session.userToken) {
+        return res.redirect('/my-card');
+    }
+    return res.render('login', { title: '내 카드 로그인', error: null, success: null });
+});
+
+// 사용자 로그인 처리
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        if (!email || !password) {
+            return res.render('login', { title: '내 카드 로그인', error: '이메일과 비밀번호(4자리)를 입력해주세요.', success: null });
+        }
+        const emailNorm = String(email).trim().toLowerCase();
+        const user = await jsonDB.findOne('users', { email: emailNorm });
+        if (!user) {
+            return res.render('login', { title: '내 카드 로그인', error: '해당 이메일로 발급된 카드가 없습니다.', success: null });
+        }
+        if (user.password !== password) {
+            return res.render('login', { title: '내 카드 로그인', error: '비밀번호가 일치하지 않습니다.', success: null });
+        }
+
+        // 로그인 성공 → 세션 저장 후 내 카드로 이동
+        req.session.userId = user.id;
+        req.session.userEmail = user.email;
+        req.session.userToken = user.token;
+        return res.redirect('/my-card');
+    } catch (e) {
+        console.error('사용자 로그인 오류:', e);
+        return res.render('login', { title: '내 카드 로그인', error: '로그인 중 오류가 발생했습니다.', success: null });
+    }
+});
+
+// 사용자 로그아웃
+app.post('/logout', (req, res) => {
+    req.session.userId = null;
+    req.session.userEmail = null;
+    req.session.userToken = null;
+    return res.redirect('/login');
+});
+
+
+
 // ==================== 메인 페이지 ====================
 app.get('/', async (req, res) => {
     try {
         // 메인 페이지용 배너 조회 (위치 1)
         const allBanners = await jsonDB.findAll('banners', { is_active: true });
-        const mainPageBanners = allBanners.filter(banner => 
-            banner.display_locations && banner.display_locations.includes(1)
-        ).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+        const mainPageBanners = allBanners
+            .filter(banner => banner.display_locations && banner.display_locations.includes(1))
+            .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
         res.render('index', {
             title: '괌세이브카드',
             message: '괌 여행의 필수 할인카드',
-            banners: mainPageBanners
+            banners: mainPageBanners,
+            partnerAgency: null
         });
     } catch (error) {
         console.error('메인 페이지 배너 조회 오류:', error);
         res.render('index', {
             title: '괌세이브카드',
             message: '괌 여행의 필수 할인카드',
-            banners: []
+            banners: [],
+            partnerAgency: null
+        });
+    }
+});
+
+// ==================== 제휴 여행사 전용 랜딩 페이지 ====================
+app.get('/partner/:agencyCode', async (req, res) => {
+    const { agencyCode } = req.params;
+    
+    try {
+        // 여행사 코드로 여행사 정보 조회
+        const agency = await jsonDB.findOne('agencies', { agency_code: agencyCode });
+        
+        if (!agency) {
+            return res.render('error', {
+                title: '유효하지 않은 파트너 코드',
+                message: '유효하지 않은 파트너 코드입니다. URL을 다시 확인해주세요.',
+                error: { status: 404 }
+            });
+        }
+
+        // 메인 페이지용 배너 조회 (위치 1)
+        let mainPageBanners = [];
+        if (agency.show_banners_on_landing !== false) {
+            const allBanners = await jsonDB.findAll('banners', { is_active: true });
+            mainPageBanners = allBanners
+                .filter(banner => banner.display_locations && banner.display_locations.includes(1))
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+        }
+
+        // 여행사 정보와 함께 메인 페이지 렌더링
+        res.render('index', {
+            title: `괌세이브카드 - ${agency.name}`,
+            message: `${agency.name}과 함께하는 괌 여행의 필수 할인카드`,
+            banners: mainPageBanners,
+            partnerAgency: {
+                name: agency.name,
+                code: agency.agency_code,
+                logo_url: agency.logo_url
+            }
+        });
+
+    } catch (error) {
+        console.error('제휴 여행사 랜딩 페이지 오류:', error);
+        res.render('error', {
+            title: '페이지 로드 오류',
+            message: '페이지를 불러오는 중 오류가 발생했습니다.',
+            error: { status: 500 }
         });
     }
 });
@@ -125,9 +249,19 @@ app.get('/register', async (req, res) => {
         // 순위별로 정렬
         const sortedAgencies = agencies.sort((a, b) => (a.sort_order || 999) - (b.sort_order || 999));
         
+        // 제휴 여행사 코드가 쿼리 파라미터로 전달된 경우
+        const partnerAgencyCode = req.query.agency;
+        let selectedAgency = null;
+        
+        if (partnerAgencyCode) {
+            selectedAgency = agencies.find(agency => agency.agency_code === partnerAgencyCode);
+            console.log(`제휴 여행사 미리 선택: ${partnerAgencyCode}`, selectedAgency ? '찾음' : '못찾음');
+        }
+        
         res.render('register', {
             title: '괌세이브카드 발급',
             agencies: sortedAgencies,
+            selectedAgency: selectedAgency,
             error: null,
             success: null
         });
@@ -136,6 +270,7 @@ app.get('/register', async (req, res) => {
         res.render('register', {
             title: '괌세이브카드 발급',
             agencies: [],
+            selectedAgency: null,
             error: '시스템 오류가 발생했습니다.',
             success: null
         });
@@ -258,6 +393,8 @@ app.post('/register', async (req, res) => {
             expiration_text: expirationText,
             issued_at: now.toISOString()
         });
+
+
 
         res.redirect(`/register/success?token=${token}`);
 
@@ -424,16 +561,89 @@ app.get('/card', async (req, res) => {
     }
 });
 
-// 사용 편의용 별칭 라우트: /my-card
-// 예: /my-card?token=YOUR_TOKEN
-app.get('/my-card', (req, res) => {
-    const { token } = req.query;
-    if (token) {
-        // 토큰이 있으면 정식 경로로 리디렉션
-        return res.redirect(`/card?token=${encodeURIComponent(token)}`);
+// 내 카드 페이지 - 로그인된 사용자의 카드 정보 직접 표시
+app.get('/my-card', async (req, res) => {
+    // 로그인 확인
+    if (!req.session.userToken) {
+        return res.redirect('/login');
     }
-    // 토큰이 없으면 발급 페이지로 안내
-    return res.redirect('/register');
+
+    try {
+        const user = await jsonDB.findOne('users', { token: req.session.userToken });
+        if (!user) {
+            req.session.userId = null;
+            req.session.userEmail = null;
+            req.session.userToken = null;
+            return res.redirect('/login');
+        }
+
+        const agency = await jsonDB.findById('agencies', user.agency_id);
+        
+        // 사용 이력 조회 (최근 10개)
+        const allUsages = await jsonDB.findAll('usages', { token: user.token });
+        const usages = allUsages
+            .sort((a, b) => new Date(b.used_at) - new Date(a.used_at))
+            .slice(0, 10);
+
+        res.render('my-card', {
+            title: '내 카드',
+            user: {
+                ...user,
+                agency_name: agency ? agency.name : 'Unknown'
+            },
+            usages: usages
+        });
+
+    } catch (error) {
+        console.error('내 카드 페이지 렌더링 오류:', error);
+        res.render('error', {
+            title: '오류',
+            message: '카드 정보를 불러오는 중 오류가 발생했습니다.',
+            error: { status: 500 }
+        });
+    }
+});
+
+// 관리자 전용 - 고객 카드 보기
+app.get('/admin/view-card/:token', requireAuth, async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        const user = await jsonDB.findOne('users', { token });
+        if (!user) {
+            return res.render('error', {
+                title: '카드를 찾을 수 없습니다',
+                message: '유효하지 않은 카드입니다.',
+                error: { status: 404 }
+            });
+        }
+
+        const agency = await jsonDB.findById('agencies', user.agency_id);
+        
+        // 사용 이력 조회 (최근 10개)
+        const allUsages = await jsonDB.findAll('usages', { token: user.token });
+        const usages = allUsages
+            .sort((a, b) => new Date(b.used_at) - new Date(a.used_at))
+            .slice(0, 10);
+
+        res.render('my-card', {
+            title: '고객 카드 보기 - ' + user.customer_name,
+            user: {
+                ...user,
+                agency_name: agency ? agency.name : 'Unknown'
+            },
+            usages: usages,
+            isAdminView: true
+        });
+
+    } catch (error) {
+        console.error('관리자 카드 보기 오류:', error);
+        res.render('error', {
+            title: '오류',
+            message: '카드 정보를 불러오는 중 오류가 발생했습니다.',
+            error: { status: 500 }
+        });
+    }
 });
 
 app.post('/card/use', async (req, res) => {
@@ -732,7 +942,7 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
 });
 
 app.post('/admin/agencies', requireAuth, async (req, res) => {
-    const { name, agency_code, contact_email, contact_phone } = req.body;
+    const { name, agency_code, contact_email, contact_phone, logo_url, show_banners_on_landing } = req.body;
 
     try {
         // 중복 코드 확인
@@ -747,12 +957,17 @@ app.post('/admin/agencies', requireAuth, async (req, res) => {
             return Math.max(max, agency.sort_order || 0);
         }, 0);
 
+        // 배너 노출 여부: 전달 없으면 기본 true
+        const showBanners = (String(show_banners_on_landing).toLowerCase() === 'false') ? false : !!show_banners_on_landing || true;
+
         await jsonDB.insert('agencies', {
             name,
             agency_code,
             contact_email: contact_email || null,
             contact_phone: contact_phone || null,
-            sort_order: maxSortOrder + 1
+            logo_url: logo_url || null,
+            sort_order: maxSortOrder + 1,
+            show_banners_on_landing: showBanners
         });
 
         res.redirect('/admin/agencies?success=여행사가 성공적으로 추가되었습니다.');
@@ -762,6 +977,8 @@ app.post('/admin/agencies', requireAuth, async (req, res) => {
         res.redirect('/admin/agencies?error=여행사 추가 중 오류가 발생했습니다.');
     }
 });
+
+// (중복 제거) 여행사 수정 라우트는 아래 "여행사 정보 수정 API" 블록 하나만 사용합니다.
 
 app.delete('/admin/agencies/:id', requireAuth, async (req, res) => {
     const agencyId = req.params.id;
@@ -815,7 +1032,7 @@ app.delete('/admin/agencies/:id', requireAuth, async (req, res) => {
 // 여행사 정보 수정 API
 app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
     const agencyId = req.params.id;
-    const { name, agency_code, contact_email, contact_phone } = req.body;
+    const { name, agency_code, contact_email, contact_phone, logo_url, show_banners_on_landing } = req.body;
 
     try {
         // 기존 여행사 정보 확인
@@ -832,11 +1049,20 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
             }
         }
 
+        // 배너 노출 여부 업데이트: 값이 전달된 경우만 반영, 미전달 시 기존값 유지
+        let showFlag = existingAgency.show_banners_on_landing;
+        if (typeof show_banners_on_landing !== 'undefined') {
+            const val = String(show_banners_on_landing).toLowerCase();
+            showFlag = (val === 'false') ? false : (val === 'true' ? true : !!show_banners_on_landing);
+        }
+
         await jsonDB.update('agencies', agencyId, {
             name: name || existingAgency.name,
             agency_code: agency_code || existingAgency.agency_code,
             contact_email: contact_email !== undefined ? contact_email : existingAgency.contact_email,
-            contact_phone: contact_phone !== undefined ? contact_phone : existingAgency.contact_phone
+            contact_phone: contact_phone !== undefined ? contact_phone : existingAgency.contact_phone,
+            logo_url: logo_url !== undefined ? logo_url : existingAgency.logo_url,
+            show_banners_on_landing: (typeof showFlag === 'boolean') ? showFlag : true
         });
 
         res.json({ success: true, message: '여행사 정보가 성공적으로 수정되었습니다.' });
@@ -908,13 +1134,39 @@ app.get('/admin/agencies/:id', requireAuth, async (req, res) => {
 
 app.get('/admin/users', requireAuth, async (req, res) => {
     try {
-        const users = await jsonDB.getUsersWithAgency();
+        // 쿼리 파라미터 추출
+        const { search, page = 1 } = req.query;
+        const itemsPerPage = 20;
+        const currentPage = parseInt(page);
+
+        // 모든 사용자 조회
+        let users = await jsonDB.getUsersWithAgency();
+
+        // 최신순 정렬 (신규 발급 카드가 상위로)
+        users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        // 검색 필터링 (이름 또는 이메일)
+        if (search && search.trim()) {
+            const searchTerm = search.trim().toLowerCase();
+            users = users.filter(user => 
+                (user.customer_name && user.customer_name.toLowerCase().includes(searchTerm)) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        // 페이지네이션
+        const totalUsers = users.length;
+        const totalPages = Math.ceil(totalUsers / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedUsers = users.slice(startIndex, startIndex + itemsPerPage);
 
         res.render('admin/users', {
             title: '고객 관리',
-            users: users,
-            currentPage: 1,
-            totalPages: 1,
+            users: paginatedUsers,
+            search: search || '',
+            currentPage: currentPage,
+            totalPages: totalPages,
+            totalUsers: totalUsers,
             adminUsername: req.session.adminUsername
         });
 
@@ -923,8 +1175,10 @@ app.get('/admin/users', requireAuth, async (req, res) => {
         res.render('admin/users', {
             title: '고객 관리',
             users: [],
+            search: '',
             currentPage: 1,
             totalPages: 1,
+            totalUsers: 0,
             adminUsername: req.session.adminUsername
         });
     }
@@ -932,13 +1186,62 @@ app.get('/admin/users', requireAuth, async (req, res) => {
 
 app.get('/admin/usages', requireAuth, async (req, res) => {
     try {
-        const usages = await jsonDB.getUsagesWithDetails();
+        // 쿼리 파라미터 추출
+        const { store_filter, date_from, date_to, sort_order = 'desc', page = 1 } = req.query;
+        const itemsPerPage = 20;
+        const currentPage = parseInt(page);
+
+        // 모든 사용 이력 조회
+        let usages = await jsonDB.getUsagesWithDetails();
+
+        // 제휴업체 필터링
+        if (store_filter && store_filter.trim()) {
+            usages = usages.filter(usage => 
+                usage.store_code && usage.store_code.toLowerCase().includes(store_filter.toLowerCase())
+            );
+        }
+
+        // 날짜 필터링
+        if (date_from) {
+            const fromDate = new Date(date_from);
+            fromDate.setHours(0, 0, 0, 0);
+            usages = usages.filter(usage => new Date(usage.used_at) >= fromDate);
+        }
+
+        if (date_to) {
+            const toDate = new Date(date_to);
+            toDate.setHours(23, 59, 59, 999);
+            usages = usages.filter(usage => new Date(usage.used_at) <= toDate);
+        }
+
+        // 정렬
+        usages.sort((a, b) => {
+            const dateA = new Date(a.used_at);
+            const dateB = new Date(b.used_at);
+            return sort_order === 'asc' ? dateA - dateB : dateB - dateA;
+        });
+
+        // 제휴업체 목록 (필터 옵션용)
+        const allUsages = await jsonDB.getUsagesWithDetails();
+        const uniqueStores = [...new Set(allUsages.map(u => u.store_code).filter(Boolean))].sort();
+
+        // 페이지네이션
+        const totalUsages = usages.length;
+        const totalPages = Math.ceil(totalUsages / itemsPerPage);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedUsages = usages.slice(startIndex, startIndex + itemsPerPage);
 
         res.render('admin/usages', {
             title: '사용 이력 관리',
-            usages: usages,
-            currentPage: 1,
-            totalPages: 1,
+            usages: paginatedUsages,
+            stores: uniqueStores,
+            store_filter: store_filter || '',
+            date_from: date_from || '',
+            date_to: date_to || '',
+            sort_order: sort_order,
+            currentPage: currentPage,
+            totalPages: totalPages,
+            totalUsages: totalUsages,
             adminUsername: req.session.adminUsername
         });
 
@@ -947,8 +1250,14 @@ app.get('/admin/usages', requireAuth, async (req, res) => {
         res.render('admin/usages', {
             title: '사용 이력 관리',
             usages: [],
+            stores: [],
+            store_filter: '',
+            date_from: '',
+            date_to: '',
+            sort_order: 'desc',
             currentPage: 1,
             totalPages: 1,
+            totalUsages: 0,
             adminUsername: req.session.adminUsername
         });
     }

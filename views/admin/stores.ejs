@@ -263,7 +263,7 @@
                                 
                                 <div class="mb-2">
                                     <strong>할인 정보:</strong><br>
-                                    <small class="text-success"><%= store.discount %></small>
+                                    <small class="text-success"><%= store.discount_info %></small>
                                 </div>
                                 
                                 <div class="mb-2">
@@ -495,7 +495,8 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'same-origin'
                 });
 
                 const result = await response.json();
@@ -521,7 +522,8 @@
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'same-origin'
                 });
 
                 const result = await response.json();
@@ -550,7 +552,8 @@
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'same-origin'
                 });
                 
                 if (!response.ok) {
@@ -564,7 +567,7 @@
                 document.getElementById('editStoreName').value = store.name || '';
                 document.getElementById('editStoreCategory').value = store.category || '';
                 document.getElementById('editStoreDescription').value = store.description || '';
-                document.getElementById('editStoreDiscount').value = store.discount || '';
+                document.getElementById('editStoreDiscount').value = (store.discount_info || store.discount || '');
                 document.getElementById('editStoreAddress').value = store.address || '';
                 document.getElementById('editStorePhone').value = store.phone || '';
                 document.getElementById('editStoreWebsite').value = store.website || '';
@@ -591,7 +594,7 @@
                 name: document.getElementById('editStoreName').value,
                 category: document.getElementById('editStoreCategory').value,
                 description: document.getElementById('editStoreDescription').value,
-                discount: document.getElementById('editStoreDiscount').value,
+                discount_info: document.getElementById('editStoreDiscount').value,
                 address: document.getElementById('editStoreAddress').value,
                 phone: document.getElementById('editStorePhone').value,
                 website: document.getElementById('editStoreWebsite').value,
@@ -599,7 +602,7 @@
                 usage_count: parseInt(document.getElementById('editStoreUsageCount').value) || 0
             };
 
-            if (!formData.name || !formData.category || !formData.discount) {
+            if (!formData.name || !formData.category || !formData.discount_info) {
                 alert('필수 항목을 모두 입력해주세요.');
                 return;
             }
@@ -610,6 +613,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
+                    credentials: 'same-origin',
                     body: JSON.stringify(formData)
                 });
 

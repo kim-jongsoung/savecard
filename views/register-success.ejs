@@ -664,30 +664,21 @@
                 </div>
             </div>
 
-            <!-- 중요사항 강조 카드링크 섹션 -->
-            <div class="important-card-link">
-                <div class="important-header">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <h6 class="mb-0">중요! 카드 링크 보관</h6>
-                </div>
-                <div class="important-content">
-                    <p class="important-text">
-                        해당 링크는 토큰값이 적용된 모바일카드 고유링크이며 발급후 북마크나 링크를 알기쉬게 보관하셔서 제휴업체 사용시 설정하신 패스워드 입력후 사용하세요.
-                    </p>
-                    <div class="link-container">
-                        <div class="copy-link-important" id="cardLink"><%= cardUrl %></div>
-                        <button class="btn btn-warning btn-copy" onclick="copyLink()">
-                            <i class="fas fa-copy me-1"></i>링크 복사
-                        </button>
-                    </div>
-                </div>
+
+
+            <!-- 로그인 안내 섹션 -->
+            <div class="alert alert-info mt-4">
+                <h6><i class="fas fa-info-circle me-2"></i>다음에 카드를 사용하려면</h6>
+                <p class="mb-2">발급한 <strong>이메일</strong>과 <strong>4자리 비밀번호</strong>로 로그인하세요!</p>
+                <a href="/login" class="btn btn-primary btn-sm">
+                    <i class="fas fa-sign-in-alt me-1"></i>로그인 페이지로 이동
+                </a>
             </div>
 
             <div class="mt-4">
                 <a href="<%= cardUrl %>" class="btn-action">
                     <i class="fas fa-credit-card me-2"></i>내 카드 보기
                 </a>
-
             </div>
 
             <div class="mt-4">

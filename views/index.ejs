@@ -411,12 +411,27 @@
                 <div class="travel-icon"><i class="fas fa-sailboat"></i></div>
             </div>
             
+            <% if (partnerAgency) { %>
+                <!-- 제휴 여행사 로고만 표시 -->
+                <div class="partner-branding mb-3">
+                    <% if (partnerAgency.logo_url) { %>
+                        <img src="<%= partnerAgency.logo_url %>" alt="<%= partnerAgency.name %> 로고" 
+                             style="max-height: 80px; margin-bottom: 20px;" class="partner-logo">
+                    <% } %>
+                </div>
+            <% } %>
+            
             <h1 class="hero-title">
                 GUAM SAVE
+                <% if (partnerAgency) { %>
+                    <small class="text-light opacity-75 d-block" style="font-size: 0.5em; margin-top: 10px;">
+                        (<%= partnerAgency.name %>)
+                    </small>
+                <% } %>
             </h1>
             <p class="hero-subtitle">괌 여행의 모든 할인 혜택을 한 번에!</p>
             <div class="cta-buttons">
-                <a href="/register" class="btn btn-primary btn-lg me-3">
+                <a href="<% if (partnerAgency) { %>/register?agency=<%= partnerAgency.code %><% } else { %>/register<% } %>" class="btn btn-primary btn-lg me-3">
                     <i class="fas fa-credit-card me-2"></i>할인카드 발급받기
                 </a>
                 <a href="/my-card" class="btn btn-outline-light btn-lg me-3">

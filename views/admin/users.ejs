@@ -82,6 +82,44 @@
             </div>
         </div>
 
+        <!-- 검색 필터 -->
+        <div class="content-card mb-3">
+            <h5><i class="fas fa-search me-2"></i>고객 검색</h5>
+            <form method="GET" action="/admin/users" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="고객명 또는 이메일로 검색..." 
+                           value="<%= search %>" autocomplete="off">
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-1"></i>검색
+                        </button>
+                        <% if (search) { %>
+                            <a href="/admin/users" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>초기화
+                            </a>
+                        <% } %>
+                    </div>
+                </div>
+            </form>
+            
+            <% if (search) { %>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        '<%= search %>' 검색 결과: <strong><%= totalUsers %>명</strong>
+                    </small>
+                </div>
+            <% } else { %>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        전체 고객: <strong><%= totalUsers %>명</strong> (최신 발급순)
+                    </small>
+                </div>
+            <% } %>
+        </div>
+
         <!-- 고객 목록 -->
         <div class="content-card">
             <h5><i class="fas fa-list me-2"></i>발급된 카드 목록</h5>
@@ -118,9 +156,9 @@
                                     </td>
                                     <td><%= new Date(user.created_at).toLocaleDateString('ko-KR') %></td>
                                     <td>
-                                        <a href="/card?token=<%= user.token %>" target="_blank" 
+                                        <a href="/admin/view-card/<%= user.token %>" target="_blank" 
                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-external-link-alt"></i>
+                                            <i class="fas fa-credit-card me-1"></i>내 카드 보기
                                         </a>
                                     </td>
                                 </tr>
@@ -133,21 +171,30 @@
                 <% if (totalPages > 1) { %>
                     <nav>
                         <ul class="pagination">
+                            <% 
+                                // 검색 파라미터를 URL에 유지하기 위한 함수
+                                function buildPageUrl(page) {
+                                    const params = new URLSearchParams();
+                                    params.set('page', page);
+                                    if (search) params.set('search', search);
+                                    return '?' + params.toString();
+                                }
+                            %>
                             <% if (currentPage > 1) { %>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<%= currentPage - 1 %>">이전</a>
+                                    <a class="page-link" href="<%= buildPageUrl(currentPage - 1) %>">이전</a>
                                 </li>
                             <% } %>
                             
                             <% for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) { %>
                                 <li class="page-item <%= i === currentPage ? 'active' : '' %>">
-                                    <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+                                    <a class="page-link" href="<%= buildPageUrl(i) %>"><%= i %></a>
                                 </li>
                             <% } %>
                             
                             <% if (currentPage < totalPages) { %>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<%= currentPage + 1 %>">다음</a>
+                                    <a class="page-link" href="<%= buildPageUrl(currentPage + 1) %>">다음</a>
                                 </li>
                             <% } %>
                         </ul>
