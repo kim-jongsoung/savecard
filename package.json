@@ -2,10 +2,10 @@
   "name": "guam-savecard",
   "version": "1.0.0",
   "description": "괌세이브카드 QR 할인카드 시스템",
-  "main": "server-simple.js",
+  "main": "server-postgresql.js",
   "scripts": {
-    "start": "node server-simple.js",
-    "dev": "nodemon server-simple.js",
+    "start": "node server-postgresql.js",
+    "dev": "nodemon server-postgresql.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

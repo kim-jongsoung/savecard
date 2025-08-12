@@ -32,12 +32,14 @@ async function createTables() {
         name VARCHAR(255) NOT NULL,
         category VARCHAR(100),
         discount VARCHAR(255),
-        location VARCHAR(255),
+        discount_info TEXT,
+        address VARCHAR(500),
         phone VARCHAR(50),
-        hours VARCHAR(255),
+        website VARCHAR(500),
         description TEXT,
         image_url VARCHAR(500),
         usage_count INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -65,28 +67,29 @@ async function createTables() {
       CREATE TABLE IF NOT EXISTS agencies (
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        agency_code VARCHAR(50) UNIQUE NOT NULL,
-        contact_email VARCHAR(255),
-        contact_phone VARCHAR(50),
-        sort_order INTEGER DEFAULT 999,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        discount_info TEXT,
+        show_banners_on_landing BOOLEAN DEFAULT true,
+        display_order INTEGER DEFAULT 999,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // 카드 사용자 테이블 (지난주 완성된 구조)
+    // 카드 사용자 테이블
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
-        customer_name VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        phone VARCHAR(50),
+        email VARCHAR(255),
         agency_id INTEGER REFERENCES agencies(id),
         token VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(4) NOT NULL,
-        qr_image_path VARCHAR(500),
+        qr_code TEXT,
         expiration_start TIMESTAMP,
         expiration_end TIMESTAMP,
-        expiration_text VARCHAR(255),
-        issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -95,7 +98,7 @@ async function createTables() {
       CREATE TABLE IF NOT EXISTS usages (
         id SERIAL PRIMARY KEY,
         token VARCHAR(255) NOT NULL,
-        store_code VARCHAR(255) NOT NULL,
+        store_name VARCHAR(255) NOT NULL,
         used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         ip_address VARCHAR(45),
         user_agent TEXT
