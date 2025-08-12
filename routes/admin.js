@@ -1,0 +1,342 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const { pool } = require('../config/database');
+
+const router = express.Router();
+
+// 관리자 인증 미들웨어
+function requireAuth(req, res, next) {
+    if (!req.session.adminId) {
+        return res.redirect('/admin/login');
+    }
+    next();
+}
+
+// 관리자 로그인 페이지
+router.get('/login', (req, res) => {
+    if (req.session.adminId) {
+        return res.redirect('/admin');
+    }
+    res.render('admin/login', {
+        title: '관리자 로그인',
+        error: null
+    });
+});
+
+// 로그인 처리
+router.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    try {
+        const [adminResult] = await pool.execute(
+            'SELECT id, username, password_hash FROM admins WHERE username = ?',
+            [username]
+        );
+
+        if (adminResult.length === 0) {
+            return res.render('admin/login', {
+                title: '관리자 로그인',
+                error: '아이디 또는 비밀번호가 잘못되었습니다.'
+            });
+        }
+
+        const admin = adminResult[0];
+        const isValidPassword = await bcrypt.compare(password, admin.password_hash);
+
+        if (!isValidPassword) {
+            return res.render('admin/login', {
+                title: '관리자 로그인',
+                error: '아이디 또는 비밀번호가 잘못되었습니다.'
+            });
+        }
+
+        // 세션에 관리자 정보 저장
+        req.session.adminId = admin.id;
+        req.session.adminUsername = admin.username;
+
+        // 마지막 로그인 시간 업데이트
+        await pool.execute(
+            'UPDATE admins SET last_login = NOW() WHERE id = ?',
+            [admin.id]
+        );
+
+        res.redirect('/admin');
+
+    } catch (error) {
+        console.error('로그인 오류:', error);
+        res.render('admin/login', {
+            title: '관리자 로그인',
+            error: '로그인 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 로그아웃
+router.get('/logout', (req, res) => {
+    req.session.destroy();
+    res.redirect('/admin/login');
+});
+
+// 관리자 대시보드
+router.get('/', requireAuth, async (req, res) => {
+    try {
+        // 통계 데이터 조회
+        const [stats] = await pool.execute(`
+            SELECT 
+                (SELECT COUNT(*) FROM travel_agencies) as total_agencies,
+                (SELECT COUNT(*) FROM savecard_users) as total_users,
+                (SELECT COUNT(*) FROM card_usages) as total_usages,
+                (SELECT COUNT(*) FROM banners WHERE is_active = 1) as active_banners
+        `);
+
+        // 최근 사용 이력
+        const [recentUsages] = await pool.execute(`
+            SELECT cu.store_code, cu.used_at, su.customer_name, ta.name as agency_name
+            FROM card_usages cu
+            JOIN savecard_users su ON cu.token = su.token
+            JOIN travel_agencies ta ON su.agency_id = ta.id
+            ORDER BY cu.used_at DESC
+            LIMIT 10
+        `);
+
+        res.render('admin/dashboard', {
+            title: '관리자 대시보드',
+            stats: stats[0],
+            recentUsages: recentUsages,
+            adminUsername: req.session.adminUsername
+        });
+
+    } catch (error) {
+        console.error('대시보드 오류:', error);
+        res.render('admin/dashboard', {
+            title: '관리자 대시보드',
+            stats: { total_agencies: 0, total_users: 0, total_usages: 0, active_banners: 0 },
+            recentUsages: [],
+            adminUsername: req.session.adminUsername
+        });
+    }
+});
+
+// 여행사 관리
+router.get('/agencies', requireAuth, async (req, res) => {
+    try {
+        const [agencies] = await pool.execute(`
+            SELECT ta.*, 
+                   COUNT(su.id) as user_count
+            FROM travel_agencies ta
+            LEFT JOIN savecard_users su ON ta.id = su.agency_id
+            GROUP BY ta.id
+            ORDER BY ta.created_at DESC
+        `);
+
+        res.render('admin/agencies', {
+            title: '여행사 관리',
+            agencies: agencies,
+            adminUsername: req.session.adminUsername,
+            success: req.query.success,
+            error: req.query.error
+        });
+
+    } catch (error) {
+        console.error('여행사 목록 조회 오류:', error);
+        res.render('admin/agencies', {
+            title: '여행사 관리',
+            agencies: [],
+            adminUsername: req.session.adminUsername,
+            success: null,
+            error: '데이터를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 여행사 추가
+router.post('/agencies', requireAuth, async (req, res) => {
+    const { name, agency_code, contact_email, contact_phone } = req.body;
+
+    try {
+        await pool.execute(
+            'INSERT INTO travel_agencies (name, agency_code, contact_email, contact_phone) VALUES (?, ?, ?, ?)',
+            [name, agency_code, contact_email || null, contact_phone || null]
+        );
+
+        res.redirect('/admin/agencies?success=여행사가 성공적으로 추가되었습니다.');
+
+    } catch (error) {
+        console.error('여행사 추가 오류:', error);
+        let errorMessage = '여행사 추가 중 오류가 발생했습니다.';
+        if (error.code === 'ER_DUP_ENTRY') {
+            errorMessage = '이미 존재하는 여행사 코드입니다.';
+        }
+        res.redirect(`/admin/agencies?error=${errorMessage}`);
+    }
+});
+
+// 고객 관리
+router.get('/users', requireAuth, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+
+        // 전체 사용자 수 조회
+        const [countResult] = await pool.execute(
+            'SELECT COUNT(*) as total FROM savecard_users'
+        );
+        const totalUsers = countResult[0].total;
+        const totalPages = Math.ceil(totalUsers / limit);
+
+        // 사용자 목록 조회
+        const [users] = await pool.execute(`
+            SELECT su.*, ta.name as agency_name,
+                   COUNT(cu.id) as usage_count
+            FROM savecard_users su
+            JOIN travel_agencies ta ON su.agency_id = ta.id
+            LEFT JOIN card_usages cu ON su.token = cu.token
+            GROUP BY su.id
+            ORDER BY su.created_at DESC
+            LIMIT ? OFFSET ?
+        `, [limit, offset]);
+
+        res.render('admin/users', {
+            title: '고객 관리',
+            users: users,
+            currentPage: page,
+            totalPages: totalPages,
+            adminUsername: req.session.adminUsername
+        });
+
+    } catch (error) {
+        console.error('고객 목록 조회 오류:', error);
+        res.render('admin/users', {
+            title: '고객 관리',
+            users: [],
+            currentPage: 1,
+            totalPages: 1,
+            adminUsername: req.session.adminUsername
+        });
+    }
+});
+
+// 사용 이력 관리
+router.get('/usages', requireAuth, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 50;
+        const offset = (page - 1) * limit;
+
+        // 전체 사용 이력 수 조회
+        const [countResult] = await pool.execute(
+            'SELECT COUNT(*) as total FROM card_usages'
+        );
+        const totalUsages = countResult[0].total;
+        const totalPages = Math.ceil(totalUsages / limit);
+
+        // 사용 이력 조회
+        const [usages] = await pool.execute(`
+            SELECT cu.*, su.customer_name, ta.name as agency_name
+            FROM card_usages cu
+            JOIN savecard_users su ON cu.token = su.token
+            JOIN travel_agencies ta ON su.agency_id = ta.id
+            ORDER BY cu.used_at DESC
+            LIMIT ? OFFSET ?
+        `, [limit, offset]);
+
+        res.render('admin/usages', {
+            title: '사용 이력 관리',
+            usages: usages,
+            currentPage: page,
+            totalPages: totalPages,
+            adminUsername: req.session.adminUsername
+        });
+
+    } catch (error) {
+        console.error('사용 이력 조회 오류:', error);
+        res.render('admin/usages', {
+            title: '사용 이력 관리',
+            usages: [],
+            currentPage: 1,
+            totalPages: 1,
+            adminUsername: req.session.adminUsername
+        });
+    }
+});
+
+// 광고 배너 관리
+router.get('/banners', requireAuth, async (req, res) => {
+    try {
+        const [banners] = await pool.execute(`
+            SELECT * FROM banners
+            ORDER BY display_order ASC, created_at DESC
+        `);
+
+        res.render('admin/banners', {
+            title: '광고 배너 관리',
+            banners: banners,
+            adminUsername: req.session.adminUsername,
+            success: req.query.success,
+            error: req.query.error
+        });
+
+    } catch (error) {
+        console.error('배너 목록 조회 오류:', error);
+        res.render('admin/banners', {
+            title: '광고 배너 관리',
+            banners: [],
+            adminUsername: req.session.adminUsername,
+            success: null,
+            error: '데이터를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 배너 추가
+router.post('/banners', requireAuth, async (req, res) => {
+    const { advertiser_name, image_url, link_url, display_order } = req.body;
+
+    try {
+        await pool.execute(
+            'INSERT INTO banners (advertiser_name, image_url, link_url, display_order) VALUES (?, ?, ?, ?)',
+            [advertiser_name, image_url, link_url || null, parseInt(display_order) || 0]
+        );
+
+        res.redirect('/admin/banners?success=광고 배너가 성공적으로 추가되었습니다.');
+
+    } catch (error) {
+        console.error('배너 추가 오류:', error);
+        res.redirect('/admin/banners?error=배너 추가 중 오류가 발생했습니다.');
+    }
+});
+
+// 배너 활성화/비활성화
+router.post('/banners/:id/toggle', requireAuth, async (req, res) => {
+    const bannerId = req.params.id;
+
+    try {
+        await pool.execute(
+            'UPDATE banners SET is_active = NOT is_active WHERE id = ?',
+            [bannerId]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('배너 상태 변경 오류:', error);
+        res.json({ success: false, message: '상태 변경 중 오류가 발생했습니다.' });
+    }
+});
+
+// 배너 삭제
+router.delete('/banners/:id', requireAuth, async (req, res) => {
+    const bannerId = req.params.id;
+
+    try {
+        await pool.execute('DELETE FROM banners WHERE id = ?', [bannerId]);
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('배너 삭제 오류:', error);
+        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+    }
+});
+
+module.exports = router;

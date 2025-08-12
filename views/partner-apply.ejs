@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제휴업체 신청 - 괌세이브카드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #ff5a5f, #ff8e8e);
+            color: white;
+            padding: 60px 0;
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .hero-section h1 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .benefits-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .benefit-item {
+            padding: 20px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .benefit-item:last-child {
+            border-bottom: none;
+        }
+        
+        .benefit-item h5 {
+            color: #ff5a5f;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .application-form {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-control {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            font-size: 16px;
+        }
+        
+        .form-control:focus {
+            border-color: #ff5a5f;
+            box-shadow: 0 0 0 0.2rem rgba(255, 90, 95, 0.25);
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #ff5a5f, #ff8e8e);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 90, 95, 0.4);
+            color: white;
+        }
+        
+        .back-link {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        
+        .back-link:hover {
+            color: #f8f9fa;
+            text-decoration: none;
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- 뒤로가기 링크 -->
+                <a href="/" class="back-link">
+                    <i class="fas fa-arrow-left me-2"></i>메인페이지로 돌아가기 / Back to Main
+                </a>
+                
+                <!-- 히어로 섹션 -->
+                <div class="hero-section">
+                    <h1>🤝 제휴업체 신청</h1>
+                    <h2 style="font-size: 1.8rem; margin-bottom: 20px;">Partner Application</h2>
+                    <p style="font-size: 1.2rem; opacity: 0.9;">
+                        괌세이브카드와 함께 더 많은 한국인 관광객을 만나보세요<br>
+                        Join Guam Save Card and connect with more Korean tourists
+                    </p>
+                </div>
+                
+                <!-- 혜택 안내 섹션 -->
+                <div class="benefits-section">
+                    <div style="text-align: center; padding: 20px; line-height: 1.8; font-size: 16px; color: #333;">
+                        <div class="benefit-item">
+                            <h5><strong>한국인 여행객에게 혜택을 만들어 주세요.</strong></h5>
+                            <p><strong>Create special benefits for Korean travelers.</strong></p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <h5><strong>귀하의 매장을 한국인 관광객에게 더 많이 알리고,<br>
+                            더 많이 방문하게 만들 수 있습니다.</strong></h5>
+                            <p><strong>Promote your store to Korean tourists and increase foot traffic.</strong></p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <h5><strong>괌세이브카드는 단순한 할인 쿠폰이 아닙니다.</strong></h5>
+                            <p><strong>Guam Save Card is more than just a discount coupon.</strong></p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <h5><strong>우리는 한국 여행객들을 위해 직접 현지 매장과 협상하여<br>
+                            "진짜 혜택"을 만들고 제공합니다.</strong></h5>
+                            <p><strong>We negotiate directly with local businesses to provide real benefits to Korean tourists.</strong></p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <h5><strong>이제 귀하의 매장을 검증된 제휴처로 등록해 보세요.</strong></h5>
+                            <p><strong>Join us as a trusted partner and be featured on the Guam Save Card platform.</strong></p>
+                        </div>
+
+                        <div class="benefit-item">
+                            <h5><strong>지금 신청하고 더 많은 한국인 고객을 만나보세요.</strong></h5>
+                            <p><strong>Apply now and attract more Korean customers to your business.</strong></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 신청 폼 -->
+                <div class="application-form">
+                    <h3 style="text-align: center; color: #ff5a5f; margin-bottom: 30px;">
+                        <i class="fas fa-store me-2"></i>제휴업체 신청서 / Partnership Application Form
+                    </h3>
+                    
+                    <div id="success-message" class="success-message">
+                        <i class="fas fa-check-circle me-2"></i>
+                        신청이 성공적으로 접수되었습니다! 검토 후 연락드리겠습니다.<br>
+                        Your application has been successfully submitted! We will contact you after review.
+                    </div>
+                    
+                    <div id="error-message" class="error-message">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        신청 중 오류가 발생했습니다. 다시 시도해주세요.<br>
+                        An error occurred during application. Please try again.
+                    </div>
+                    
+                    <form id="partner-application-form">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="business_name" class="form-label">
+                                    <i class="fas fa-store me-2"></i>업체명 / Business Name *
+                                </label>
+                                <input type="text" class="form-control" id="business_name" name="business_name" 
+                                       placeholder="ABC Restaurant" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="contact_name" class="form-label">
+                                    <i class="fas fa-user me-2"></i>담당자명 / Contact Person *
+                                </label>
+                                <input type="text" class="form-control" id="contact_name" name="contact_name" 
+                                       placeholder="John Smith" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>이메일 주소 / Email Address *
+                                </label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       placeholder="contact@abcrestaurant.com" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">
+                                    <i class="fas fa-phone me-2"></i>전화번호 / Phone Number *
+                                </label>
+                                <input type="tel" class="form-control" id="phone" name="phone" 
+                                       placeholder="+1-671-123-4567" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="business_address" class="form-label">
+                                <i class="fas fa-map-marker-alt me-2"></i>매장 주소 / Business Address *
+                            </label>
+                            <textarea class="form-control" id="business_address" name="business_address" rows="2" 
+                                      placeholder="123 Main Street, Tumon, Guam 96913" required></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="business_type" class="form-label">
+                                    <i class="fas fa-tags me-2"></i>업종 / Business Type *
+                                </label>
+                                <select class="form-control" id="business_type" name="business_type" required>
+                                    <option value="">선택해주세요 / Please Select</option>
+                                    <option value="restaurant">레스토랑 / Restaurant</option>
+                                    <option value="cafe">카페 / Cafe</option>
+                                    <option value="shopping">쇼핑 / Shopping</option>
+                                    <option value="activity">액티비티 / Activity</option>
+                                    <option value="accommodation">숙박 / Accommodation</option>
+                                    <option value="service">서비스 / Service</option>
+                                    <option value="other">기타 / Other</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="proposed_discount" class="form-label">
+                                    <i class="fas fa-percent me-2"></i>제안 할인율/혜택 / Proposed Discount/Benefit
+                                </label>
+                                <input type="text" class="form-control" id="proposed_discount" name="proposed_discount" 
+                                       placeholder="10% discount, Free drink, etc.">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="business_description" class="form-label">
+                                <i class="fas fa-info-circle me-2"></i>매장 소개 / Business Description
+                            </label>
+                            <textarea class="form-control" id="business_description" name="business_description" rows="4" 
+                                      placeholder="Tell us about your business, what makes it special, and why Korean tourists would love to visit..."></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="additional_notes" class="form-label">
+                                <i class="fas fa-comment me-2"></i>추가 메모 / Additional Notes
+                            </label>
+                            <textarea class="form-control" id="additional_notes" name="additional_notes" rows="3" 
+                                      placeholder="Any additional information you'd like to share..."></textarea>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="agree_terms" name="agree_terms" required>
+                            <label class="form-check-label" for="agree_terms">
+                                <strong>약관에 동의합니다 / I agree to the terms and conditions *</strong><br>
+                                <small class="text-muted">
+                                    신청 후 검토를 거쳐 연락드리며, 제휴 조건은 협의를 통해 결정됩니다.<br>
+                                    We will contact you after review, and partnership terms will be determined through discussion.
+                                </small>
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-submit">
+                            <i class="fas fa-paper-plane me-2"></i>제휴 신청하기 / Submit Application
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer style="text-align: center; padding: 20px 0; font-size: 14px; color: #ffffff; background: rgba(0,0,0,0.1); margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.2); text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+        &copy; 2025 luxfind. All rights reserved. Developed by Kim Jongsoung.
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('partner-application-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            const successMessage = document.getElementById('success-message');
+            const errorMessage = document.getElementById('error-message');
+            
+            // 메시지 숨기기
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            // 버튼 상태 변경
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>신청 중... / Submitting...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/partner-apply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    successMessage.style.display = 'block';
+                    this.reset();
+                    // 성공 메시지로 스크롤
+                    successMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    errorMessage.style.display = 'block';
+                    errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.style.display = 'block';
+                errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } finally {
+                // 버튼 상태 복원
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

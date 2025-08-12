@@ -1,0 +1,29 @@
+[
+  {
+    "id": "1754487857284",
+    "businessName": "테스트 업체",
+    "email": "test@example.com",
+    "contactName": "홍길동",
+    "status": "pending",
+    "createdAt": "2025-08-06T13:44:17.291Z",
+    "updatedAt": "2025-08-06T13:44:17.292Z"
+  },
+  {
+    "id": "1754487879981",
+    "businessName": "dfdsf",
+    "email": "kmtour@naver.com",
+    "contactName": "sdfsdf",
+    "status": "pending",
+    "createdAt": "2025-08-06T13:44:39.981Z",
+    "updatedAt": "2025-08-06T13:44:39.981Z"
+  },
+  {
+    "id": "1754488547437",
+    "businessName": "sdfsdfasdf",
+    "email": "luxfind01@gmail.com",
+    "contactName": "sdfasdfsadfsdf",
+    "status": "pending",
+    "createdAt": "2025-08-06T13:55:47.437Z",
+    "updatedAt": "2025-08-06T13:55:47.437Z"
+  }
+]

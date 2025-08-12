@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>제휴업체 신청 관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 15px;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-approved {
+            background-color: #d1edff;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .application-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .application-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .btn-action {
+            margin: 2px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+        }
+        
+        .business-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .contact-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">대시보드</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/agencies">여행사 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">고객 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/stores">제휴업체 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/usages">사용 이력</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/banners">광고 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/partner-applications">제휴업체 신청</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i><%= adminUsername %>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-handshake me-2"></i>제휴업체 신청 관리</h2>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" onclick="filterApplications('all')">
+                    <i class="fas fa-list me-1"></i>전체 (<span id="count-all">0</span>)
+                </button>
+                <button class="btn btn-outline-warning" onclick="filterApplications('pending')">
+                    <i class="fas fa-clock me-1"></i>대기 (<span id="count-pending">0</span>)
+                </button>
+                <button class="btn btn-outline-success" onclick="filterApplications('approved')">
+                    <i class="fas fa-check me-1"></i>승인 (<span id="count-approved">0</span>)
+                </button>
+                <button class="btn btn-outline-danger" onclick="filterApplications('rejected')">
+                    <i class="fas fa-times me-1"></i>거절 (<span id="count-rejected">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <!-- 신청 목록 -->
+        <div id="applications-container">
+            <% if (applications && applications.length > 0) { %>
+                <% applications.forEach(app => { %>
+                    <div class="application-card card" data-status="<%= app.status %>">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    <i class="fas fa-store me-2"></i><%= app.business_name %>
+                                    <span class="status-badge status-<%= app.status %>">
+                                        <% if (app.status === 'pending') { %>
+                                            <i class="fas fa-clock me-1"></i>검토 대기
+                                        <% } else if (app.status === 'approved') { %>
+                                            <i class="fas fa-check me-1"></i>승인됨
+                                        <% } else if (app.status === 'rejected') { %>
+                                            <i class="fas fa-times me-1"></i>거절됨
+                                        <% } %>
+                                    </span>
+                                </h5>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>신청일: <%= new Date(app.created_at).toLocaleString('ko-KR') %>
+                                    <% if (app.reviewed_at) { %>
+                                        | <i class="fas fa-eye me-1"></i>검토일: <%= new Date(app.reviewed_at).toLocaleString('ko-KR') %>
+                                    <% } %>
+                                </small>
+                            </div>
+                            <div class="btn-group">
+                                <% if (app.status === 'pending') { %>
+                                    <button class="btn btn-success btn-action" onclick="updateApplicationStatus('<%= app.id %>', 'approved')">
+                                        <i class="fas fa-check me-1"></i>승인
+                                    </button>
+                                    <button class="btn btn-danger btn-action" onclick="updateApplicationStatus('<%= app.id %>', 'rejected')">
+                                        <i class="fas fa-times me-1"></i>거절
+                                    </button>
+                                <% } %>
+                                <button class="btn btn-info btn-action" onclick="viewApplicationDetails('<%= app.id %>')">
+                                    <i class="fas fa-eye me-1"></i>상세보기
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="contact-info">
+                                        <h6><i class="fas fa-user me-2"></i>담당자 정보</h6>
+                                        <p class="mb-1"><strong>이름:</strong> <%= app.contact_name %></p>
+                                        <p class="mb-1"><strong>이메일:</strong> 
+                                            <a href="mailto:<%= app.email %>"><%= app.email %></a>
+                                        </p>
+                                        <p class="mb-0"><strong>전화:</strong> 
+                                            <a href="tel:<%= app.phone %>"><%= app.phone %></a>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="business-info">
+                                        <h6><i class="fas fa-info-circle me-2"></i>업체 정보</h6>
+                                        <p class="mb-1"><strong>업체명:</strong> <%= app.business_name %></p>
+                                        <p class="mb-1"><strong>업종:</strong> <%= app.business_type %></p>
+                                        <p class="mb-1"><strong>주소:</strong> <%= app.business_address %></p>
+                                        <% if (app.proposed_discount) { %>
+                                            <p class="mb-0"><strong>제안 혜택:</strong> <%= app.proposed_discount %></p>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                            <% if (app.business_description) { %>
+                                <div class="mt-3">
+                                    <h6><i class="fas fa-file-text me-2"></i>업체 소개</h6>
+                                    <p class="text-muted"><%= app.business_description %></p>
+                                </div>
+                            <% } %>
+                            <% if (app.notes) { %>
+                                <div class="mt-3">
+                                    <h6><i class="fas fa-sticky-note me-2"></i>관리자 메모</h6>
+                                    <p class="text-info"><%= app.notes %></p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">신청 내역이 없습니다</h4>
+                    <p class="text-muted">아직 제휴업체 신청이 접수되지 않았습니다.</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- 상세보기 모달 -->
+    <div class="modal fade" id="applicationDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle me-2"></i>제휴업체 신청 상세정보
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="applicationDetailContent">
+                    <!-- 상세 내용이 여기에 로드됩니다 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer style="text-align: center; padding: 20px 0; font-size: 14px; color: #333; background: #f8f9fa; margin-top: 30px; border-top: 1px solid #dee2e6; font-weight: 500;">
+        &copy; 2025 luxfind. All rights reserved. Developed by Kim Jongsoung.
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 페이지 로드 시 통계 업데이트
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCounts();
+        });
+
+        // 통계 업데이트
+        function updateCounts() {
+            const all = document.querySelectorAll('.application-card').length;
+            const pending = document.querySelectorAll('.application-card[data-status="pending"]').length;
+            const approved = document.querySelectorAll('.application-card[data-status="approved"]').length;
+            const rejected = document.querySelectorAll('.application-card[data-status="rejected"]').length;
+
+            document.getElementById('count-all').textContent = all;
+            document.getElementById('count-pending').textContent = pending;
+            document.getElementById('count-approved').textContent = approved;
+            document.getElementById('count-rejected').textContent = rejected;
+        }
+
+        // 필터링
+        function filterApplications(status) {
+            const cards = document.querySelectorAll('.application-card');
+            
+            cards.forEach(card => {
+                if (status === 'all' || card.dataset.status === status) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // 신청 상태 업데이트
+        async function updateApplicationStatus(applicationId, newStatus) {
+            const notes = prompt(`${newStatus === 'approved' ? '승인' : '거절'} 사유를 입력하세요 (선택사항):`);
+            
+            try {
+                const response = await fetch(`/admin/api/partner-applications/${applicationId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        status: newStatus,
+                        notes: notes || ''
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`신청이 ${newStatus === 'approved' ? '승인' : '거절'}되었습니다.`);
+                    location.reload();
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('시스템 오류가 발생했습니다.');
+            }
+        }
+
+        // 상세보기
+        async function viewApplicationDetails(applicationId) {
+            try {
+                const response = await fetch(`/admin/api/partner-applications/${applicationId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const app = result.application;
+                    const content = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-store me-2"></i>업체 정보</h6>
+                                <table class="table table-sm">
+                                    <tr><td><strong>업체명:</strong></td><td>${app.business_name}</td></tr>
+                                    <tr><td><strong>업종:</strong></td><td>${app.business_type}</td></tr>
+                                    <tr><td><strong>주소:</strong></td><td>${app.business_address}</td></tr>
+                                    <tr><td><strong>제안 혜택:</strong></td><td>${app.proposed_discount || '없음'}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-user me-2"></i>담당자 정보</h6>
+                                <table class="table table-sm">
+                                    <tr><td><strong>이름:</strong></td><td>${app.contact_name}</td></tr>
+                                    <tr><td><strong>이메일:</strong></td><td><a href="mailto:${app.email}">${app.email}</a></td></tr>
+                                    <tr><td><strong>전화:</strong></td><td><a href="tel:${app.phone}">${app.phone}</a></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        ${app.business_description ? `
+                            <div class="mt-3">
+                                <h6><i class="fas fa-file-text me-2"></i>업체 소개</h6>
+                                <p class="border p-3 rounded">${app.business_description}</p>
+                            </div>
+                        ` : ''}
+                        ${app.additional_notes ? `
+                            <div class="mt-3">
+                                <h6><i class="fas fa-comment me-2"></i>추가 메모</h6>
+                                <p class="border p-3 rounded">${app.additional_notes}</p>
+                            </div>
+                        ` : ''}
+                        <div class="mt-3">
+                            <h6><i class="fas fa-info-circle me-2"></i>신청 정보</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>신청일:</strong></td><td>${new Date(app.applied_at).toLocaleString('ko-KR')}</td></tr>
+                                <tr><td><strong>상태:</strong></td><td>
+                                    <span class="status-badge status-${app.status}">
+                                        ${app.status === 'pending' ? '검토 대기' : app.status === 'approved' ? '승인됨' : '거절됨'}
+                                    </span>
+                                </td></tr>
+                                ${app.reviewed_at ? `<tr><td><strong>검토일:</strong></td><td>${new Date(app.reviewed_at).toLocaleString('ko-KR')}</td></tr>` : ''}
+                                ${app.notes ? `<tr><td><strong>관리자 메모:</strong></td><td>${app.notes}</td></tr>` : ''}
+                            </table>
+                        </div>
+                    `;
+                    
+                    document.getElementById('applicationDetailContent').innerHTML = content;
+                    new bootstrap.Modal(document.getElementById('applicationDetailModal')).show();
+                } else {
+                    alert('상세 정보를 불러올 수 없습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('시스템 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>

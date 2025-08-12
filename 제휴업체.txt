@@ -1,0 +1,617 @@
+
+업체명 * 민즈 오사카 마트
+영문명 Min's Osaka Mart
+카테고리 * 마트/상점
+선택하세요
+혜택 내역 * 0% 할인 (담배 및 주류 품목 제외)
+혜택 내역 (영문) 0% discount (excluding tobacco and alcoholic beverages)
+노출 순서 0
+설명 담배 및 주류 품목은 할인에서 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Tobacco and alcoholic beverages are excluded from the discount. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 셀프픽스 카페
+영문명 Safpix Café
+카테고리 * 카페
+선택하세요
+혜택 내역 * 결제 금액 $20당 무료 음료 1잔 제공
+혜택 내역 (영문) 1 free drink for every $20 spent
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 릿광
+영문명
+카테고리 * 상점
+선택하세요
+혜택 내역 * 60% 할인
+혜택 내역 (영문) 60% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 돈키호테
+영문명 Don Dan Donki Guam
+카테고리 * 마트/상점
+선택하세요
+혜택 내역 * 결제 금액 $50 이상 5% 할인
+혜택 내역 (영문) 5% discount for payments over $50
+노출 순서 0
+설명 최소 결제금액 $80 구매 시 5% 할인 + 랜덤 선물 (열쇠고리, 에코백 등/품절시 제공 중단)이 제공됩니다. 서비스 차지 및 추가 비용은 현장에서 고객에게 청구됩니다. 혜택 이용 시 반드시 결제 전 디지털 괌 세이브 카드를 직원에게 확인 진행해야 합니다. 주문 후 괌 세이브 카드를 보여주는 경우 혜택이 불가합니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) For purchases of $80 or more, get 5% discount + a random gift (keychain, eco-bag, etc./discontinued if out of stock). Service charges and additional costs are charged to the customer on-site. When using the benefit, you must show the digital Guam Save Card to the staff before payment. Benefits are not available if you show the Guam Save Card after ordering. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 아이스 우나 괌
+영문명 e Una Guam
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 전체 금액 10% 할인
+혜택 내역 (영문) 10% off total bill
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 티지아이 프라이데이
+영문명 TGI Friday's
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 인퓨전 커피&티 DFS
+영문명 Infusion Coffee & Tea
+카테고리 * 카페
+선택하세요
+혜택 내역 * 음료만 10% 할인
+혜택 내역 (영문) 10% off drinks only
+노출 순서 0
+설명 음식 및 소매품은 할인 혜택에서 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Food and retail items are excluded from the discount. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 하팔로하
+영문명 Hafaloha
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 메인 메뉴 구매 시 전체 금액 15% 할인
+혜택 내역 (영문) 15% off total bill with main menu purchase
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능하며, 연속 혜택 사용이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions, and consecutive benefits cannot be used.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 고메 괌
+영문명 Gourmet Guam
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 5% 할인
+혜택 내역 (영문) 5% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 이자카야 바이 지미
+영문명 EZ-KAYA BY JIMMY
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 식사, 음료, 주류 모두 할인 적용됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to all meals, drinks, and alcoholic beverages. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 카페 치노
+영문명 Caffe Lino
+카테고리 * 카페
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 At Hilton Guam
+주소 (영문) At Hilton Guam
+전화번호
+웹사이트
+
+업체명 * 뉴 초이 레스토랑
+영문명 New Choi's Restaurant
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 름삐아 or 교자 1개 제공
+혜택 내역 (영문) 1 lumpia or gyoza provided
+노출 순서 0
+설명 혜택 제공은 하루 1번, 주문 1번으로 제한됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Benefit limited to 1 per day, 1 per order. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * K-치킨
+영문명 K-Chicken
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 테이크 아웃 최소 $40 결제 시 5% 할인
+혜택 내역 (영문) 5% discount for takeout orders of $40 or more
+노출 순서 0
+설명 메인 메뉴당 밥 1공기 기본 반찬이 제공됩니다 (에피타이저). 혜택 제공 시간은 16:30~21:30입니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) 1 bowl of rice and basic side dishes provided per main menu (appetizer). Benefit available from 16:30 to 21:30. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 치킨 펌 & 카페
+영문명 Chicken Pub & Cafe
+카테고리 * 레스토랑/카페
+선택하세요
+혜택 내역 * 최소 $45 결제 시 아이스 커피 2잔 제공
+혜택 내역 (영문) 2 free iced coffees with minimum $45 payment
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 피카
+영문명 Manang Pika
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 주류 품목은 할인에서 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Alcoholic beverages are excluded from the discount. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 부니스 바케이드 앤 비스트로
+영문명 Binnie's Barkede N Bistro
+카테고리 * 레스토랑/바
+선택하세요
+혜택 내역 * 메인 메뉴 주문 당 음료 1잔 제공
+혜택 내역 (영문) 1 free drink per main menu order
+노출 순서 0
+설명 최소 $30 결제 시 5% 할인 (위 혜택과 중복 가능)이 적용됩니다. 전체 결제 금액에서 주류 포함 할인 혜택이 적용 가능합니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) 5% discount for minimum $30 payment (can be combined with the above benefit). Discount applies to total payment including alcoholic beverages. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * CRC 루프탑
+영문명 CPC Rooftop
+카테고리 * 레스토랑/바
+선택하세요
+혜택 내역 * 저녁 식사 메뉴 주문 시 노래방 이용 50% 할인
+혜택 내역 (영문) 50% discount on karaoke when ordering dinner menu
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 블레이즈 레스토랑 & 바
+영문명 Blaze Restaurant & Bar
+카테고리 * 레스토랑/바
+선택하세요
+혜택 내역 * 전체 금액 10% 할인
+혜택 내역 (영문) 10% off total bill
+노출 순서 0
+설명 해피 아워 타임 음식과 음료 및 주류 할인 혜택은 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Happy hour food, drinks, and alcoholic beverage discounts are excluded. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 차모로 바베큐 & 씨푸드
+영문명 Chamorro BBQ & Seafood
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 전체 결제 금액 10% 할인 (생참치 제외)
+혜택 내역 (영문) 10% off total bill (excluding fresh tuna)
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 모두의 분식
+영문명
+카테고리 * 한식/분식
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 청담
+영문명 Cheong Dam
+카테고리 * 한식
+선택하세요
+혜택 내역 * 5% 할인
+혜택 내역 (영문) 5% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 민즈 라운지
+영문명 Min's Lounge
+카테고리 * 바/라운지
+선택하세요
+혜택 내역 * 주류 및 음료 10% 할인
+혜택 내역 (영문) 10% off alcoholic beverages and drinks
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * K-치킨
+영문명 K-Chicken
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 최소 $25 결제 시 음료 1잔 제공
+혜택 내역 (영문) 1 free drink with minimum $25 payment
+노출 순서 0
+설명 매장 식사, 테이크 아웃 모두 혜택 가능합니다. 배달 주문 시 호텔 위치에 따라 혜택이 상이합니다 (두짓, 하얏트, PIC 크라운, 리가로, 호시노). 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Available for dine-in and takeout. Benefits vary for delivery orders depending on hotel location (Dusit, Hyatt, PIC Crown, Rigalo, Hoshino). Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 타코스 시날로아
+영문명 Tacos Sinaloa
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 전체 금액 15% 할인
+혜택 내역 (영문) 15% off total bill
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * K-라멘
+영문명 K-Ramen
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 라면 1인분 주문 시 콜라 1잔 무료
+혜택 내역 (영문) 1 free coke with 1 ramen order
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * A & L Foods
+영문명 A&L Foods
+카테고리 * 길거리 음식/푸드트럭
+선택하세요
+혜택 내역 *
+혜택 내역 (영문)
+노출 순서 0
+설명 야시장/차모로빌리지, 스키너 플라자 푸드 트럭 나이트/데데도에서 운영됩니다.
+설명 (영문) Operates at Night Market/Chamorro Village, Skinner Plaza Food Truck Night/Dededo.
+주소 야시장/수차모로빌리지, 스키너 플라자 푸드 트럭 나이트/데데도
+주소 (영문) Night Market/Chamorro Village, Skinner Plaza Food Truck Night/Dededo
+전화번호
+웹사이트
+
+업체명 * 마루가메 우동
+영문명 Marugame Udon
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 10% 할인 + 11세 미만 아동 과일 주스 무료 제공
+혜택 내역 (영문) 10% discount + free fruit juice for children under 11
+노출 순서 0
+설명 11세 미만 아동 과일 주스는 메인 주문 시 무료 제공됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Free fruit juice for children under 11 is provided with a main order. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 올리브 가든
+영문명 Olive Garden
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 카드 소지자 및 테이블당 매장 식사 또는 테이크아웃 모두 가능합니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Available for dine-in or takeout per cardholder and table. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 로이다스 푸드
+영문명 Loida's Foods
+카테고리 * 길거리 음식/푸드트럭
+선택하세요
+혜택 내역 *
+혜택 내역 (영문)
+노출 순서 0
+설명 한데테도 야시장/차모로빌리지, 스키너 플라자 푸드 트럭 나이트/데데도에서 운영됩니다.
+설명 (영문) Operates at Handetedo Night Market/Chamorro Village, Skinner Plaza Food Truck Night/Dededo.
+주소 한데테도 야시장/차모로빌리지, 스키너 플라자 푸드 트럭 나이트/데데도
+주소 (영문) Handetedo Night Market/Chamorro Village, Skinner Plaza Food Truck Night/Dededo
+전화번호
+웹사이트
+
+업체명 * 와카 사쿠라 스시
+영문명 Waka Sakura Sushi
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 10% 할인 + 11세 미만 아동 과일 주스 무료 제공
+혜택 내역 (영문) 10% discount + free fruit juice for children under 11
+노출 순서 0
+설명 11세 미만 아동 과일 주스는 메인 주문 시 무료 제공됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Free fruit juice for children under 11 is provided with a main order. Cannot be combined with other discounts or promotions.
+주소 스키너 플라자 푸드 트럭 나이트/데데도
+주소 (영문) Skinner Plaza Food Truck Night/Dededo
+전화번호
+웹사이트
+
+업체명 * 라이스 & 라멘
+영문명 Rice & Ramen
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 10% 할인
+혜택 내역 (영문) 10% discount
+노출 순서 0
+설명 매장 식사 시에만 식음료에 한해 할인 적용됩니다. 주류, 맥주 할인은 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to food and drinks for dine-in only. Alcoholic beverages and beer are excluded. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 애플비
+영문명 Applebee's
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 파이올로지
+영문명 Piology
+카테고리 * 스시
+선택하세요
+혜택 내역 * 무료 3피스 셰프 오마카세 세트 제공
+혜택 내역 (영문) Free 3-piece chef's omakase set
+노출 순서 0
+설명 가족당 1세트, 매장 방문 식사 및 결제 필수입니다. 괌 구매 확인 이메일 + 괌 세이브 카드 (캡처본x) 제시해야 합니다. 재료 및 양은 변동 가능하며, 재고 소진 시 일시 중단될 수 있습니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) 1 set per family, dine-in and payment required. Must present Guam purchase confirmation email + Guam Save Card (no screenshots). Ingredients and quantity may vary, and may be temporarily suspended if out of stock. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 롱혼 스테이크하우스
+영문명 Longhorn Steakhouse
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 매장 식사 시에만 식음료에 한해 할인 적용됩니다. 주류, 맥주 할인은 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to food and drinks for dine-in only. Alcoholic beverages and beer are excluded. Cannot be combined with other discounts or promotions.
+주소 Agatgan
+주소 (영문) Agatgan
+전화번호
+웹사이트
+
+업체명 * 아지 라멘
+영문명 Ajisen Ramen
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 매장 식사 시에만 식음료에 한해 할인 적용됩니다. 주류, 맥주 할인은 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to food and drinks for dine-in only. Alcoholic beverages and beer are excluded. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 아이홉
+영문명 IHOP
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 카드 소지자 및 테이블당 매장 식사 또는 테이크아웃 가능합니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Available for dine-in or takeout per cardholder and table. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 마우이타코스
+영문명 Maui Tacos
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 매장 식사 시에만 식음료에 한해 할인 적용됩니다. 주류, 맥주 할인은 제외됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to food and drinks for dine-in only. Alcoholic beverages and beer are excluded. Cannot be combined with other discounts or promotions.
+주소 Tamuning
+주소 (영문) Tamuning
+전화번호
+웹사이트
+
+업체명 * 피셔맨즈 코브
+영문명 Fisherman's Cove
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 식사, 음료, 주류 모두 할인 적용됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to all meals, drinks, and alcoholic beverages. Cannot be combined with other discounts or promotions.
+주소 At Hilton Guam
+주소 (영문) At Hilton Guam
+전화번호
+웹사이트
+
+업체명 * 텐쥬도 스파
+영문명 Tenjudo Spa
+카테고리 * 스파
+선택하세요
+혜택 내역 *
+혜택 내역 (영문)
+노출 순서 0
+설명
+설명 (영문)
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 탈라폭포 폴즈 리조트 파크
+영문명 Talofofo Fall's Resort Park
+카테고리 * 관광지/어트랙션
+선택하세요
+혜택 내역 * 이용객 1인당 $5 할인
+혜택 내역 (영문) $5 discount per person
+노출 순서 0
+설명 성인 입장료 $5 할인, 탈로포포 야외 사격 갤러리 입장료 $10 면제, 리조트 파크 내 짚라인 아동&성인 $5 할인됩니다. 예약 없이 방문 가능합니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) $5 discount on adult admission, $10 exemption for Talofofo Outdoor Shooting Gallery admission, $5 discount on zipline for children & adults within the resort park. No reservation required. Cannot be combined with other discounts or promotions.
+주소 Talatata
+주소 (영문) Talatata
+전화번호
+웹사이트
+
+업체명 * 아일렌더 테라스
+영문명 Islander Terrace
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 식사, 음료, 주류 모두 할인 적용됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to all meals, drinks, and alcoholic beverages. Cannot be combined with other discounts or promotions.
+주소 At Hilton Guam
+주소 (영문) At Hilton Guam
+전화번호
+웹사이트
+
+업체명 * 쉘 주유소
+영문명 Shell
+카테고리 * 주유소
+선택하세요
+혜택 내역 * 주유 6% 할인
+혜택 내역 (영문) 6% off fuel
+노출 순서 0
+설명 괌 전 지역 기능합니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Available throughout Guam. Cannot be combined with other discounts or promotions.
+주소 Tumon
+주소 (영문) Tumon
+전화번호
+웹사이트
+
+업체명 * 로이즈
+영문명 Roy's
+카테고리 * 레스토랑
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 식사, 음료, 주류 모두 할인 적용됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to all meals, drinks, and alcoholic beverages. Cannot be combined with other discounts or promotions.
+주소 At Hilton Guam
+주소 (영문) At Hilton Guam
+전화번호
+웹사이트
+
+업체명 * 트리바
+영문명 Tree Bar
+카테고리 * 바
+선택하세요
+혜택 내역 * 0% 할인
+혜택 내역 (영문) 0% discount
+노출 순서 0
+설명 식사, 음료, 주류 모두 할인 적용됩니다. 다른 할인 및 프로모션과 중복 할인이 불가능합니다.
+설명 (영문) Discount applies to all meals, drinks, and alcoholic beverages. Cannot be combined with other discounts or promotions.
+주소 At Hilton Guam
+주소 (영문) At Hilton Guam
+전화번호
+웹사이트
+```

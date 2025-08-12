@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - 괌세이브카드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #4682B4 50%, #1E90FF 100%);
+            min-height: 100vh;
+            padding: 10px 0;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Travel Icons Animation */
+        .travel-icon {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.1);
+            font-size: 2rem;
+            animation: float 6s ease-in-out infinite;
+            z-index: 1;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        
+        .travel-icon:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+        .travel-icon:nth-child(2) { top: 20%; right: 15%; animation-delay: 1s; }
+        .travel-icon:nth-child(3) { top: 60%; left: 5%; animation-delay: 2s; }
+        .travel-icon:nth-child(4) { bottom: 30%; right: 10%; animation-delay: 3s; }
+        .travel-icon:nth-child(5) { bottom: 10%; left: 20%; animation-delay: 4s; }
+        .travel-icon:nth-child(6) { top: 40%; right: 5%; animation-delay: 5s; }
+        
+        .card-container {
+            max-width: 500px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .discount-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 30px;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.1), 0 0 0 1px rgba(255,255,255,0.1);
+        }
+        
+        .card-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .card-info {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .banner-ad {
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .banner-ad:hover {
+            transform: scale(1.01);
+        }
+        
+        .banner-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+        
+        .usage-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px 15px;
+            margin: 15px 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .usage-form {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px 15px;
+            margin-bottom: 20px;
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 768px) {
+            .card-info {
+                border-radius: 15px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            
+            .banner-ad {
+                border-radius: 15px;
+                margin: 20px 0;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+            
+            .banner-ad:hover {
+                transform: scale(1.02);
+            }
+            
+            .banner-image {
+                height: 120px;
+            }
+            
+            .usage-section {
+                border-radius: 20px;
+                padding: 30px;
+                margin: 20px 0;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+            
+            .usage-form {
+                border-radius: 15px;
+                padding: 25px;
+                margin-bottom: 30px;
+            }
+        }
+        
+        .form-control {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            font-size: 16px;
+            margin-bottom: 15px;
+            min-height: 44px;
+            width: 100%;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 768px) {
+            .form-control {
+                border-radius: 10px;
+                padding: 15px;
+            }
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-result-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* 할인혜택 표시 영역 스타일 */
+        .discount-benefit-display {
+            margin: 20px 0;
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        .benefit-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .benefit-card h6 {
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .benefit-content {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .benefit-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .benefit-original {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+        
+        .benefit-instruction {
+            text-align: center;
+            opacity: 0.9;
+        }
+        
+        .btn-use:disabled {
+            background: #6c757d;
+            border-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .btn-use:not(:disabled) {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+            transform: translateY(0);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-use:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.5);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .store-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .store-discount {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .form-group {
+            position: relative;
+        }
+        
+        .btn-use {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 600;
+            width: 100%;
+            color: white;
+            font-size: 16px;
+            min-height: 48px;
+            touch-action: manipulation;
+        }
+        
+        .btn-use:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+            color: white;
+        }
+        
+        .usage-history {
+            margin-top: 20px;
+        }
+        
+        .usage-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 3px solid #667eea;
+            font-size: 14px;
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 768px) {
+            .btn-use {
+                border-radius: 25px;
+                padding: 15px 30px;
+                font-size: 18px;
+            }
+            
+            .btn-use:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4);
+            }
+            
+            .usage-history {
+                margin-top: 30px;
+            }
+            
+            .usage-item {
+                border-radius: 10px;
+                padding: 15px;
+                margin: 10px 0;
+                border-left: 4px solid #667eea;
+                font-size: inherit;
+            }
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .expiration-notice {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #856404;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        @media (max-width: 768px) {
+            .card-container {
+                margin: 0 10px;
+            }
+            .discount-card, .usage-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 비밀번호 인증 모달 -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="passwordModalLabel">
+                        <i class="fas fa-lock me-2"></i>카드 비밀번호 입력
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <form id="passwordForm">
+                        <div class="mb-3">
+                            <label for="cardPassword" class="form-label">
+                                <i class="fas fa-key me-2"></i>4자리 숫자 비밀번호
+                            </label>
+                            <input type="number" class="form-control text-center" id="cardPassword" name="cardPassword" placeholder="4자리 숫자 입력" maxlength="4" style="font-size: 1.5rem; letter-spacing: 0.5rem;" required>
+                        </div>
+                        <div id="passwordError" class="alert alert-danger" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="passwordErrorMessage"></span>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-unlock me-2"></i>비밀번호 확인
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Travel Icons Background -->
+    <div class="travel-icon"><i class="fas fa-plane"></i></div>
+    <div class="travel-icon"><i class="fas fa-suitcase-rolling"></i></div>
+    <div class="travel-icon"><i class="fas fa-fish"></i></div>
+    <div class="travel-icon"><i class="fas fa-shopping-bag"></i></div>
+    <div class="travel-icon"><i class="fas fa-palm-tree"></i></div>
+    <div class="travel-icon"><i class="fas fa-sailboat"></i></div>
+    
+    <div class="container" id="cardContent" style="display: none;">
+        <div class="card-container">
+
+
+            <!-- 할인카드 -->
+            <div class="discount-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-credit-card me-2"></i>Guam Save Card
+                    </div>
+                </div>
+
+                <!-- 유효기간 표시 -->
+                <% if (user.expiration_text) { %>
+                    <div class="expiration-notice">
+                        <%= user.expiration_text %>
+                    </div>
+                <% } %>
+
+                <div class="card-info">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong><i class="fas fa-user me-2"></i>Customer Name</strong>
+                            <div><%= user.customer_name %></div>
+                        </div>
+                        <div class="col-6">
+                            <strong><i class="fas fa-building me-2"></i>Travel Agency</strong>
+                            <div><%= user.agency_name %></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Processing Section -->
+            <div class="usage-section">
+                <h5><i class="fas fa-store me-2"></i>Process Discount Usage</h5>
+                <p class="text-muted">Partner store staff can select store and process discount usage.</p>
+
+                <% if (success) { %>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i><%= success %>
+                    </div>
+                <% } %>
+
+                <% if (error) { %>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+                    </div>
+                <% } %>
+
+                <div class="usage-form">
+                    <form id="usageForm">
+                        <input type="hidden" id="token" value="<%= user.token %>">
+                        
+                        <label for="store_code" class="form-label">
+                            <i class="fas fa-store me-2"></i>Select Partner Store
+                        </label>
+                        <div class="form-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="store_code" 
+                                   name="store_code" 
+                                   placeholder="Type store name to search..."
+                                   list="store_list"
+                                   autocomplete="off"
+                                   required>
+                            <datalist id="store_list">
+                                <% if (typeof stores !== 'undefined' && stores) { %>
+                                    <% stores.filter(store => store.is_active).forEach(store => { %>
+                                        <option value="<%= store.name %>">
+                                    <% }); %>
+                                <% } %>
+                            </datalist>
+                            <div id="search_results" class="search-results"></div>
+                        </div>
+                        
+                        <!-- 할인혜택 표시 영역 -->
+                        <div id="discount_benefit_display" class="discount-benefit-display" style="display: none;">
+                            <div class="benefit-card">
+                                <h6><i class="fas fa-gift me-2"></i>Discount Benefit</h6>
+                                <div id="benefit_content" class="benefit-content">
+                                    <!-- 선택된 제휴업체의 할인혜택이 여기에 표시됨 -->
+                                </div>
+                                <div class="benefit-instruction">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Please confirm the discount benefit above and click the button below to apply.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-use" id="apply_discount_btn" disabled>
+                            <i class="fas fa-check me-2"></i>Apply Discount
+                        </button>
+                    </form>
+                </div>
+
+                
+            </div>
+
+            <!-- Footer Link -->
+            <div class="text-center">
+                <a href="/" class="text-white text-decoration-none">
+                    <i class="fas fa-home me-2"></i>Back to Main Page
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 비밀번호 인증 기능
+        function initPasswordAuthOnCard() {
+            const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+            const passwordForm = document.getElementById('passwordForm');
+            const passwordInput = document.getElementById('cardPassword');
+            const errorDiv = document.getElementById('passwordError');
+            const errorMessage = document.getElementById('passwordErrorMessage');
+            const cardContent = document.getElementById('cardContent');
+
+            // 모달 표시
+            modal.show();
+
+            passwordForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const password = passwordInput.value.trim();
+                if (!password || password.length !== 4 || !/^[0-9]{4}$/.test(password)) {
+                    showError('4자리 숫자 비밀번호를 입력해주세요.');
+                    return;
+                }
+
+                const submitBtn = passwordForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+
+                try {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>인증 중...';
+                    submitBtn.disabled = true;
+
+                    const response = await fetch('/verify-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token: '<%= user.token %>',
+                            password: password
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        cardContent.style.display = 'block';
+                        setTimeout(() => { modal.hide(); }, 100);
+                    } else {
+                        showError(result.message || '비밀번호가 일치하지 않습니다.');
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                    }
+                } catch (error) {
+                    console.error('비밀번호 인증 오류:', error);
+                    showError('인증 중 오류가 발생했습니다. 다시 시도해주세요.');
+                } finally {
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorDiv.style.display = 'block';
+                passwordInput.classList.add('is-invalid');
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                    passwordInput.classList.remove('is-invalid');
+                }, 5000);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            initPasswordAuthOnCard();
+        });
+
+        // 제휴업체 데이터
+        const storesData = `<%- JSON.stringify(stores ? stores.filter(store => store.is_active).map(store => ({name: store.name, discount: store.discount, category: store.category})) : []) %>`;
+        const stores = JSON.parse(storesData);
+        
+        // 할인혜택 영어 번역 함수
+        function translateDiscountToEnglish(koreanDiscount) {
+            const translations = {
+                // 기본 할인 패턴
+                '전 품목 10% 할인': '10% discount on all items',
+                '전 품목 15% 할인': '15% discount on all items',
+                '전 품목 20% 할인': '20% discount on all items',
+                '전 품목 5% 할인': '5% discount on all items',
+                
+                // 음료/카페 혜택
+                '$50 이상 구매 시 음료 1잔 제공': 'Free drink with purchase over $50',
+                '$30 이상 구매 시 음료 1잔 제공': 'Free drink with purchase over $30',
+                '음료 10% 할인': '10% discount on beverages',
+                '커피 1+1': 'Buy 1 Get 1 Free Coffee',
+                
+                // 식당/레스토랑 혜택
+                '식사 10% 할인': '10% discount on meals',
+                '식사 15% 할인': '15% discount on meals',
+                '식사 20% 할인': '20% discount on meals',
+                '디저트 무료 제공': 'Free dessert',
+                '애피타이저 무료': 'Free appetizer',
+                
+                // 쇼핑/마트 혜택
+                '$100 이상 구매 시 10% 할인': '10% discount on purchases over $100',
+                '$50 이상 구매 시 5% 할인': '5% discount on purchases over $50',
+                '선물 포장 무료': 'Free gift wrapping',
+                
+                // 액티비티/투어 혜택
+                '투어 10% 할인': '10% discount on tours',
+                '투어 15% 할인': '15% discount on tours',
+                '액티비티 20% 할인': '20% discount on activities',
+                '사진 인화 무료': 'Free photo printing',
+                
+                // 숙박/호텔 혜택
+                '숙박비 10% 할인': '10% discount on accommodation',
+                '조식 무료 제공': 'Free breakfast included',
+                '레이트 체크아웃 무료': 'Free late check-out',
+                
+                // 기타 서비스
+                '배송비 무료': 'Free shipping',
+                '주차비 무료': 'Free parking',
+                'Wi-Fi 무료': 'Free Wi-Fi'
+            };
+            
+            // 직접 매칭 찾기
+            if (translations[koreanDiscount]) {
+                return translations[koreanDiscount];
+            }
+            
+            // 패턴 기반 번역 (숫자 추출)
+            const percentMatch = koreanDiscount.match(/(하드|전상품|전 품목|식사|음료|커피|액티비티|투어|숙박).*?(헐드|전상품|전 품목|식사|음료|커피|액티비티|투어|숙박)?.*?(헐드|전상품|전 품목|식사|음료|커피|액티비티|투어|숙박)?.*?(\d+)%.*?할인/);
+            if (percentMatch) {
+                const percent = percentMatch[4];
+                return `${percent}% discount`;
+            }
+            
+            // 금액 기반 혜택 번역
+            const dollarMatch = koreanDiscount.match(/\$(\d+).*?이상.*?구매.*?시.*?(음료|커피|디저트).*?(무료|제공|1잔)/);
+            if (dollarMatch) {
+                const amount = dollarMatch[1];
+                const item = dollarMatch[2];
+                const itemTranslation = {
+                    '음료': 'drink',
+                    '커피': 'coffee',
+                    '디저트': 'dessert'
+                }[item] || 'item';
+                return `Free ${itemTranslation} with purchase over $${amount}`;
+            }
+            
+            // 기본 번역 (매칭되지 않는 경우)
+            return `Special Discount Available (${koreanDiscount})`;
+        }
+        
+        // 검색 기능 초기화
+        function initializeSearch() {
+            const input = document.getElementById('store_code');
+            const searchResults = document.getElementById('search_results');
+            
+            input.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                
+                if (query.length === 0) {
+                    searchResults.style.display = 'none';
+                    hideDiscountBenefit();
+                    return;
+                }
+                
+                // 정확한 매칭 확인
+                const exactMatch = stores.find(store => 
+                    store.name.toLowerCase() === query
+                );
+                
+                if (exactMatch) {
+                    showDiscountBenefit(exactMatch.name, exactMatch.discount);
+                } else {
+                    hideDiscountBenefit();
+                }
+                
+                const filteredStores = stores.filter(store => 
+                    store.name.toLowerCase().includes(query)
+                );
+                
+                if (filteredStores.length === 0) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+                
+                searchResults.innerHTML = filteredStores.map(store => 
+                    `<div class="search-result-item" onclick="selectStore('${store.name}', '${store.discount}')">
+                        <div class="store-name">${store.name}</div>
+                        <div class="store-discount">${store.discount}</div>
+                    </div>`
+                ).join('');
+                
+                searchResults.style.display = 'block';
+            });
+            
+            // 외부 클릭 시 검색 결과 숨기기
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.form-group')) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+        
+        // 할인혜택 표시 함수
+        function showDiscountBenefit(storeName, discountInfo) {
+            const discountDisplay = document.getElementById('discount_benefit_display');
+            const benefitContent = document.getElementById('benefit_content');
+            const applyBtn = document.getElementById('apply_discount_btn');
+            
+            // 할인혜택 영어 번역
+            const englishDiscount = translateDiscountToEnglish(discountInfo);
+            
+            // 할인혜택 표시
+            benefitContent.innerHTML = `
+                <div class="benefit-text">${englishDiscount}</div>
+                <div class="benefit-original">Original: ${discountInfo}</div>
+            `;
+            
+            // 할인혜택 영역 표시 및 버튼 활성화
+            discountDisplay.style.display = 'block';
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Apply Discount';
+        }
+        
+        // 할인혜택 숨김 함수
+        function hideDiscountBenefit() {
+            const discountDisplay = document.getElementById('discount_benefit_display');
+            const applyBtn = document.getElementById('apply_discount_btn');
+            
+            discountDisplay.style.display = 'none';
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i class="fas fa-check me-2"></i>Apply Discount';
+        }
+        
+        // 업체 선택 함수
+        function selectStore(storeName, discountInfo) {
+            const input = document.getElementById('store_code');
+            const searchResults = document.getElementById('search_results');
+            
+            // 입력필드 업데이트
+            input.value = storeName;
+            searchResults.style.display = 'none';
+            
+            // 할인혜택 표시
+            showDiscountBenefit(storeName, discountInfo);
+            
+            // 스크롤로 할인혜택 영역으로 이동
+            setTimeout(() => {
+                const discountDisplay = document.getElementById('discount_benefit_display');
+                discountDisplay.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }, 100);
+        }
+        
+        // 사용 처리 함수
+        async function processUsage(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // token 값을 명시적으로 추가
+            data.token = document.getElementById('token').value;
+            
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // 버튼 상태 변경
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/card/use', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Discount usage recorded successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (result.message || 'An error occurred.'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('System error occurred. Please try again.');
+            } finally {
+                // 버튼 상태 복원
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // DOM 로드 완료 후 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 검색 기능 초기화
+            initializeSearch();
+            
+            // 폼 이벤트 리스너 등록
+            const form = document.getElementById('usageForm');
+            if (form) {
+                form.addEventListener('submit', processUsage);
+            }
+        });
+    </script>
+    <footer style="text-align: center; padding: 20px 0; font-size: 14px; color: #ffffff; background: rgba(0,0,0,0.1); margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.2); text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+        &copy; 2025 luxfind. All rights reserved. Developed by Kim Jongsoung.
+    </footer>
+</body>
+</html>

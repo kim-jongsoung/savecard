@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .admin-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .admin-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        
+        .admin-header p {
+            font-size: 0.9rem;
+        }
+        
+        .admin-nav {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 768px) {
+            .admin-container {
+                border-radius: 20px;
+                padding: 30px;
+                margin: 20px 0;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            }
+            
+            .admin-header {
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 30px;
+            }
+            
+            .admin-header h2 {
+                font-size: 2rem;
+                margin-bottom: 10px;
+            }
+            
+            .admin-header p {
+                font-size: 1rem;
+            }
+            
+            .admin-nav {
+                border-radius: 10px;
+                padding: 15px;
+                margin-bottom: 30px;
+            }
+        }
+        
+        .admin-nav .nav-link {
+            color: #667eea;
+            font-weight: 500;
+            border-radius: 8px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-nav .nav-link:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .store-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .store-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .store-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .store-content {
+            padding: 15px;
+        }
+        
+        .store-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .store-category {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn-action {
+            margin: 2px;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .admin-container {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .admin-nav .nav-link {
+                margin: 2px 0;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">대시보드</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/agencies">여행사 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">고객 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/stores">제휴업체 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/usages">사용 이력</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/banners">광고 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/partner-applications">제휴업체 신청</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i>admin
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-store me-2"></i><%= title %></h2>
+                <p class="text-muted">제휴업체를 관리하고 새로운 업체를 추가하세요</p>
+            </div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStoreModal">
+                <i class="fas fa-plus me-2"></i>제휴업체 추가
+            </button>
+        </div>
+
+        <!-- 알림 메시지 -->
+        <% if (success) { %>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i><%= success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <% if (error) { %>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i><%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <!-- 제휴업체 목록 헤더 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4>제휴업체 목록 (<%= stores.length %>개)</h4>
+        </div>
+
+        <!-- 제휴업체 목록 -->
+        <div class="row">
+                <% stores.forEach(store => { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="store-card">
+                            <img src="<%= store.image_url %>" alt="<%= store.name %>" class="store-image">
+                            <div class="store-content">
+                                <div class="store-category"><%= store.category %></div>
+                                <h6 class="store-name"><%= store.name %></h6>
+                                <p class="text-muted small"><%= store.description %></p>
+                                
+                                <div class="mb-2">
+                                    <strong>할인 정보:</strong><br>
+                                    <small class="text-success"><%= store.discount %></small>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>누적 사용 횟수:</strong>
+                                    <span class="usage-count-display badge bg-warning text-dark ms-2" id="usage-count-<%= store.id %>">
+                                        <i class="fas fa-fire me-1"></i><%= store.usage_count || 0 %>회
+                                    </span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <span class="status-badge <%= store.is_active ? 'status-active' : 'status-inactive' %>">
+                                        <%= store.is_active ? '활성' : '비활성' %>
+                                    </span>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between flex-wrap">
+                                    <button class="btn btn-sm btn-outline-primary btn-action" onclick="toggleStore(<%= store.id %>)">
+                                        <i class="fas fa-power-off"></i>
+                                        <%= store.is_active ? '비활성화' : '활성화' %>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success btn-action" onclick="editStore(<%= store.id %>)">
+                                        <i class="fas fa-edit"></i> 수정
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteStore(<%= store.id %>)">
+                                        <i class="fas fa-trash"></i> 삭제
+                                    </button>
+                                </div>
+                                
+                                <% if (store.address) { %>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-map-marker-alt me-1"></i><%= store.address %>
+                                        </small>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+
+            <% if (stores.length === 0) { %>
+                <div class="text-center py-5">
+                    <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">등록된 제휴업체가 없습니다.</p>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStoreModal">
+                        첫 번째 제휴업체 추가하기
+                    </button>
+                </div>
+            <% } %>
+
+            <!-- 로그아웃 -->
+            <div class="text-center mt-4">
+                <a href="/admin/logout" class="btn btn-outline-secondary">
+                    <i class="fas fa-sign-out-alt me-2"></i>로그아웃
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 제휴업체 추가 모달 -->
+    <div class="modal fade" id="addStoreModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">새 제휴업체 추가</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/admin/stores" method="POST">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="storeName" class="form-label">업체명 *</label>
+                                    <input type="text" class="form-control" id="storeName" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="storeCategory" class="form-label">카테고리 *</label>
+                                    <select class="form-select" id="storeCategory" name="category" required>
+                                        <option value="">카테고리 선택</option>
+                                        <option value="쇼핑">쇼핑</option>
+                                        <option value="면세점">면세점</option>
+                                        <option value="레스토랑">레스토랑</option>
+                                        <option value="관광/액티비티">관광/액티비티</option>
+                                        <option value="스파/마사지">스파/마사지</option>
+                                        <option value="숙박">숙박</option>
+                                        <option value="교통">교통</option>
+                                        <option value="기타">기타</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="storeDescription" class="form-label">설명 *</label>
+                            <textarea class="form-control" id="storeDescription" name="description" rows="2" required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="discountInfo" class="form-label">할인 정보 *</label>
+                            <input type="text" class="form-control" id="discountInfo" name="discount" 
+                                   placeholder="예: 전 품목 10% 할인" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="storeAddress" class="form-label">주소</label>
+                            <input type="text" class="form-control" id="storeAddress" name="address">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="storePhone" class="form-label">전화번호</label>
+                                    <input type="text" class="form-control" id="storePhone" name="phone">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="storeWebsite" class="form-label">웹사이트</label>
+                                    <input type="url" class="form-control" id="storeWebsite" name="website">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="storeImage" class="form-label">이미지 URL</label>
+                            <input type="url" class="form-control" id="storeImage" name="image_url" 
+                                   placeholder="이미지 URL (선택사항)">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                        <button type="submit" class="btn btn-primary">추가</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 제휴업체 수정 모달 -->
+    <div class="modal fade" id="editStoreModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">제휴업체 정보 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editStoreName" class="form-label">업체명 *</label>
+                                <input type="text" class="form-control" id="editStoreName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editStoreCategory" class="form-label">카테고리 *</label>
+                                <select class="form-select" id="editStoreCategory" required>
+                                    <option value="">카테고리 선택</option>
+                                    <option value="쇼핑">쇼핑</option>
+                                    <option value="카페">카페</option>
+                                    <option value="레스토랑">레스토랑</option>
+                                    <option value="바">바</option>
+                                    <option value="관광/액티비티">관광/액티비티</option>
+                                    <option value="스파/마사지">스파/마사지</option>
+                                    <option value="주유소">주유소</option>
+                                    <option value="기타">기타</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStoreDescription" class="form-label">업체 설명</label>
+                        <textarea class="form-control" id="editStoreDescription" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStoreDiscount" class="form-label">할인 정보 *</label>
+                        <input type="text" class="form-control" id="editStoreDiscount" placeholder="예: 전 품목 10% 할인" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editStoreAddress" class="form-label">주소</label>
+                                <input type="text" class="form-control" id="editStoreAddress">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editStorePhone" class="form-label">전화번호</label>
+                                <input type="text" class="form-control" id="editStorePhone">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStoreWebsite" class="form-label">웹사이트</label>
+                        <input type="url" class="form-control" id="editStoreWebsite">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStoreImageUrl" class="form-label">이미지 URL</label>
+                        <input type="url" class="form-control" id="editStoreImageUrl" placeholder="예: https://example.com/image.jpg">
+                        <div class="form-text">제휴업체 카드에 표시될 이미지 URL을 입력하세요.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStoreUsageCount" class="form-label">누적 사용 횟수</label>
+                        <input type="number" class="form-control" id="editStoreUsageCount" min="0" placeholder="0">
+                        <div class="form-text">제휴업체의 누적 할인 사용 횟수를 설정하세요.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="updateStore()">수정 완료</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function toggleStore(storeId) {
+            if (!confirm('제휴업체의 활성화 상태를 변경하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/stores/${storeId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('상태 변경 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function deleteStore(storeId) {
+            if (!confirm('정말로 이 제휴업체를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/stores/${storeId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('제휴업체가 성공적으로 삭제되었습니다.');
+                    location.reload();
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        let currentEditStoreId = null;
+
+        async function editStore(storeId) {
+            console.log('수정 버튼 클릭:', storeId);
+            currentEditStoreId = storeId;
+            
+            try {
+                // 서버에서 제휴업체 데이터 가져오기
+                const response = await fetch(`/admin/stores/${storeId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const store = await response.json();
+                console.log('가져온 제휴업체 데이터:', store);
+                
+                // 모달 필드에 데이터 채우기
+                document.getElementById('editStoreName').value = store.name || '';
+                document.getElementById('editStoreCategory').value = store.category || '';
+                document.getElementById('editStoreDescription').value = store.description || '';
+                document.getElementById('editStoreDiscount').value = store.discount || '';
+                document.getElementById('editStoreAddress').value = store.address || '';
+                document.getElementById('editStorePhone').value = store.phone || '';
+                document.getElementById('editStoreWebsite').value = store.website || '';
+                document.getElementById('editStoreImageUrl').value = store.image_url || '';
+                document.getElementById('editStoreUsageCount').value = store.usage_count || 0;
+                
+                // 모달 열기
+                const editModal = new bootstrap.Modal(document.getElementById('editStoreModal'));
+                editModal.show();
+                
+            } catch (error) {
+                console.error('제휴업체 데이터 로드 오류:', error);
+                alert('제휴업체 정보를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function updateStore() {
+            if (!currentEditStoreId) {
+                alert('오류: 수정할 제휴업체를 찾을 수 없습니다.');
+                return;
+            }
+
+            const formData = {
+                name: document.getElementById('editStoreName').value,
+                category: document.getElementById('editStoreCategory').value,
+                description: document.getElementById('editStoreDescription').value,
+                discount: document.getElementById('editStoreDiscount').value,
+                address: document.getElementById('editStoreAddress').value,
+                phone: document.getElementById('editStorePhone').value,
+                website: document.getElementById('editStoreWebsite').value,
+                image_url: document.getElementById('editStoreImageUrl').value,
+                usage_count: parseInt(document.getElementById('editStoreUsageCount').value) || 0
+            };
+
+            if (!formData.name || !formData.category || !formData.discount) {
+                alert('필수 항목을 모두 입력해주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/stores/${currentEditStoreId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('제휴업체 정보가 성공적으로 수정되었습니다.');
+                    location.reload();
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('수정 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - 괌세이브카드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(45deg, #667eea, #764ba2) !important;
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+        }
+        
+        .banner-preview {
+            max-width: 200px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .status-badge {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">대시보드</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/agencies">여행사 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/users">고객 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/stores">제휴업체 관리</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/usages">사용 이력</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/admin/banners">광고 관리</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i><%= adminUsername %>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-ad me-2"></i><%= title %></h2>
+                <p class="text-muted">광고 배너를 관리합니다</p>
+            </div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBannerModal">
+                <i class="fas fa-plus me-2"></i>광고 추가
+            </button>
+        </div>
+
+        <!-- 알림 메시지 -->
+        <% if (success) { %>
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle me-2"></i><%= success %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <% if (error) { %>
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <% } %>
+
+        <!-- 광고 목록 -->
+        <div class="content-card">
+            <h5><i class="fas fa-list me-2"></i>등록된 광고 목록</h5>
+            
+            <% if (banners && banners.length > 0) { %>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>미리보기</th>
+                                <th>광고주</th>
+                                <th>설명</th>
+                                <th>노출 위치</th>
+                                <th>노출 기간</th>
+                                <th>클릭 수</th>
+                                <th>상태</th>
+                                <th>액션</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% banners.forEach(banner => { %>
+                                <tr>
+                                    <td>
+                                        <img src="<%= banner.image_url %>" alt="배너" class="banner-preview">
+                                    </td>
+                                    <td><strong><%= banner.advertiser_name %></strong></td>
+                                    <td>
+                                        <% if (banner.description) { %>
+                                            <span class="text-truncate d-block" style="max-width: 200px;" title="<%= banner.description %>">
+                                                <%= banner.description %>
+                                            </span>
+                                        <% } else { %>
+                                            <span class="text-muted">설명 없음</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (banner.display_locations && banner.display_locations.length > 0) { %>
+                                            <% banner.display_locations.forEach((location, index) => { %>
+                                                <% 
+                                                    let locationName = '';
+                                                    if (location === 1) locationName = '메인';
+                                                    else if (location === 2) locationName = '발급완료';
+                                                    else if (location === 3) locationName = '제휴목록';
+                                                %>
+                                                <span class="badge bg-primary me-1"><%= locationName %></span>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <span class="text-muted">설정 없음</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (banner.start_date && banner.end_date) { %>
+                                            <small class="text-muted">
+                                                <%= new Date(banner.start_date).toLocaleDateString('ko-KR') %><br>
+                                                ~ <%= new Date(banner.end_date).toLocaleDateString('ko-KR') %>
+                                            </small>
+                                        <% } else { %>
+                                            <span class="text-muted">기간 설정 없음</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <%= banner.click_count || 0 %> 클릭
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge status-badge <%= banner.is_active ? 'bg-success' : 'bg-secondary' %>" 
+                                              onclick="toggleBanner(<%= banner.id %>)">
+                                            <%= banner.is_active ? '활성' : '비활성' %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editBanner(<%= banner.id %>)" title="수정">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteBanner(<%= banner.id %>)" title="삭제">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-ad fa-3x mb-3"></i>
+                    <p>등록된 광고가 없습니다.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBannerModal">
+                        첫 번째 광고 추가하기
+                    </button>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- 광고 추가 모달 -->
+    <div class="modal fade" id="addBannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>새 광고 추가
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/admin/banners">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="advertiser_name" class="form-label">광고주명 *</label>
+                            <input type="text" class="form-control" id="advertiser_name" name="advertiser_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">제목 *</label>
+                            <input type="text" class="form-control" id="title" name="title" placeholder="광고 제목" required>
+                            <div class="form-text">노출용 제목입니다. 미입력 시 광고주명으로 저장됩니다.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="image_url" class="form-label">배너 이미지 URL *</label>
+                            <input type="url" class="form-control" id="image_url" name="image_url" 
+                                   placeholder="https://example.com/banner.jpg" required>
+                            <div class="form-text">권장 크기: 400x120px</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="link_url" class="form-label">링크 URL</label>
+                            <input type="url" class="form-control" id="link_url" name="link_url" placeholder="https://example.com">
+                            <div class="form-text">선택사항: 배너 클릭 시 이동할 URL</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">광고 설명</label>
+                            <textarea class="form-control" id="description" name="description" rows="2" placeholder="광고 내용을 간단히 설명해주세요"></textarea>
+                            <div class="form-text">배너에 표시될 설명 텍스트</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">노출 위치 선택 *</label>
+                            <div class="form-text mb-2">광고를 노출할 위치를 선택하세요 (여러 선택 가능)</div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="location_1" name="display_locations" value="1">
+                                        <label class="form-check-label" for="location_1">
+                                            <strong>1. 메인 페이지</strong><br>
+                                            <small class="text-muted">최고 노출률</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="location_2" name="display_locations" value="2">
+                                        <label class="form-check-label" for="location_2">
+                                            <strong>2. 발급 완료</strong><br>
+                                            <small class="text-muted">고객 만족도 최고</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="location_3" name="display_locations" value="3">
+                                        <label class="form-check-label" for="location_3">
+                                            <strong>3. 제휴업체 목록</strong><br>
+                                            <small class="text-muted">구매 의향 최고</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="display_order" class="form-label">노출 순서</label>
+                            <input type="number" class="form-control" id="display_order" name="display_order" value="0" min="0">
+                            <div class="form-text">숫자가 작을수록 먼저 노출</div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_date" class="form-label">노출 시작일</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date">
+                                    <div class="form-text">비워두면 오늘부터 시작</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_date" class="form-label">노출 종료일</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date">
+                                    <div class="form-text">비워두면 1년 후 종료</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                        <button type="submit" class="btn btn-primary">추가</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 배너 수정 모달 -->
+    <div class="modal fade" id="editBannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>배너 광고 수정
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editBannerForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_banner_id" name="banner_id">
+                        
+                        <div class="mb-3">
+                            <label for="edit_advertiser_name" class="form-label">광고주명 *</label>
+                            <input type="text" class="form-control" id="edit_advertiser_name" name="advertiser_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_title" class="form-label">제목 *</label>
+                            <input type="text" class="form-control" id="edit_title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_image_url" class="form-label">배너 이미지 URL *</label>
+                            <input type="url" class="form-control" id="edit_image_url" name="image_url" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_link_url" class="form-label">링크 URL</label>
+                            <input type="url" class="form-control" id="edit_link_url" name="link_url">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_description" class="form-label">광고 설명</label>
+                            <textarea class="form-control" id="edit_description" name="description" rows="2"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">노출 위치 *</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="edit_location_1" name="display_locations" value="1">
+                                        <label class="form-check-label" for="edit_location_1">
+                                            <i class="fas fa-home me-1"></i>1. 메인 페이지
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="edit_location_2" name="display_locations" value="2">
+                                        <label class="form-check-label" for="edit_location_2">
+                                            <i class="fas fa-check-circle me-1"></i>2. 발급 완료
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="edit_location_3" name="display_locations" value="3">
+                                        <label class="form-check-label" for="edit_location_3">
+                                            <i class="fas fa-store me-1"></i>3. 제휴 목록
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_display_order" class="form-label">노출 순서</label>
+                            <input type="number" class="form-control" id="edit_display_order" name="display_order" value="0" min="0">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="edit_start_date" class="form-label">노출 시작일</label>
+                                    <input type="date" class="form-control" id="edit_start_date" name="start_date">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="edit_end_date" class="form-label">노출 종료일</label>
+                                    <input type="date" class="form-control" id="edit_end_date" name="end_date">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_click_count" class="form-label">클릭 수</label>
+                            <input type="number" class="form-control" id="edit_click_count" name="click_count" min="0">
+                            <div class="form-text">클릭 수를 수동으로 조정할 수 있습니다</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                        <button type="submit" class="btn btn-primary">수정</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function toggleBanner(bannerId) {
+            try {
+                const response = await fetch(`/admin/banners/${bannerId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message || '상태 변경에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('상태 변경 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function editBanner(bannerId) {
+            try {
+                // 배너 데이터 조회
+                const banners = <%- JSON.stringify(banners || []) %>;
+                const banner = banners.find(b => b.id == bannerId);
+                
+                if (!banner) {
+                    alert('배너를 찾을 수 없습니다.');
+                    return;
+                }
+                
+                // 모달 폼 요소들 확인 및 채우기
+                const elements = {
+                    'edit_banner_id': banner.id,
+                    'edit_advertiser_name': banner.advertiser_name || '',
+                    'edit_title': (banner.title || banner.advertiser_name || ''),
+                    'edit_image_url': banner.image_url || '',
+                    'edit_link_url': banner.link_url || '',
+                    'edit_description': banner.description || '',
+                    'edit_display_order': banner.display_order || 0,
+                    'edit_click_count': banner.click_count || 0
+                };
+                
+                // 각 요소가 존재하는지 확인 후 값 설정
+                for (const [elementId, value] of Object.entries(elements)) {
+                    const element = document.getElementById(elementId);
+                    if (element) {
+                        element.value = value;
+                    } else {
+                        console.warn(`Element not found: ${elementId}`);
+                    }
+                }
+                
+                // 날짜 필드 채우기
+                if (banner.start_date) {
+                    try {
+                        const startDate = new Date(banner.start_date);
+                        const startElement = document.getElementById('edit_start_date');
+                        if (startElement && !isNaN(startDate.getTime())) {
+                            startElement.value = startDate.toISOString().split('T')[0];
+                        }
+                    } catch (e) {
+                        console.warn('Invalid start date:', banner.start_date);
+                    }
+                }
+                
+                if (banner.end_date) {
+                    try {
+                        const endDate = new Date(banner.end_date);
+                        const endElement = document.getElementById('edit_end_date');
+                        if (endElement && !isNaN(endDate.getTime())) {
+                            endElement.value = endDate.toISOString().split('T')[0];
+                        }
+                    } catch (e) {
+                        console.warn('Invalid end date:', banner.end_date);
+                    }
+                }
+                
+                // 노출 위치 체크박스 초기화
+                const locationCheckboxes = ['edit_location_1', 'edit_location_2', 'edit_location_3'];
+                locationCheckboxes.forEach(id => {
+                    const checkbox = document.getElementById(id);
+                    if (checkbox) {
+                        checkbox.checked = false;
+                    }
+                });
+                
+                // 노출 위치 설정
+                if (banner.display_locations && Array.isArray(banner.display_locations)) {
+                    banner.display_locations.forEach(location => {
+                        const checkbox = document.getElementById(`edit_location_${location}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+                
+                // 모달 열기
+                const modalElement = document.getElementById('editBannerModal');
+                if (modalElement && typeof bootstrap !== 'undefined') {
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                } else {
+                    console.error('Modal element or Bootstrap not found');
+                    alert('모달을 열 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+                }
+                
+            } catch (error) {
+                console.error('배너 수정 모달 오류:', error);
+                alert('배너 정보를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 배너 수정 폼 제출
+        const editForm = document.getElementById('editBannerForm');
+        if (editForm) {
+            editForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    const formData = new FormData(this);
+                    const bannerId = formData.get('banner_id');
+                    
+                    if (!bannerId) {
+                        alert('배너 ID가 없습니다. 다시 시도해주세요.');
+                        return;
+                    }
+                    
+                    // 필수 필드 검증
+                    const advertiserName = formData.get('advertiser_name');
+                    const imageUrl = formData.get('image_url');
+                    
+                    if (!advertiserName || !advertiserName.trim()) {
+                        alert('광고주명을 입력해주세요.');
+                        return;
+                    }
+                    
+                    if (!imageUrl || !imageUrl.trim()) {
+                        alert('배너 이미지 URL을 입력해주세요.');
+                        return;
+                    }
+                    
+                    // 노출 위치 배열로 변환
+                    const displayLocations = [];
+                    const location1 = document.getElementById('edit_location_1');
+                    const location2 = document.getElementById('edit_location_2');
+                    const location3 = document.getElementById('edit_location_3');
+                    
+                    if (location1 && location1.checked) displayLocations.push(1);
+                    if (location2 && location2.checked) displayLocations.push(2);
+                    if (location3 && location3.checked) displayLocations.push(3);
+                    
+                    if (displayLocations.length === 0) {
+                        alert('노출 위치를 최소 1개 이상 선택해주세요.');
+                        return;
+                    }
+                    
+                    // 날짜 유효성 검증
+                    const startDate = formData.get('start_date');
+                    const endDate = formData.get('end_date');
+                    
+                    if (startDate && endDate) {
+                        const start = new Date(startDate);
+                        const end = new Date(endDate);
+                        
+                        if (end <= start) {
+                            alert('종료일은 시작일보다 늦어야 합니다.');
+                            return;
+                        }
+                    }
+                    
+                    const data = {
+                        advertiser_name: advertiserName.trim(),
+                        title: (formData.get('title') || advertiserName || '').toString().trim(),
+                        image_url: imageUrl.trim(),
+                        link_url: formData.get('link_url') || '',
+                        description: formData.get('description') || '',
+                        display_order: parseInt(formData.get('display_order')) || 0,
+                        display_locations: displayLocations,
+                        start_date: startDate || null,
+                        end_date: endDate || null,
+                        click_count: parseInt(formData.get('click_count')) || 0
+                    };
+                    
+                    // 로딩 상태 표시
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>수정 중...';
+                    submitBtn.disabled = true;
+                    
+                    const response = await fetch(`/admin/banners/${bannerId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert('배너가 성공적으로 수정되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('오류: ' + (result.message || '알 수 없는 오류가 발생했습니다.'));
+                    }
+                    
+                } catch (error) {
+                    console.error('배너 수정 오류:', error);
+                    alert('수정 중 오류가 발생했습니다: ' + error.message);
+                } finally {
+                    // 로딩 상태 해제
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '수정';
+                        submitBtn.disabled = false;
+                    }
+                }
+            });
+        } else {
+            console.error('Edit banner form not found');
+        }
+
+        async function deleteBanner(bannerId) {
+            if (!confirm('정말 이 배너를 삭제하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/banners/${bannerId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('배너가 성공적으로 삭제되었습니다.');
+                    location.reload();
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('삭제 오류:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>

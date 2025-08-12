@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - 괌세이브카드</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        
+        .success-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .success-icon {
+            font-size: 5rem;
+            color: #28a745;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-in-out;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .qr-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border: 3px dashed #667eea;
+        }
+        
+        .qr-image {
+            max-width: 250px;
+            width: 100%;
+            height: auto;
+            margin: 20px 0;
+        }
+        
+        .card-info {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .btn-action {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            color: white;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .share-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        
+        .copy-link {
+            background: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .copy-link:hover {
+            background: #e3f2fd;
+        }
+        
+        .banner-section {
+            margin: 40px 0;
+        }
+        
+        .banner-item {
+            margin-bottom: 20px;
+        }
+        
+        .banner-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .banner-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            border-color: #4FC3F7;
+        }
+        
+        .banner-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        
+        .banner-card:hover .banner-image {
+            transform: scale(1.05);
+        }
+        
+        .banner-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .banner-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            line-height: 1.3;
+        }
+        
+        .banner-description {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.4;
+            flex-grow: 1;
+        }
+        
+        .banner-action {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #4FC3F7;
+            display: flex;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        /* 사용방법 안내 스타일 */
+        .usage-guide {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid rgba(33, 150, 243, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .usage-guide h6 {
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .usage-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .usage-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .step-number {
+            background: #2196F3;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        
+        .step-text {
+            color: #333;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        /* 스크린샷 방지 스타일 */
+        .screenshot-protection {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: none;
+        }
+        
+        .screenshot-protection * {
+            pointer-events: auto;
+        }
+        
+        /* QR 코드 보호 */
+        .qr-protected {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .qr-protected::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        /* 보안 경고 메시지 */
+        .security-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(220, 53, 69, 0.95);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            font-weight: bold;
+            z-index: 9999;
+            display: none;
+            animation: fadeInOut 3s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .success-card {
+                margin: 10px;
+                padding: 30px 20px;
+            }
+            .qr-image {
+                max-width: 200px;
+            }
+            .success-icon {
+                font-size: 4rem;
+                margin-bottom: 20px;
+            }
+            .qr-code {
+                width: 200px;
+                height: 200px;
+            }
+            .banner-image {
+                max-height: 80px;
+            }
+        }
+        
+        /* 실물카드 디자인 스타일 */
+        .physical-card-container {
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .guam-save-card {
+            width: 100%;
+            max-width: 400px;
+            background: linear-gradient(135deg, #87CEEB 0%, #4FC3F7 50%, #29B6F6 100%);
+            border-radius: 20px;
+            padding: 30px 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2), 0 5px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .guam-save-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+        }
+        
+        .card-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .travel-icons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .travel-icons i {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.5rem;
+        }
+        
+        .trip-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .guam-save-text {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 2px;
+            margin: 0;
+            font-family: 'Arial Black', Arial, sans-serif;
+        }
+        
+        .qr-section {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .card-qr-image {
+            max-width: 180px;
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        
+        .qr-instruction {
+            color: #333;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+        
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .guam-save-card {
+                max-width: 350px;
+                padding: 25px 20px;
+            }
+            
+            .guam-save-text {
+                font-size: 2rem;
+            }
+            
+            .travel-icons {
+                gap: 10px;
+            }
+            
+            .travel-icons i {
+                font-size: 1.2rem;
+            }
+            
+            .card-qr-image {
+                max-width: 150px;
+            }
+        }
+        
+        /* 중요사항 카드링크 스타일 */
+        .important-card-link {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 3px solid #f39c12;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 25px 0;
+            box-shadow: 0 8px 25px rgba(243, 156, 18, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .important-card-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .important-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #d35400;
+        }
+        
+        .important-header i {
+            font-size: 1.3rem;
+            color: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .important-header h6 {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 0;
+        }
+        
+        .important-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .important-text {
+            color: #8b4513;
+            font-weight: 500;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .link-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .copy-link-important {
+            background: white;
+            border: 2px solid #f39c12;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            color: #2c3e50;
+            font-weight: bold;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .btn-copy {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+        }
+        
+        .btn-copy:hover {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.6);
+            color: white;
+        }
+        
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+        
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            .important-card-link {
+                padding: 15px;
+                margin: 20px 0;
+            }
+            
+            .important-header h6 {
+                font-size: 1rem;
+            }
+            
+            .important-text {
+                font-size: 0.9rem;
+                padding: 10px;
+            }
+            
+            .copy-link-important {
+                font-size: 0.8rem;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 비밀번호 인증 모달 -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="passwordModalLabel">
+                        <i class="fas fa-lock me-2"></i>카드 비밀번호 입력
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-shield-alt text-primary" style="font-size: 3rem;"></i>
+                        <h6 class="mt-3">카드 사용을 위해 비밀번호를 입력해주세요</h6>
+                        <p class="text-muted">발급 시 설정한 4자리 숫자 비밀번호를 입력하세요</p>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>중요:</strong> 이 비밀번호는 제휴업체에서 카드를 사용할 때 반드시 필요합니다!
+                        </div>
+                    </div>
+                    
+                    <form id="passwordForm">
+                        <div class="mb-3">
+                            <label for="cardPassword" class="form-label">
+                                <i class="fas fa-key me-2"></i>4자리 숫자 비밀번호
+                            </label>
+                            <input type="number" 
+                                   class="form-control text-center" 
+                                   id="cardPassword" 
+                                   name="cardPassword" 
+                                   placeholder="4자리 숫자 입력"
+                                   maxlength="4"
+                                   style="font-size: 1.5rem; letter-spacing: 0.5rem;"
+                                   required>
+                        </div>
+                        
+                        <div id="passwordError" class="alert alert-danger" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="passwordErrorMessage"></span>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-unlock me-2"></i>비밀번호 확인
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 보안 경고 메시지 -->
+    <div id="securityWarning" class="security-warning">
+        <i class="fas fa-shield-alt me-2"></i>보안: 스크린샷 및 녹화가 감지되었습니다!
+    </div>
+    
+    <div class="container" id="cardContent" style="display: none;">
+
+        
+        <div class="success-card">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            
+            <h2 class="mb-3">🎉 할인카드 발급 완료!</h2>
+            <p class="text-muted mb-4">축하합니다! 괌세이브카드가 성공적으로 발급되었습니다.</p>
+
+            <div class="card-info">
+                <h4><i class="fas fa-user me-2"></i><%= user.customer_name %>님의 할인카드</h4>
+                <p class="mb-1"><i class="fas fa-building me-2"></i><%= user.agency_name %></p>
+                <% if (user.expiration_text) { %>
+                    <p class="mb-0 text-warning fw-bold">
+                        <i class="fas fa-calendar-alt me-2"></i><%= user.expiration_text %>
+                    </p>
+                <% } %>
+            </div>
+
+            <div class="physical-card-container screenshot-protection">
+                <div class="guam-save-card">
+                    <!-- 카드 상단 디자인 -->
+                    <div class="card-header">
+                        <div class="travel-icons">
+                            <i class="fas fa-plane"></i>
+                            <span class="trip-badge">TRIP</span>
+                            <i class="fas fa-fish"></i>
+                            <i class="fas fa-suitcase"></i>
+                            <i class="fas fa-palm-tree"></i>
+                            <i class="fas fa-sailboat"></i>
+                        </div>
+                        <div class="card-title-main">
+                            <h2 class="guam-save-text">GUAM SAVE</h2>
+                        </div>
+                    </div>
+                    
+                    <!-- QR 코드 영역 -->
+                    <div class="qr-section">
+                        <div class="qr-protected">
+                            <img src="<%= qrImageUrl %>" alt="QR Code" class="card-qr-image">
+                        </div>
+                        <p class="qr-instruction">제휴업체에서 QR코드를 스캔하세요</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 사용방법 안내 - QR 카드 아래로 이동 -->
+            <div class="usage-guide mt-4">
+                <h6 class="text-primary"><i class="fas fa-question-circle me-2"></i>사용방법</h6>
+                <div class="usage-steps">
+                    <div class="usage-step">
+                        <span class="step-number">1</span>
+                        <span class="step-text">제휴업체에서 QR 코드를 보여주세요</span>
+                    </div>
+                    <div class="usage-step">
+                        <span class="step-number">2</span>
+                        <span class="step-text">직원이 제휴업체명을 입력합니다</span>
+                    </div>
+                    <div class="usage-step">
+                        <span class="step-number">3</span>
+                        <span class="step-text">할인혜택을 받으세요</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중요사항 강조 카드링크 섹션 -->
+            <div class="important-card-link">
+                <div class="important-header">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <h6 class="mb-0">중요! 카드 링크 보관</h6>
+                </div>
+                <div class="important-content">
+                    <p class="important-text">
+                        해당 링크는 토큰값이 적용된 모바일카드 고유링크이며 발급후 북마크나 링크를 알기쉬게 보관하셔서 제휴업체 사용시 설정하신 패스워드 입력후 사용하세요.
+                    </p>
+                    <div class="link-container">
+                        <div class="copy-link-important" id="cardLink"><%= cardUrl %></div>
+                        <button class="btn btn-warning btn-copy" onclick="copyLink()">
+                            <i class="fas fa-copy me-1"></i>링크 복사
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="<%= cardUrl %>" class="btn-action">
+                    <i class="fas fa-credit-card me-2"></i>내 카드 보기
+                </a>
+
+            </div>
+
+            <div class="mt-4">
+                <a href="/" class="text-muted text-decoration-none">
+                    <i class="fas fa-home me-2"></i>메인 페이지로 돌아가기
+                </a>
+            </div>
+
+            <!-- Banner Section -->
+        <% if (banners && banners.length > 0) { %>
+        <div class="banner-section mb-5">
+            <h3 class="text-white text-center mb-4">
+                <i class="fas fa-star me-2"></i>추천 할인 혜택
+            </h3>
+            <div class="row g-3" id="bannersList">
+                <% banners.forEach(banner => { %>
+                <div class="col-12 banner-item">
+                    <div class="banner-card" onclick="trackBannerClick('<%= banner.id %>', '<%= banner.link_url || "" %>')">
+                        <img src="<%= banner.image_url %>" alt="<%= banner.advertiser_name %>" class="banner-image">
+                        <div class="banner-content">
+                            <h5 class="banner-name"><%= banner.advertiser_name %></h5>
+                            <% if (banner.description) { %>
+                                <p class="banner-description"><%= banner.description %></p>
+                            <% } %>
+                            <div class="banner-action">
+                                <i class="fas fa-external-link-alt me-2"></i>자세히 보기
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+            
+            <!-- 배너 이미지 가이드 -->
+            <div class="text-center mt-4">
+                <small class="text-white-50">
+                    <i class="fas fa-info-circle me-2"></i>
+
+                </small>
+            </div>
+        </div>
+        <% } %>
+
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 배너 클릭 추적 함수
+        async function trackBannerClick(bannerId, linkUrl) {
+            try {
+                // 클릭 수 증가 API 호출
+                await fetch(`/banner/click/${bannerId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                // 링크가 있으면 새 탭에서 열기
+                if (linkUrl && linkUrl.trim() !== '') {
+                    window.open(linkUrl, '_blank');
+                }
+            } catch (error) {
+                console.error('배너 클릭 추적 오류:', error);
+                // 오류가 발생해도 링크는 열기
+                if (linkUrl && linkUrl.trim() !== '') {
+                    window.open(linkUrl, '_blank');
+                }
+            }
+        }
+
+        function copyLink() {
+            const linkText = document.getElementById('cardLink').textContent;
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            
+            // 현대적인 Clipboard API 시도
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(linkText).then(() => {
+                    showCopySuccess(btn, originalText);
+                }).catch(() => {
+                    fallbackCopyTextToClipboard(linkText, btn, originalText);
+                });
+            } else {
+                // Clipboard API를 사용할 수 없는 경우 fallback 사용
+                fallbackCopyTextToClipboard(linkText, btn, originalText);
+            }
+        }
+        
+        function fallbackCopyTextToClipboard(text, btn, originalText) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            
+            // 화면에서 숨기기
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess(btn, originalText);
+                } else {
+                    showCopyError();
+                }
+            } catch (err) {
+                console.error('Fallback: Could not copy text: ', err);
+                showCopyError();
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        function showCopySuccess(btn, originalText) {
+            btn.innerHTML = '<i class="fas fa-check me-1"></i>복사됨!';
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-outline-primary');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-primary');
+            }, 2000);
+        }
+        
+        function showCopyError() {
+            // 링크를 선택 상태로 만들어 수동 복사 가능하게 함
+            const linkElement = document.getElementById('cardLink');
+            if (window.getSelection) {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(linkElement);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            alert('자동 복사에 실패했습니다. 링크가 선택되었으니 Ctrl+C로 복사해주세요.');
+        }
+
+        // 스크린샷 방지 기능
+        function initScreenshotProtection() {
+            // 보안 경고 표시 함수
+            function showSecurityWarning() {
+                const warning = document.getElementById('securityWarning');
+                warning.style.display = 'block';
+                setTimeout(() => {
+                    warning.style.display = 'none';
+                }, 3000);
+            }
+            
+            // 우클릭 방지
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showSecurityWarning();
+                return false;
+            });
+            
+            // 키보드 단축키 방지 (스크린샷, 개발자 도구 등)
+            document.addEventListener('keydown', function(e) {
+                // F12 (개발자 도구)
+                if (e.keyCode === 123) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                    return false;
+                }
+                
+                // Ctrl+Shift+I (개발자 도구)
+                if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                    return false;
+                }
+                
+                // Ctrl+U (소스 보기)
+                if (e.ctrlKey && e.keyCode === 85) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                    return false;
+                }
+                
+                // Ctrl+S (저장)
+                if (e.ctrlKey && e.keyCode === 83) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                    return false;
+                }
+                
+                // Print Screen
+                if (e.keyCode === 44) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                    return false;
+                }
+                
+                // Alt+Print Screen
+                if (e.altKey && e.keyCode === 44) {
+                    e.preventDefault();
+                    showSecurityWarning();
+                    return false;
+                }
+            });
+            
+            // 페이지 가시성 변경 감지 (앱 전환, 스크린샷 등)
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    // 페이지가 숨겨질 때 (스크린샷 가능성)
+                    setTimeout(() => {
+                        if (!document.hidden) {
+                            showSecurityWarning();
+                        }
+                    }, 100);
+                }
+            });
+            
+            // 드래그 방지
+            document.addEventListener('dragstart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // 선택 방지 (추가 보안)
+            document.addEventListener('selectstart', function(e) {
+                if (e.target.closest('.screenshot-protection')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+            
+            // 모바일 길게 누르기 방지
+            let touchTimer;
+            document.addEventListener('touchstart', function(e) {
+                if (e.target.closest('.screenshot-protection')) {
+                    touchTimer = setTimeout(() => {
+                        showSecurityWarning();
+                    }, 500);
+                }
+            });
+            
+            document.addEventListener('touchend', function() {
+                clearTimeout(touchTimer);
+            });
+            
+            document.addEventListener('touchmove', function() {
+                clearTimeout(touchTimer);
+            });
+        }
+        
+        // 비밀번호 인증 기능
+        function initPasswordAuth() {
+            const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+            const passwordForm = document.getElementById('passwordForm');
+            const passwordInput = document.getElementById('cardPassword');
+            const errorDiv = document.getElementById('passwordError');
+            const errorMessage = document.getElementById('passwordErrorMessage');
+            const cardContent = document.getElementById('cardContent');
+            
+            // 모달 표시
+            modal.show();
+            
+            // 비밀번호 입력 폼 제출
+            passwordForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const password = passwordInput.value.trim();
+                if (!password || password.length !== 4 || !/^[0-9]{4}$/.test(password)) {
+                    showError('4자리 숫자 비밀번호를 입력해주세요.');
+                    return;
+                }
+                
+                const submitBtn = passwordForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                
+                try {
+                    // 로딩 상태
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>인증 중...';
+                    submitBtn.disabled = true;
+                    
+                    // 비밀번호 인증 API 호출 (경로 수정)
+                    const response = await fetch('/verify-password', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            token: '<%= user.token %>',
+                            password: password
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // 인증 성공 플래그 설정
+                        window.setAuthenticated();
+                        
+                        // 카드 내용 표시
+                        cardContent.style.display = 'block';
+                        
+                        // 모달 닫기 (지연 실행으로 카드 내용이 먼저 표시되도록)
+                        setTimeout(() => {
+                            modal.hide();
+                        }, 100);
+                        
+                        // 성공 애니메이션
+                        setTimeout(() => {
+                            const icon = document.querySelector('.success-icon');
+                            if (icon) {
+                                icon.style.animation = 'bounce 1s ease-in-out';
+                            }
+                        }, 500);
+                    } else {
+                        // 인증 실패
+                        showError(result.message || '비밀번호가 일치하지 않습니다.');
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                    }
+                    
+                } catch (error) {
+                    console.error('비밀번호 인증 오류:', error);
+                    showError('인증 중 오류가 발생했습니다. 다시 시도해주세요.');
+                } finally {
+                    // 버튼 상태 복원
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            });
+            
+            // 오류 메시지 표시 함수
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorDiv.style.display = 'block';
+                passwordInput.classList.add('is-invalid');
+                
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                    passwordInput.classList.remove('is-invalid');
+                }, 5000);
+            }
+            
+            // 비밀번호 입력 시 오류 숨기기
+            passwordInput.addEventListener('input', function() {
+                if (errorDiv.style.display === 'block') {
+                    errorDiv.style.display = 'none';
+                    passwordInput.classList.remove('is-invalid');
+                }
+            });
+            
+            // 모달이 닫히는 것을 방지 (비밀번호 인증 전까지)
+            let isAuthenticated = false;
+            document.getElementById('passwordModal').addEventListener('hide.bs.modal', function(e) {
+                if (!isAuthenticated && (!cardContent.style.display || cardContent.style.display === 'none')) {
+                    e.preventDefault();
+                }
+            });
+            
+            // 인증 성공 시 플래그 설정
+            window.setAuthenticated = function() {
+                isAuthenticated = true;
+            };
+        }
+        
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', () => {
+            // 비밀번호 인증 기능 초기화
+            initPasswordAuth();
+            
+            // 스크린샷 방지 기능 초기화
+            initScreenshotProtection();
+        });
+    </script>
+    
+    <footer style="text-align: center; padding: 20px 0; font-size: 14px; color: #ffffff; background: rgba(0,0,0,0.1); margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.2); text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+        &copy; 2025 luxfind. All rights reserved. Developed by Kim Jongsoung.
+    </footer>
+</body>
+</html>
