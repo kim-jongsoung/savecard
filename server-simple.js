@@ -369,7 +369,9 @@ app.post('/register', async (req, res) => {
         const expirationText = `Save Card Expiration Date ${formatDate(expirationStart)}~${formatDate(expirationEnd)}`;
 
         // QR 코드 생성 (Base64 인라인 방식으로 변경 - Railway 배포 환경 대응)
-        const qrDataURL = await QRCode.toDataURL(token, {
+        // 제휴업체 직원이 스캔 시 사용처리 페이지로 연결되도록 완전한 URL 생성
+        const cardUrl = `${req.protocol}://${req.get('host')}/card?token=${token}`;
+        const qrDataURL = await QRCode.toDataURL(cardUrl, {
             color: {
                 dark: '#000000',
                 light: '#FFFFFF'

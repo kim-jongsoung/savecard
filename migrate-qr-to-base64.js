@@ -17,8 +17,9 @@ async function migrateQRCodesToBase64() {
                 console.log(`🔧 사용자 ${user.customer_name} (${user.email}) QR코드 업데이트 중...`);
                 
                 try {
-                    // 토큰으로 새로운 Base64 QR코드 생성
-                    const qrDataURL = await QRCode.toDataURL(user.token, {
+                    // 제휴업체 직원이 스캔 시 사용처리 페이지로 연결되도록 완전한 URL로 QR코드 생성
+                    const cardUrl = `https://savecard-production.up.railway.app/card?token=${user.token}`;
+                    const qrDataURL = await QRCode.toDataURL(cardUrl, {
                         color: {
                             dark: '#000000',
                             light: '#FFFFFF'
