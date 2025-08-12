@@ -39,8 +39,10 @@ try {
     console.warn('⚠️ 이메일 발송 설정 중 경고:', e.message);
 }
 
-// QR 코드 저장 디렉토리 생성
-const qrDir = path.join(__dirname, 'qrcodes');
+// QR 코드 저장 디렉토리 생성 (Railway 배포 환경 고려)
+const qrDir = process.env.NODE_ENV === 'production' 
+    ? path.join('/tmp', 'qrcodes')  // Railway에서는 /tmp 디렉토리 사용
+    : path.join(__dirname, 'qrcodes');
 fs.ensureDirSync(qrDir);
 
 // 미들웨어 설정
@@ -366,18 +368,13 @@ app.post('/register', async (req, res) => {
         
         const expirationText = `Save Card Expiration Date ${formatDate(expirationStart)}~${formatDate(expirationEnd)}`;
 
-        // QR 코드 생성
-        const cardUrl = `${req.protocol}://${req.get('host')}/card?token=${token}`;
-        const qrFileName = `${token}.png`;
-        const qrFilePath = path.join(qrDir, qrFileName);
-
-        await QRCode.toFile(qrFilePath, cardUrl, {
-            width: 300,
-            margin: 2,
+        // QR 코드 생성 (Base64 인라인 방식으로 변경 - Railway 배포 환경 대응)
+        const qrDataURL = await QRCode.toDataURL(token, {
             color: {
                 dark: '#000000',
                 light: '#FFFFFF'
-            }
+            },
+            width: 256
         });
 
         // 사용자 정보 저장
@@ -387,7 +384,7 @@ app.post('/register', async (req, res) => {
             email: emailNorm,
             token,
             password, // 4자리 비밀번호 저장
-            qr_image_path: `/qrcodes/${qrFileName}`,
+            qr_image_path: qrDataURL, // Base64 데이터 URL로 직접 저장
             expiration_start: expirationStart.toISOString(),
             expiration_end: expirationEnd.toISOString(),
             expiration_text: expirationText,
