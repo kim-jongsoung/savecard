@@ -6,9 +6,25 @@ const { v4: uuidv4 } = require('uuid');
 const QRCode = require('qrcode');
 const fs = require('fs-extra');
 const bcrypt = require('bcryptjs');
-const { pool, testConnection, createTables, migrateFromJSON } = require('./database');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
+
+// PostgreSQL 또는 JSON 데이터베이스 선택
+let dbMode = 'postgresql';
+let pool, testConnection, createTables, migrateFromJSON;
+let jsonDB;
+
+try {
+    const dbModule = require('./database');
+    pool = dbModule.pool;
+    testConnection = dbModule.testConnection;
+    createTables = dbModule.createTables;
+    migrateFromJSON = dbModule.migrateFromJSON;
+} catch (error) {
+    console.warn('⚠️ PostgreSQL 모듈 로드 실패, JSON 데이터베이스로 fallback:', error.message);
+    dbMode = 'json';
+    jsonDB = require('./utils/jsonDB');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -68,108 +84,177 @@ function requireAuth(req, res, next) {
 // 데이터베이스 연결 확인 미들웨어
 async function checkDatabase(req, res, next) {
     try {
-        await pool.query('SELECT 1');
+        if (dbMode === 'postgresql') {
+            await pool.query('SELECT 1');
+        }
+        // JSON 모드는 항상 사용 가능하므로 체크 생략
         next();
     } catch (err) {
         console.error('데이터베이스 연결 오류:', err);
-        res.status(500).send('데이터베이스 연결 오류가 발생했습니다.');
+        // PostgreSQL 실패 시 JSON 모드로 fallback
+        if (dbMode === 'postgresql') {
+            console.warn('⚠️ PostgreSQL 연결 실패, JSON 데이터베이스로 전환합니다.');
+            dbMode = 'json';
+            if (!jsonDB) {
+                jsonDB = require('./utils/jsonDB');
+            }
+        }
+        next();
     }
 }
 
 // 모든 라우트에 데이터베이스 체크 적용
 app.use(checkDatabase);
 
-// PostgreSQL 헬퍼 함수들
+// 데이터베이스 헬퍼 함수들 (PostgreSQL/JSON 호환)
 const dbHelpers = {
     // 사용자 관련
     async getUsers() {
-        const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
-        return result.rows;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
+            return result.rows;
+        } else {
+            return await jsonDB.findAll('users');
+        }
     },
     
     async getUserByToken(token) {
-        const result = await pool.query('SELECT * FROM users WHERE token = $1', [token]);
-        return result.rows[0] || null;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM users WHERE token = $1', [token]);
+            return result.rows[0] || null;
+        } else {
+            return await jsonDB.findOne('users', { token });
+        }
     },
     
     async createUser(userData) {
-        const { name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end } = userData;
-        const result = await pool.query(
-            'INSERT INTO users (name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
-            [name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end]
-        );
-        return result.rows[0];
+        if (dbMode === 'postgresql') {
+            const { name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end } = userData;
+            const result = await pool.query(
+                'INSERT INTO users (name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
+                [name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.insert('users', userData);
+        }
     },
     
     // 여행사 관련
     async getAgencies() {
-        const result = await pool.query('SELECT * FROM agencies ORDER BY display_order, name');
-        return result.rows;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM agencies ORDER BY display_order, name');
+            return result.rows;
+        } else {
+            return await jsonDB.findAll('agencies');
+        }
     },
     
     async getAgencyById(id) {
-        const result = await pool.query('SELECT * FROM agencies WHERE id = $1', [id]);
-        return result.rows[0] || null;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM agencies WHERE id = $1', [id]);
+            return result.rows[0] || null;
+        } else {
+            return await jsonDB.findById('agencies', id);
+        }
     },
     
     async getAgencyByCode(code) {
-        const result = await pool.query('SELECT * FROM agencies WHERE code = $1', [code]);
-        return result.rows[0] || null;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM agencies WHERE code = $1', [code]);
+            return result.rows[0] || null;
+        } else {
+            return await jsonDB.findOne('agencies', { code });
+        }
     },
     
     async createAgency(agencyData) {
-        const { name, code, discount_info, show_banners_on_landing = true } = agencyData;
-        const result = await pool.query(
-            'INSERT INTO agencies (name, code, discount_info, show_banners_on_landing, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-            [name, code, discount_info, show_banners_on_landing]
-        );
-        return result.rows[0];
+        if (dbMode === 'postgresql') {
+            const { name, code, discount_info, show_banners_on_landing = true } = agencyData;
+            const result = await pool.query(
+                'INSERT INTO agencies (name, code, discount_info, show_banners_on_landing, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
+                [name, code, discount_info, show_banners_on_landing]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.insert('agencies', agencyData);
+        }
     },
     
     async updateAgency(id, agencyData) {
-        const { name, code, discount_info, show_banners_on_landing } = agencyData;
-        const result = await pool.query(
-            'UPDATE agencies SET name = $1, code = $2, discount_info = $3, show_banners_on_landing = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
-            [name, code, discount_info, show_banners_on_landing, id]
-        );
-        return result.rows[0];
+        if (dbMode === 'postgresql') {
+            const { name, code, discount_info, show_banners_on_landing } = agencyData;
+            const result = await pool.query(
+                'UPDATE agencies SET name = $1, code = $2, discount_info = $3, show_banners_on_landing = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
+                [name, code, discount_info, show_banners_on_landing, id]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.update('agencies', id, agencyData);
+        }
     },
     
     // 제휴업체 관련
     async getStores() {
-        const result = await pool.query('SELECT * FROM stores WHERE is_active = true ORDER BY name');
-        return result.rows;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM stores WHERE is_active = true ORDER BY name');
+            return result.rows;
+        } else {
+            const stores = await jsonDB.findAll('stores');
+            return stores.filter(store => store.is_active !== false);
+        }
     },
     
     async getStoreById(id) {
-        const result = await pool.query('SELECT * FROM stores WHERE id = $1', [id]);
-        return result.rows[0] || null;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM stores WHERE id = $1', [id]);
+            return result.rows[0] || null;
+        } else {
+            return await jsonDB.findById('stores', id);
+        }
     },
     
     // 배너 관련
     async getBanners() {
-        const result = await pool.query('SELECT * FROM banners WHERE is_active = true ORDER BY display_order');
-        return result.rows;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM banners WHERE is_active = true ORDER BY display_order');
+            return result.rows;
+        } else {
+            const banners = await jsonDB.findAll('banners');
+            return banners.filter(banner => banner.is_active !== false);
+        }
     },
     
     // 사용 기록 관련
     async getUsages(token = null) {
-        if (token) {
-            const result = await pool.query('SELECT * FROM usages WHERE token = $1 ORDER BY used_at DESC', [token]);
-            return result.rows;
+        if (dbMode === 'postgresql') {
+            if (token) {
+                const result = await pool.query('SELECT * FROM usages WHERE token = $1 ORDER BY used_at DESC', [token]);
+                return result.rows;
+            } else {
+                const result = await pool.query('SELECT * FROM usages ORDER BY used_at DESC');
+                return result.rows;
+            }
         } else {
-            const result = await pool.query('SELECT * FROM usages ORDER BY used_at DESC');
-            return result.rows;
+            if (token) {
+                return await jsonDB.findAll('usages', { token });
+            } else {
+                return await jsonDB.findAll('usages');
+            }
         }
     },
     
     async createUsage(usageData) {
-        const { token, store_name, used_at = new Date() } = usageData;
-        const result = await pool.query(
-            'INSERT INTO usages (token, store_name, used_at) VALUES ($1, $2, $3) RETURNING *',
-            [token, store_name, used_at]
-        );
-        return result.rows[0];
+        if (dbMode === 'postgresql') {
+            const { token, store_name, used_at = new Date() } = usageData;
+            const result = await pool.query(
+                'INSERT INTO usages (token, store_name, used_at) VALUES ($1, $2, $3) RETURNING *',
+                [token, store_name, used_at]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.insert('usages', { ...usageData, used_at: usageData.used_at || new Date() });
+        }
     }
 };
 
@@ -185,11 +270,65 @@ function formatDate(date) {
 
 // ==================== 메인 라우트 ====================
 
+// 헬스체크 라우트 (디버깅용)
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        message: 'PostgreSQL 서버가 정상 작동 중입니다.'
+    });
+});
+
+// 데이터베이스 연결 테스트 라우트
+app.get('/db-test', async (req, res) => {
+    try {
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT NOW() as current_time');
+            res.json({ 
+                status: 'OK', 
+                database: 'PostgreSQL Connected',
+                mode: 'postgresql',
+                current_time: result.rows[0].current_time
+            });
+        } else {
+            res.json({ 
+                status: 'OK', 
+                database: 'JSON Database Active',
+                mode: 'json',
+                current_time: new Date().toISOString()
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ 
+            status: 'ERROR', 
+            database: 'Connection Failed',
+            mode: dbMode,
+            error: error.message
+        });
+    }
+});
+
 // 메인 페이지
 app.get('/', async (req, res) => {
     try {
-        const agencies = await dbHelpers.getAgencies();
-        const banners = await dbHelpers.getBanners();
+        // 먼저 데이터베이스 연결 확인
+        await pool.query('SELECT 1');
+        
+        // 데이터 조회 (오류 발생 시 빈 배열 반환)
+        let agencies = [];
+        let banners = [];
+        
+        try {
+            agencies = await dbHelpers.getAgencies();
+        } catch (err) {
+            console.warn('여행사 데이터 조회 실패:', err.message);
+        }
+        
+        try {
+            banners = await dbHelpers.getBanners();
+        } catch (err) {
+            console.warn('배너 데이터 조회 실패:', err.message);
+        }
         
         res.render('index', {
             title: '괌세이브카드',
@@ -198,10 +337,12 @@ app.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('메인 페이지 오류:', error);
-        res.render('index', {
-            title: '괌세이브카드',
-            agencies: [],
-            banners: []
+        
+        // 데이터베이스 연결 실패 시 에러 페이지 렌더링
+        res.status(500).render('error', {
+            title: '서버 오류',
+            message: '데이터베이스 연결에 실패했습니다.',
+            error: { status: 500, message: error.message }
         });
     }
 });
@@ -606,20 +747,33 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
 // 서버 시작 및 데이터베이스 초기화
 app.listen(PORT, async () => {
     console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
+    console.log(`📊 데이터베이스 모드: ${dbMode.toUpperCase()}`);
     
-    try {
-        // 데이터베이스 연결 테스트
-        await testConnection();
-        
-        // 테이블 생성
-        await createTables();
-        console.log('📊 데이터베이스 테이블이 준비되었습니다.');
-        
-        // JSON 데이터 마이그레이션 (최초 1회만)
-        await migrateFromJSON();
-        console.log('🔄 데이터 마이그레이션이 완료되었습니다.');
-        
-    } catch (error) {
-        console.error('❌ 서버 초기화 중 오류:', error);
+    if (dbMode === 'postgresql') {
+        try {
+            // 데이터베이스 연결 테스트
+            await testConnection();
+            
+            // 테이블 생성
+            await createTables();
+            console.log('📊 PostgreSQL 테이블이 준비되었습니다.');
+            
+            // JSON 데이터 마이그레이션 (최초 1회만)
+            await migrateFromJSON();
+            console.log('🔄 데이터 마이그레이션이 완료되었습니다.');
+            
+        } catch (error) {
+            console.error('❌ PostgreSQL 초기화 중 오류:', error);
+            console.warn('⚠️ JSON 데이터베이스로 fallback 합니다.');
+            dbMode = 'json';
+            if (!jsonDB) {
+                jsonDB = require('./utils/jsonDB');
+            }
+        }
+    }
+    
+    if (dbMode === 'json') {
+        console.log('📁 JSON 파일 기반 데이터베이스를 사용합니다.');
+        console.log('⚠️ 주의: Railway 배포 시 데이터가 초기화될 수 있습니다.');
     }
 });

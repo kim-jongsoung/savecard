@@ -3,9 +3,15 @@ require('dotenv').config();
 
 // Railway PostgreSQL 연결 설정
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
+
+// 환경변수 확인
+if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL && !process.env.DB_URL) {
+  console.warn('⚠️ PostgreSQL 연결 문자열이 설정되지 않았습니다.');
+  console.warn('환경변수 DATABASE_URL, POSTGRES_URL, 또는 DB_URL을 설정해주세요.');
+}
 
 // 데이터베이스 연결 테스트
 async function testConnection() {
