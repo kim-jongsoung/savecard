@@ -16,8 +16,8 @@ async function forceUpdateQRCodesToURL() {
             console.log(`🔧 사용자 ${user.customer_name} (${user.email || 'undefined'}) QR코드 업데이트 중...`);
             
             try {
-                // 제휴업체 직원이 스캔 시 사용처리 페이지로 연결되도록 완전한 URL로 QR코드 생성
-                const cardUrl = `https://savecard-production.up.railway.app/card?token=${user.token}`;
+                // 제휴업체 직원이 스캔 시 비밀번호 없이 사용처리 페이지로 연결되도록 staff=true 파라미터 추가
+                const cardUrl = `https://savecard-production.up.railway.app/card?token=${user.token}&staff=true`;
                 const qrDataURL = await QRCode.toDataURL(cardUrl, {
                     color: {
                         dark: '#000000',

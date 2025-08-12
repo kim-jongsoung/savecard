@@ -369,8 +369,8 @@ app.post('/register', async (req, res) => {
         const expirationText = `Save Card Expiration Date ${formatDate(expirationStart)}~${formatDate(expirationEnd)}`;
 
         // QR 코드 생성 (Base64 인라인 방식으로 변경 - Railway 배포 환경 대응)
-        // 제휴업체 직원이 스캔 시 사용처리 페이지로 연결되도록 완전한 URL 생성
-        const cardUrl = `${req.protocol}://${req.get('host')}/card?token=${token}`;
+        // 제휴업체 직원이 스캔 시 비밀번호 없이 사용처리 페이지로 연결되도록 staff=true 파라미터 추가
+        const cardUrl = `${req.protocol}://${req.get('host')}/card?token=${token}&staff=true`;
         const qrDataURL = await QRCode.toDataURL(cardUrl, {
             color: {
                 dark: '#000000',
@@ -502,7 +502,7 @@ app.post('/verify-password', async (req, res) => {
 
 // ==================== 카드 페이지 ====================
 app.get('/card', async (req, res) => {
-    const { token } = req.query;
+    const { token, staff } = req.query;
 
     if (!token) {
         return res.render('error', {
@@ -537,6 +537,9 @@ app.get('/card', async (req, res) => {
         // 제휴업체 목록 조회
         const stores = await jsonDB.read('stores');
 
+        // 직원 모드인지 확인 (QR코드 스캔으로 접근한 경우)
+        const isStaffMode = staff === 'true';
+
         res.render('card', {
             title: '괌세이브카드',
             user: {
@@ -546,6 +549,7 @@ app.get('/card', async (req, res) => {
             banner: banner,
             usages: usages,
             stores: stores,
+            isStaffMode: isStaffMode, // 직원 모드 플래그 추가
             success: null,
             error: null
         });

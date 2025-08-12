@@ -595,7 +595,13 @@
         }
 
         window.addEventListener('load', () => {
-            initPasswordAuthOnCard();
+            // 직원 모드인 경우 비밀번호 인증 건너뛰기
+            <% if (isStaffMode) { %>
+                document.getElementById('cardContent').style.display = 'block';
+                console.log('직원 모드: 비밀번호 인증 건너뛰기');
+            <% } else { %>
+                initPasswordAuthOnCard();
+            <% } %>
         });
 
         // 제휴업체 데이터
