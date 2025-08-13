@@ -328,7 +328,8 @@ app.get('/', async (req, res) => {
         res.render('index', {
             title: '괌세이브카드',
             agencies,
-            banners
+            banners,
+            partnerAgency: null
         });
     } catch (renderErr) {
         console.error('메인 페이지 렌더링 오류:', renderErr);
@@ -399,11 +400,79 @@ app.post('/banner/click/:id', async (req, res) => {
     try {
         await dbHelpers.incrementBannerClick(id);
         res.json({ success: true });
-    } catch (e) {
-        console.warn('배너 클릭 집계 실패:', e.message);
-        // 실패해도 사용자 UX에 영향 없도록 200 반환
+    } catch (error) {
+        console.error('배너 클릭 추적 오류:', error);
         res.json({ success: false });
     }
+});
+
+// 제휴업체 목록 페이지
+app.get('/stores', async (req, res) => {
+    try {
+        const stores = await dbHelpers.getStores();
+        const banners = await dbHelpers.getBanners();
+        
+        // 카테고리 생성 (stores에서 카테고리 추출)
+        const categories = {};
+        if (stores && stores.length > 0) {
+            stores.forEach(store => {
+                if (store.category) {
+                    categories[store.category] = true;
+                }
+            });
+        }
+        
+        res.render('stores', {
+            title: '제휴업체',
+            stores: stores,
+            banners: banners,
+            categories: categories
+        });
+    } catch (error) {
+        console.error('제휴업체 목록 오류:', error);
+        res.render('stores', {
+            title: '제휴업체',
+            stores: [],
+            banners: [],
+            categories: {}
+        });
+    }
+});
+
+// 카드 발급 페이지
+app.get('/register', async (req, res) => {
+    try {
+        const agencies = await dbHelpers.getAgencies();
+        res.render('register', {
+            title: '카드 발급',
+            agencies: agencies,
+            error: null
+        });
+    } catch (error) {
+        console.error('카드 발급 페이지 오류:', error);
+        res.render('register', {
+            title: '카드 발급',
+            agencies: [],
+            error: null
+        });
+    }
+});
+
+// 사용자 로그인 페이지
+app.get('/login', (req, res) => {
+    res.render('login', {
+        title: '로그인',
+        error: null
+    });
+});
+
+// 내 카드 페이지
+app.get('/my-card', (req, res) => {
+    res.render('my-card', {
+        title: '내 카드',
+        user: null,
+        usages: []
+    });
 });
 
 // 카드 발급 페이지
@@ -626,7 +695,10 @@ app.post('/card/use', async (req, res) => {
 
 // 관리자 로그인 페이지
 app.get('/admin/login', (req, res) => {
-    res.render('admin/login', { title: '관리자 로그인' });
+    res.render('admin/login', { 
+        title: '관리자 로그인',
+        error: null 
+    });
 });
 
 // 관리자 로그인 처리
