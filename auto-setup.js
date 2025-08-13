@@ -28,6 +28,16 @@ async function autoSetup() {
   // 2. .env 파일 업데이트
   console.log('📝 .env 파일 업데이트 중...');
   const envPath = path.join(__dirname, '.env');
+  // .env 파일이 없으면 기본 템플릿 생성
+  if (!fs.existsSync(envPath)) {
+    const defaultEnv = [
+      'DATABASE_URL=',
+      'SESSION_SECRET=guam-savecard-secret-key-2025',
+      'NODE_ENV=development'
+    ].join('\n') + '\n';
+    fs.writeFileSync(envPath, defaultEnv, 'utf8');
+    console.log('📄 .env 파일이 없어 기본 템플릿을 생성했습니다.');
+  }
   let envContent = fs.readFileSync(envPath, 'utf8');
   
   // DATABASE_URL 라인 찾아서 교체
