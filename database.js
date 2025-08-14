@@ -143,25 +143,29 @@ async function migrateFromJSON() {
   const path = require('path');
   
   try {
-    // stores.json 마이그레이션
+    // stores.json 마이그레이션 (테이블 스키마에 맞게 매핑)
     const storesPath = path.join(__dirname, 'data', 'stores.json');
     if (fs.existsSync(storesPath)) {
       const stores = JSON.parse(fs.readFileSync(storesPath, 'utf8'));
-      
+
       for (const store of stores) {
         await pool.query(`
-          INSERT INTO stores (name, category, discount, location, phone, hours, description, image_url, usage_count)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO stores (
+            name, category, discount, discount_info, address, phone, website, description, image_url, usage_count
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           ON CONFLICT DO NOTHING
         `, [
           store.name,
-          store.category,
-          store.discount,
-          store.location,
-          store.phone,
-          store.hours,
-          store.description,
-          store.imageUrl,
+          store.category || null,
+          // discount 컬럼은 간단 요약, discount_info는 상세 설명으로 매핑
+          store.discount || null,
+          store.discount_info || null,
+          store.location || null,
+          store.phone || null,
+          store.website || null,
+          store.description || null,
+          store.imageUrl || null,
           store.usage_count || 0
         ]);
       }
