@@ -439,6 +439,22 @@ app.get('/stores', async (req, res) => {
     }
 });
 
+// 제휴 신청 페이지
+app.get('/partner-apply', (req, res) => {
+    try {
+        res.render('partner-apply', {
+            title: '제휴업체 신청'
+        });
+    } catch (error) {
+        console.error('제휴 신청 페이지 오류:', error);
+        res.status(500).render('error', {
+            title: '서버 오류',
+            message: '페이지를 불러오는 중 오류가 발생했습니다.',
+            error: { status: 500 }
+        });
+    }
+});
+
 // 카드 발급 페이지
 app.get('/register', async (req, res) => {
     try {
@@ -499,20 +515,29 @@ app.get('/issue', async (req, res) => {
 // 카드 발급 처리
 app.post('/issue', async (req, res) => {
     try {
-        const { name, phone, email, agency_id } = req.body;
-        
-        if (!name || !phone || !agency_id) {
+        const { name, phone, email } = req.body;
+        let { agency_id, agency_code } = req.body;
+
+        // agency_id 우선, 없으면 agency_code로 조회
+        let agency = null;
+        if (agency_id) {
+            const idNum = Number(agency_id);
+            if (!Number.isFinite(idNum)) {
+                return res.json({ success: false, message: '유효하지 않은 여행사 ID입니다.' });
+            }
+            agency = await dbHelpers.getAgencyById(idNum);
+        } else if (agency_code) {
+            agency_code = String(agency_code).trim();
+            agency = await dbHelpers.getAgencyByCode(agency_code);
+            if (agency) {
+                agency_id = agency.id;
+            }
+        }
+
+        if (!name || !phone || !agency_id || !agency) {
             return res.json({
                 success: false,
                 message: '필수 정보를 모두 입력해주세요.'
-            });
-        }
-        
-        const agency = await dbHelpers.getAgencyById(agency_id);
-        if (!agency) {
-            return res.json({
-                success: false,
-                message: '유효하지 않은 여행사입니다.'
             });
         }
         
@@ -561,6 +586,50 @@ app.post('/issue', async (req, res) => {
             success: false,
             message: '카드 발급 중 오류가 발생했습니다.'
         });
+    }
+});
+
+// 제휴 신청 접수 API
+app.post('/api/partner-apply', async (req, res) => {
+    try {
+        // 폼 → DB 컬럼 매핑
+        const business_name = (req.body.business_name || '').toString().trim();
+        const contact_name = (req.body.contact_name || '').toString().trim();
+        const phone = (req.body.phone || '').toString().trim();
+        const email = (req.body.email || '').toString().trim() || null;
+        const business_type = (req.body.business_type || '').toString().trim() || null;
+        const location = (req.body.business_address || req.body.location || '').toString().trim() || null;
+        const discount_offer = (req.body.proposed_discount || req.body.discount_offer || '').toString().trim() || null;
+        // 설명/추가정보를 하나로 합쳐 저장 (둘 중 하나만 있을 수도 있음)
+        const desc = (req.body.business_description || '').toString().trim();
+        const notes = (req.body.additional_notes || req.body.additional_info || '').toString().trim();
+        const additional_info = [desc, notes].filter(Boolean).join('\n\n');
+        
+        if (!business_name || !contact_name || !phone) {
+            return res.status(400).json({ success: false, message: '필수 항목을 입력해주세요.' });
+        }
+        
+        if (dbMode === 'postgresql') {
+            await pool.query(
+                `INSERT INTO partner_applications (business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+                [business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info || null]
+            );
+        } else {
+            await jsonDB.create('partner_applications', {
+                id: Date.now(),
+                business_name, contact_name, phone, email,
+                business_type, location, discount_offer,
+                additional_info: additional_info || null,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('제휴 신청 접수 오류:', error);
+        res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
     }
 });
 

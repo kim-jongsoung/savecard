@@ -13,13 +13,16 @@
   },
   {
     "id": 2,
-    "name": "괌관광청",
+    "name": "",
     "agency_code": "guam_tourism",
     "contact_email": null,
     "contact_phone": null,
     "sort_order": 4,
     "created_at": "2025-08-06T10:34:00.000Z",
-    "updated_at": "2025-08-06T13:20:05.778Z"
+    "updated_at": "2025-08-14T07:36:56.527Z",
+    "code": "",
+    "discount_info": "",
+    "show_banners_on_landing": false
   },
   {
     "id": 5,
