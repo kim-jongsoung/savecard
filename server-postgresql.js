@@ -879,6 +879,7 @@ app.get('/admin/users', requireAuth, async (req, res) => {
         res.render('admin/users', {
             title: '사용자 관리',
             adminUsername: req.session.adminUsername || 'admin',
+            search: req.query.search || '',
             users,
             success: null,
             error: null
@@ -888,6 +889,7 @@ app.get('/admin/users', requireAuth, async (req, res) => {
         res.render('admin/users', {
             title: '사용자 관리',
             adminUsername: req.session.adminUsername || 'admin',
+            search: req.query.search || '',
             users: [],
             success: null,
             error: '사용자 목록을 불러오지 못했습니다.'
