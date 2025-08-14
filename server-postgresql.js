@@ -876,20 +876,36 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
 app.get('/admin/users', requireAuth, async (req, res) => {
     try {
         const users = await dbHelpers.getUsers();
+        const currentPage = Number(req.query.page) || 1;
+        const totalPages = 1; // 서버 페이징 미구현 상태의 기본값
+        const search = req.query.search || '';
+        const buildPageUrl = (p) => `/admin/users?page=${p}&search=${encodeURIComponent(search)}`;
         res.render('admin/users', {
             title: '사용자 관리',
             adminUsername: req.session.adminUsername || 'admin',
-            search: req.query.search || '',
+            search,
+            totalUsers: Array.isArray(users) ? users.length : 0,
+            currentPage,
+            totalPages,
+            buildPageUrl,
             users,
             success: null,
             error: null
         });
     } catch (error) {
         console.error('사용자 관리 페이지 오류:', error);
+        const currentPage = Number(req.query.page) || 1;
+        const totalPages = 1;
+        const search = req.query.search || '';
+        const buildPageUrl = (p) => `/admin/users?page=${p}&search=${encodeURIComponent(search)}`;
         res.render('admin/users', {
             title: '사용자 관리',
             adminUsername: req.session.adminUsername || 'admin',
-            search: req.query.search || '',
+            search,
+            totalUsers: 0,
+            currentPage,
+            totalPages,
+            buildPageUrl,
             users: [],
             success: null,
             error: '사용자 목록을 불러오지 못했습니다.'
