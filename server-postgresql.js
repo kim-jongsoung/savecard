@@ -717,6 +717,7 @@ app.post('/admin/login', async (req, res) => {
         
         if (username === adminUsername && password === adminPassword) {
             req.session.adminId = 'admin';
+            req.session.adminUsername = username;
             res.json({ success: true });
         } else {
             res.json({ success: false, message: '아이디 또는 비밀번호가 올바르지 않습니다.' });
@@ -727,34 +728,52 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-// 관리자 로그아웃
+// 관리자 로그아웃 (GET/POST 모두 허용)
+app.get('/admin/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/admin/login');
+    });
+});
 app.post('/admin/logout', (req, res) => {
-    req.session.destroy();
-    res.redirect('/admin/login');
+    req.session.destroy(() => {
+        res.redirect('/admin/login');
+    });
 });
 
 // 관리자 대시보드
 app.get('/admin', requireAuth, async (req, res) => {
     try {
-        const users = await dbHelpers.getUsers();
-        const agencies = await dbHelpers.getAgencies();
-        const stores = await dbHelpers.getStores();
-        const usages = await dbHelpers.getUsages();
+        const [users, agencies, stores, usages, banners] = await Promise.all([
+            dbHelpers.getUsers(),
+            dbHelpers.getAgencies(),
+            dbHelpers.getStores(),
+            dbHelpers.getUsages(),
+            dbHelpers.getBanners()
+        ]);
         
         res.render('admin/dashboard', {
             title: '관리자 대시보드',
+            adminUsername: req.session.adminUsername || 'admin',
             stats: {
-                totalUsers: users.length,
-                totalAgencies: agencies.length,
-                totalStores: stores.length,
-                totalUsages: usages.length
+                total_agencies: agencies.length,
+                total_users: users.length,
+                total_usages: usages.length,
+                total_stores: stores.length,
+                active_banners: (banners || []).length
             }
         });
     } catch (error) {
         console.error('관리자 대시보드 오류:', error);
         res.render('admin/dashboard', {
             title: '관리자 대시보드',
-            stats: { totalUsers: 0, totalAgencies: 0, totalStores: 0, totalUsages: 0 }
+            adminUsername: req.session.adminUsername || 'admin',
+            stats: { 
+                total_agencies: 0, 
+                total_users: 0, 
+                total_usages: 0, 
+                total_stores: 0,
+                active_banners: 0 
+            }
         });
     }
 });
