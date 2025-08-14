@@ -214,6 +214,30 @@ const dbHelpers = {
         }
     },
     
+    async createStore(storeData) {
+        if (dbMode === 'postgresql') {
+            const {
+                name,
+                category = null,
+                discount = null,
+                discount_info = null,
+                address = null,
+                phone = null,
+                website = null,
+                description = null,
+                image_url = null
+            } = storeData;
+            const result = await pool.query(
+                `INSERT INTO stores (name, category, discount, discount_info, address, phone, website, description, image_url)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+                [name, category, discount, discount_info, address, phone, website, description, image_url]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.insert('stores', storeData);
+        }
+    },
+    
     // 배너 관련
     async getBanners() {
         if (dbMode === 'postgresql') {
@@ -222,6 +246,27 @@ const dbHelpers = {
         } else {
             const banners = await jsonDB.findAll('banners');
             return banners.filter(banner => banner.is_active !== false);
+        }
+    },
+    
+    async createBanner(bannerData) {
+        if (dbMode === 'postgresql') {
+            const {
+                advertiser_name,
+                image_url,
+                link_url = null,
+                is_active = true,
+                display_order = 0,
+                display_locations = [1]
+            } = bannerData;
+            const result = await pool.query(
+                `INSERT INTO banners (advertiser_name, image_url, link_url, is_active, display_order, display_locations)
+                 VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+                [advertiser_name, image_url, link_url, is_active, display_order, display_locations]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.insert('banners', bannerData);
         }
     },
     
@@ -305,6 +350,166 @@ app.get('/db-test', async (req, res) => {
             mode: dbMode,
             error: error.message
         });
+    }
+});
+
+// 사용자용 로그아웃 (프론트 my-card.ejs 등에서 사용)
+app.post('/logout', (req, res) => {
+    try {
+        req.session.destroy(() => {
+            res.redirect('/');
+        });
+    } catch (e) {
+        res.redirect('/');
+    }
+});
+
+// 제휴업체 생성 (관리자)
+app.post('/admin/stores', requireAuth, async (req, res) => {
+    try {
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        const name = (req.body.name || '').trim();
+        const category = (req.body.category || '').trim();
+        const description = (req.body.description || '').trim();
+        const discount = (req.body.discount || '').trim();
+        const address = (req.body.address || '').trim();
+        const phone = (req.body.phone || '').trim();
+        const website = (req.body.website || '').trim();
+        const image_url = (req.body.image_url || '').trim();
+
+        if (!name || !category || !description || !discount) {
+            if (wantsJson) {
+                return res.json({ success: false, message: '필수 항목(업체명/카테고리/설명/할인 정보)을 입력하세요.' });
+            } else {
+                return res.redirect('/admin/stores?error=missing_fields');
+            }
+        }
+
+        const store = await dbHelpers.createStore({
+            name,
+            category,
+            description,
+            discount,
+            address: address || null,
+            phone: phone || null,
+            website: website || null,
+            image_url: image_url || null
+        });
+
+        if (wantsJson) {
+            return res.json({ success: true, message: '제휴업체가 추가되었습니다.', store });
+        } else {
+            return res.redirect('/admin/stores?success=1');
+        }
+    } catch (error) {
+        console.error('제휴업체 생성 오류:', error);
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        if (wantsJson) {
+            return res.json({ success: false, message: '제휴업체 추가 중 오류가 발생했습니다.' });
+        } else {
+            return res.redirect('/admin/stores?error=server');
+        }
+    }
+});
+
+// 제휴업체 활성/비활성 토글
+app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
+    try {
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) {
+            if (wantsJson) return res.json({ success: false, message: '유효하지 않은 ID' });
+            return res.redirect('/admin/stores?error=invalid_id');
+        }
+
+        if (dbMode === 'postgresql') {
+            const current = await pool.query('SELECT is_active FROM stores WHERE id = $1', [id]);
+            if (current.rowCount === 0) return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
+            const nextVal = !Boolean(current.rows[0].is_active);
+            await pool.query('UPDATE stores SET is_active = $1, updated_at = NOW() WHERE id = $2', [nextVal, id]);
+        } else {
+            const store = await jsonDB.findById('stores', id);
+            if (!store) return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
+            await jsonDB.update('stores', id, { is_active: store.is_active === false ? true : false });
+        }
+
+        if (wantsJson) {
+            return res.json({ success: true });
+        } else {
+            return res.redirect('/admin/stores?toggle=1');
+        }
+    } catch (error) {
+        console.error('제휴업체 토글 오류:', error);
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        if (wantsJson) {
+            return res.json({ success: false, message: '상태 변경 중 오류가 발생했습니다.' });
+        } else {
+            return res.redirect('/admin/stores?error=server');
+        }
+    }
+});
+
+// 배너 생성 (관리자)
+app.post('/admin/banners', requireAuth, async (req, res) => {
+    try {
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        let { advertiser_name, title, image_url, link_url, description, display_order } = req.body;
+        let display_locations = req.body.display_locations;
+
+        advertiser_name = String(advertiser_name || '').trim();
+        title = String(title || '').trim();
+        image_url = String(image_url || '').trim();
+        link_url = (link_url && String(link_url).trim()) || null;
+        description = (description && String(description).trim()) || null;
+        const orderNum = Number(display_order);
+        display_order = Number.isFinite(orderNum) ? orderNum : 0;
+
+        // 체크박스 다중 값 처리
+        if (!Array.isArray(display_locations)) {
+            display_locations = typeof display_locations === 'undefined' ? [] : [display_locations];
+        }
+        const locationsInt = display_locations
+            .map(v => Number(v))
+            .filter(n => Number.isFinite(n) && n > 0);
+        const finalLocations = locationsInt.length ? locationsInt : [1];
+
+        if (!advertiser_name && !title) {
+            if (wantsJson) return res.json({ success: false, message: '광고주명 또는 제목 중 하나는 필수입니다.' });
+            return res.redirect('/admin/banners?error=missing_title');
+        }
+        if (!image_url) {
+            if (wantsJson) return res.json({ success: false, message: '배너 이미지 URL은 필수입니다.' });
+            return res.redirect('/admin/banners?error=missing_image');
+        }
+
+        // DB 스키마에 제목/설명 컬럼이 없으므로 광고주명에 제목을 우선 반영
+        const banner = await dbHelpers.createBanner({
+            advertiser_name: title || advertiser_name,
+            image_url,
+            link_url,
+            is_active: true,
+            display_order,
+            display_locations: finalLocations
+        });
+
+        // JSON 모드의 경우 description 등 추가 필드도 저장
+        if (dbMode === 'json' && description) {
+            await jsonDB.update('banners', banner.id, { description });
+        }
+
+        if (wantsJson) {
+            return res.json({ success: true, message: '배너가 추가되었습니다.', banner });
+        } else {
+            return res.redirect('/admin/banners?success=1');
+        }
+    } catch (error) {
+        console.error('배너 생성 오류:', error);
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        if (wantsJson) {
+            return res.json({ success: false, message: '배너 추가 중 오류가 발생했습니다.' });
+        } else {
+            return res.redirect('/admin/banners?error=server');
+        }
     }
 });
 
@@ -797,6 +1002,13 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 app.post('/admin/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/admin/login');
+    });
+});
+
+// 일부 관리자 뷰에서 GET 링크로 로그아웃을 호출하므로 GET도 허용
+app.get('/admin/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/admin/login');
     });

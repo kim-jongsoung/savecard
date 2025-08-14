@@ -585,14 +585,14 @@
                                 <label class="form-label">
                                     <i class="fas fa-store me-2"></i>업체명 / Business Name *
                                 </label>
-                                <input type="text" class="form-control" name="businessName" required 
+                                <input type="text" class="form-control" name="business_name" required 
                                        placeholder="예: ABC Restaurant">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">
                                     <i class="fas fa-user me-2"></i>담당자명 / Contact Name *
                                 </label>
-                                <input type="text" class="form-control" name="contactName" required 
+                                <input type="text" class="form-control" name="contact_name" required 
                                        placeholder="예: John Smith">
                             </div>
                         </div>
@@ -603,6 +603,14 @@
                             </label>
                             <input type="email" class="form-control" name="email" required 
                                    placeholder="예: contact@business.com">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-phone me-2"></i>전화번호 / Phone *
+                            </label>
+                            <input type="tel" class="form-control" name="phone" required 
+                                   placeholder="예: +1-671-123-4567">
                         </div>
                         
                         <div class="alert alert-info">
@@ -664,19 +672,20 @@
             const formData = new FormData(form);
             
             const data = {
-                businessName: formData.get('businessName'),
+                business_name: formData.get('business_name'),
+                contact_name: formData.get('contact_name'),
                 email: formData.get('email'),
-                contactName: formData.get('contactName')
+                phone: formData.get('phone')
             };
             
             // 입력 검증
-            if (!data.businessName || !data.email || !data.contactName) {
+            if (!data.business_name || !data.email || !data.contact_name || !data.phone) {
                 alert('모든 필드를 입력해주세요.');
                 return;
             }
             
             try {
-                const response = await fetch('/partner-application', {
+                const response = await fetch('/api/partner-apply', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

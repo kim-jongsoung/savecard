@@ -118,7 +118,7 @@
                     <input type="text" 
                            class="form-control" 
                            id="customer_name" 
-                           name="customer_name" 
+                           name="name" 
                            placeholder="Hong Gil Dong"
                            required>
                 </div>
@@ -139,6 +139,18 @@
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label for="phone" class="form-label">
+                        <i class="fas fa-phone me-2"></i>전화번호
+                    </label>
+                    <input type="text"
+                           class="form-control"
+                           id="phone"
+                           name="phone"
+                           placeholder="010-1234-5678"
+                           required>
+                </div>
+
                 <div class="mb-4">
                     <label for="agency_code" class="form-label">
                         <i class="fas fa-building me-2"></i>여행사
@@ -148,61 +160,19 @@
                             <option value="">여행사를 선택해주세요</option>
                         <% } %>
                         <% agencies.forEach(agency => { %>
-                            <option value="<%= agency.agency_code %>" <% if (selectedAgency && selectedAgency.agency_code === agency.agency_code) { %>selected<% } %>>
-                                <%= agency.name %> (<%= agency.agency_code %>)
+                            <option value="<%= agency.code %>" <% if (selectedAgency && (selectedAgency.code === agency.code || selectedAgency.agency_code === agency.code)) { %>selected<% } %>>
+                                <%= agency.name %> (<%= agency.code %>)
                             </option>
                         <% }); %>
                     </select>
                     <% if (selectedAgency) { %>
                         <!-- 제휴 여행사가 선택된 경우 숨겨진 필드로 값 전송 -->
-                        <input type="hidden" name="agency_code" value="<%= selectedAgency.agency_code %>">
+                        <input type="hidden" name="agency_code" value="<%= selectedAgency.code || selectedAgency.agency_code %>">
                         <div class="form-text text-success">
                             <i class="fas fa-check-circle me-1"></i>
                             <strong><%= selectedAgency.name %></strong> 제휴 여행사로 자동 선택되었습니다.
                         </div>
                     <% } %>
-                </div>
-
-                <div class="mb-3">
-                    <label for="password" class="form-label">
-                        <i class="fas fa-lock me-2"></i>카드 비밀번호 (4자리 숫자)
-                    </label>
-                    <input type="number" 
-                           class="form-control" 
-                           id="password" 
-                           name="password" 
-                           placeholder="4자리 숫자 입력 (예: 1234)"
-                           maxlength="4"
-                           pattern="[0-9]{4}"
-                           title="4자리 숫자를 입력하세요"
-                           required>
-                    <div class="form-text">
-                        <i class="fas fa-info-circle me-1"></i>
-                        카드 사용 시 필요한 4자리 숫자 비밀번호를 입력하세요 (예: 1234, 5678)
-                    </div>
-                    <div id="passwordError" class="text-danger mt-1" style="display: none;">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        4자리 숫자만 입력 가능합니다
-                    </div>
-                </div>
-
-                <div class="mb-4">
-                    <label for="password_confirm" class="form-label">
-                        <i class="fas fa-lock me-2"></i>비밀번호 확인
-                    </label>
-                    <input type="number" 
-                           class="form-control" 
-                           id="password_confirm" 
-                           name="password_confirm" 
-                           placeholder="위에서 입력한 4자리 숫자 다시 입력"
-                           maxlength="4"
-                           pattern="[0-9]{4}"
-                           title="위에서 입력한 비밀번호와 동일하게 입력하세요"
-                           required>
-                    <div id="passwordMatchError" class="text-danger mt-1" style="display: none;">
-                        <i class="fas fa-exclamation-triangle me-1"></i>
-                        비밀번호가 일치하지 않습니다
-                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-register">
@@ -227,26 +197,12 @@
             return englishNameRegex.test(name.trim());
         }
         
-        // 4자리 숫자 비밀번호 검증 함수
-        function validatePassword(password) {
-            // 4자리 숫자만 허용
-            const passwordRegex = /^[0-9]{4}$/;
-            return passwordRegex.test(password);
-        }
-        
-        // 비밀번호 일치 검증 함수
-        function validatePasswordMatch(password, confirmPassword) {
-            return password === confirmPassword;
-        }
-        
         // 폼 제출 시 검증 및 로딩 표시
         document.querySelector('form').addEventListener('submit', function(e) {
             const customerNameInput = document.getElementById('customer_name');
             const customerName = customerNameInput.value.trim();
-            const passwordInput = document.getElementById('password');
-            const passwordConfirmInput = document.getElementById('password_confirm');
-            const password = passwordInput.value.trim();
-            const passwordConfirm = passwordConfirmInput.value.trim();
+            const phoneInput = document.getElementById('phone');
+            const phone = phoneInput.value.trim();
             
             // 영문명 검증
             if (customerName && !validateEnglishName(customerName)) {
@@ -256,19 +212,12 @@
                 return;
             }
             
-            // 비밀번호 형식 검증
-            if (!validatePassword(password)) {
+            // 전화번호 간단 검증
+            const phoneRegex = /^[0-9\-+()\s]{6,20}$/;
+            if (!phoneRegex.test(phone)) {
                 e.preventDefault();
-                alert('비밀번호는 4자리 숫자로 입력해주세요 (예: 1234)');
-                passwordInput.focus();
-                return;
-            }
-            
-            // 비밀번호 일치 검증
-            if (!validatePasswordMatch(password, passwordConfirm)) {
-                e.preventDefault();
-                alert('비밀번호가 일치하지 않습니다. 다시 확인해주세요.');
-                passwordConfirmInput.focus();
+                alert('전화번호를 올바르게 입력해주세요.');
+                phoneInput.focus();
                 return;
             }
             
@@ -276,47 +225,6 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>발급 중...';
             submitBtn.disabled = true;
         });
-        
-        // 실시간 비밀번호 검증
-        document.getElementById('password').addEventListener('input', function(e) {
-            const password = e.target.value;
-            const errorDiv = document.getElementById('passwordError');
-            
-            if (password.length > 0 && !validatePassword(password)) {
-                errorDiv.style.display = 'block';
-                e.target.classList.add('is-invalid');
-            } else {
-                errorDiv.style.display = 'none';
-                e.target.classList.remove('is-invalid');
-                
-                // 비밀번호 확인 필드도 다시 검증
-                const confirmInput = document.getElementById('password_confirm');
-                const confirmPassword = confirmInput.value;
-                if (confirmPassword.length > 0) {
-                    validatePasswordConfirmField();
-                }
-            }
-        });
-        
-        // 실시간 비밀번호 확인 검증
-        document.getElementById('password_confirm').addEventListener('input', function(e) {
-            validatePasswordConfirmField();
-        });
-        
-        function validatePasswordConfirmField() {
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('password_confirm').value;
-            const errorDiv = document.getElementById('passwordMatchError');
-            const confirmInput = document.getElementById('password_confirm');
-            
-            if (confirmPassword.length > 0 && !validatePasswordMatch(password, confirmPassword)) {
-                errorDiv.style.display = 'block';
-                confirmInput.classList.add('is-invalid');
-            } else {
-                errorDiv.style.display = 'none';
-                confirmInput.classList.remove('is-invalid');
-            }
-        }
         
         // 실시간 입력 검증
         document.getElementById('customer_name').addEventListener('input', function() {
