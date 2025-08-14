@@ -446,14 +446,16 @@ app.get('/register', async (req, res) => {
         res.render('register', {
             title: '카드 발급',
             agencies: agencies,
-            error: null
+            error: null,
+            success: null
         });
     } catch (error) {
         console.error('카드 발급 페이지 오류:', error);
         res.render('register', {
             title: '카드 발급',
             agencies: [],
-            error: null
+            error: null,
+            success: null
         });
     }
 });
@@ -697,7 +699,8 @@ app.post('/card/use', async (req, res) => {
 app.get('/admin/login', (req, res) => {
     res.render('admin/login', { 
         title: '관리자 로그인',
-        error: null 
+        error: null,
+        success: null
     });
 });
 
@@ -760,13 +763,17 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
         const agencies = await dbHelpers.getAgencies();
         res.render('admin/agencies', {
             title: '여행사 관리',
-            agencies: agencies
+            agencies: agencies,
+            success: null,
+            error: null
         });
     } catch (error) {
         console.error('여행사 관리 페이지 오류:', error);
         res.render('admin/agencies', {
             title: '여행사 관리',
-            agencies: []
+            agencies: [],
+            success: null,
+            error: null
         });
     }
 });
