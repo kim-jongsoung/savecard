@@ -781,6 +781,7 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
             title: '여행사 관리',
             adminUsername: req.session.adminUsername || 'admin',
             agencies: agencies,
+            baseUrl: `${req.protocol}://${req.get('host')}`,
             success: null,
             error: null
         });
@@ -790,6 +791,7 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
             title: '여행사 관리',
             adminUsername: req.session.adminUsername || 'admin',
             agencies: [],
+            baseUrl: `${req.protocol}://${req.get('host')}`,
             success: null,
             error: null
         });

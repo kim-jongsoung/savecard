@@ -152,7 +152,7 @@
                                         </div>
                                     </td>
                                     <td class="agency-name"><strong><%= agency.name %></strong></td>
-                                    <td class="agency-code"><code><%= agency.agency_code %></code></td>
+                                    <td class="agency-code"><code><%= agency.agency_code || agency.code %></code></td>
                                     <td class="agency-logo">
                                         <% if (agency.logo_url) { %>
                                             <img src="<%= agency.logo_url %>" alt="<%= agency.name %> 로고" 
@@ -168,14 +168,14 @@
                                         <div class="d-flex flex-column gap-1">
                                             <div class="input-group input-group-sm">
                                                 <input type="text" class="form-control form-control-sm" 
-                                                       value="http://localhost:3000/partner/<%= agency.agency_code %>" 
+                                                       value="<%= typeof baseUrl !== 'undefined' ? baseUrl : window.location.origin %>/partner/<%= agency.agency_code || agency.code %>" 
                                                        readonly id="landingUrl_<%= agency.id %>">
                                                 <button class="btn btn-outline-secondary btn-sm" type="button" 
                                                         onclick="copyLandingUrl('<%= agency.id %>')" title="URL 복사">
                                                     <i class="fas fa-copy"></i>
                                                 </button>
                                             </div>
-                                            <a href="/partner/<%= agency.agency_code %>" target="_blank" 
+                                            <a href="/partner/<%= agency.agency_code || agency.code %>" target="_blank" 
                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-external-link-alt me-1"></i>미리보기
                                             </a>
@@ -407,7 +407,7 @@
                     // 모달 폼에 데이터 채우기
                     document.getElementById('editAgencyId').value = agency.id;
                     document.getElementById('editName').value = agency.name;
-                    document.getElementById('editAgencyCode').value = agency.agency_code;
+                    document.getElementById('editAgencyCode').value = agency.agency_code || agency.code;
                     document.getElementById('editLogoUrl').value = agency.logo_url || '';
                     document.getElementById('editContactEmail').value = agency.contact_email || '';
                     document.getElementById('editContactPhone').value = agency.contact_phone || '';
@@ -612,7 +612,7 @@
             // 여행사 코드 업데이트
             const codeCell = row.querySelector('.agency-code');
             if (codeCell) {
-                codeCell.textContent = updatedData.agency_code;
+                codeCell.textContent = updatedData.agency_code || updatedData.code;
             }
 
             // 연락처 정보 업데이트
@@ -634,7 +634,7 @@
             // 전용 랜딩 페이지 URL 업데이트
             const landingUrlInput = row.querySelector(`input[id^="landingUrl_"]`);
             if (landingUrlInput) {
-                landingUrlInput.value = `${window.location.origin}/partner/${updatedData.agency_code}`;
+                landingUrlInput.value = `${window.location.origin}/partner/${updatedData.agency_code || updatedData.code}`;
             }
 
             console.log('여행사 정보가 동적으로 업데이트되었습니다.');
