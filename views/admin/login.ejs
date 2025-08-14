@@ -140,7 +140,8 @@
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const formData = new FormData(this);
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             
@@ -151,7 +152,10 @@
             try {
                 const response = await fetch('/admin/login', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
                 });
                 
                 const result = await response.json();
@@ -161,7 +165,7 @@
                     window.location.href = '/admin';
                 } else {
                     // 실패 시 에러 메시지 표시
-                    alert(result.message || '로그인에 실패했습니다.');
+                    alert(result.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
                 }
             } catch (error) {
                 console.error('로그인 오류:', error);
