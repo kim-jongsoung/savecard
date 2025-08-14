@@ -787,7 +787,13 @@ app.post('/issue', async (req, res) => {
             pin: hashedPin
         });
         
-        res.json({
+        // 제출 방식에 따른 응답 분기: AJAX이면 JSON, 일반 HTML 폼이면 카드 페이지로 리다이렉트
+        const isAjax = req.xhr || (req.get('X-Requested-With') === 'XMLHttpRequest');
+        const acceptsHtml = (req.accepts(['html','json']) === 'html');
+        if (!isAjax && acceptsHtml) {
+            return res.redirect(`/card?token=${encodeURIComponent(token)}&success=1`);
+        }
+        return res.json({
             success: true,
             message: '카드가 성공적으로 발급되었습니다.',
             token: token
@@ -890,7 +896,7 @@ app.get('/my-card', async (req, res) => {
 // 카드 사용 페이지 (QR 스캔)
 app.get('/card', async (req, res) => {
     try {
-        const { token, staff } = req.query;
+        const { token, staff, success: successFlag } = req.query;
         
         if (!token) {
             return res.render('error', {
@@ -916,6 +922,10 @@ app.get('/card', async (req, res) => {
         const stores = await dbHelpers.getStores();
         const isStaffMode = staff === 'true';
         
+        const successMessage = (successFlag === '1' || successFlag === 'true')
+            ? '카드 발급이 완료되었어요! 아래 QR을 매장 직원에게 보여주세요.'
+            : null;
+
         res.render('card', {
             title: '괌세이브카드',
             user: { ...user, agency_name: agency ? agency.name : 'Unknown' },
@@ -923,7 +933,7 @@ app.get('/card', async (req, res) => {
             usages: usages.slice(0, 5),
             stores: stores,
             isStaffMode: isStaffMode,
-            success: null,
+            success: successMessage,
             error: null
         });
         
