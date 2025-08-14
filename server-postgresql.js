@@ -917,20 +917,52 @@ app.get('/admin/users', requireAuth, async (req, res) => {
 app.get('/admin/usages', requireAuth, async (req, res) => {
     try {
         const usages = await dbHelpers.getUsages();
+        const storesData = await dbHelpers.getStores();
+        const stores = Array.isArray(storesData)
+            ? storesData.map(s => s.code || s.store_code || s.name).filter(Boolean)
+            : [];
+        const currentPage = Number(req.query.page) || 1;
+        const totalPages = 1; // 서버 페이징 미구현 기본값
+        const store_filter = req.query.store_filter || '';
+        const date_from = req.query.date_from || '';
+        const date_to = req.query.date_to || '';
+        const sort_order = req.query.sort_order || 'desc';
         res.render('admin/usages', {
             title: '사용 이력',
             adminUsername: req.session.adminUsername || 'admin',
             usages,
+            totalUsages: Array.isArray(usages) ? usages.length : 0,
+            currentPage,
+            totalPages,
+            stores,
+            store_filter,
+            date_from,
+            date_to,
+            sort_order,
             formatDate,
             success: null,
             error: null
         });
     } catch (error) {
         console.error('사용 이력 페이지 오류:', error);
+        const currentPage = Number(req.query.page) || 1;
+        const totalPages = 1;
+        const store_filter = req.query.store_filter || '';
+        const date_from = req.query.date_from || '';
+        const date_to = req.query.date_to || '';
+        const sort_order = req.query.sort_order || 'desc';
         res.render('admin/usages', {
             title: '사용 이력',
             adminUsername: req.session.adminUsername || 'admin',
             usages: [],
+            totalUsages: 0,
+            currentPage,
+            totalPages,
+            stores: [],
+            store_filter,
+            date_from,
+            date_to,
+            sort_order,
             formatDate,
             success: null,
             error: '사용 이력을 불러오지 못했습니다.'
