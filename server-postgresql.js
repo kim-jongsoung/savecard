@@ -760,7 +760,8 @@ app.get('/admin', requireAuth, async (req, res) => {
                 total_usages: usages.length,
                 total_stores: stores.length,
                 active_banners: (banners || []).length
-            }
+            },
+            recentUsages: []
         });
     } catch (error) {
         console.error('관리자 대시보드 오류:', error);
@@ -773,7 +774,8 @@ app.get('/admin', requireAuth, async (req, res) => {
                 total_usages: 0, 
                 total_stores: 0,
                 active_banners: 0 
-            }
+            },
+            recentUsages: []
         });
     }
 });

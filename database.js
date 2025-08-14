@@ -172,20 +172,23 @@ async function migrateFromJSON() {
       console.log('✅ 제휴업체 데이터 마이그레이션 완료');
     }
 
-    // partner-applications.json 마이그레이션
+    // partner-applications.json 마이그레이션 (NOT NULL 컬럼 보정: business_name, contact_name, phone)
     const applicationsPath = path.join(__dirname, 'data', 'partner-applications.json');
     if (fs.existsSync(applicationsPath)) {
       const applications = JSON.parse(fs.readFileSync(applicationsPath, 'utf8'));
       
       for (const app of applications) {
+        const businessName = app.businessName && String(app.businessName).trim() ? app.businessName : '미기재 업체명';
+        const contactName = app.contactName && String(app.contactName).trim() ? app.contactName : '담당자 미기재';
+        const phone = app.phone && String(app.phone).trim() ? app.phone : '000-0000-0000';
         await pool.query(`
           INSERT INTO partner_applications (business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           ON CONFLICT DO NOTHING
         `, [
-          app.businessName,
-          app.contactName,
-          app.phone,
+          businessName,
+          contactName,
+          phone,
           app.email,
           app.businessType,
           app.location,
