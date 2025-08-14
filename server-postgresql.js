@@ -786,6 +786,7 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
         const agencies = await dbHelpers.getAgencies();
         res.render('admin/agencies', {
             title: '여행사 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             agencies: agencies,
             success: null,
             error: null
@@ -794,6 +795,7 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
         console.error('여행사 관리 페이지 오류:', error);
         res.render('admin/agencies', {
             title: '여행사 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             agencies: [],
             success: null,
             error: null
@@ -876,6 +878,7 @@ app.get('/admin/users', requireAuth, async (req, res) => {
         const users = await dbHelpers.getUsers();
         res.render('admin/users', {
             title: '사용자 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             users,
             success: null,
             error: null
@@ -884,6 +887,7 @@ app.get('/admin/users', requireAuth, async (req, res) => {
         console.error('사용자 관리 페이지 오류:', error);
         res.render('admin/users', {
             title: '사용자 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             users: [],
             success: null,
             error: '사용자 목록을 불러오지 못했습니다.'
@@ -897,6 +901,7 @@ app.get('/admin/usages', requireAuth, async (req, res) => {
         const usages = await dbHelpers.getUsages();
         res.render('admin/usages', {
             title: '사용 이력',
+            adminUsername: req.session.adminUsername || 'admin',
             usages,
             formatDate,
             success: null,
@@ -906,6 +911,7 @@ app.get('/admin/usages', requireAuth, async (req, res) => {
         console.error('사용 이력 페이지 오류:', error);
         res.render('admin/usages', {
             title: '사용 이력',
+            adminUsername: req.session.adminUsername || 'admin',
             usages: [],
             formatDate,
             success: null,
@@ -920,6 +926,7 @@ app.get('/admin/stores', requireAuth, async (req, res) => {
         const stores = await dbHelpers.getStores();
         res.render('admin/stores', {
             title: '제휴업체 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             stores,
             success: null,
             error: null
@@ -928,6 +935,7 @@ app.get('/admin/stores', requireAuth, async (req, res) => {
         console.error('제휴업체 관리 페이지 오류:', error);
         res.render('admin/stores', {
             title: '제휴업체 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             stores: [],
             success: null,
             error: '제휴업체 목록을 불러오지 못했습니다.'
@@ -941,6 +949,7 @@ app.get('/admin/banners', requireAuth, async (req, res) => {
         const banners = await dbHelpers.getBanners();
         res.render('admin/banners', {
             title: '배너 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             banners,
             success: null,
             error: null
@@ -949,6 +958,7 @@ app.get('/admin/banners', requireAuth, async (req, res) => {
         console.error('배너 관리 페이지 오류:', error);
         res.render('admin/banners', {
             title: '배너 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             banners: [],
             success: null,
             error: '배너 목록을 불러오지 못했습니다.'
@@ -968,6 +978,7 @@ app.get('/admin/partner-applications', requireAuth, async (req, res) => {
         }
         res.render('admin/partner-applications', {
             title: '제휴 신청서',
+            adminUsername: req.session.adminUsername || 'admin',
             applications,
             success: null,
             error: null
@@ -976,6 +987,7 @@ app.get('/admin/partner-applications', requireAuth, async (req, res) => {
         console.error('제휴 신청서 페이지 오류:', error);
         res.render('admin/partner-applications', {
             title: '제휴 신청서',
+            adminUsername: req.session.adminUsername || 'admin',
             applications: [],
             success: null,
             error: '신청서 목록을 불러오지 못했습니다.'
