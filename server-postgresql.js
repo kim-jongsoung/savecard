@@ -727,13 +727,6 @@ app.post('/admin/login', async (req, res) => {
         res.json({ success: false, message: '로그인 처리 중 오류가 발생했습니다.' });
     }
 });
-
-// 관리자 로그아웃 (GET/POST 모두 허용)
-app.get('/admin/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
-});
 app.post('/admin/logout', (req, res) => {
     req.session.destroy(() => {
         res.redirect('/admin/login');
@@ -806,7 +799,24 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
 // 여행사 생성
 app.post('/admin/agencies', requireAuth, async (req, res) => {
     try {
-        const { name, code, discount_info, show_banners_on_landing } = req.body;
+        // 프로덕션 진단 로그 (임시): 실제로 어떤 본문이 오는지 확인
+        try {
+            console.log('[POST /admin/agencies] content-type =', req.headers['content-type']);
+            console.log('[POST /admin/agencies] raw body keys =', Object.keys(req.body || {}));
+            console.log('[POST /admin/agencies] body preview =', {
+                name: req.body?.name,
+                code: req.body?.code,
+                agency_code: req.body?.agency_code,
+                show_banners_on_landing: req.body?.show_banners_on_landing
+            });
+        } catch (e) {
+            console.warn('[POST /admin/agencies] log error:', e?.message);
+        }
+
+        const name = (req.body.name || '').trim();
+        const code = (req.body.code || req.body.agency_code || '').trim();
+        const discount_info = req.body.discount_info || '';
+        const show_banners_on_landing = req.body.show_banners_on_landing;
         
         if (!name || !code) {
             return res.json({
@@ -819,7 +829,7 @@ app.post('/admin/agencies', requireAuth, async (req, res) => {
             name,
             code,
             discount_info,
-            show_banners_on_landing: show_banners_on_landing === 'true'
+            show_banners_on_landing: String(show_banners_on_landing) === 'true'
         });
         
         res.json({
@@ -830,6 +840,10 @@ app.post('/admin/agencies', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('여행사 생성 오류:', error);
+        // PostgreSQL unique 제약 위반 처리 (code 중복 등)
+        if (error && (error.code === '23505' || /unique/i.test(String(error.message)))) {
+            return res.json({ success: false, message: '이미 존재하는 코드입니다. 다른 코드를 사용하세요.' });
+        }
         res.json({
             success: false,
             message: '여행사 추가 중 오류가 발생했습니다.'
@@ -841,13 +855,16 @@ app.post('/admin/agencies', requireAuth, async (req, res) => {
 app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, code, discount_info, show_banners_on_landing } = req.body;
+        const name = (req.body.name || '').trim();
+        const code = (req.body.code || req.body.agency_code || '').trim();
+        const discount_info = req.body.discount_info || '';
+        const show_banners_on_landing = req.body.show_banners_on_landing;
         
         const agency = await dbHelpers.updateAgency(id, {
             name,
             code,
             discount_info,
-            show_banners_on_landing: show_banners_on_landing === 'true'
+            show_banners_on_landing: String(show_banners_on_landing) === 'true'
         });
         
         if (!agency) {
