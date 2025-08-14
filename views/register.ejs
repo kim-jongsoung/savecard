@@ -139,16 +139,45 @@
                     </div>
                 </div>
 
+                <!-- 카드 비밀번호 (PIN) 입력 -->
                 <div class="mb-3">
-                    <label for="phone" class="form-label">
-                        <i class="fas fa-phone me-2"></i>전화번호
+                    <label for="pin" class="form-label">
+                        <i class="fas fa-lock me-2"></i>카드 비밀번호 (4자리 숫자)
                     </label>
-                    <input type="text"
+                    <input type="password"
                            class="form-control"
-                           id="phone"
-                           name="phone"
-                           placeholder="010-1234-5678"
+                           id="pin"
+                           name="pin"
+                           inputmode="numeric"
+                           pattern="[0-9]{4}"
+                           maxlength="4"
+                           placeholder="예: 1234"
                            required>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        결제/사용 시 확인용 4자리 숫자 비밀번호입니다.
+                    </div>
+                    <div id="pinError" class="text-danger mt-1" style="display:none;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>4자리 숫자만 입력 가능합니다.
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="pin_confirm" class="form-label">
+                        <i class="fas fa-lock me-2"></i>비밀번호 확인
+                    </label>
+                    <input type="password"
+                           class="form-control"
+                           id="pin_confirm"
+                           name="pin_confirm"
+                           inputmode="numeric"
+                           pattern="[0-9]{4}"
+                           maxlength="4"
+                           placeholder="위와 동일하게 4자리 입력"
+                           required>
+                    <div id="pinMatchError" class="text-danger mt-1" style="display:none;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>비밀번호가 일치하지 않습니다.
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -201,8 +230,10 @@
         document.querySelector('form').addEventListener('submit', function(e) {
             const customerNameInput = document.getElementById('customer_name');
             const customerName = customerNameInput.value.trim();
-            const phoneInput = document.getElementById('phone');
-            const phone = phoneInput.value.trim();
+            const pinInput = document.getElementById('pin');
+            const pinConfirmInput = document.getElementById('pin_confirm');
+            const pin = pinInput.value.trim();
+            const pinConfirm = pinConfirmInput.value.trim();
             
             // 영문명 검증
             if (customerName && !validateEnglishName(customerName)) {
@@ -212,13 +243,29 @@
                 return;
             }
             
-            // 전화번호 간단 검증
-            const phoneRegex = /^[0-9\-+()\s]{6,20}$/;
-            if (!phoneRegex.test(phone)) {
+            // PIN 형식 검증
+            const pinRegex = /^[0-9]{4}$/;
+            if (!pinRegex.test(pin)) {
                 e.preventDefault();
-                alert('전화번호를 올바르게 입력해주세요.');
-                phoneInput.focus();
+                document.getElementById('pinError').style.display = 'block';
+                pinInput.classList.add('is-invalid');
+                pinInput.focus();
                 return;
+            } else {
+                document.getElementById('pinError').style.display = 'none';
+                pinInput.classList.remove('is-invalid');
+            }
+
+            // PIN 일치 검증
+            if (pin !== pinConfirm) {
+                e.preventDefault();
+                document.getElementById('pinMatchError').style.display = 'block';
+                pinConfirmInput.classList.add('is-invalid');
+                pinConfirmInput.focus();
+                return;
+            } else {
+                document.getElementById('pinMatchError').style.display = 'none';
+                pinConfirmInput.classList.remove('is-invalid');
             }
             
             const submitBtn = document.querySelector('.btn-register');
@@ -230,23 +277,22 @@
         document.getElementById('customer_name').addEventListener('input', function() {
             const name = this.value.trim();
             const isValid = name === '' || validateEnglishName(name);
-            
-            if (!isValid) {
-                this.style.borderColor = '#dc3545';
-                if (!document.getElementById('name-warning')) {
-                    const warning = document.createElement('small');
-                    warning.id = 'name-warning';
-                    warning.className = 'text-danger';
-                    warning.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>영문자만 입력해주세요';
-                    this.parentNode.appendChild(warning);
-                }
-            } else {
-                this.style.borderColor = '';
-                const warning = document.getElementById('name-warning');
-                if (warning) {
-                    warning.remove();
-                }
-            }
+            this.classList.toggle('is-invalid', !isValid);
+        });
+
+        // 실시간 PIN 검증
+        document.getElementById('pin').addEventListener('input', function(e) {
+            const pinRegex = /^[0-9]{4}$/;
+            const ok = this.value.length === 0 || pinRegex.test(this.value);
+            document.getElementById('pinError').style.display = ok ? 'none' : 'block';
+            this.classList.toggle('is-invalid', !ok);
+        });
+
+        document.getElementById('pin_confirm').addEventListener('input', function(e) {
+            const pin = document.getElementById('pin').value;
+            const same = this.value === pin;
+            document.getElementById('pinMatchError').style.display = (this.value.length>0 && !same) ? 'block' : 'none';
+            this.classList.toggle('is-invalid', (this.value.length>0 && !same));
         });
     </script>
 

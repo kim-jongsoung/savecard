@@ -99,6 +99,12 @@ async function createTables() {
       )
     `);
 
+    // 카드 비밀번호(PIN) 컬럼 추가 (없으면 추가)
+    await client.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS pin VARCHAR(10)
+    `);
+
     // 카드 사용 이력 테이블
     await client.query(`
       CREATE TABLE IF NOT EXISTS usages (

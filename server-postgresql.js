@@ -129,10 +129,10 @@ const dbHelpers = {
     
     async createUser(userData) {
         if (dbMode === 'postgresql') {
-            const { name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end } = userData;
+            const { name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, pin } = userData;
             const result = await pool.query(
-                'INSERT INTO users (name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING *',
-                [name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end]
+                'INSERT INTO users (name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, pin, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING *',
+                [name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, pin]
             );
             return result.rows[0];
         } else {
@@ -720,8 +720,10 @@ app.get('/issue', async (req, res) => {
 // 카드 발급 처리
 app.post('/issue', async (req, res) => {
     try {
-        const { name, phone, email } = req.body;
+        const { name, email } = req.body;
         let { agency_id, agency_code } = req.body;
+        const pin = (req.body.pin || '').toString().trim();
+        const phone = (req.body.phone || '').toString().trim() || null; // 선택 입력
 
         // agency_id 우선, 없으면 agency_code로 조회
         let agency = null;
@@ -739,11 +741,12 @@ app.post('/issue', async (req, res) => {
             }
         }
 
-        if (!name || !phone || !agency_id || !agency) {
-            return res.json({
-                success: false,
-                message: '필수 정보를 모두 입력해주세요.'
-            });
+        // 필수값: name, agency, pin(4자리)
+        if (!name || !agency_id || !agency) {
+            return res.json({ success: false, message: '이름과 여행사를 선택해주세요.' });
+        }
+        if (!/^[0-9]{4}$/.test(pin)) {
+            return res.json({ success: false, message: '비밀번호는 4자리 숫자여야 합니다.' });
         }
         
         // 토큰 생성
@@ -776,7 +779,8 @@ app.post('/issue', async (req, res) => {
             token,
             qr_code: qrCodeDataURL,
             expiration_start: expirationStart,
-            expiration_end: expirationEnd
+            expiration_end: expirationEnd,
+            pin
         });
         
         res.json({
