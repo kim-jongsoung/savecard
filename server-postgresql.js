@@ -770,6 +770,10 @@ app.post('/issue', async (req, res) => {
             }
         });
         
+        // PIN 해시 처리
+        const saltRounds = Number(process.env.PIN_SALT_ROUNDS || 10);
+        const hashedPin = await bcrypt.hash(pin, saltRounds);
+
         // 사용자 생성
         const user = await dbHelpers.createUser({
             name,
@@ -780,7 +784,7 @@ app.post('/issue', async (req, res) => {
             qr_code: qrCodeDataURL,
             expiration_start: expirationStart,
             expiration_end: expirationEnd,
-            pin
+            pin: hashedPin
         });
         
         res.json({
