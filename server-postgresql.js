@@ -870,6 +870,119 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
     }
 });
 
+// 사용자 관리 페이지
+app.get('/admin/users', requireAuth, async (req, res) => {
+    try {
+        const users = await dbHelpers.getUsers();
+        res.render('admin/users', {
+            title: '사용자 관리',
+            users,
+            success: null,
+            error: null
+        });
+    } catch (error) {
+        console.error('사용자 관리 페이지 오류:', error);
+        res.render('admin/users', {
+            title: '사용자 관리',
+            users: [],
+            success: null,
+            error: '사용자 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+// 사용 이력 페이지
+app.get('/admin/usages', requireAuth, async (req, res) => {
+    try {
+        const usages = await dbHelpers.getUsages();
+        res.render('admin/usages', {
+            title: '사용 이력',
+            usages,
+            formatDate,
+            success: null,
+            error: null
+        });
+    } catch (error) {
+        console.error('사용 이력 페이지 오류:', error);
+        res.render('admin/usages', {
+            title: '사용 이력',
+            usages: [],
+            formatDate,
+            success: null,
+            error: '사용 이력을 불러오지 못했습니다.'
+        });
+    }
+});
+
+// 제휴업체(스토어) 관리 페이지
+app.get('/admin/stores', requireAuth, async (req, res) => {
+    try {
+        const stores = await dbHelpers.getStores();
+        res.render('admin/stores', {
+            title: '제휴업체 관리',
+            stores,
+            success: null,
+            error: null
+        });
+    } catch (error) {
+        console.error('제휴업체 관리 페이지 오류:', error);
+        res.render('admin/stores', {
+            title: '제휴업체 관리',
+            stores: [],
+            success: null,
+            error: '제휴업체 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+// 배너 관리 페이지
+app.get('/admin/banners', requireAuth, async (req, res) => {
+    try {
+        const banners = await dbHelpers.getBanners();
+        res.render('admin/banners', {
+            title: '배너 관리',
+            banners,
+            success: null,
+            error: null
+        });
+    } catch (error) {
+        console.error('배너 관리 페이지 오류:', error);
+        res.render('admin/banners', {
+            title: '배너 관리',
+            banners: [],
+            success: null,
+            error: '배너 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+// 제휴 신청서 관리 페이지
+app.get('/admin/partner-applications', requireAuth, async (req, res) => {
+    try {
+        let applications = [];
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM partner_applications ORDER BY created_at DESC');
+            applications = result.rows;
+        } else {
+            applications = await jsonDB.findAll('partner_applications');
+        }
+        res.render('admin/partner-applications', {
+            title: '제휴 신청서',
+            applications,
+            success: null,
+            error: null
+        });
+    } catch (error) {
+        console.error('제휴 신청서 페이지 오류:', error);
+        res.render('admin/partner-applications', {
+            title: '제휴 신청서',
+            applications: [],
+            success: null,
+            error: '신청서 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
 // 서버 시작 및 데이터베이스 초기화
 app.listen(PORT, async () => {
     console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
