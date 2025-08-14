@@ -447,7 +447,8 @@ app.get('/register', async (req, res) => {
             title: '카드 발급',
             agencies: agencies,
             error: null,
-            success: null
+            success: null,
+            selectedAgency: null
         });
     } catch (error) {
         console.error('카드 발급 페이지 오류:', error);
@@ -455,7 +456,8 @@ app.get('/register', async (req, res) => {
             title: '카드 발급',
             agencies: [],
             error: null,
-            success: null
+            success: null,
+            selectedAgency: null
         });
     }
 });
@@ -710,8 +712,8 @@ app.post('/admin/login', async (req, res) => {
         const { username, password } = req.body;
         
         // 기본 관리자 계정 (환경변수 또는 하드코딩)
-        const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-        const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+        const adminUsername = process.env.ADMIN_USERNAME || 'luxfind01';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'vasco01@';
         
         if (username === adminUsername && password === adminPassword) {
             req.session.adminId = 'admin';
