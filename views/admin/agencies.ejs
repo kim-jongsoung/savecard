@@ -335,13 +335,6 @@
         async function deleteAgency(agencyId) {
             console.log(`삭제 요청 시작: agencyId = ${agencyId}`);
             
-            if (!confirm('정말로 이 여행사를 삭제하시겠습니까?\n연결된 모든 고객 정보도 함께 삭제됩니다.')) {
-                console.log('사용자가 삭제를 취소했습니다.');
-                return;
-            }
-
-            console.log('DELETE 요청 전송 시작...');
-            
             try {
                 const url = `/admin/agencies/${agencyId}`;
                 console.log(`요청 URL: ${url}`);
@@ -364,14 +357,49 @@
                 console.log('서버 응답:', result);
                 
                 if (result.success) {
-                    alert(result.message || '여행사가 성공적으로 삭제되었습니다.');
+                    alert('여행사가 성공적으로 삭제되었습니다.');
+                    location.reload();
+                } else if (result.hasUsers) {
+                    // 연결된 사용자가 있는 경우 확인 후 강제 삭제 옵션 제공
+                    if (confirm(result.message + '\n\n계속 진행하시겠습니까?')) {
+                        await forceDeleteAgency(agencyId);
+                    }
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('삭제 요청 오류:', error);
+                alert('삭제 중 오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        async function forceDeleteAgency(agencyId) {
+            try {
+                const url = `/admin/agencies/${agencyId}/force`;
+                
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
                     location.reload();
                 } else {
                     alert('오류: ' + result.message);
                 }
             } catch (error) {
-                console.error('삭제 중 오류 발생:', error);
-                alert('삭제 중 오류가 발생했습니다: ' + error.message);
+                console.error('강제 삭제 요청 오류:', error);
+                alert('강제 삭제 중 오류가 발생했습니다: ' + error.message);
             }
         }
 

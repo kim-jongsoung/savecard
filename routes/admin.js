@@ -426,10 +426,21 @@ router.delete('/agencies/:id', requireAuth, async (req, res) => {
     const agencyId = req.params.id;
 
     try {
-        // 먼저 해당 여행사에 연결된 사용자들 삭제
-        await pool.query('DELETE FROM users WHERE agency_id = $1', [agencyId]);
+        // 먼저 해당 여행사에 연결된 사용자 수 확인
+        const userCountResult = await pool.query('SELECT COUNT(*) as count FROM users WHERE agency_id = $1', [agencyId]);
+        const userCount = parseInt(userCountResult.rows[0].count);
         
-        // 여행사 삭제
+        if (userCount > 0) {
+            // 연결된 사용자가 있는 경우 사용자에게 선택권 제공
+            return res.json({ 
+                success: false, 
+                message: `이 여행사에 ${userCount}명의 고객이 등록되어 있습니다. 여행사를 삭제하면 연결된 모든 고객 데이터도 함께 삭제됩니다.`,
+                hasUsers: true,
+                userCount: userCount
+            });
+        }
+        
+        // 연결된 사용자가 없는 경우 바로 삭제
         const result = await pool.query('DELETE FROM agencies WHERE id = $1 RETURNING *', [agencyId]);
         
         if (result.rows.length === 0) {
@@ -440,6 +451,43 @@ router.delete('/agencies/:id', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('여행사 삭제 오류:', error);
+        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+    }
+});
+
+// 여행사 강제 삭제 (연결된 사용자 포함)
+router.delete('/agencies/:id/force', requireAuth, async (req, res) => {
+    const agencyId = req.params.id;
+
+    try {
+        // 트랜잭션 시작
+        await pool.query('BEGIN');
+        
+        // 먼저 해당 여행사 사용자들의 사용 이력 삭제
+        await pool.query(`
+            DELETE FROM usages 
+            WHERE token IN (SELECT token FROM users WHERE agency_id = $1)
+        `, [agencyId]);
+        
+        // 해당 여행사에 연결된 사용자들 삭제
+        await pool.query('DELETE FROM users WHERE agency_id = $1', [agencyId]);
+        
+        // 여행사 삭제
+        const result = await pool.query('DELETE FROM agencies WHERE id = $1 RETURNING *', [agencyId]);
+        
+        if (result.rows.length === 0) {
+            await pool.query('ROLLBACK');
+            return res.json({ success: false, message: '삭제할 여행사를 찾을 수 없습니다.' });
+        }
+
+        // 트랜잭션 커밋
+        await pool.query('COMMIT');
+        
+        res.json({ success: true, message: '여행사와 연결된 모든 데이터가 성공적으로 삭제되었습니다.' });
+
+    } catch (error) {
+        await pool.query('ROLLBACK');
+        console.error('여행사 강제 삭제 오류:', error);
         res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
     }
 });
