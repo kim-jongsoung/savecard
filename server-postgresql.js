@@ -11,7 +11,7 @@ require('dotenv').config();
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
 let dbMode = 'postgresql';
-let pool, testConnection, createTables, migrateFromJSON;
+let pool, testConnection, createTables, migrateFromJSON, ensureAllColumns;
 let jsonDB;
 
 try {
@@ -20,6 +20,7 @@ try {
     testConnection = dbModule.testConnection;
     createTables = dbModule.createTables;
     migrateFromJSON = dbModule.migrateFromJSON;
+    ensureAllColumns = dbModule.ensureAllColumns;
 } catch (error) {
     console.warn('⚠️ PostgreSQL 모듈 로드 실패, JSON 데이터베이스로 fallback:', error.message);
     dbMode = 'json';
@@ -105,6 +106,40 @@ async function checkDatabase(req, res, next) {
 
 // 모든 라우트에 데이터베이스 체크 적용
 app.use(checkDatabase);
+
+// 서버 시작 시 PostgreSQL 스키마 보정: 테이블 생성 → 컬럼 보정
+(async () => {
+    if (dbMode !== 'postgresql') return;
+    try {
+        const ok = await testConnection();
+        if (!ok) return;
+        await createTables();
+        if (typeof ensureAllColumns === 'function') {
+            await ensureAllColumns();
+        }
+        console.log('🗄️ DB 초기화/보정 완료');
+    } catch (e) {
+        console.warn('DB 초기화/보정 중 경고:', e.message);
+    }
+})();
+
+// 관리자: 수동 컬럼 보정 실행 엔드포인트 (로그인 필요)
+app.post('/admin/db/ensure-columns', requireAuth, async (req, res) => {
+    if (dbMode !== 'postgresql') {
+        return res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+    }
+    try {
+        await createTables();
+        if (typeof ensureAllColumns === 'function') {
+            await ensureAllColumns();
+        }
+        return res.json({ success: true, message: '모든 테이블 컬럼 보정 완료' });
+    } catch (e) {
+        console.error('ensure-columns 실행 오류:', e);
+        const expose = String(process.env.EXPOSE_ERROR || '').toLowerCase() === 'true';
+        return res.json({ success: false, message: '컬럼 보정 중 오류가 발생했습니다.', ...(expose ? { detail: e.message } : {}) });
+    }
+});
 
 // 데이터베이스 헬퍼 함수들 (PostgreSQL/JSON 호환)
 const dbHelpers = {

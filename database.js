@@ -13,6 +13,99 @@ if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL && !process.env.DB_UR
   console.warn('환경변수 DATABASE_URL, POSTGRES_URL, 또는 DB_URL을 설정해주세요.');
 }
 
+// 운영 안정화: 필요한 모든 컬럼을 사전에 보정(존재하지 않으면 추가)
+async function ensureAllColumns() {
+  const client = await pool.connect();
+  try {
+    // users
+    await client.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS agency_id INTEGER,
+      ADD COLUMN IF NOT EXISTS token VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS qr_code TEXT,
+      ADD COLUMN IF NOT EXISTS expiration_start TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS expiration_end TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS pin VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    // agencies
+    await client.query(`
+      ALTER TABLE agencies
+      ADD COLUMN IF NOT EXISTS discount_info TEXT,
+      ADD COLUMN IF NOT EXISTS show_banners_on_landing BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 999,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    // stores
+    await client.query(`
+      ALTER TABLE stores
+      ADD COLUMN IF NOT EXISTS category VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS discount VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS discount_info TEXT,
+      ADD COLUMN IF NOT EXISTS address VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS website VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS description TEXT,
+      ADD COLUMN IF NOT EXISTS image_url VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS usage_count INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    // usages
+    await client.query(`
+      ALTER TABLE usages
+      ADD COLUMN IF NOT EXISTS token VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS store_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45),
+      ADD COLUMN IF NOT EXISTS user_agent TEXT
+    `);
+
+    // partner_applications
+    await client.query(`
+      ALTER TABLE partner_applications
+      ADD COLUMN IF NOT EXISTS business_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS contact_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS phone VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS business_type VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS location VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS discount_offer TEXT,
+      ADD COLUMN IF NOT EXISTS additional_info TEXT,
+      ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending',
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    // banners
+    await client.query(`
+      ALTER TABLE banners
+      ADD COLUMN IF NOT EXISTS advertiser_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS image_url VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS link_url VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+      ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS display_locations INTEGER[] DEFAULT '{1}',
+      ADD COLUMN IF NOT EXISTS click_count INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    console.log('🛠️ 모든 테이블 컬럼 보정 완료');
+  } catch (err) {
+    console.warn('⚠️ 컬럼 보정 중 경고:', err.message);
+  } finally {
+    client.release();
+  }
+}
+
 // 데이터베이스 연결 테스트
 async function testConnection() {
   try {
@@ -214,5 +307,6 @@ module.exports = {
   pool,
   testConnection,
   createTables,
-  migrateFromJSON
+  migrateFromJSON,
+  ensureAllColumns
 };
