@@ -280,6 +280,7 @@ router.get('/users', requireAuth, async (req, res) => {
         // 사용자 목록 조회
         const usersResult = await pool.query(`
             SELECT u.*, a.name as agency_name,
+                   u.name as customer_name,
                    COUNT(cu.id) as usage_count
             FROM users u
             LEFT JOIN agencies a ON u.agency_id = a.id
