@@ -28,47 +28,45 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const adminResult = await pool.query(
-            'SELECT id, username, password_hash FROM admins WHERE username = $1',
-            [username]
-        );
-        const adminRows = adminResult.rows;
-
-        if (adminRows.length === 0) {
-            return res.render('admin/login', {
-                title: '관리자 로그인',
-                error: '아이디 또는 비밀번호가 잘못되었습니다.'
-            });
+        // 기본 관리자 계정 (환경변수 또는 하드코딩)
+        const adminUsername = process.env.ADMIN_USERNAME || 'luxfind01';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'vasco01@';
+        
+        if (username === adminUsername && password === adminPassword) {
+            req.session.adminId = 'admin';
+            req.session.adminUsername = username;
+            
+            // AJAX 요청인지 확인
+            if (req.xhr || req.headers.accept?.includes('application/json')) {
+                return res.json({ success: true });
+            } else {
+                return res.redirect('/admin');
+            }
+        } else {
+            const errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
+            
+            if (req.xhr || req.headers.accept?.includes('application/json')) {
+                return res.json({ success: false, message: errorMsg });
+            } else {
+                return res.render('admin/login', {
+                    title: '관리자 로그인',
+                    error: errorMsg
+                });
+            }
         }
-
-        const admin = adminRows[0];
-        const isValidPassword = await bcrypt.compare(password, admin.password_hash);
-
-        if (!isValidPassword) {
-            return res.render('admin/login', {
-                title: '관리자 로그인',
-                error: '아이디 또는 비밀번호가 잘못되었습니다.'
-            });
-        }
-
-        // 세션에 관리자 정보 저장
-        req.session.adminId = admin.id;
-        req.session.adminUsername = admin.username;
-
-        // 마지막 로그인 시간 업데이트
-        await pool.query(
-            'UPDATE admins SET last_login = NOW() WHERE id = $1',
-            [admin.id]
-        );
-
-        res.redirect('/admin');
 
     } catch (error) {
         console.error('로그인 오류:', error);
-        res.render('admin/login', {
-            title: '관리자 로그인',
-            error: '로그인 중 오류가 발생했습니다.'
-        });
+        const errorMsg = '로그인 처리 중 오류가 발생했습니다.';
+        
+        if (req.xhr || req.headers.accept?.includes('application/json')) {
+            return res.json({ success: false, message: errorMsg });
+        } else {
+            return res.render('admin/login', {
+                title: '관리자 로그인',
+                error: errorMsg
+            });
+        }
     }
 });
 
