@@ -608,6 +608,52 @@ app.get('/', async (req, res) => {
     }
 });
 
+// 여행사 전용 랜딩 페이지
+app.get('/partner/:code', async (req, res) => {
+    try {
+        const { code } = req.params;
+        
+        // 여행사 코드로 여행사 정보 조회
+        const partnerAgency = await dbHelpers.getAgencyByCode(code);
+        if (!partnerAgency) {
+            return res.render('error', {
+                title: '여행사를 찾을 수 없습니다',
+                message: '유효하지 않은 여행사 코드입니다.',
+                error: { status: 404 }
+            });
+        }
+
+        // 데이터 조회
+        let agencies = [];
+        let banners = [];
+        try {
+            agencies = await dbHelpers.getAgencies();
+        } catch (err) {
+            console.warn('여행사 데이터 조회 실패:', err.message);
+        }
+        try {
+            banners = await dbHelpers.getBanners();
+        } catch (err) {
+            console.warn('배너 데이터 조회 실패:', err.message);
+        }
+
+        res.render('index', {
+            title: `괌세이브카드 - ${partnerAgency.name}`,
+            agencies,
+            banners,
+            partnerAgency: partnerAgency
+        });
+        
+    } catch (error) {
+        console.error('파트너 랜딩 페이지 오류:', error);
+        res.render('error', {
+            title: '오류가 발생했습니다',
+            message: '페이지를 불러오는 중 오류가 발생했습니다.',
+            error: { status: 500, message: error.message }
+        });
+    }
+});
+
 // 진단용 라우트 (임시)
 app.get('/__diag', async (req, res) => {
     try {
@@ -1112,24 +1158,42 @@ app.post('/api/partner-apply', async (req, res) => {
                 business_name, contact_name, phone, email,
                 business_type, location, discount_offer,
                 additional_info: additional_info || null,
-                status: 'pending',
-                created_at: new Date().toISOString()
-            });
-        }
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('제휴 신청 접수 오류:', error);
-        res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
     }
+
+    if (dbMode === 'postgresql') {
+        await pool.query(
+            `INSERT INTO partner_applications (business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+            [business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info || null]
+        );
+    } else {
+        await jsonDB.create('partner_applications', {
+            id: Date.now(),
+            business_name, contact_name, phone, email,
+            business_type, location, discount_offer,
+            additional_info: additional_info || null,
+            status: 'pending',
+            created_at: new Date().toISOString()
+        });
+    }
+
+    res.json({ success: true, agency });
+} catch (error) {
+    console.error('제휴 신청 접수 오류:', error);
+    res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
+}
 });
 
 // 내 카드 페이지
 app.get('/my-card', async (req, res) => {
-    try {
-        const { token } = req.query;
-        
-        if (!token) {
+try {
+    const { token } = req.query;
+
+    if (!token) {
+        return res.render('error', {
+            title: '잘못된 접근',
+            message: '유효하지 않은 카드입니다.',
+            error: { status: 400 }
             return res.render('error', {
                 title: '잘못된 접근',
                 message: '유효하지 않은 카드입니다.',
@@ -1507,6 +1571,89 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
             success: false,
             message: '여행사 수정 중 오류가 발생했습니다.'
         });
+    }
+});
+
+// 여행사 순위 조정
+app.post('/admin/agencies/:id/move', requireAuth, async (req, res) => {
+    try {
+        const agencyId = Number(req.params.id);
+        const { direction } = req.body; // 'up' 또는 'down'
+        
+        if (!Number.isFinite(agencyId) || !['up', 'down'].includes(direction)) {
+            return res.status(400).json({ success: false, message: '잘못된 요청입니다.' });
+        }
+
+        if (dbMode === 'postgresql') {
+            // 현재 여행사의 sort_order 조회
+            const currentResult = await pool.query('SELECT sort_order FROM agencies WHERE id = $1', [agencyId]);
+            if (currentResult.rows.length === 0) {
+                return res.status(404).json({ success: false, message: '여행사를 찾을 수 없습니다.' });
+            }
+            
+            const currentOrder = currentResult.rows[0].sort_order || 999;
+            let targetOrder;
+            
+            if (direction === 'up') {
+                // 위로 이동: 현재보다 작은 sort_order 중 가장 큰 값 찾기
+                const targetResult = await pool.query(
+                    'SELECT id, sort_order FROM agencies WHERE sort_order < $1 ORDER BY sort_order DESC LIMIT 1',
+                    [currentOrder]
+                );
+                if (targetResult.rows.length === 0) {
+                    return res.json({ success: false, message: '이미 최상위입니다.' });
+                }
+                targetOrder = targetResult.rows[0].sort_order;
+                const targetId = targetResult.rows[0].id;
+                
+                // 순서 교체
+                await pool.query('UPDATE agencies SET sort_order = $1 WHERE id = $2', [targetOrder, agencyId]);
+                await pool.query('UPDATE agencies SET sort_order = $1 WHERE id = $2', [currentOrder, targetId]);
+                
+            } else { // down
+                // 아래로 이동: 현재보다 큰 sort_order 중 가장 작은 값 찾기
+                const targetResult = await pool.query(
+                    'SELECT id, sort_order FROM agencies WHERE sort_order > $1 ORDER BY sort_order ASC LIMIT 1',
+                    [currentOrder]
+                );
+                if (targetResult.rows.length === 0) {
+                    return res.json({ success: false, message: '이미 최하위입니다.' });
+                }
+                targetOrder = targetResult.rows[0].sort_order;
+                const targetId = targetResult.rows[0].id;
+                
+                // 순서 교체
+                await pool.query('UPDATE agencies SET sort_order = $1 WHERE id = $2', [targetOrder, agencyId]);
+                await pool.query('UPDATE agencies SET sort_order = $1 WHERE id = $2', [currentOrder, targetId]);
+            }
+            
+        } else {
+            // JSON 모드 처리
+            const agencies = await jsonDB.read('agencies') || [];
+            const agencyIndex = agencies.findIndex(a => a.id === agencyId);
+            
+            if (agencyIndex === -1) {
+                return res.status(404).json({ success: false, message: '여행사를 찾을 수 없습니다.' });
+            }
+            
+            if (direction === 'up' && agencyIndex > 0) {
+                // 위로 이동
+                [agencies[agencyIndex], agencies[agencyIndex - 1]] = [agencies[agencyIndex - 1], agencies[agencyIndex]];
+                await jsonDB.write('agencies', agencies);
+            } else if (direction === 'down' && agencyIndex < agencies.length - 1) {
+                // 아래로 이동
+                [agencies[agencyIndex], agencies[agencyIndex + 1]] = [agencies[agencyIndex + 1], agencies[agencyIndex]];
+                await jsonDB.write('agencies', agencies);
+            } else {
+                return res.json({ success: false, message: direction === 'up' ? '이미 최상위입니다.' : '이미 최하위입니다.' });
+            }
+        }
+        
+        res.json({ success: true, message: '순위가 변경되었습니다.' });
+        
+    } catch (error) {
+        console.error('여행사 순위 조정 오류:', error);
+        res.status(500).json({ success: false, message: '순위 조정 중 오류가 발생했습니다.' });
     }
 });
 

@@ -639,6 +639,31 @@
 
             console.log('여행사 정보가 동적으로 업데이트되었습니다.');
         }
+
+        // 여행사 순위 조정 함수
+        async function moveAgency(agencyId, direction) {
+            try {
+                const response = await fetch(`/admin/agencies/${agencyId}/move`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ direction })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 성공 시 페이지 새로고침하여 변경된 순위 반영
+                    location.reload();
+                } else {
+                    alert(result.message || '순위 조정 중 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                console.error('순위 조정 오류:', error);
+                alert('순위 조정 중 오류가 발생했습니다.');
+            }
+        }
     </script>
 </body>
 </html>
