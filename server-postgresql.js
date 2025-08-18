@@ -50,53 +50,6 @@ try {
             auth: { user: SMTP_USER, pass: SMTP_PASS }
         });
 
-// 발급 완료 페이지
-app.get('/register/success', async (req, res) => {
-    try {
-        const { token } = req.query;
-        if (!token) {
-            return res.redirect('/issue');
-        }
-
-        const user = await dbHelpers.getUserByToken(token);
-        if (!user) {
-            return res.redirect('/issue');
-        }
-
-        const agency = user.agency_id ? await dbHelpers.getAgencyById(user.agency_id) : null;
-        const banners = await dbHelpers.getBanners();
-
-        // 만료 텍스트 구성 (있으면 표시)
-        let expiration_text = null;
-        if (user.expiration_start && user.expiration_end) {
-            const start = new Date(user.expiration_start);
-            const end = new Date(user.expiration_end);
-            const fmt = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-            expiration_text = `Save Card Expiration Date ${fmt(start)}~${fmt(end)}`;
-        }
-
-        const userForView = {
-            customer_name: user.name || user.customer_name || '고객',
-            agency_name: agency ? agency.name : 'Unknown',
-            expiration_text
-        };
-
-        const cardUrl = `/card?token=${encodeURIComponent(token)}`;
-        const qrImageUrl = user.qr_code; // DataURL
-
-        return res.render('register-success', {
-            title: '괌세이브카드 발급 완료',
-            user: userForView,
-            cardUrl,
-            qrImageUrl,
-            banners
-        });
-    } catch (error) {
-        console.error('발급 성공 페이지 오류:', error);
-        return res.redirect('/issue');
-    }
-});
-
 // (편의) GET으로도 실행 가능하게 지원
 app.get('/admin/db/ensure-columns', requireAuth, async (req, res) => {
     if (dbMode !== 'postgresql') {
@@ -717,6 +670,53 @@ app.post('/banner/click/:id', async (req, res) => {
     } catch (error) {
         console.error('배너 클릭 추적 오류:', error);
         res.json({ success: false });
+    }
+});
+
+// 발급 완료 페이지
+app.get('/register/success', async (req, res) => {
+    try {
+        const { token } = req.query;
+        if (!token) {
+            return res.redirect('/issue');
+        }
+
+        const user = await dbHelpers.getUserByToken(token);
+        if (!user) {
+            return res.redirect('/issue');
+        }
+
+        const agency = user.agency_id ? await dbHelpers.getAgencyById(user.agency_id) : null;
+        const banners = await dbHelpers.getBanners();
+
+        // 만료 텍스트 구성 (있으면 표시)
+        let expiration_text = null;
+        if (user.expiration_start && user.expiration_end) {
+            const start = new Date(user.expiration_start);
+            const end = new Date(user.expiration_end);
+            const fmt = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+            expiration_text = `Save Card Expiration Date ${fmt(start)}~${fmt(end)}`;
+        }
+
+        const userForView = {
+            customer_name: user.name || user.customer_name || '고객',
+            agency_name: agency ? agency.name : 'Unknown',
+            expiration_text
+        };
+
+        const cardUrl = `/card?token=${encodeURIComponent(token)}`;
+        const qrImageUrl = user.qr_code; // DataURL
+
+        return res.render('register-success', {
+            title: '괌세이브카드 발급 완료',
+            user: userForView,
+            cardUrl,
+            qrImageUrl,
+            banners
+        });
+    } catch (error) {
+        console.error('발급 성공 페이지 오류:', error);
+        return res.redirect('/issue');
     }
 });
 
