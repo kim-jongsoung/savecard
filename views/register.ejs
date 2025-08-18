@@ -197,10 +197,6 @@
                     <% if (selectedAgency) { %>
                         <!-- 제휴 여행사가 선택된 경우 숨겨진 필드로 값 전송 -->
                         <input type="hidden" name="agency_code" value="<%= selectedAgency.code || selectedAgency.agency_code %>">
-                        <div class="form-text text-success">
-                            <i class="fas fa-check-circle me-1"></i>
-                            <strong><%= selectedAgency.name %></strong> 제휴 여행사로 자동 선택되었습니다.
-                        </div>
                     <% } %>
                 </div>
 
