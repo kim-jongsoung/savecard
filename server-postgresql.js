@@ -50,6 +50,53 @@ try {
             auth: { user: SMTP_USER, pass: SMTP_PASS }
         });
 
+// 발급 완료 페이지
+app.get('/register/success', async (req, res) => {
+    try {
+        const { token } = req.query;
+        if (!token) {
+            return res.redirect('/issue');
+        }
+
+        const user = await dbHelpers.getUserByToken(token);
+        if (!user) {
+            return res.redirect('/issue');
+        }
+
+        const agency = user.agency_id ? await dbHelpers.getAgencyById(user.agency_id) : null;
+        const banners = await dbHelpers.getBanners();
+
+        // 만료 텍스트 구성 (있으면 표시)
+        let expiration_text = null;
+        if (user.expiration_start && user.expiration_end) {
+            const start = new Date(user.expiration_start);
+            const end = new Date(user.expiration_end);
+            const fmt = (d) => `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+            expiration_text = `Save Card Expiration Date ${fmt(start)}~${fmt(end)}`;
+        }
+
+        const userForView = {
+            customer_name: user.name || user.customer_name || '고객',
+            agency_name: agency ? agency.name : 'Unknown',
+            expiration_text
+        };
+
+        const cardUrl = `/card?token=${encodeURIComponent(token)}`;
+        const qrImageUrl = user.qr_code; // DataURL
+
+        return res.render('register-success', {
+            title: '괌세이브카드 발급 완료',
+            user: userForView,
+            cardUrl,
+            qrImageUrl,
+            banners
+        });
+    } catch (error) {
+        console.error('발급 성공 페이지 오류:', error);
+        return res.redirect('/issue');
+    }
+});
+
 // (편의) GET으로도 실행 가능하게 지원
 app.get('/admin/db/ensure-columns', requireAuth, async (req, res) => {
     if (dbMode !== 'postgresql') {
@@ -187,6 +234,15 @@ const dbHelpers = {
                 'INSERT INTO users (name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, pin, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING *',
                 [name, phone, email, agency_id, token, qr_code, expiration_start, expiration_end, pin]
             );
+            // 호환성: 과거 스키마의 customer_name 컬럼이 존재한다면 동기화 저장
+            try {
+                const col = await pool.query("SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='customer_name'");
+                if (col && col.rowCount > 0) {
+                    await pool.query('UPDATE users SET customer_name = $1, updated_at = NOW() WHERE id = $2', [name, result.rows[0].id]);
+                }
+            } catch (compatErr) {
+                console.warn('customer_name 호환 저장 중 경고:', compatErr.message);
+            }
             return result.rows[0];
         } else {
             return await jsonDB.insert('users', userData);
@@ -832,10 +888,23 @@ app.post('/issue', async (req, res) => {
             try {
                 await pool.query(`
                   ALTER TABLE users
+                  ADD COLUMN IF NOT EXISTS name VARCHAR(255),
                   ADD COLUMN IF NOT EXISTS qr_code TEXT,
                   ADD COLUMN IF NOT EXISTS expiration_start TIMESTAMP,
                   ADD COLUMN IF NOT EXISTS expiration_end TIMESTAMP,
                   ADD COLUMN IF NOT EXISTS pin VARCHAR(100)
+                `);
+                // 과거 스키마 호환: customer_name만 있고 name이 비어있는 경우 동기화
+                await pool.query(`
+                  DO $$
+                  BEGIN
+                    IF EXISTS (
+                      SELECT 1 FROM information_schema.columns
+                      WHERE table_name='users' AND column_name='customer_name'
+                    ) THEN
+                      UPDATE users SET name = customer_name WHERE name IS NULL OR name = '';
+                    END IF;
+                  END$$;
                 `);
                 // 기존 pin 컬럼 길이가 100 미만이면 확장
                 await pool.query(`
