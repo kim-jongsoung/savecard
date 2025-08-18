@@ -1085,6 +1085,16 @@ app.get('/my-card', async (req, res) => {
     }
 });
 
+// 카드 보기 페이지 (경로 파라미터 방식) - /card로 리다이렉트
+app.get('/view-card/:token', (req, res) => {
+    const { token } = req.params;
+    if (!token) {
+        return res.redirect('/issue');
+    }
+    // /card?token=... 형식으로 리다이렉트
+    res.redirect(`/card?token=${encodeURIComponent(token)}`);
+});
+
 // 카드 사용 페이지 (QR 스캔)
 app.get('/card', async (req, res) => {
     try {
