@@ -45,7 +45,15 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'guam-savecard-secret-key-2025',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24시간
+    },
+    // 프로덕션 환경에서는 메모리 스토어 경고 억제
+    ...(process.env.NODE_ENV === 'production' ? {
+        name: 'sessionId',
+        proxy: true
+    } : {})
 }));
 
 // 관리자 인증 미들웨어
