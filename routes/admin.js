@@ -128,7 +128,7 @@ router.get('/agencies', requireAuth, async (req, res) => {
                    COUNT(u.id) as user_count
             FROM agencies a
             LEFT JOIN users u ON a.id = u.agency_id
-            GROUP BY a.id, a.name, a.code, a.discount_info, a.show_banners_on_landing, a.display_order, a.sort_order, a.created_at, a.updated_at
+            GROUP BY a.id, a.name, a.code, a.display_order, a.sort_order, a.created_at, a.updated_at
             ORDER BY a.created_at DESC
         `);
 
@@ -202,7 +202,7 @@ router.post('/agencies', requireAuth, async (req, res) => {
 // 여행사 수정
 router.put('/agencies/:id', requireAuth, async (req, res) => {
     const agencyId = req.params.id;
-    const { name, code, contact_email, contact_phone, show_banners_on_landing } = req.body;
+    const { name, code, contact_email, contact_phone } = req.body;
 
     console.log('여행사 수정 요청:', { agencyId, body: req.body });
 
@@ -221,17 +221,16 @@ router.put('/agencies/:id', requireAuth, async (req, res) => {
             name: name !== undefined ? name : existing.name,
             code: code !== undefined ? code : existing.code,
             contact_email: contact_email !== undefined ? contact_email : existing.contact_email,
-            contact_phone: contact_phone !== undefined ? contact_phone : existing.contact_phone,
-            show_banners_on_landing: show_banners_on_landing !== undefined ? show_banners_on_landing : existing.show_banners_on_landing
+            contact_phone: contact_phone !== undefined ? contact_phone : existing.contact_phone
         };
 
         const result = await pool.query(`
             UPDATE agencies 
             SET name = $1, code = $2, contact_email = $3, contact_phone = $4, 
-                show_banners_on_landing = $5, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $6 
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5 
             RETURNING *
-        `, [updateData.name, updateData.code, updateData.contact_email, updateData.contact_phone, updateData.show_banners_on_landing, agencyId]);
+        `, [updateData.name, updateData.code, updateData.contact_email, updateData.contact_phone, agencyId]);
 
         console.log('여행사 수정 성공:', result.rows[0]);
         res.json({ success: true, message: '여행사 정보가 성공적으로 수정되었습니다.', agency: result.rows[0] });

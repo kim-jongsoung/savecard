@@ -261,10 +261,6 @@
                                 <h6 class="store-name"><%= store.name %></h6>
                                 <p class="text-muted small"><%= store.description %></p>
                                 
-                                <div class="mb-2">
-                                    <strong>할인 정보:</strong><br>
-                                    <small class="text-success"><%= store.discount_info %></small>
-                                </div>
                                 
                                 <div class="mb-2">
                                     <strong>누적 사용 횟수:</strong>
@@ -567,7 +563,7 @@
                 document.getElementById('editStoreName').value = store.name || '';
                 document.getElementById('editStoreCategory').value = store.category || '';
                 document.getElementById('editStoreDescription').value = store.description || '';
-                document.getElementById('editStoreDiscount').value = (store.discount_info || store.discount || '');
+                // discount_info 필드 제거됨
                 document.getElementById('editStoreAddress').value = store.address || '';
                 document.getElementById('editStorePhone').value = store.phone || '';
                 document.getElementById('editStoreWebsite').value = store.website || '';
@@ -594,7 +590,7 @@
                 name: document.getElementById('editStoreName').value,
                 category: document.getElementById('editStoreCategory').value,
                 description: document.getElementById('editStoreDescription').value,
-                discount_info: document.getElementById('editStoreDiscount').value,
+                // discount_info 필드 제거됨
                 address: document.getElementById('editStoreAddress').value,
                 phone: document.getElementById('editStorePhone').value,
                 website: document.getElementById('editStoreWebsite').value,
@@ -602,7 +598,7 @@
                 usage_count: parseInt(document.getElementById('editStoreUsageCount').value) || 0
             };
 
-            if (!formData.name || !formData.category || !formData.discount_info) {
+            if (!formData.name || !formData.category) {
                 alert('필수 항목을 모두 입력해주세요.');
                 return;
             }
