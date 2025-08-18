@@ -178,7 +178,17 @@ router.post('/agencies', requireAuth, async (req, res) => {
         );
 
         console.log('여행사 추가 성공:', result.rows[0]);
-        res.redirect('/admin/agencies?success=여행사가 성공적으로 추가되었습니다.');
+        
+        // AJAX 요청인지 확인
+        if (req.headers['content-type'] === 'application/json') {
+            res.json({
+                success: true,
+                message: '여행사가 성공적으로 추가되었습니다.',
+                agency: result.rows[0]
+            });
+        } else {
+            res.redirect('/admin/agencies?success=여행사가 성공적으로 추가되었습니다.');
+        }
 
     } catch (error) {
         console.error('여행사 추가 상세 오류:');
@@ -195,7 +205,15 @@ router.post('/agencies', requireAuth, async (req, res) => {
             errorMessage = '필요한 컬럼이 존재하지 않습니다.';
         }
         
-        res.redirect(`/admin/agencies?error=${errorMessage}: ${error.message}`);
+        // AJAX 요청인지 확인
+        if (req.headers['content-type'] === 'application/json') {
+            res.status(400).json({
+                success: false,
+                message: errorMessage
+            });
+        } else {
+            res.redirect(`/admin/agencies?error=${errorMessage}: ${error.message}`);
+        }
     }
 });
 

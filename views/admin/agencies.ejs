@@ -232,7 +232,7 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form method="POST" action="/admin/agencies">
+                <form id="addAgencyForm" method="POST" action="/admin/agencies">
                     <div class="modal-body">
                         <div class="mb-3">
                             <label for="name" class="form-label">여행사명 *</label>
@@ -588,6 +588,44 @@
                 alert('순위 조정 중 오류가 발생했습니다.');
             }
         }
+
+        // 여행사 추가 폼 제출 처리 (AJAX로 변경하여 JSON 응답 숨기기)
+        document.getElementById('addAgencyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                name: formData.get('name'),
+                agency_code: formData.get('agency_code'),
+                contact_email: formData.get('contact_email'),
+                contact_phone: formData.get('contact_phone'),
+                logo_url: formData.get('logo_url')
+            };
+
+            try {
+                const response = await fetch('/admin/agencies', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    // 성공 시 모달 닫기 및 페이지 새로고침
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addAgencyModal'));
+                    modal.hide();
+                    location.reload();
+                } else {
+                    const result = await response.json();
+                    alert(result.message || '여행사 추가 중 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                console.error('여행사 추가 오류:', error);
+                alert('여행사 추가 중 오류가 발생했습니다.');
+            }
+        });
     </script>
 </body>
 </html>
