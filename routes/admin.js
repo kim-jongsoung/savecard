@@ -83,19 +83,19 @@ router.get('/', requireAuth, async (req, res) => {
         // 통계 데이터 조회
         const [stats] = await pool.execute(`
             SELECT 
-                (SELECT COUNT(*) FROM travel_agencies) as total_agencies,
-                (SELECT COUNT(*) FROM savecard_users) as total_users,
-                (SELECT COUNT(*) FROM card_usages) as total_usages,
-                (SELECT COUNT(*) FROM banners WHERE is_active = 1) as active_banners
+                (SELECT COUNT(*) FROM agencies) as total_agencies,
+                (SELECT COUNT(*) FROM users) as total_users,
+                (SELECT COUNT(*) FROM usages) as total_usages,
+                (SELECT COUNT(*) FROM banners WHERE is_active = true) as active_banners
         `);
 
         // 최근 사용 이력
         const [recentUsages] = await pool.execute(`
-            SELECT cu.store_code, cu.used_at, su.customer_name, ta.name as agency_name
-            FROM card_usages cu
-            JOIN savecard_users su ON cu.token = su.token
-            JOIN travel_agencies ta ON su.agency_id = ta.id
-            ORDER BY cu.used_at DESC
+            SELECT u.store_name, u.used_at, us.name as customer_name, a.name as agency_name
+            FROM usages u
+            JOIN users us ON u.token = us.token
+            JOIN agencies a ON us.agency_id = a.id
+            ORDER BY u.used_at DESC
             LIMIT 10
         `);
 
@@ -121,12 +121,12 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/agencies', requireAuth, async (req, res) => {
     try {
         const [agencies] = await pool.execute(`
-            SELECT ta.*, 
-                   COUNT(su.id) as user_count
-            FROM travel_agencies ta
-            LEFT JOIN savecard_users su ON ta.id = su.agency_id
-            GROUP BY ta.id
-            ORDER BY ta.created_at DESC
+            SELECT a.*, 
+                   COUNT(u.id) as user_count
+            FROM agencies a
+            LEFT JOIN users u ON a.id = u.agency_id
+            GROUP BY a.id
+            ORDER BY a.created_at DESC
         `);
 
         res.render('admin/agencies', {
@@ -151,12 +151,12 @@ router.get('/agencies', requireAuth, async (req, res) => {
 
 // 여행사 추가
 router.post('/agencies', requireAuth, async (req, res) => {
-    const { name, agency_code, contact_email, contact_phone } = req.body;
+    const { name, code, contact_email, contact_phone } = req.body;
 
     try {
         await pool.execute(
-            'INSERT INTO travel_agencies (name, agency_code, contact_email, contact_phone) VALUES (?, ?, ?, ?)',
-            [name, agency_code, contact_email || null, contact_phone || null]
+            'INSERT INTO agencies (name, code, contact_email, contact_phone) VALUES (?, ?, ?, ?)',
+            [name, code, contact_email || null, contact_phone || null]
         );
 
         res.redirect('/admin/agencies?success=여행사가 성공적으로 추가되었습니다.');
@@ -180,20 +180,20 @@ router.get('/users', requireAuth, async (req, res) => {
 
         // 전체 사용자 수 조회
         const [countResult] = await pool.execute(
-            'SELECT COUNT(*) as total FROM savecard_users'
+            'SELECT COUNT(*) as total FROM users'
         );
         const totalUsers = countResult[0].total;
         const totalPages = Math.ceil(totalUsers / limit);
 
         // 사용자 목록 조회
         const [users] = await pool.execute(`
-            SELECT su.*, ta.name as agency_name,
+            SELECT u.*, a.name as agency_name,
                    COUNT(cu.id) as usage_count
-            FROM savecard_users su
-            JOIN travel_agencies ta ON su.agency_id = ta.id
-            LEFT JOIN card_usages cu ON su.token = cu.token
-            GROUP BY su.id
-            ORDER BY su.created_at DESC
+            FROM users u
+            JOIN agencies a ON u.agency_id = a.id
+            LEFT JOIN usages cu ON u.token = cu.token
+            GROUP BY u.id
+            ORDER BY u.created_at DESC
             LIMIT ? OFFSET ?
         `, [limit, offset]);
 
@@ -226,18 +226,18 @@ router.get('/usages', requireAuth, async (req, res) => {
 
         // 전체 사용 이력 수 조회
         const [countResult] = await pool.execute(
-            'SELECT COUNT(*) as total FROM card_usages'
+            'SELECT COUNT(*) as total FROM usages'
         );
         const totalUsages = countResult[0].total;
         const totalPages = Math.ceil(totalUsages / limit);
 
         // 사용 이력 조회
         const [usages] = await pool.execute(`
-            SELECT cu.*, su.customer_name, ta.name as agency_name
-            FROM card_usages cu
-            JOIN savecard_users su ON cu.token = su.token
-            JOIN travel_agencies ta ON su.agency_id = ta.id
-            ORDER BY cu.used_at DESC
+            SELECT u.*, us.name as customer_name, a.name as agency_name
+            FROM usages u
+            JOIN users us ON u.token = us.token
+            JOIN agencies a ON us.agency_id = a.id
+            ORDER BY u.used_at DESC
             LIMIT ? OFFSET ?
         `, [limit, offset]);
 
