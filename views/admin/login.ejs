@@ -150,6 +150,8 @@
             submitBtn.disabled = true;
             
             try {
+                console.log('로그인 시도:', { username, password });
+                
                 const response = await fetch('/admin/login', {
                     method: 'POST',
                     headers: {
@@ -158,18 +160,27 @@
                     body: JSON.stringify({ username, password })
                 });
                 
+                console.log('응답 상태:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const result = await response.json();
+                console.log('서버 응답:', result);
                 
                 if (result.success) {
+                    console.log('로그인 성공, 리다이렉트 중...');
                     // 성공 시 대시보드로 리다이렉트
                     window.location.href = '/admin';
                 } else {
                     // 실패 시 에러 메시지 표시
+                    console.log('로그인 실패:', result.message);
                     alert(result.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
                 }
             } catch (error) {
                 console.error('로그인 오류:', error);
-                alert('로그인 처리 중 오류가 발생했습니다.');
+                alert('로그인 처리 중 오류가 발생했습니다: ' + error.message);
             } finally {
                 // 버튼 원래 상태로 복구
                 submitBtn.innerHTML = originalText;
