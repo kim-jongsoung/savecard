@@ -1341,48 +1341,7 @@ app.post('/card/use', async (req, res) => {
 
 // ==================== 관리자 라우트 ====================
 
-// 관리자 로그인 페이지
-app.get('/admin/login', (req, res) => {
-    res.render('admin/login', { 
-        title: '관리자 로그인',
-        error: null,
-        success: null
-    });
-});
-
-// 관리자 로그인 처리
-app.post('/admin/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        
-        // 기본 관리자 계정 (환경변수 또는 하드코딩)
-        const adminUsername = process.env.ADMIN_USERNAME || 'luxfind01';
-        const adminPassword = process.env.ADMIN_PASSWORD || 'vasco01@';
-        
-        if (username === adminUsername && password === adminPassword) {
-            req.session.adminId = 'admin';
-            req.session.adminUsername = username;
-            res.json({ success: true });
-        } else {
-            res.json({ success: false, message: '아이디 또는 비밀번호가 올바르지 않습니다.' });
-        }
-    } catch (error) {
-        console.error('관리자 로그인 오류:', error);
-        res.json({ success: false, message: '로그인 처리 중 오류가 발생했습니다.' });
-    }
-});
-app.post('/admin/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
-});
-
-// 일부 관리자 뷰에서 GET 링크로 로그아웃을 호출하므로 GET도 허용
-app.get('/admin/logout', (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/admin/login');
-    });
-});
+// 관리자 로그인/로그아웃은 routes/admin.js에서 처리하므로 중복 제거
 
 // 관리자 대시보드
 app.get('/admin', requireAuth, async (req, res) => {
