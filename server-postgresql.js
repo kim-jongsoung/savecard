@@ -701,7 +701,8 @@ app.get('/register/success', async (req, res) => {
         const userForView = {
             customer_name: user.name || user.customer_name || '고객',
             agency_name: agency ? agency.name : 'Unknown',
-            expiration_text
+            expiration_text,
+            token: token
         };
 
         const cardUrl = `/card?token=${encodeURIComponent(token)}`;
