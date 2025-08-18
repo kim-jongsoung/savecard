@@ -102,6 +102,10 @@ async function checkDatabase(req, res, next) {
 // 모든 라우트에 데이터베이스 체크 적용
 app.use(checkDatabase);
 
+// 관리자 라우트 연결
+const adminRoutes = require('./routes/admin');
+app.use('/admin', adminRoutes);
+
 // 서버 시작 시 PostgreSQL 스키마 보정: 테이블 생성 → 컬럼 보정
 (async () => {
     if (dbMode !== 'postgresql') return;
