@@ -457,4 +457,250 @@ router.delete('/banners/:id', requireAuth, async (req, res) => {
     }
 });
 
+// 제휴업체 관리
+router.get('/stores', requireAuth, async (req, res) => {
+    try {
+        const storesResult = await pool.query(`
+            SELECT * FROM stores
+            ORDER BY created_at DESC
+        `);
+        const stores = storesResult.rows;
+
+        res.render('admin/stores', {
+            title: '제휴업체 관리',
+            stores: stores,
+            adminUsername: req.session.adminUsername,
+            success: req.query.success,
+            error: req.query.error
+        });
+
+    } catch (error) {
+        console.error('제휴업체 목록 조회 오류:', error);
+        res.render('admin/stores', {
+            title: '제휴업체 관리',
+            stores: [],
+            adminUsername: req.session.adminUsername,
+            success: null,
+            error: '데이터를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 제휴업체 추가
+router.post('/stores', requireAuth, async (req, res) => {
+    const { name, category, description, address, phone, website, image_url } = req.body;
+
+    try {
+        const result = await pool.query(
+            'INSERT INTO stores (name, category, description, address, phone, website, image_url, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [name, category, description || null, address || null, phone || null, website || null, image_url || null, true]
+        );
+
+        // AJAX 요청인지 확인
+        if (req.headers['content-type'] === 'application/json') {
+            res.json({
+                success: true,
+                message: '제휴업체가 성공적으로 추가되었습니다.',
+                store: result.rows[0]
+            });
+        } else {
+            res.redirect('/admin/stores?success=제휴업체가 성공적으로 추가되었습니다.');
+        }
+
+    } catch (error) {
+        console.error('제휴업체 추가 오류:', error);
+        
+        let errorMessage = '제휴업체 추가 중 오류가 발생했습니다.';
+        if (error.code === '23505') {
+            errorMessage = '이미 존재하는 제휴업체입니다.';
+        }
+        
+        // AJAX 요청인지 확인
+        if (req.headers['content-type'] === 'application/json') {
+            res.status(400).json({
+                success: false,
+                message: errorMessage
+            });
+        } else {
+            res.redirect(`/admin/stores?error=${errorMessage}`);
+        }
+    }
+});
+
+// 제휴업체 정보 조회
+router.get('/stores/:id', requireAuth, async (req, res) => {
+    const storeId = req.params.id;
+
+    try {
+        const result = await pool.query('SELECT * FROM stores WHERE id = $1', [storeId]);
+        
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: '제휴업체를 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true, store: result.rows[0] });
+
+    } catch (error) {
+        console.error('제휴업체 정보 조회 오류:', error);
+        res.json({ success: false, message: '정보 조회 중 오류가 발생했습니다.' });
+    }
+});
+
+// 제휴업체 수정
+router.put('/stores/:id', requireAuth, async (req, res) => {
+    const storeId = req.params.id;
+    const { name, category, description, address, phone, website, image_url, usage_count } = req.body;
+
+    try {
+        const result = await pool.query(
+            'UPDATE stores SET name = $1, category = $2, description = $3, address = $4, phone = $5, website = $6, image_url = $7, usage_count = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *',
+            [name, category, description || null, address || null, phone || null, website || null, image_url || null, parseInt(usage_count) || 0, storeId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: '수정할 제휴업체를 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true, message: '제휴업체 정보가 성공적으로 수정되었습니다.', store: result.rows[0] });
+
+    } catch (error) {
+        console.error('제휴업체 수정 오류:', error);
+        res.json({ success: false, message: '수정 중 오류가 발생했습니다.' });
+    }
+});
+
+// 제휴업체 활성화/비활성화
+router.post('/stores/:id/toggle', requireAuth, async (req, res) => {
+    const storeId = req.params.id;
+
+    try {
+        await pool.query(
+            'UPDATE stores SET is_active = NOT is_active WHERE id = $1',
+            [storeId]
+        );
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('제휴업체 상태 변경 오류:', error);
+        res.json({ success: false, message: '상태 변경 중 오류가 발생했습니다.' });
+    }
+});
+
+// 제휴업체 삭제
+router.delete('/stores/:id', requireAuth, async (req, res) => {
+    const storeId = req.params.id;
+
+    try {
+        // 먼저 해당 제휴업체의 사용 이력 삭제
+        await pool.query('DELETE FROM usages WHERE store_code = (SELECT name FROM stores WHERE id = $1)', [storeId]);
+        
+        // 제휴업체 삭제
+        const result = await pool.query('DELETE FROM stores WHERE id = $1 RETURNING *', [storeId]);
+        
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: '삭제할 제휴업체를 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true, message: '제휴업체가 성공적으로 삭제되었습니다.' });
+
+    } catch (error) {
+        console.error('제휴업체 삭제 오류:', error);
+        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+    }
+});
+
+// 제휴업체 신청 관리
+router.get('/partner-applications', requireAuth, async (req, res) => {
+    try {
+        const applicationsResult = await pool.query(`
+            SELECT * FROM partner_applications
+            ORDER BY created_at DESC
+        `);
+        const applications = applicationsResult.rows;
+
+        res.render('admin/partner-applications', {
+            title: '제휴업체 신청 관리',
+            applications: applications,
+            adminUsername: req.session.adminUsername,
+            success: req.query.success,
+            error: req.query.error
+        });
+
+    } catch (error) {
+        console.error('제휴업체 신청 목록 조회 오류:', error);
+        res.render('admin/partner-applications', {
+            title: '제휴업체 신청 관리',
+            applications: [],
+            adminUsername: req.session.adminUsername,
+            success: null,
+            error: '데이터를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 제휴업체 신청 승인
+router.post('/partner-applications/:id/approve', requireAuth, async (req, res) => {
+    const applicationId = req.params.id;
+
+    try {
+        // 신청 정보 조회
+        const applicationResult = await pool.query('SELECT * FROM partner_applications WHERE id = $1', [applicationId]);
+        
+        if (applicationResult.rows.length === 0) {
+            return res.json({ success: false, message: '신청을 찾을 수 없습니다.' });
+        }
+
+        const application = applicationResult.rows[0];
+
+        // 제휴업체로 등록
+        await pool.query(
+            'INSERT INTO stores (name, category, description, address, phone, website, image_url, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [application.business_name, application.category, application.description, application.address, application.phone, application.website, application.image_url, true]
+        );
+
+        // 신청 상태를 승인으로 변경
+        await pool.query('UPDATE partner_applications SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['approved', applicationId]);
+
+        res.json({ success: true, message: '제휴업체 신청이 승인되었습니다.' });
+
+    } catch (error) {
+        console.error('제휴업체 신청 승인 오류:', error);
+        res.json({ success: false, message: '승인 처리 중 오류가 발생했습니다.' });
+    }
+});
+
+// 제휴업체 신청 거절
+router.post('/partner-applications/:id/reject', requireAuth, async (req, res) => {
+    const applicationId = req.params.id;
+
+    try {
+        await pool.query('UPDATE partner_applications SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['rejected', applicationId]);
+        res.json({ success: true, message: '제휴업체 신청이 거절되었습니다.' });
+
+    } catch (error) {
+        console.error('제휴업체 신청 거절 오류:', error);
+        res.json({ success: false, message: '거절 처리 중 오류가 발생했습니다.' });
+    }
+});
+
+// 제휴업체 신청 삭제
+router.delete('/partner-applications/:id', requireAuth, async (req, res) => {
+    const applicationId = req.params.id;
+
+    try {
+        const result = await pool.query('DELETE FROM partner_applications WHERE id = $1 RETURNING *', [applicationId]);
+        
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: '삭제할 신청을 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true, message: '제휴업체 신청이 성공적으로 삭제되었습니다.' });
+
+    } catch (error) {
+        console.error('제휴업체 신청 삭제 오류:', error);
+        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+    }
+});
+
 module.exports = router;
