@@ -260,34 +260,8 @@ async function migrateFromJSON() {
   const path = require('path');
   
   try {
-    // stores.json 마이그레이션 (테이블 스키마에 맞게 매핑)
-    const storesPath = path.join(__dirname, 'data', 'stores.json');
-    if (fs.existsSync(storesPath)) {
-      const stores = JSON.parse(fs.readFileSync(storesPath, 'utf8'));
-
-      for (const store of stores) {
-        await pool.query(`
-          INSERT INTO stores (
-            name, category, discount, discount_info, address, phone, website, description, image_url, usage_count
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          ON CONFLICT DO NOTHING
-        `, [
-          store.name,
-          store.category || null,
-          // discount 컬럼은 간단 요약, discount_info는 상세 설명으로 매핑
-          store.discount || null,
-          store.discount_info || null,
-          store.location || null,
-          store.phone || null,
-          store.website || null,
-          store.description || null,
-          store.imageUrl || null,
-          store.usage_count || 0
-        ]);
-      }
-      console.log('✅ 제휴업체 데이터 마이그레이션 완료');
-    }
+    // stores.json 마이그레이션 비활성화 (수동 등록으로 변경)
+    console.log('⏭️ 제휴업체 자동 마이그레이션 건너뜀 (수동 등록 모드)');
 
     // partner-applications.json 마이그레이션 (NOT NULL 컬럼 보정: business_name, contact_name, phone)
     const applicationsPath = path.join(__dirname, 'data', 'partner-applications.json');
