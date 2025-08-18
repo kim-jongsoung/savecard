@@ -102,7 +102,7 @@ async function checkDatabase(req, res, next) {
 // 모든 라우트에 데이터베이스 체크 적용
 app.use(checkDatabase);
 
-// 관리자 라우트 연결
+// 관리자 라우트 연결 (로그인/로그아웃만)
 const adminRoutes = require('./routes/admin');
 app.use('/admin', adminRoutes);
 
@@ -1343,7 +1343,7 @@ app.post('/card/use', async (req, res) => {
 
 // 관리자 로그인/로그아웃은 routes/admin.js에서 처리하므로 중복 제거
 
-// 관리자 대시보드
+// 관리자 대시보드 (루트 경로는 라우터에서 처리하지 않음)
 app.get('/admin', requireAuth, async (req, res) => {
     try {
         const [users, agencies, stores, usages, banners] = await Promise.all([
