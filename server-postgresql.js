@@ -205,7 +205,7 @@ const dbHelpers = {
     // 여행사 관련
     async getAgencies() {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('SELECT * FROM agencies ORDER BY display_order, name');
+            const result = await pool.query('SELECT * FROM agencies ORDER BY sort_order, name');
             return result.rows;
         } else {
             return await jsonDB.findAll('agencies');
@@ -233,9 +233,14 @@ const dbHelpers = {
     async createAgency(agencyData) {
         if (dbMode === 'postgresql') {
             const { name, code, discount_info, show_banners_on_landing = true } = agencyData;
+            
+            // 새로운 여행사의 sort_order를 가장 마지막으로 설정
+            const maxOrderResult = await pool.query('SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM agencies');
+            const nextOrder = maxOrderResult.rows[0].next_order;
+            
             const result = await pool.query(
-                'INSERT INTO agencies (name, code, discount_info, show_banners_on_landing, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *',
-                [name, code, discount_info, show_banners_on_landing]
+                'INSERT INTO agencies (name, code, discount_info, show_banners_on_landing, sort_order, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
+                [name, code, discount_info, show_banners_on_landing, nextOrder]
             );
             return result.rows[0];
         } else {
