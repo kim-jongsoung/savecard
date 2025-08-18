@@ -402,6 +402,29 @@ router.post('/banners/:id/toggle', requireAuth, async (req, res) => {
     }
 });
 
+// 여행사 삭제
+router.delete('/agencies/:id', requireAuth, async (req, res) => {
+    const agencyId = req.params.id;
+
+    try {
+        // 먼저 해당 여행사에 연결된 사용자들 삭제
+        await pool.query('DELETE FROM users WHERE agency_id = $1', [agencyId]);
+        
+        // 여행사 삭제
+        const result = await pool.query('DELETE FROM agencies WHERE id = $1 RETURNING *', [agencyId]);
+        
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: '삭제할 여행사를 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true, message: '여행사가 성공적으로 삭제되었습니다.' });
+
+    } catch (error) {
+        console.error('여행사 삭제 오류:', error);
+        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+    }
+});
+
 // 배너 삭제
 router.delete('/banners/:id', requireAuth, async (req, res) => {
     const bannerId = req.params.id;
