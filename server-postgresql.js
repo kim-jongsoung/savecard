@@ -232,10 +232,16 @@ const dbHelpers = {
     async updateAgency(id, agencyData) {
         if (dbMode === 'postgresql') {
             const { name, code, discount_info, show_banners_on_landing } = agencyData;
+            console.log('updateAgency 호출:', { id, name, code, discount_info, show_banners_on_landing });
+            
             const result = await pool.query(
                 'UPDATE agencies SET name = $1, code = $2, discount_info = $3, show_banners_on_landing = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
                 [name, code, discount_info, show_banners_on_landing, id]
             );
+            
+            console.log('SQL 업데이트 결과:', result.rows[0]);
+            console.log('영향받은 행 수:', result.rowCount);
+            
             return result.rows[0];
         } else {
             return await jsonDB.update('agencies', id, agencyData);
@@ -1598,12 +1604,23 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
         const discount_info = req.body.discount_info || '';
         const show_banners_on_landing = req.body.show_banners_on_landing;
         
+        console.log('여행사 수정 요청:', {
+            id,
+            name,
+            code,
+            discount_info,
+            show_banners_on_landing,
+            body: req.body
+        });
+        
         const agency = await dbHelpers.updateAgency(id, {
             name,
             code,
             discount_info,
             show_banners_on_landing: String(show_banners_on_landing) === 'true'
         });
+        
+        console.log('수정 결과:', agency);
         
         if (!agency) {
             return res.json({
