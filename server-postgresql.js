@@ -907,16 +907,17 @@ app.post('/issue', async (req, res) => {
             }
         }
         
-        // 제출 방식에 따른 응답 분기: AJAX이면 JSON, 일반 HTML 폼이면 카드 페이지로 리다이렉트
+        // 제출 방식에 따른 응답 분기: AJAX이면 JSON, 일반 HTML 폼이면 발급 완료 페이지로 리다이렉트
         const isAjax = req.xhr || (req.get('X-Requested-With') === 'XMLHttpRequest');
         const acceptsHtml = (req.accepts(['html','json']) === 'html');
         if (!isAjax && acceptsHtml) {
-            return res.redirect(`/card?token=${encodeURIComponent(token)}&success=1`);
+            return res.redirect(`/register/success?token=${encodeURIComponent(token)}`);
         }
         return res.json({
             success: true,
             message: '카드가 성공적으로 발급되었습니다.',
-            token: token
+            token: token,
+            success_url: `/register/success?token=${encodeURIComponent(token)}`
         });
         
     } catch (error) {
