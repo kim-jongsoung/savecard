@@ -810,10 +810,12 @@ app.get('/partner/:agencyCode', async (req, res) => {
             banners = await dbHelpers.getBanners();
         }
         
-        res.render('partner', {
+        res.render('index', {
             title: `${agency.name} - 괌세이브카드`,
             agency: agency,
-            banners: banners
+            banners: banners,
+            partnerMode: true,
+            selectedAgency: agency
         });
     } catch (error) {
         console.error('파트너 페이지 오류:', error);
