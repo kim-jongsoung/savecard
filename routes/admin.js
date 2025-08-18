@@ -156,21 +156,46 @@ router.get('/agencies', requireAuth, async (req, res) => {
 router.post('/agencies', requireAuth, async (req, res) => {
     const { name, code, contact_email, contact_phone } = req.body;
 
+    console.log('여행사 추가 요청:', { name, code, contact_email, contact_phone });
+
     try {
-        await pool.query(
-            'INSERT INTO agencies (name, code, contact_email, contact_phone) VALUES ($1, $2, $3, $4)',
+        // 데이터베이스 연결 상태 확인
+        const testResult = await pool.query('SELECT 1 as test');
+        console.log('DB 연결 테스트 성공:', testResult.rows);
+
+        // 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'agencies'
+            ORDER BY ordinal_position
+        `);
+        console.log('agencies 테이블 컬럼:', tableCheck.rows);
+
+        const result = await pool.query(
+            'INSERT INTO agencies (name, code, contact_email, contact_phone) VALUES ($1, $2, $3, $4) RETURNING *',
             [name, code, contact_email || null, contact_phone || null]
         );
 
+        console.log('여행사 추가 성공:', result.rows[0]);
         res.redirect('/admin/agencies?success=여행사가 성공적으로 추가되었습니다.');
 
     } catch (error) {
-        console.error('여행사 추가 오류:', error);
+        console.error('여행사 추가 상세 오류:');
+        console.error('- 오류 코드:', error.code);
+        console.error('- 오류 메시지:', error.message);
+        console.error('- 전체 오류:', error);
+        
         let errorMessage = '여행사 추가 중 오류가 발생했습니다.';
         if (error.code === '23505') {
             errorMessage = '이미 존재하는 여행사 코드입니다.';
+        } else if (error.code === '42P01') {
+            errorMessage = 'agencies 테이블이 존재하지 않습니다.';
+        } else if (error.code === '42703') {
+            errorMessage = '필요한 컬럼이 존재하지 않습니다.';
         }
-        res.redirect(`/admin/agencies?error=${errorMessage}`);
+        
+        res.redirect(`/admin/agencies?error=${errorMessage}: ${error.message}`);
     }
 });
 
