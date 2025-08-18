@@ -770,6 +770,85 @@ app.get('/partner-apply', (req, res) => {
     }
 });
 
+// 사용자 로그인 페이지
+app.get('/login', (req, res) => {
+    res.render('login', {
+        title: '로그인',
+        error: null,
+        success: null
+    });
+});
+
+// 사용자 로그인 처리
+app.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+            return res.render('login', {
+                title: '로그인',
+                error: '이메일과 비밀번호를 입력해주세요.',
+                success: null
+            });
+        }
+        
+        if (!/^[0-9]{4}$/.test(password)) {
+            return res.render('login', {
+                title: '로그인',
+                error: '비밀번호는 4자리 숫자여야 합니다.',
+                success: null
+            });
+        }
+        
+        // 이메일로 사용자 찾기
+        let user = null;
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+            user = result.rows[0];
+        } else {
+            const users = jsonDB.getUsers();
+            user = users.find(u => u.email === email);
+        }
+        
+        if (!user) {
+            return res.render('login', {
+                title: '로그인',
+                error: '등록되지 않은 이메일입니다.',
+                success: null
+            });
+        }
+        
+        if (!user.pin) {
+            return res.render('login', {
+                title: '로그인',
+                error: '비밀번호가 설정되지 않았습니다. 관리자에게 문의해주세요.',
+                success: null
+            });
+        }
+        
+        // 비밀번호 확인
+        const isPasswordValid = await bcrypt.compare(password, user.pin);
+        if (!isPasswordValid) {
+            return res.render('login', {
+                title: '로그인',
+                error: '비밀번호가 일치하지 않습니다.',
+                success: null
+            });
+        }
+        
+        // 로그인 성공 - 카드 페이지로 리다이렉트
+        res.redirect(`/card?token=${encodeURIComponent(user.token)}&success=1`);
+        
+    } catch (error) {
+        console.error('사용자 로그인 오류:', error);
+        res.render('login', {
+            title: '로그인',
+            error: '로그인 처리 중 오류가 발생했습니다.',
+            success: null
+        });
+    }
+});
+
 // 카드 발급 페이지
 app.get('/register', async (req, res) => {
     try {
