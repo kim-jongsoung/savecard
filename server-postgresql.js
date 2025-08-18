@@ -1646,9 +1646,11 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('여행사 수정 오류:', error);
+        console.error('오류 상세:', error.message);
+        console.error('오류 스택:', error.stack);
         res.json({
             success: false,
-            message: '여행사 수정 중 오류가 발생했습니다.'
+            message: `여행사 수정 중 오류가 발생했습니다: ${error.message}`
         });
     }
 });
@@ -2199,13 +2201,54 @@ app.listen(PORT, async () => {
             // 데이터베이스 연결 테스트
             await testConnection();
             
-            // 테이블 생성
-            await createTables();
-            console.log('📊 PostgreSQL 테이블이 준비되었습니다.');
+            // 데이터베이스 초기화 함수
+            async function initializeDatabase() {
+                if (dbMode === 'postgresql') {
+                    try {
+                        console.log('PostgreSQL 데이터베이스 초기화 중...');
+                        
+                        // 테이블 존재 확인 및 생성
+                        await ensureTablesExist();
+                        
+                        // logo_url 컬럼 존재 확인 및 추가
+                        await ensureLogoUrlColumn();
+                        
+                        console.log('PostgreSQL 데이터베이스 초기화 완료');
+                    } catch (error) {
+                        console.error('데이터베이스 초기화 오류:', error);
+                    }
+                }
+            }
+            await initializeDatabase();
             
             // JSON 데이터 마이그레이션 (최초 1회만)
             await migrateFromJSON();
             console.log('🔄 데이터 마이그레이션이 완료되었습니다.');
+            
+            // logo_url 컬럼 존재 확인 및 추가 함수
+            async function ensureLogoUrlColumn() {
+                try {
+                    // agencies 테이블에 logo_url 컬럼이 있는지 확인
+                    const columnCheck = await pool.query(`
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'agencies' AND column_name = 'logo_url'
+                    `);
+                    
+                    if (columnCheck.rows.length === 0) {
+                        console.log('logo_url 컬럼이 없습니다. 추가하는 중...');
+                        await pool.query('ALTER TABLE agencies ADD COLUMN logo_url VARCHAR(500)');
+                        console.log('✅ logo_url 컬럼이 성공적으로 추가되었습니다.');
+                    } else {
+                        console.log('✅ logo_url 컬럼이 이미 존재합니다.');
+                    }
+                } catch (error) {
+                    console.error('logo_url 컬럼 확인/추가 오류:', error);
+                }
+            }
+            
+            // logo_url 컬럼 추가 실행
+            await ensureLogoUrlColumn();
             
         } catch (error) {
             console.error('❌ PostgreSQL 초기화 중 오류:', error);
