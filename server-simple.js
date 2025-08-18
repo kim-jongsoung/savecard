@@ -7,37 +7,12 @@ const QRCode = require('qrcode');
 const fs = require('fs-extra');
 const bcrypt = require('bcryptjs');
 const jsonDB = require('./utils/jsonDB');
-const nodemailer = require('nodemailer');
+// nodemailer 제거됨
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 메일 발송 설정 (환경변수 기반)
-let mailTransporter = null;
-try {
-    const {
-        SMTP_HOST,
-        SMTP_PORT,
-        SMTP_USER,
-        SMTP_PASS,
-        SMTP_SECURE,
-        MAIL_FROM
-    } = process.env;
-
-    if (SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS) {
-        mailTransporter = nodemailer.createTransport({
-            host: SMTP_HOST,
-            port: Number(SMTP_PORT),
-            secure: String(SMTP_SECURE || '').toLowerCase() === 'true',
-            auth: { user: SMTP_USER, pass: SMTP_PASS }
-        });
-        console.log('✉️ 이메일 발송 설정이 구성되었습니다.');
-    } else {
-        console.warn('⚠️ SMTP 환경변수가 설정되지 않았습니다. 이메일 대신 검증 링크를 콘솔에 출력합니다.');
-    }
-} catch (e) {
-    console.warn('⚠️ 이메일 발송 설정 중 경고:', e.message);
-}
+// 이메일 기능 완전 제거됨
 
 // QR 코드 저장 디렉토리 생성 (Railway 배포 환경 고려)
 const qrDir = process.env.NODE_ENV === 'production' 
