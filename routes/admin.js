@@ -199,6 +199,53 @@ router.post('/agencies', requireAuth, async (req, res) => {
     }
 });
 
+// 여행사 수정
+router.put('/agencies/:id', requireAuth, async (req, res) => {
+    const agencyId = req.params.id;
+    const { name, code, contact_email, contact_phone, show_banners_on_landing } = req.body;
+
+    console.log('여행사 수정 요청:', { agencyId, body: req.body });
+
+    try {
+        // 기존 여행사 정보 조회
+        const existingResult = await pool.query('SELECT * FROM agencies WHERE id = $1', [agencyId]);
+        
+        if (existingResult.rows.length === 0) {
+            return res.json({ success: false, message: '여행사를 찾을 수 없습니다.' });
+        }
+
+        const existing = existingResult.rows[0];
+
+        // 업데이트할 데이터 준비 (전달된 필드만 업데이트)
+        const updateData = {
+            name: name !== undefined ? name : existing.name,
+            code: code !== undefined ? code : existing.code,
+            contact_email: contact_email !== undefined ? contact_email : existing.contact_email,
+            contact_phone: contact_phone !== undefined ? contact_phone : existing.contact_phone,
+            show_banners_on_landing: show_banners_on_landing !== undefined ? show_banners_on_landing : existing.show_banners_on_landing
+        };
+
+        const result = await pool.query(`
+            UPDATE agencies 
+            SET name = $1, code = $2, contact_email = $3, contact_phone = $4, 
+                show_banners_on_landing = $5, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $6 
+            RETURNING *
+        `, [updateData.name, updateData.code, updateData.contact_email, updateData.contact_phone, updateData.show_banners_on_landing, agencyId]);
+
+        console.log('여행사 수정 성공:', result.rows[0]);
+        res.json({ success: true, message: '여행사 정보가 성공적으로 수정되었습니다.', agency: result.rows[0] });
+
+    } catch (error) {
+        console.error('여행사 수정 오류:', error);
+        let errorMessage = '여행사 수정 중 오류가 발생했습니다.';
+        if (error.code === '23505') {
+            errorMessage = '이미 존재하는 여행사 코드입니다.';
+        }
+        res.json({ success: false, message: errorMessage });
+    }
+});
+
 // 고객 관리
 router.get('/users', requireAuth, async (req, res) => {
     try {
