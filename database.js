@@ -47,9 +47,12 @@ async function ensureAllColumns() {
     // agencies
     await client.query(`
       ALTER TABLE agencies
+      ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50),
       ADD COLUMN IF NOT EXISTS discount_info TEXT,
       ADD COLUMN IF NOT EXISTS show_banners_on_landing BOOLEAN DEFAULT true,
       ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 999,
+      ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 999,
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     `);
@@ -179,9 +182,12 @@ async function createTables() {
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
+        contact_email VARCHAR(255),
+        contact_phone VARCHAR(50),
         discount_info TEXT,
         show_banners_on_landing BOOLEAN DEFAULT true,
         display_order INTEGER DEFAULT 999,
+        sort_order INTEGER DEFAULT 999,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
