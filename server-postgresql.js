@@ -774,18 +774,62 @@ app.post('/issue', async (req, res) => {
         const saltRounds = Number(process.env.PIN_SALT_ROUNDS || 10);
         const hashedPin = await bcrypt.hash(pin, saltRounds);
 
-        // 사용자 생성
-        const user = await dbHelpers.createUser({
-            name,
-            phone,
-            email,
-            agency_id,
-            token,
-            qr_code: qrCodeDataURL,
-            expiration_start: expirationStart,
-            expiration_end: expirationEnd,
-            pin: hashedPin
-        });
+        // (운영 안전장치) users 테이블 필수 컬럼 보정
+        if (dbMode === 'postgresql') {
+            try {
+                await pool.query(`
+                  ALTER TABLE users
+                  ADD COLUMN IF NOT EXISTS qr_code TEXT,
+                  ADD COLUMN IF NOT EXISTS expiration_start TIMESTAMP,
+                  ADD COLUMN IF NOT EXISTS expiration_end TIMESTAMP,
+                  ADD COLUMN IF NOT EXISTS pin VARCHAR(10)
+                `);
+            } catch (ensureErr) {
+                console.warn('users 테이블 컬럼 보정 중 경고:', ensureErr.message);
+            }
+        }
+
+        // 사용자 생성 (운영 DB에 pin 컬럼이 없는 경우 자동 보정 후 재시도)
+        let user;
+        try {
+            user = await dbHelpers.createUser({
+                name,
+                phone,
+                email,
+                agency_id,
+                token,
+                qr_code: qrCodeDataURL,
+                expiration_start: expirationStart,
+                expiration_end: expirationEnd,
+                pin: hashedPin
+            });
+        } catch (e) {
+            // PostgreSQL: undefined_column = 42703
+            const missingPinColumn = e && (e.code === '42703' || /column\s+"?pin"?\s+of\s+relation\s+"?users"?/i.test(e.message || ''));
+            if (dbMode === 'postgresql' && missingPinColumn) {
+                console.warn('users.pin 컬럼이 없어 자동으로 추가합니다.');
+                try {
+                    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pin VARCHAR(10)');
+                    // 재시도
+                    user = await dbHelpers.createUser({
+                        name,
+                        phone,
+                        email,
+                        agency_id,
+                        token,
+                        qr_code: qrCodeDataURL,
+                        expiration_start: expirationStart,
+                        expiration_end: expirationEnd,
+                        pin: hashedPin
+                    });
+                } catch (e2) {
+                    console.error('핀 컬럼 추가 또는 재시도 중 오류:', e2);
+                    throw e2;
+                }
+            } else {
+                throw e;
+            }
+        }
         
         // 제출 방식에 따른 응답 분기: AJAX이면 JSON, 일반 HTML 폼이면 카드 페이지로 리다이렉트
         const isAjax = req.xhr || (req.get('X-Requested-With') === 'XMLHttpRequest');
@@ -801,9 +845,11 @@ app.post('/issue', async (req, res) => {
         
     } catch (error) {
         console.error('카드 발급 오류:', error);
+        const expose = String(process.env.EXPOSE_ERROR || '').toLowerCase() === 'true';
         res.json({
             success: false,
-            message: '카드 발급 중 오류가 발생했습니다.'
+            message: '카드 발급 중 오류가 발생했습니다.',
+            ...(expose ? { detail: error.message, code: error.code } : {})
         });
     }
 });
