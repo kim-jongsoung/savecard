@@ -1069,6 +1069,39 @@ app.get('/card', async (req, res) => {
     }
 });
 
+// 카드 비밀번호 검증
+app.post('/verify-password', async (req, res) => {
+    try {
+        const token = (req.body.token || '').toString().trim();
+        const password = (req.body.password || '').toString().trim();
+
+        if (!token || !password) {
+            return res.json({ success: false, message: '필수 정보가 누락되었습니다.' });
+        }
+        if (!/^[0-9]{4}$/.test(password)) {
+            return res.json({ success: false, message: '비밀번호는 4자리 숫자여야 합니다.' });
+        }
+
+        const user = await dbHelpers.getUserByToken(token);
+        if (!user) {
+            return res.json({ success: false, message: '유효하지 않은 카드입니다.' });
+        }
+        if (!user.pin) {
+            return res.json({ success: false, message: '비밀번호가 설정되지 않았습니다. 관리자에게 문의해주세요.' });
+        }
+
+        const ok = await bcrypt.compare(password, user.pin);
+        if (!ok) {
+            return res.json({ success: false, message: '비밀번호가 일치하지 않습니다.' });
+        }
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('비밀번호 검증 오류:', error);
+        const expose = String(process.env.EXPOSE_ERROR || '').toLowerCase() === 'true';
+        return res.json({ success: false, message: '인증 중 오류가 발생했습니다.', ...(expose ? { detail: error.message } : {}) });
+    }
+});
+
 // 카드 사용 처리
 app.post('/card/use', async (req, res) => {
     try {
