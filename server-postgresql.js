@@ -1158,42 +1158,24 @@ app.post('/api/partner-apply', async (req, res) => {
                 business_name, contact_name, phone, email,
                 business_type, location, discount_offer,
                 additional_info: additional_info || null,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('제휴 신청 접수 오류:', error);
+        res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
     }
-
-    if (dbMode === 'postgresql') {
-        await pool.query(
-            `INSERT INTO partner_applications (business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-            [business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info || null]
-        );
-    } else {
-        await jsonDB.create('partner_applications', {
-            id: Date.now(),
-            business_name, contact_name, phone, email,
-            business_type, location, discount_offer,
-            additional_info: additional_info || null,
-            status: 'pending',
-            created_at: new Date().toISOString()
-        });
-    }
-
-    res.json({ success: true, agency });
-} catch (error) {
-    console.error('제휴 신청 접수 오류:', error);
-    res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
-}
 });
 
 // 내 카드 페이지
 app.get('/my-card', async (req, res) => {
-try {
-    const { token } = req.query;
+    try {
+        const { token } = req.query;
 
-    if (!token) {
-        return res.render('error', {
-            title: '잘못된 접근',
-            message: '유효하지 않은 카드입니다.',
-            error: { status: 400 }
+        if (!token) {
             return res.render('error', {
                 title: '잘못된 접근',
                 message: '유효하지 않은 카드입니다.',
