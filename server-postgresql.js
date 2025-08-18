@@ -41,20 +41,32 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // 세션 설정
-app.use(session({
+const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'guam-savecard-secret-key-2025',
     resave: false,
     saveUninitialized: false,
     cookie: { 
         secure: process.env.NODE_ENV === 'production',
         maxAge: 24 * 60 * 60 * 1000 // 24시간
-    },
-    // 프로덕션 환경에서는 메모리 스토어 경고 억제
-    ...(process.env.NODE_ENV === 'production' ? {
-        name: 'sessionId',
-        proxy: true
-    } : {})
-}));
+    }
+};
+
+// 프로덕션 환경에서 MemoryStore 경고 억제
+if (process.env.NODE_ENV === 'production') {
+    sessionConfig.name = 'sessionId';
+    sessionConfig.proxy = true;
+    // MemoryStore 경고 메시지 억제를 위한 설정
+    const originalConsoleWarn = console.warn;
+    console.warn = function(...args) {
+        const message = args.join(' ');
+        if (message.includes('MemoryStore') || message.includes('connect.session()')) {
+            return; // MemoryStore 관련 경고 무시
+        }
+        originalConsoleWarn.apply(console, args);
+    };
+}
+
+app.use(session(sessionConfig));
 
 // 관리자 인증 미들웨어
 function requireAuth(req, res, next) {

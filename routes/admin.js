@@ -451,7 +451,13 @@ router.delete('/agencies/:id', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('여행사 삭제 오류:', error);
-        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+        console.error('오류 상세:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack
+        });
+        res.json({ success: false, message: `삭제 중 오류가 발생했습니다: ${error.message}` });
     }
 });
 
@@ -486,9 +492,19 @@ router.delete('/agencies/:id/force', requireAuth, async (req, res) => {
         res.json({ success: true, message: '여행사와 연결된 모든 데이터가 성공적으로 삭제되었습니다.' });
 
     } catch (error) {
-        await pool.query('ROLLBACK');
+        try {
+            await pool.query('ROLLBACK');
+        } catch (rollbackError) {
+            console.error('롤백 오류:', rollbackError);
+        }
         console.error('여행사 강제 삭제 오류:', error);
-        res.json({ success: false, message: '삭제 중 오류가 발생했습니다.' });
+        console.error('오류 상세:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            stack: error.stack
+        });
+        res.json({ success: false, message: `삭제 중 오류가 발생했습니다: ${error.message}` });
     }
 });
 
