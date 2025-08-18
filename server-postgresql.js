@@ -422,10 +422,11 @@ const dbHelpers = {
 
     async deleteBanner(id) {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('UPDATE banners SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *', [id]);
+            // 실제 삭제로 변경 (소프트 삭제에서 하드 삭제로)
+            const result = await pool.query('DELETE FROM banners WHERE id = $1 RETURNING *', [id]);
             return result.rows[0];
         } else {
-            return await jsonDB.update('banners', id, { is_active: false });
+            return await jsonDB.delete('banners', id);
         }
     },
 
@@ -1882,6 +1883,33 @@ app.get('/admin/partner-applications', requireAuth, async (req, res) => {
     }
 });
 
+// 여행사 개별 조회 라우트 추가 (수정 모달용)
+app.get('/admin/agencies/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const agency = await dbHelpers.getAgencyById(id);
+        
+        if (!agency) {
+            return res.json({
+                success: false,
+                message: '여행사를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            agency: agency
+        });
+        
+    } catch (error) {
+        console.error('여행사 조회 오류:', error);
+        res.json({
+            success: false,
+            message: '여행사 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 여행사 삭제 라우트 추가
 app.delete('/admin/agencies/:id', requireAuth, async (req, res) => {
     try {
@@ -1948,6 +1976,33 @@ app.delete('/admin/agencies/:id/force', requireAuth, async (req, res) => {
     }
 });
 
+// 제휴업체 개별 조회 라우트 추가 (수정 모달용)
+app.get('/admin/stores/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const store = await dbHelpers.getStoreById(id);
+        
+        if (!store) {
+            return res.json({
+                success: false,
+                message: '제휴업체를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            store: store
+        });
+        
+    } catch (error) {
+        console.error('제휴업체 조회 오류:', error);
+        res.json({
+            success: false,
+            message: '제휴업체 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 제휴업체 수정 라우트 추가
 app.put('/admin/stores/:id', requireAuth, async (req, res) => {
     try {
@@ -2002,6 +2057,50 @@ app.delete('/admin/stores/:id', requireAuth, async (req, res) => {
         res.json({
             success: false,
             message: '제휴업체 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 광고배너 개별 조회 라우트 추가 (수정 모달용)
+app.get('/admin/banners/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM banners WHERE id = $1', [id]);
+            const banner = result.rows[0];
+            
+            if (!banner) {
+                return res.json({
+                    success: false,
+                    message: '광고배너를 찾을 수 없습니다.'
+                });
+            }
+            
+            res.json({
+                success: true,
+                banner: banner
+            });
+        } else {
+            const banner = await jsonDB.findById('banners', id);
+            if (!banner) {
+                return res.json({
+                    success: false,
+                    message: '광고배너를 찾을 수 없습니다.'
+                });
+            }
+            
+            res.json({
+                success: true,
+                banner: banner
+            });
+        }
+        
+    } catch (error) {
+        console.error('광고배너 조회 오류:', error);
+        res.json({
+            success: false,
+            message: '광고배너 조회 중 오류가 발생했습니다.'
         });
     }
 });
