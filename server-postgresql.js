@@ -1210,7 +1210,12 @@ app.get('/card', async (req, res) => {
 
         res.render('card', {
             title: '괌세이브카드',
-            user: { ...user, agency_name: agency ? agency.name : 'Unknown' },
+            user: { 
+                ...user, 
+                agency_name: agency ? agency.name : 'Unknown',
+                customer_name: user.customer_name || user.name || '고객',
+                qr_code: user.qr_code || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://savecard-production.up.railway.app/card?token=${token}&staff=true`)}`
+            },
             banner: banner,
             usages: usages.slice(0, 5),
             stores: stores,
