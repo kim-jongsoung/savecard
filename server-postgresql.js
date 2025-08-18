@@ -231,12 +231,12 @@ const dbHelpers = {
     
     async updateAgency(id, agencyData) {
         if (dbMode === 'postgresql') {
-            const { name, code, discount_info, show_banners_on_landing } = agencyData;
-            console.log('updateAgency 호출:', { id, name, code, discount_info, show_banners_on_landing });
+            const { name, code, discount_info, show_banners_on_landing, contact_email, contact_phone } = agencyData;
+            console.log('updateAgency 호출:', { id, name, code, discount_info, show_banners_on_landing, contact_email, contact_phone });
             
             const result = await pool.query(
-                'UPDATE agencies SET name = $1, code = $2, discount_info = $3, show_banners_on_landing = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
-                [name, code, discount_info, show_banners_on_landing, id]
+                'UPDATE agencies SET name = $1, code = $2, discount_info = $3, show_banners_on_landing = $4, contact_email = $5, contact_phone = $6, updated_at = NOW() WHERE id = $7 RETURNING *',
+                [name, code, discount_info, show_banners_on_landing, contact_email, contact_phone, id]
             );
             
             console.log('SQL 업데이트 결과:', result.rows[0]);
@@ -1603,6 +1603,8 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
         const code = (req.body.code || req.body.agency_code || '').trim();
         const discount_info = req.body.discount_info || '';
         const show_banners_on_landing = req.body.show_banners_on_landing;
+        const contact_email = (req.body.contact_email || '').trim();
+        const contact_phone = (req.body.contact_phone || '').trim();
         
         console.log('여행사 수정 요청:', {
             id,
@@ -1610,6 +1612,8 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
             code,
             discount_info,
             show_banners_on_landing,
+            contact_email,
+            contact_phone,
             body: req.body
         });
         
@@ -1617,7 +1621,9 @@ app.put('/admin/agencies/:id', requireAuth, async (req, res) => {
             name,
             code,
             discount_info,
-            show_banners_on_landing: String(show_banners_on_landing) === 'true'
+            show_banners_on_landing: String(show_banners_on_landing) === 'true',
+            contact_email,
+            contact_phone
         });
         
         console.log('수정 결과:', agency);
