@@ -1019,12 +1019,19 @@ app.post('/login', async (req, res) => {
 app.get('/register', async (req, res) => {
     try {
         const agencies = await dbHelpers.getAgencies();
+        const { agency } = req.query;
+        
+        let selectedAgency = null;
+        if (agency) {
+            selectedAgency = await dbHelpers.getAgencyByCode(agency);
+        }
+        
         res.render('register', {
             title: '카드 발급',
             agencies: agencies,
             error: null,
             success: null,
-            selectedAgency: null
+            selectedAgency: selectedAgency
         });
     } catch (error) {
         console.error('카드 발급 페이지 오류:', error);
