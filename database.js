@@ -27,9 +27,21 @@ async function ensureAllColumns() {
       ADD COLUMN IF NOT EXISTS qr_code TEXT,
       ADD COLUMN IF NOT EXISTS expiration_start TIMESTAMP,
       ADD COLUMN IF NOT EXISTS expiration_end TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS pin VARCHAR(10),
+      ADD COLUMN IF NOT EXISTS pin VARCHAR(100),
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+    // 기존에 더 짧게 생성된 경우 타입 확장
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='users' AND column_name='pin' AND character_maximum_length IS NOT NULL AND character_maximum_length < 100
+        ) THEN
+          ALTER TABLE users ALTER COLUMN pin TYPE VARCHAR(100);
+        END IF;
+      END$$;
     `);
 
     // agencies
@@ -195,7 +207,7 @@ async function createTables() {
     // 카드 비밀번호(PIN) 컬럼 추가 (없으면 추가)
     await client.query(`
       ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS pin VARCHAR(10)
+      ADD COLUMN IF NOT EXISTS pin VARCHAR(100)
     `);
 
     // 카드 사용 이력 테이블

@@ -835,7 +835,19 @@ app.post('/issue', async (req, res) => {
                   ADD COLUMN IF NOT EXISTS qr_code TEXT,
                   ADD COLUMN IF NOT EXISTS expiration_start TIMESTAMP,
                   ADD COLUMN IF NOT EXISTS expiration_end TIMESTAMP,
-                  ADD COLUMN IF NOT EXISTS pin VARCHAR(10)
+                  ADD COLUMN IF NOT EXISTS pin VARCHAR(100)
+                `);
+                // 기존 pin 컬럼 길이가 100 미만이면 확장
+                await pool.query(`
+                  DO $$
+                  BEGIN
+                    IF EXISTS (
+                      SELECT 1 FROM information_schema.columns
+                      WHERE table_name='users' AND column_name='pin' AND character_maximum_length IS NOT NULL AND character_maximum_length < 100
+                    ) THEN
+                      ALTER TABLE users ALTER COLUMN pin TYPE VARCHAR(100);
+                    END IF;
+                  END$$;
                 `);
             } catch (ensureErr) {
                 console.warn('users 테이블 컬럼 보정 중 경고:', ensureErr.message);
@@ -862,7 +874,18 @@ app.post('/issue', async (req, res) => {
             if (dbMode === 'postgresql' && missingPinColumn) {
                 console.warn('users.pin 컬럼이 없어 자동으로 추가합니다.');
                 try {
-                    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pin VARCHAR(10)');
+                    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS pin VARCHAR(100)');
+                    await pool.query(`
+                      DO $$
+                      BEGIN
+                        IF EXISTS (
+                          SELECT 1 FROM information_schema.columns
+                          WHERE table_name='users' AND column_name='pin' AND character_maximum_length IS NOT NULL AND character_maximum_length < 100
+                        ) THEN
+                          ALTER TABLE users ALTER COLUMN pin TYPE VARCHAR(100);
+                        END IF;
+                      END$$;
+                    `);
                     // 재시도
                     user = await dbHelpers.createUser({
                         name,
