@@ -81,16 +81,17 @@ router.get('/logout', (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
     try {
         // 통계 데이터 조회
-        const [stats] = await pool.execute(`
+        const statsResult = await pool.query(`
             SELECT 
                 (SELECT COUNT(*) FROM agencies) as total_agencies,
                 (SELECT COUNT(*) FROM users) as total_users,
                 (SELECT COUNT(*) FROM usages) as total_usages,
                 (SELECT COUNT(*) FROM banners WHERE is_active = true) as active_banners
         `);
+        const stats = statsResult.rows[0];
 
         // 최근 사용 이력
-        const [recentUsages] = await pool.execute(`
+        const recentUsagesResult = await pool.query(`
             SELECT u.store_name, u.used_at, us.name as customer_name, a.name as agency_name
             FROM usages u
             JOIN users us ON u.token = us.token
@@ -98,10 +99,11 @@ router.get('/', requireAuth, async (req, res) => {
             ORDER BY u.used_at DESC
             LIMIT 10
         `);
+        const recentUsages = recentUsagesResult.rows;
 
         res.render('admin/dashboard', {
             title: '관리자 대시보드',
-            stats: stats[0],
+            stats: stats,
             recentUsages: recentUsages,
             adminUsername: req.session.adminUsername
         });
@@ -120,18 +122,18 @@ router.get('/', requireAuth, async (req, res) => {
 // 여행사 관리
 router.get('/agencies', requireAuth, async (req, res) => {
     try {
-        const [agencies] = await pool.execute(`
+        const agenciesResult = await pool.query(`
             SELECT a.*, 
                    COUNT(u.id) as user_count
             FROM agencies a
             LEFT JOIN users u ON a.id = u.agency_id
-            GROUP BY a.id
+            GROUP BY a.id, a.name, a.code, a.discount_info, a.show_banners_on_landing, a.display_order, a.sort_order, a.created_at, a.updated_at
             ORDER BY a.created_at DESC
         `);
 
         res.render('admin/agencies', {
             title: '여행사 관리',
-            agencies: agencies,
+            agencies: agenciesResult.rows,
             adminUsername: req.session.adminUsername,
             success: req.query.success,
             error: req.query.error
