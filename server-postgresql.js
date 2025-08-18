@@ -49,6 +49,24 @@ try {
             secure: String(SMTP_SECURE || '').toLowerCase() === 'true',
             auth: { user: SMTP_USER, pass: SMTP_PASS }
         });
+
+// (편의) GET으로도 실행 가능하게 지원
+app.get('/admin/db/ensure-columns', requireAuth, async (req, res) => {
+    if (dbMode !== 'postgresql') {
+        return res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+    }
+    try {
+        await createTables();
+        if (typeof ensureAllColumns === 'function') {
+            await ensureAllColumns();
+        }
+        return res.json({ success: true, message: '모든 테이블 컬럼 보정 완료 (GET)' });
+    } catch (e) {
+        console.error('ensure-columns(GET) 실행 오류:', e);
+        const expose = String(process.env.EXPOSE_ERROR || '').toLowerCase() === 'true';
+        return res.json({ success: false, message: '컬럼 보정 중 오류가 발생했습니다.', ...(expose ? { detail: e.message } : {}) });
+    }
+});
         console.log('✉️ 이메일 발송 설정이 구성되었습니다.');
     } else {
         console.warn('⚠️ SMTP 환경변수가 설정되지 않았습니다. 이메일 대신 검증 링크를 콘솔에 출력합니다.');
