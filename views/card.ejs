@@ -356,6 +356,47 @@
             margin-bottom: 20px;
         }
         
+        /* QR 코드 섹션 스타일 */
+        .qr-section {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .qr-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .qr-image {
+            max-width: 200px;
+            width: 100%;
+            height: auto;
+        }
+        
+        .usage-history {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .usage-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-left: 3px solid #4CAF50;
+        }
+        
         .expiration-notice {
             background: rgba(255, 193, 7, 0.1);
             border: 2px solid #ffc107;
@@ -451,6 +492,7 @@
                 </div>
             </div>
 
+            <% if (isStaffMode) { %>
             <!-- Usage Processing Section -->
             <div class="usage-section">
                 <h5><i class="fas fa-store me-2"></i>Process Discount Usage</h5>
@@ -515,6 +557,37 @@
 
                 
             </div>
+            <% } %>
+
+            <!-- 고객 모드: QR 코드 표시 -->
+            <% if (!isStaffMode) { %>
+            <div class="qr-section text-center">
+                <h5><i class="fas fa-qrcode me-2"></i>내 할인카드</h5>
+                <p class="text-muted">제휴업체에서 아래 QR 코드를 스캔해주세요</p>
+                
+                <div class="qr-container">
+                    <img src="<%= user.qr_code %>" alt="QR Code" class="qr-image">
+                </div>
+                
+                <div class="usage-history mt-4">
+                    <h6><i class="fas fa-history me-2"></i>최근 사용 내역</h6>
+                    <% if (usages && usages.length > 0) { %>
+                        <div class="usage-list">
+                            <% usages.forEach(usage => { %>
+                            <div class="usage-item">
+                                <div class="d-flex justify-content-between">
+                                    <span><%= usage.store_name %></span>
+                                    <small class="text-muted"><%= new Date(usage.created_at).toLocaleDateString('ko-KR') %></small>
+                                </div>
+                            </div>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <p class="text-muted">아직 사용 내역이 없습니다.</p>
+                    <% } %>
+                </div>
+            </div>
+            <% } %>
 
             <!-- Footer Link -->
             <div class="text-center">
