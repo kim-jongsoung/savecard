@@ -155,15 +155,25 @@
                 const response = await fetch('/admin/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({ username, password })
                 });
                 
                 console.log('응답 상태:', response.status, response.statusText);
+                console.log('응답 헤더:', response.headers.get('content-type'));
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // 응답이 JSON인지 확인
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.log('HTML 응답 받음:', text.substring(0, 200));
+                    throw new Error('서버에서 HTML 응답을 받았습니다. JSON이 예상되었습니다.');
                 }
                 
                 const result = await response.json();

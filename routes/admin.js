@@ -47,8 +47,8 @@ router.post('/login', async (req, res) => {
             
             console.log('로그인 성공, 세션 설정됨:', req.session);
             
-            // AJAX 요청인지 확인
-            if (req.xhr || req.headers.accept?.includes('application/json')) {
+            // AJAX 요청인지 확인 (Content-Type 헤더로 판단)
+            if (req.headers['content-type']?.includes('application/json')) {
                 console.log('JSON 응답 전송');
                 return res.json({ success: true });
             } else {
@@ -59,7 +59,7 @@ router.post('/login', async (req, res) => {
             const errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
             console.log('로그인 실패:', errorMsg);
             
-            if (req.xhr || req.headers.accept?.includes('application/json')) {
+            if (req.headers['content-type']?.includes('application/json')) {
                 return res.json({ success: false, message: errorMsg });
             } else {
                 return res.render('admin/login', {
@@ -73,7 +73,7 @@ router.post('/login', async (req, res) => {
         console.error('로그인 오류:', error);
         const errorMsg = '로그인 처리 중 오류가 발생했습니다.';
         
-        if (req.xhr || req.headers.accept?.includes('application/json')) {
+        if (req.headers['content-type']?.includes('application/json')) {
             return res.json({ success: false, message: errorMsg });
         } else {
             return res.render('admin/login', {
