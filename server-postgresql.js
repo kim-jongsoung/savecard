@@ -241,6 +241,52 @@ const dbHelpers = {
             return await jsonDB.update('agencies', id, agencyData);
         }
     },
+
+    async deleteAgency(id) {
+        if (dbMode === 'postgresql') {
+            // 연결된 사용자 확인
+            const userCheck = await pool.query('SELECT COUNT(*) as count FROM users WHERE agency_id = $1', [id]);
+            const userCount = parseInt(userCheck.rows[0].count);
+            
+            if (userCount > 0) {
+                return { hasUsers: true, userCount, message: `이 여행사에 연결된 ${userCount}명의 고객이 있습니다.` };
+            }
+            
+            // 사용자가 없으면 바로 삭제
+            const result = await pool.query('DELETE FROM agencies WHERE id = $1 RETURNING *', [id]);
+            return { success: true, deleted: result.rows[0] };
+        } else {
+            return await jsonDB.delete('agencies', id);
+        }
+    },
+
+    async forceDeleteAgency(id) {
+        if (dbMode === 'postgresql') {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                
+                // 연결된 사용자들의 사용 이력 삭제
+                await client.query('DELETE FROM usages WHERE token IN (SELECT token FROM users WHERE agency_id = $1)', [id]);
+                
+                // 연결된 사용자들 삭제
+                await client.query('DELETE FROM users WHERE agency_id = $1', [id]);
+                
+                // 여행사 삭제
+                const result = await client.query('DELETE FROM agencies WHERE id = $1 RETURNING *', [id]);
+                
+                await client.query('COMMIT');
+                return { success: true, deleted: result.rows[0] };
+            } catch (error) {
+                await client.query('ROLLBACK');
+                throw error;
+            } finally {
+                client.release();
+            }
+        } else {
+            return await jsonDB.delete('agencies', id);
+        }
+    },
     
     // 제휴업체 관련
     async getStores() {
@@ -285,6 +331,40 @@ const dbHelpers = {
             return await jsonDB.insert('stores', storeData);
         }
     },
+
+    async updateStore(id, storeData) {
+        if (dbMode === 'postgresql') {
+            const {
+                name,
+                category = null,
+                discount = null,
+                discount_info = null,
+                address = null,
+                phone = null,
+                website = null,
+                description = null,
+                image_url = null
+            } = storeData;
+            const result = await pool.query(
+                `UPDATE stores SET name = $1, category = $2, discount = $3, discount_info = $4, 
+                 address = $5, phone = $6, website = $7, description = $8, image_url = $9, updated_at = NOW() 
+                 WHERE id = $10 RETURNING *`,
+                [name, category, discount, discount_info, address, phone, website, description, image_url, id]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.update('stores', id, storeData);
+        }
+    },
+
+    async deleteStore(id) {
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('UPDATE stores SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *', [id]);
+            return result.rows[0];
+        } else {
+            return await jsonDB.update('stores', id, { is_active: false });
+        }
+    },
     
     // 배너 관련
     async getBanners() {
@@ -315,6 +395,51 @@ const dbHelpers = {
             return result.rows[0];
         } else {
             return await jsonDB.insert('banners', bannerData);
+        }
+    },
+
+    async updateBanner(id, bannerData) {
+        if (dbMode === 'postgresql') {
+            const {
+                advertiser_name,
+                image_url,
+                link_url = null,
+                is_active = true,
+                display_order = 0,
+                display_locations = [1]
+            } = bannerData;
+            const result = await pool.query(
+                `UPDATE banners SET advertiser_name = $1, image_url = $2, link_url = $3, 
+                 is_active = $4, display_order = $5, display_locations = $6, updated_at = NOW() 
+                 WHERE id = $7 RETURNING *`,
+                [advertiser_name, image_url, link_url, is_active, display_order, display_locations, id]
+            );
+            return result.rows[0];
+        } else {
+            return await jsonDB.update('banners', id, bannerData);
+        }
+    },
+
+    async deleteBanner(id) {
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('UPDATE banners SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *', [id]);
+            return result.rows[0];
+        } else {
+            return await jsonDB.update('banners', id, { is_active: false });
+        }
+    },
+
+    async incrementBannerClick(id) {
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('UPDATE banners SET click_count = click_count + 1, updated_at = NOW() WHERE id = $1 RETURNING *', [id]);
+            return result.rows[0];
+        } else {
+            const banner = await jsonDB.findById('banners', id);
+            if (banner) {
+                banner.click_count = (banner.click_count || 0) + 1;
+                return await jsonDB.update('banners', id, banner);
+            }
+            return null;
         }
     },
     
@@ -1753,6 +1878,188 @@ app.get('/admin/partner-applications', requireAuth, async (req, res) => {
             applications: [],
             success: null,
             error: '신청서 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+// 여행사 삭제 라우트 추가
+app.delete('/admin/agencies/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`여행사 삭제 요청: ID ${id}`);
+        
+        const result = await dbHelpers.deleteAgency(id);
+        
+        if (result.hasUsers) {
+            return res.json({
+                success: false,
+                hasUsers: true,
+                message: result.message
+            });
+        }
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                message: '여행사가 성공적으로 삭제되었습니다.'
+            });
+        } else {
+            res.json({
+                success: false,
+                message: '여행사 삭제에 실패했습니다.'
+            });
+        }
+        
+    } catch (error) {
+        console.error('여행사 삭제 오류:', error);
+        res.json({
+            success: false,
+            message: '여행사 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 여행사 강제 삭제 라우트 추가
+app.delete('/admin/agencies/:id/force', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`여행사 강제 삭제 요청: ID ${id}`);
+        
+        const result = await dbHelpers.forceDeleteAgency(id);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                message: '여행사와 관련된 모든 데이터가 삭제되었습니다.'
+            });
+        } else {
+            res.json({
+                success: false,
+                message: '여행사 강제 삭제에 실패했습니다.'
+            });
+        }
+        
+    } catch (error) {
+        console.error('여행사 강제 삭제 오류:', error);
+        res.json({
+            success: false,
+            message: '여행사 강제 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 제휴업체 수정 라우트 추가
+app.put('/admin/stores/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const storeData = req.body;
+        
+        const store = await dbHelpers.updateStore(id, storeData);
+        
+        if (!store) {
+            return res.json({
+                success: false,
+                message: '제휴업체를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '제휴업체 정보가 성공적으로 수정되었습니다.',
+            store: store
+        });
+        
+    } catch (error) {
+        console.error('제휴업체 수정 오류:', error);
+        res.json({
+            success: false,
+            message: '제휴업체 수정 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 제휴업체 삭제 라우트 추가
+app.delete('/admin/stores/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const store = await dbHelpers.deleteStore(id);
+        
+        if (!store) {
+            return res.json({
+                success: false,
+                message: '제휴업체를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '제휴업체가 성공적으로 삭제되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('제휴업체 삭제 오류:', error);
+        res.json({
+            success: false,
+            message: '제휴업체 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 광고배너 수정 라우트 추가
+app.put('/admin/banners/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const bannerData = req.body;
+        
+        const banner = await dbHelpers.updateBanner(id, bannerData);
+        
+        if (!banner) {
+            return res.json({
+                success: false,
+                message: '광고배너를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '광고배너가 성공적으로 수정되었습니다.',
+            banner: banner
+        });
+        
+    } catch (error) {
+        console.error('광고배너 수정 오류:', error);
+        res.json({
+            success: false,
+            message: '광고배너 수정 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 광고배너 삭제 라우트 추가
+app.delete('/admin/banners/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const banner = await dbHelpers.deleteBanner(id);
+        
+        if (!banner) {
+            return res.json({
+                success: false,
+                message: '광고배너를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '광고배너가 성공적으로 삭제되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('광고배너 삭제 오류:', error);
+        res.json({
+            success: false,
+            message: '광고배너 삭제 중 오류가 발생했습니다.'
         });
     }
 });
