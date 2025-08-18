@@ -28,19 +28,20 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const [adminResult] = await pool.execute(
-            'SELECT id, username, password_hash FROM admins WHERE username = ?',
+        const adminResult = await pool.query(
+            'SELECT id, username, password_hash FROM admins WHERE username = $1',
             [username]
         );
+        const adminRows = adminResult.rows;
 
-        if (adminResult.length === 0) {
+        if (adminRows.length === 0) {
             return res.render('admin/login', {
                 title: '관리자 로그인',
                 error: '아이디 또는 비밀번호가 잘못되었습니다.'
             });
         }
 
-        const admin = adminResult[0];
+        const admin = adminRows[0];
         const isValidPassword = await bcrypt.compare(password, admin.password_hash);
 
         if (!isValidPassword) {
@@ -55,8 +56,8 @@ router.post('/login', async (req, res) => {
         req.session.adminUsername = admin.username;
 
         // 마지막 로그인 시간 업데이트
-        await pool.execute(
-            'UPDATE admins SET last_login = NOW() WHERE id = ?',
+        await pool.query(
+            'UPDATE admins SET last_login = NOW() WHERE id = $1',
             [admin.id]
         );
 
@@ -156,8 +157,8 @@ router.post('/agencies', requireAuth, async (req, res) => {
     const { name, code, contact_email, contact_phone } = req.body;
 
     try {
-        await pool.execute(
-            'INSERT INTO agencies (name, code, contact_email, contact_phone) VALUES (?, ?, ?, ?)',
+        await pool.query(
+            'INSERT INTO agencies (name, code, contact_email, contact_phone) VALUES ($1, $2, $3, $4)',
             [name, code, contact_email || null, contact_phone || null]
         );
 
@@ -166,7 +167,7 @@ router.post('/agencies', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('여행사 추가 오류:', error);
         let errorMessage = '여행사 추가 중 오류가 발생했습니다.';
-        if (error.code === 'ER_DUP_ENTRY') {
+        if (error.code === '23505') {
             errorMessage = '이미 존재하는 여행사 코드입니다.';
         }
         res.redirect(`/admin/agencies?error=${errorMessage}`);
@@ -181,23 +182,24 @@ router.get('/users', requireAuth, async (req, res) => {
         const offset = (page - 1) * limit;
 
         // 전체 사용자 수 조회
-        const [countResult] = await pool.execute(
+        const countResult = await pool.query(
             'SELECT COUNT(*) as total FROM users'
         );
-        const totalUsers = countResult[0].total;
+        const totalUsers = countResult.rows[0].total;
         const totalPages = Math.ceil(totalUsers / limit);
 
         // 사용자 목록 조회
-        const [users] = await pool.execute(`
+        const usersResult = await pool.query(`
             SELECT u.*, a.name as agency_name,
                    COUNT(cu.id) as usage_count
             FROM users u
-            JOIN agencies a ON u.agency_id = a.id
+            LEFT JOIN agencies a ON u.agency_id = a.id
             LEFT JOIN usages cu ON u.token = cu.token
-            GROUP BY u.id
+            GROUP BY u.id, u.name, u.email, u.phone, u.agency_id, u.token, u.qr_code, u.expiration_start, u.expiration_end, u.pin, u.created_at, u.updated_at, a.name
             ORDER BY u.created_at DESC
-            LIMIT ? OFFSET ?
+            LIMIT $1 OFFSET $2
         `, [limit, offset]);
+        const users = usersResult.rows;
 
         res.render('admin/users', {
             title: '고객 관리',
@@ -227,21 +229,22 @@ router.get('/usages', requireAuth, async (req, res) => {
         const offset = (page - 1) * limit;
 
         // 전체 사용 이력 수 조회
-        const [countResult] = await pool.execute(
+        const countResult = await pool.query(
             'SELECT COUNT(*) as total FROM usages'
         );
-        const totalUsages = countResult[0].total;
+        const totalUsages = countResult.rows[0].total;
         const totalPages = Math.ceil(totalUsages / limit);
 
         // 사용 이력 조회
-        const [usages] = await pool.execute(`
+        const usagesResult = await pool.query(`
             SELECT u.*, us.name as customer_name, a.name as agency_name
             FROM usages u
             JOIN users us ON u.token = us.token
             JOIN agencies a ON us.agency_id = a.id
             ORDER BY u.used_at DESC
-            LIMIT ? OFFSET ?
+            LIMIT $1 OFFSET $2
         `, [limit, offset]);
+        const usages = usagesResult.rows;
 
         res.render('admin/usages', {
             title: '사용 이력 관리',
@@ -266,10 +269,11 @@ router.get('/usages', requireAuth, async (req, res) => {
 // 광고 배너 관리
 router.get('/banners', requireAuth, async (req, res) => {
     try {
-        const [banners] = await pool.execute(`
+        const bannersResult = await pool.query(`
             SELECT * FROM banners
             ORDER BY display_order ASC, created_at DESC
         `);
+        const banners = bannersResult.rows;
 
         res.render('admin/banners', {
             title: '광고 배너 관리',
@@ -296,8 +300,8 @@ router.post('/banners', requireAuth, async (req, res) => {
     const { advertiser_name, image_url, link_url, display_order } = req.body;
 
     try {
-        await pool.execute(
-            'INSERT INTO banners (advertiser_name, image_url, link_url, display_order) VALUES (?, ?, ?, ?)',
+        await pool.query(
+            'INSERT INTO banners (advertiser_name, image_url, link_url, display_order) VALUES ($1, $2, $3, $4)',
             [advertiser_name, image_url, link_url || null, parseInt(display_order) || 0]
         );
 
@@ -314,8 +318,8 @@ router.post('/banners/:id/toggle', requireAuth, async (req, res) => {
     const bannerId = req.params.id;
 
     try {
-        await pool.execute(
-            'UPDATE banners SET is_active = NOT is_active WHERE id = ?',
+        await pool.query(
+            'UPDATE banners SET is_active = NOT is_active WHERE id = $1',
             [bannerId]
         );
 
@@ -332,7 +336,7 @@ router.delete('/banners/:id', requireAuth, async (req, res) => {
     const bannerId = req.params.id;
 
     try {
-        await pool.execute('DELETE FROM banners WHERE id = ?', [bannerId]);
+        await pool.query('DELETE FROM banners WHERE id = $1', [bannerId]);
         res.json({ success: true });
 
     } catch (error) {
