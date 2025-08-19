@@ -976,6 +976,7 @@ app.get('/admin/banners', requireAuth, async (req, res) => {
 
         res.render('admin/banners', {
             title: '광고 배너 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             banners,
             success: req.query.success,
             error: req.query.error
@@ -984,7 +985,9 @@ app.get('/admin/banners', requireAuth, async (req, res) => {
         console.error('광고 배너 관리 페이지 오류:', error);
         res.render('admin/banners', {
             title: '광고 배너 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             banners: [],
+            success: null,
             error: 'load_error'
         });
     }
@@ -2251,28 +2254,6 @@ app.get('/admin/stores', requireAuth, async (req, res) => {
     }
 });
 
-// 배너 관리 페이지
-app.get('/admin/banners', requireAuth, async (req, res) => {
-    try {
-        const banners = await dbHelpers.getBanners();
-        res.render('admin/banners', {
-            title: '배너 관리',
-            adminUsername: req.session.adminUsername || 'admin',
-            banners,
-            success: null,
-            error: null
-        });
-    } catch (error) {
-        console.error('배너 관리 페이지 오류:', error);
-        res.render('admin/banners', {
-            title: '배너 관리',
-            adminUsername: req.session.adminUsername || 'admin',
-            banners: [],
-            success: null,
-            error: '배너 목록을 불러오지 못했습니다.'
-        });
-    }
-});
 
 // 제휴 신청서 관리 페이지
 app.get('/admin/partner-applications', requireAuth, async (req, res) => {
