@@ -790,7 +790,9 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
         const agencies = await dbHelpers.getAgencies();
         res.render('admin/agencies', {
             title: '여행사 관리',
-            agencies,
+            adminUsername: req.session.adminUsername || 'admin',
+            agencies: agencies,
+            baseUrl: `${req.protocol}://${req.get('host')}`,
             success: req.query.success,
             error: req.query.error
         });
@@ -798,7 +800,10 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
         console.error('여행사 관리 페이지 오류:', error);
         res.render('admin/agencies', {
             title: '여행사 관리',
+            adminUsername: req.session.adminUsername || 'admin',
             agencies: [],
+            baseUrl: `${req.protocol}://${req.get('host')}`,
+            success: null,
             error: 'load_error'
         });
     }
@@ -1851,30 +1856,6 @@ app.get('/admin', requireAuth, async (req, res) => {
     }
 });
 
-// 여행사 관리 페이지
-app.get('/admin/agencies', requireAuth, async (req, res) => {
-    try {
-        const agencies = await dbHelpers.getAgencies();
-        res.render('admin/agencies', {
-            title: '여행사 관리',
-            adminUsername: req.session.adminUsername || 'admin',
-            agencies: agencies,
-            baseUrl: `${req.protocol}://${req.get('host')}`,
-            success: null,
-            error: null
-        });
-    } catch (error) {
-        console.error('여행사 관리 페이지 오류:', error);
-        res.render('admin/agencies', {
-            title: '여행사 관리',
-            adminUsername: req.session.adminUsername || 'admin',
-            agencies: [],
-            baseUrl: `${req.protocol}://${req.get('host')}`,
-            success: null,
-            error: null
-        });
-    }
-});
 
 // 여행사 생성
 app.post('/admin/agencies', requireAuth, async (req, res) => {
