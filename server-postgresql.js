@@ -869,7 +869,7 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
     }
 });
 
-// 관리자 제휴업체 관리 페이지
+// 관리자 제휴업체
 app.get('/admin/stores', requireAuth, async (req, res) => {
     try {
         const stores = await dbHelpers.getStores();
@@ -1635,6 +1635,19 @@ app.post('/api/partner-apply', async (req, res) => {
         }
         
         if (dbMode === 'postgresql') {
+            // 중복 체크
+            const existingApp = await pool.query(
+                'SELECT id FROM partner_applications WHERE business_name = $1 AND contact_name = $2 AND phone = $3',
+                [business_name, contact_name, phone]
+            );
+            
+            if (existingApp.rows.length > 0) {
+                return res.json({
+                    success: false,
+                    message: '이미 동일한 정보로 신청된 내역이 있습니다.'
+                });
+            }
+            
             await pool.query(
                 `INSERT INTO partner_applications (business_name, contact_name, phone, email, business_type, location, discount_offer, additional_info)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
