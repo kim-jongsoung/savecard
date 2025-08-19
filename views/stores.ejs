@@ -488,25 +488,13 @@
                         <div class="position-relative">
                             <img src="<%= store.image_url %>" alt="<%= store.name %>" class="store-image">
                             <div class="store-image-overlay">
-                                <i class="fas fa-star me-1"></i>4.8
+                                <i class="fas fa-fire me-1"></i>사용 <%= store.usage_count || 0 %>회
                             </div>
                         </div>
                         <div class="store-content">
                             <div class="store-category"><%= store.category %></div>
                             <h5 class="store-name"><%= store.name %></h5>
                             
-                            <div class="store-rating">
-                                <div class="rating-stars">
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                </div>
-                                <span class="rating-count">사용 <%= store.usage_count || 0 %>회</span>
-                            </div>
-                            
-                            <div class="store-description"><%= store.description %></div>
                             
                             <div class="discount-badge">
                                 <i class="fas fa-percent me-1"></i><%= store.discount %>
@@ -519,32 +507,46 @@
                             <% } %>
                             
                             
-                            <% if (store.address) { %>
-                                <div class="store-info">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span><%= store.address %></span>
-                                </div>
-                            <% } %>
                             
-                            <% if (store.phone) { %>
-                                <div class="store-info">
-                                    <i class="fas fa-phone"></i>
-                                    <span><%= store.phone %></span>
-                                </div>
-                            <% } %>
-                            
-                            <% if (store.website) { %>
-                                <div class="store-info">
-                                    <i class="fas fa-globe"></i>
-                                    <a href="<%= store.website %>" target="_blank" class="text-decoration-none">
-                                        웹사이트 방문
-                                    </a>
-                                </div>
-                            <% } %>
+                            <div class="text-center mt-auto pt-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="showStoreDetail('<%= store.id %>')" 
+                                        data-name="<%= store.name %>" 
+                                        data-description="<%= store.description || '' %>" 
+                                        data-address="<%= store.address || '' %>" 
+                                        data-phone="<%= store.phone || '' %>" 
+                                        data-website="<%= store.website || '' %>">
+                                    <i class="fas fa-info-circle me-1"></i>상세정보
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             <% }); %>
+        </div>
+
+        <!-- 상세정보 모달 -->
+        <div class="modal fade" id="storeDetailModal" tabindex="-1" aria-labelledby="storeDetailModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="storeDetailModalLabel">
+                            <i class="fas fa-store me-2"></i><span id="modalStoreName"></span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="modalStoreDescription" class="mb-3"></div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3" id="modalStoreAddress"></div>
+                            <div class="col-md-6 mb-3" id="modalStorePhone"></div>
+                        </div>
+                        <div id="modalStoreWebsite"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <% if (stores.length === 0) { %>
@@ -706,6 +708,49 @@
                 }, index * 100);
             });
         });
+        
+        // 상세정보 모달 표시 함수
+        function showStoreDetail(storeId) {
+            const button = event.target.closest('button');
+            const name = button.dataset.name;
+            const description = button.dataset.description;
+            const address = button.dataset.address;
+            const phone = button.dataset.phone;
+            const website = button.dataset.website;
+            
+            document.getElementById('modalStoreName').textContent = name;
+            
+            const descDiv = document.getElementById('modalStoreDescription');
+            if (description) {
+                descDiv.innerHTML = `<div class="alert alert-light"><i class="fas fa-info-circle me-2"></i><strong>업체 소개:</strong><br>${description}</div>`;
+            } else {
+                descDiv.innerHTML = '';
+            }
+            
+            const addressDiv = document.getElementById('modalStoreAddress');
+            if (address) {
+                addressDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-map-marker-alt me-2 text-danger"></i><strong>주소:</strong><br><span class="ms-3">${address}</span></div>`;
+            } else {
+                addressDiv.innerHTML = '';
+            }
+            
+            const phoneDiv = document.getElementById('modalStorePhone');
+            if (phone) {
+                phoneDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-phone me-2 text-success"></i><strong>전화번호:</strong><br><span class="ms-3">${phone}</span></div>`;
+            } else {
+                phoneDiv.innerHTML = '';
+            }
+            
+            const websiteDiv = document.getElementById('modalStoreWebsite');
+            if (website) {
+                websiteDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-globe me-2 text-primary"></i><strong>웹사이트:</strong><br><a href="${website}" target="_blank" class="ms-3 text-decoration-none">${website}</a></div>`;
+            } else {
+                websiteDiv.innerHTML = '';
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('storeDetailModal'));
+            modal.show();
+        }
         
         // 제휴업체 신청 제출 함수
         async function submitPartnerApplication() {
