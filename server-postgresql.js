@@ -602,6 +602,108 @@ app.post('/admin/stores', requireAuth, async (req, res) => {
     }
 });
 
+// 제휴업체 수정 라우트
+app.put('/admin/stores/:id', requireAuth, async (req, res) => {
+    try {
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) {
+            if (wantsJson) return res.json({ success: false, message: '유효하지 않은 ID' });
+            return res.redirect('/admin/stores?error=invalid_id');
+        }
+
+        const {
+            name,
+            category,
+            discount,
+            discount_info,
+            address,
+            phone,
+            website,
+            description,
+            image_url
+        } = req.body;
+
+        if (!name || !category || !description || !discount) {
+            if (wantsJson) {
+                return res.json({ success: false, message: '필수 항목(업체명/카테고리/설명/할인 정보)을 입력하세요.' });
+            } else {
+                return res.redirect('/admin/stores?error=missing_fields');
+            }
+        }
+
+        const store = await dbHelpers.updateStore(id, {
+            name: name.trim(),
+            category: category.trim(),
+            discount: discount.trim(),
+            discount_info: discount_info ? discount_info.trim() : null,
+            address: address ? address.trim() : null,
+            phone: phone ? phone.trim() : null,
+            website: website ? website.trim() : null,
+            description: description.trim(),
+            image_url: image_url ? image_url.trim() : null
+        });
+
+        if (!store) {
+            if (wantsJson) {
+                return res.json({ success: false, message: '제휴업체를 찾을 수 없습니다.' });
+            } else {
+                return res.redirect('/admin/stores?error=not_found');
+            }
+        }
+
+        if (wantsJson) {
+            return res.json({ success: true, message: '제휴업체가 수정되었습니다.', store });
+        } else {
+            return res.redirect('/admin/stores?success=updated');
+        }
+    } catch (error) {
+        console.error('제휴업체 수정 오류:', error);
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        if (wantsJson) {
+            return res.json({ success: false, message: '제휴업체 수정 중 오류가 발생했습니다.' });
+        } else {
+            return res.redirect('/admin/stores?error=server');
+        }
+    }
+});
+
+// 제휴업체 삭제 라우트 (소프트 삭제)
+app.delete('/admin/stores/:id', requireAuth, async (req, res) => {
+    try {
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        const id = Number(req.params.id);
+        if (!Number.isFinite(id)) {
+            if (wantsJson) return res.json({ success: false, message: '유효하지 않은 ID' });
+            return res.redirect('/admin/stores?error=invalid_id');
+        }
+
+        const store = await dbHelpers.deleteStore(id);
+        
+        if (!store) {
+            if (wantsJson) {
+                return res.json({ success: false, message: '제휴업체를 찾을 수 없습니다.' });
+            } else {
+                return res.redirect('/admin/stores?error=not_found');
+            }
+        }
+
+        if (wantsJson) {
+            return res.json({ success: true, message: '제휴업체가 비활성화되었습니다.' });
+        } else {
+            return res.redirect('/admin/stores?success=deleted');
+        }
+    } catch (error) {
+        console.error('제휴업체 삭제 오류:', error);
+        const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
+        if (wantsJson) {
+            return res.json({ success: false, message: '제휴업체 삭제 중 오류가 발생했습니다.' });
+        } else {
+            return res.redirect('/admin/stores?error=server');
+        }
+    }
+});
+
 // 제휴업체 활성/비활성 토글
 app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
     try {
@@ -638,6 +740,188 @@ app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
         } else {
             return res.redirect('/admin/stores?error=server');
         }
+    }
+});
+
+// ==================== 관리자 페이지 라우트 ====================
+
+// 관리자 대시보드
+app.get('/admin/dashboard', requireAuth, async (req, res) => {
+    try {
+        // 통계 데이터 수집
+        const [users, agencies, stores, usages] = await Promise.all([
+            dbHelpers.getUsers().catch(() => []),
+            dbHelpers.getAgencies().catch(() => []),
+            dbHelpers.getStores().catch(() => []),
+            dbHelpers.getUsages().catch(() => [])
+        ]);
+
+        // 최근 사용 이력 (최근 10개)
+        const recentUsages = usages
+            .sort((a, b) => new Date(b.used_at) - new Date(a.used_at))
+            .slice(0, 10);
+
+        res.render('admin/dashboard', {
+            title: '관리자 대시보드',
+            stats: {
+                totalUsers: users.length,
+                totalAgencies: agencies.length,
+                totalStores: stores.length,
+                totalUsages: usages.length
+            },
+            recentUsages,
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (error) {
+        console.error('관리자 대시보드 오류:', error);
+        res.render('admin/dashboard', {
+            title: '관리자 대시보드',
+            stats: { totalUsers: 0, totalAgencies: 0, totalStores: 0, totalUsages: 0 },
+            recentUsages: [],
+            error: 'dashboard_error'
+        });
+    }
+});
+
+// 관리자 여행사 관리 페이지
+app.get('/admin/agencies', requireAuth, async (req, res) => {
+    try {
+        const agencies = await dbHelpers.getAgencies();
+        res.render('admin/agencies', {
+            title: '여행사 관리',
+            agencies,
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (error) {
+        console.error('여행사 관리 페이지 오류:', error);
+        res.render('admin/agencies', {
+            title: '여행사 관리',
+            agencies: [],
+            error: 'load_error'
+        });
+    }
+});
+
+// 관리자 제휴업체 관리 페이지
+app.get('/admin/stores', requireAuth, async (req, res) => {
+    try {
+        const stores = await dbHelpers.getStores();
+        res.render('admin/stores', {
+            title: '제휴업체 관리',
+            stores,
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (error) {
+        console.error('제휴업체 관리 페이지 오류:', error);
+        res.render('admin/stores', {
+            title: '제휴업체 관리',
+            stores: [],
+            error: 'load_error'
+        });
+    }
+});
+
+// 관리자 고객 관리 페이지
+app.get('/admin/customers', requireAuth, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 20;
+        const offset = (page - 1) * limit;
+
+        const users = await dbHelpers.getUsers();
+        const totalUsers = users.length;
+        const paginatedUsers = users.slice(offset, offset + limit);
+        
+        const totalPages = Math.ceil(totalUsers / limit);
+
+        res.render('admin/customers', {
+            title: '고객 관리',
+            users: paginatedUsers,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1
+            },
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (error) {
+        console.error('고객 관리 페이지 오류:', error);
+        res.render('admin/customers', {
+            title: '고객 관리',
+            users: [],
+            pagination: { currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false },
+            error: 'load_error'
+        });
+    }
+});
+
+// 관리자 사용 이력 페이지
+app.get('/admin/usage-history', requireAuth, async (req, res) => {
+    try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = 50;
+        const offset = (page - 1) * limit;
+
+        const allUsages = await dbHelpers.getUsages();
+        const totalUsages = allUsages.length;
+        const paginatedUsages = allUsages
+            .sort((a, b) => new Date(b.used_at) - new Date(a.used_at))
+            .slice(offset, offset + limit);
+        
+        const totalPages = Math.ceil(totalUsages / limit);
+
+        res.render('admin/usage-history', {
+            title: '사용 이력',
+            usages: paginatedUsages,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1
+            },
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (error) {
+        console.error('사용 이력 페이지 오류:', error);
+        res.render('admin/usage-history', {
+            title: '사용 이력',
+            usages: [],
+            pagination: { currentPage: 1, totalPages: 0, hasNext: false, hasPrev: false },
+            error: 'load_error'
+        });
+    }
+});
+
+// 관리자 광고 배너 관리 페이지
+app.get('/admin/banners', requireAuth, async (req, res) => {
+    try {
+        let banners = [];
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM banners ORDER BY display_order, created_at DESC');
+            banners = result.rows;
+        } else {
+            banners = await jsonDB.findAll('banners');
+        }
+
+        res.render('admin/banners', {
+            title: '광고 배너 관리',
+            banners,
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (error) {
+        console.error('광고 배너 관리 페이지 오류:', error);
+        res.render('admin/banners', {
+            title: '광고 배너 관리',
+            banners: [],
+            error: 'load_error'
+        });
     }
 });
 
@@ -2262,12 +2546,10 @@ app.listen(PORT, async () => {
                         console.log('PostgreSQL 데이터베이스 초기화 중...');
                         
                         // 테이블 존재 확인 및 생성
-                        await ensureTablesExist();
+                        await createTables();
                         
-                        // logo_url 컬럼 존재 확인 및 추가
-                        await ensureLogoUrlColumn();
-                        
-                        console.log('PostgreSQL 데이터베이스 초기화 완료');
+                        // 모든 컬럼 보정
+                        await ensureAllColumns();
                     } catch (error) {
                         console.error('데이터베이스 초기화 오류:', error);
                     }
@@ -2276,8 +2558,12 @@ app.listen(PORT, async () => {
             await initializeDatabase();
             
             // JSON 데이터 마이그레이션 (최초 1회만)
-            await migrateFromJSON();
-            console.log('🔄 데이터 마이그레이션이 완료되었습니다.');
+            try {
+                await migrateFromJSON();
+                console.log('🔄 데이터 마이그레이션이 완료되었습니다.');
+            } catch (error) {
+                console.warn('⚠️ 데이터 마이그레이션 건너뜀:', error.message);
+            }
             
             // logo_url 컬럼 존재 확인 및 추가 함수
             async function ensureLogoUrlColumn() {
@@ -2297,12 +2583,10 @@ app.listen(PORT, async () => {
                         console.log('✅ logo_url 컬럼이 이미 존재합니다.');
                     }
                 } catch (error) {
-                    console.error('logo_url 컬럼 확인/추가 오류:', error);
+                    console.warn('⚠️ logo_url 컬럼 확인/추가 건너뜀:', error.message);
                 }
             }
             
-            // logo_url 컬럼 추가 실행
-            await ensureLogoUrlColumn();
             
             // 제휴업체 자동 삭제 비활성화 (수동 관리 모드)
             console.log('📋 제휴업체 수동 관리 모드 - 기존 데이터 유지');
@@ -2315,9 +2599,7 @@ app.listen(PORT, async () => {
                 jsonDB = require('./utils/jsonDB');
             }
         }
-    }
-    
-    if (dbMode === 'json') {
+    } else {
         console.log('📁 JSON 파일 기반 데이터베이스를 사용합니다.');
         console.log('⚠️ 주의: Railway 배포 시 데이터가 초기화될 수 있습니다.');
     }
