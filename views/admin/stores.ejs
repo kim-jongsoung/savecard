@@ -377,6 +377,12 @@
                         </div>
                         
                         <div class="mb-3">
+                            <label for="discountCondition" class="form-label">할인 적용 조건</label>
+                            <textarea class="form-control" id="discountCondition" name="discount_info" rows="2" 
+                                      placeholder="예: 1회 구매시 1회 적용, 타 할인과 중복 불가"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
                             <label for="storeAddress" class="form-label">주소</label>
                             <input type="text" class="form-control" id="storeAddress" name="address">
                         </div>
@@ -451,6 +457,11 @@
                     <div class="mb-3">
                         <label for="editStoreDiscount" class="form-label">할인 정보 *</label>
                         <input type="text" class="form-control" id="editStoreDiscount" placeholder="예: 전 품목 10% 할인" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStoreDiscountInfo" class="form-label">할인 적용 조건</label>
+                        <textarea class="form-control" id="editStoreDiscountInfo" rows="2" 
+                                  placeholder="예: 1회 구매시 1회 적용, 타 할인과 중복 불가"></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
@@ -592,6 +603,7 @@
                 document.getElementById('editStoreCategory').value = store.category || '';
                 document.getElementById('editStoreDescription').value = store.description || '';
                 document.getElementById('editStoreDiscount').value = store.discount || '';
+                document.getElementById('editStoreDiscountInfo').value = store.discount_info || '';
                 document.getElementById('editStoreAddress').value = store.location || store.address || '';
                 document.getElementById('editStorePhone').value = store.phone || '';
                 document.getElementById('editStoreWebsite').value = store.website || '';
@@ -619,6 +631,7 @@
                 category: document.getElementById('editStoreCategory').value,
                 description: document.getElementById('editStoreDescription').value,
                 discount: document.getElementById('editStoreDiscount').value,
+                discount_info: document.getElementById('editStoreDiscountInfo').value,
                 address: document.getElementById('editStoreAddress').value,
                 phone: document.getElementById('editStorePhone').value,
                 website: document.getElementById('editStoreWebsite').value,
