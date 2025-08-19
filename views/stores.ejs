@@ -503,7 +503,7 @@
                                     <i class="fas fa-star"></i>
                                     <i class="fas fa-star"></i>
                                 </div>
-                                <span class="rating-count"><%= store.usage_count || 0 %></span>
+                                <span class="rating-count">사용 <%= store.usage_count || 0 %>회</span>
                             </div>
                             
                             <div class="store-description"><%= store.description %></div>
@@ -518,9 +518,6 @@
                             </div>
                             <% } %>
                             
-                            <div class="store-price">
-                                할인가 <span class="price-unit">/ 1인</span>
-                            </div>
                             
                             <% if (store.address) { %>
                                 <div class="store-info">
