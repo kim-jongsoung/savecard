@@ -57,7 +57,7 @@
         .store-image-overlay {
             position: absolute;
             top: 8px;
-            right: 8px;
+            left: 8px;
             background: rgba(0,0,0,0.7);
             color: white;
             padding: 4px 8px;
@@ -514,9 +514,9 @@
                                     data-name="<%= store.name %>" 
                                     data-description="<%= store.description || '' %>" 
                                     data-address="<%= store.address || '' %>" 
-                                    data-phone="<%= store.phone || '' %>" 
+ 
                                     data-website="<%= store.website || '' %>">
-                                <i class="fas fa-info-circle me-1"></i>상세
+                                <i class="fas fa-info-circle me-1"></i>상세정보
                             </button>
                         </div>
                         <div class="store-content">
@@ -552,12 +552,24 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div id="modalStoreDescription" class="mb-3"></div>
                         <div class="row">
-                            <div class="col-md-6 mb-3" id="modalStoreAddress"></div>
-                            <div class="col-md-6 mb-3" id="modalStorePhone"></div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-info-circle me-2 text-primary"></i>소개</h6>
+                                    <p id="modalDescription" class="text-muted"></p>
+                                </div>
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-map-marker-alt me-2 text-danger"></i>주소</h6>
+                                    <p id="modalAddress" class="text-muted"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-globe me-2 text-info"></i>웹사이트</h6>
+                                    <p id="modalWebsite"></p>
+                                </div>
+                            </div>
                         </div>
-                        <div id="modalStoreWebsite"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
@@ -606,6 +618,21 @@
             </a>
         </div>
     </div>
+
+    <!-- 위로가기 버튼 -->
+    <button id="scrollToTop" class="btn btn-primary" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: none;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    ">
+        <i class="fas fa-arrow-up"></i>
+    </button>
 
     <!-- 제휴업체 신청 모달 -->
     <div class="modal fade" id="partnerApplicationModal" tabindex="-1" aria-labelledby="partnerApplicationModalLabel" aria-hidden="true">
@@ -730,40 +757,21 @@
         function showStoreDetail(storeId) {
             const button = event.target.closest('button');
             const name = button.dataset.name;
-            const description = button.dataset.description;
-            const address = button.dataset.address;
-            const phone = button.dataset.phone;
-            const website = button.dataset.website;
+            const description = button.getAttribute('data-description');
+            const address = button.getAttribute('data-address');
+            const website = button.getAttribute('data-website');
             
             document.getElementById('modalStoreName').textContent = name;
+            document.getElementById('modalDescription').textContent = description || '정보 없음';
+            document.getElementById('modalAddress').textContent = address || '정보 없음';
             
-            const descDiv = document.getElementById('modalStoreDescription');
-            if (description) {
-                descDiv.innerHTML = `<div class="alert alert-light"><i class="fas fa-info-circle me-2"></i><strong>업체 소개:</strong><br>${description}</div>`;
+            const websiteElement = document.getElementById('modalWebsite');
+            if (website && website.trim()) {
+                websiteElement.innerHTML = `<a href="${website}" target="_blank" class="text-decoration-none">${website}</a>`;
             } else {
-                descDiv.innerHTML = '';
+                websiteElement.textContent = '정보 없음';
             }
             
-            const addressDiv = document.getElementById('modalStoreAddress');
-            if (address) {
-                addressDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-map-marker-alt me-2 text-danger"></i><strong>주소:</strong><br><span class="ms-3">${address}</span></div>`;
-            } else {
-                addressDiv.innerHTML = '';
-            }
-            
-            const phoneDiv = document.getElementById('modalStorePhone');
-            if (phone) {
-                phoneDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-phone me-2 text-success"></i><strong>전화번호:</strong><br><span class="ms-3">${phone}</span></div>`;
-            } else {
-                phoneDiv.innerHTML = '';
-            }
-            
-            const websiteDiv = document.getElementById('modalStoreWebsite');
-            if (website) {
-                websiteDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-globe me-2 text-primary"></i><strong>웹사이트:</strong><br><a href="${website}" target="_blank" class="ms-3 text-decoration-none">${website}</a></div>`;
-            } else {
-                websiteDiv.innerHTML = '';
-            }
             
             const modal = new bootstrap.Modal(document.getElementById('storeDetailModal'));
             modal.show();
