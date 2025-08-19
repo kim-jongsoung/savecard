@@ -308,11 +308,10 @@ const dbHelpers = {
     // 제휴업체 관련
     async getStores() {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('SELECT * FROM stores WHERE is_active = true ORDER BY name');
+            const result = await pool.query('SELECT * FROM stores ORDER BY name');
             return result.rows;
         } else {
-            const stores = await jsonDB.findAll('stores');
-            return stores.filter(store => store.is_active !== false);
+            return await jsonDB.findAll('stores');
         }
     },
     
@@ -1893,6 +1892,8 @@ app.get('/admin/usages', requireAuth, async (req, res) => {
 app.get('/admin/stores', requireAuth, async (req, res) => {
     try {
         const stores = await dbHelpers.getStores();
+        console.log('🔍 관리자 제휴업체 조회 결과:', stores.length, '개');
+        console.log('📋 제휴업체 샘플 데이터:', stores.slice(0, 2));
         res.render('admin/stores', {
             title: '제휴업체 관리',
             adminUsername: req.session.adminUsername || 'admin',
