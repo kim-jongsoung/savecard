@@ -2284,6 +2284,28 @@ app.get('/admin/partner-applications', requireAuth, async (req, res) => {
     }
 });
 
+// 제휴 신청서 전체 삭제 라우트
+app.delete('/admin/partner-applications/clear-all', requireAuth, async (req, res) => {
+    try {
+        if (dbMode === 'postgresql') {
+            await pool.query('DELETE FROM partner_applications');
+        } else {
+            await jsonDB.deleteAll('partner_applications');
+        }
+        
+        res.json({
+            success: true,
+            message: '모든 제휴 신청서가 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('제휴 신청서 전체 삭제 오류:', error);
+        res.json({
+            success: false,
+            message: '제휴 신청서 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 여행사 개별 조회 라우트 추가 (수정 모달용)
 app.get('/admin/agencies/:id', requireAuth, async (req, res) => {
     try {
