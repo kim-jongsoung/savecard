@@ -2301,18 +2301,8 @@ app.listen(PORT, async () => {
             // logo_url 컬럼 추가 실행
             await ensureLogoUrlColumn();
             
-            // 기존 제휴업체 데이터 전체 삭제 (수동 등록으로 변경)
-            async function clearStoresData() {
-                try {
-                    const result = await pool.query('DELETE FROM stores');
-                    console.log(`🗑️ 기존 제휴업체 데이터 ${result.rowCount}개 삭제 완료 (수동 등록 모드로 변경)`);
-                } catch (error) {
-                    console.error('제휴업체 데이터 삭제 오류:', error);
-                }
-            }
-            
-            // 제휴업체 데이터 삭제 실행
-            await clearStoresData();
+            // 제휴업체 자동 삭제 비활성화 (수동 관리 모드)
+            console.log('📋 제휴업체 수동 관리 모드 - 기존 데이터 유지');
             
         } catch (error) {
             console.error('❌ PostgreSQL 초기화 중 오류:', error);
