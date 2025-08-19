@@ -2301,6 +2301,42 @@ app.get('/admin/partner-applications', requireAuth, async (req, res) => {
     }
 });
 
+// 제휴 신청서 개별 삭제 라우트
+app.delete('/admin/partner-applications/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('DELETE FROM partner_applications WHERE id = $1 RETURNING *', [id]);
+            if (result.rows.length === 0) {
+                return res.json({
+                    success: false,
+                    message: '신청서를 찾을 수 없습니다.'
+                });
+            }
+        } else {
+            const deleted = await jsonDB.delete('partner_applications', id);
+            if (!deleted) {
+                return res.json({
+                    success: false,
+                    message: '신청서를 찾을 수 없습니다.'
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: '제휴 신청서가 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('제휴 신청서 삭제 오류:', error);
+        res.json({
+            success: false,
+            message: '제휴 신청서 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 제휴 신청서 전체 삭제 라우트
 app.delete('/admin/partner-applications/clear-all', requireAuth, async (req, res) => {
     try {

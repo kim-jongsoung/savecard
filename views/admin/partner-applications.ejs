@@ -125,14 +125,8 @@
                 <button class="btn btn-outline-primary" onclick="filterApplications('all')">
                     <i class="fas fa-list me-1"></i>전체 (<span id="count-all">0</span>)
                 </button>
-                <button class="btn btn-outline-warning" onclick="filterApplications('pending')">
-                    <i class="fas fa-clock me-1"></i>대기 (<span id="count-pending">0</span>)
-                </button>
-                <button class="btn btn-outline-success" onclick="filterApplications('approved')">
-                    <i class="fas fa-check me-1"></i>승인 (<span id="count-approved">0</span>)
-                </button>
-                <button class="btn btn-outline-danger" onclick="filterApplications('rejected')">
-                    <i class="fas fa-times me-1"></i>거절 (<span id="count-rejected">0</span>)
+                <button class="btn btn-danger" onclick="clearAllApplications()">
+                    <i class="fas fa-trash me-1"></i>전체 삭제
                 </button>
             </div>
         </div>
@@ -164,16 +158,11 @@
                                 </small>
                             </div>
                             <div class="btn-group">
-                                <% if (app.status === 'pending') { %>
-                                    <button class="btn btn-success btn-action" onclick="updateApplicationStatus('<%= app.id %>', 'approved')">
-                                        <i class="fas fa-check me-1"></i>승인
-                                    </button>
-                                    <button class="btn btn-danger btn-action" onclick="updateApplicationStatus('<%= app.id %>', 'rejected')">
-                                        <i class="fas fa-times me-1"></i>거절
-                                    </button>
-                                <% } %>
                                 <button class="btn btn-info btn-action" onclick="viewApplicationDetails('<%= app.id %>')">
                                     <i class="fas fa-eye me-1"></i>상세보기
+                                </button>
+                                <button class="btn btn-danger btn-action" onclick="deleteApplication('<%= app.id %>')">
+                                    <i class="fas fa-trash me-1"></i>삭제
                                 </button>
                             </div>
                         </div>
@@ -262,14 +251,7 @@
         // 통계 업데이트
         function updateCounts() {
             const all = document.querySelectorAll('.application-card').length;
-            const pending = document.querySelectorAll('.application-card[data-status="pending"]').length;
-            const approved = document.querySelectorAll('.application-card[data-status="approved"]').length;
-            const rejected = document.querySelectorAll('.application-card[data-status="rejected"]').length;
-
             document.getElementById('count-all').textContent = all;
-            document.getElementById('count-pending').textContent = pending;
-            document.getElementById('count-approved').textContent = approved;
-            document.getElementById('count-rejected').textContent = rejected;
         }
 
         // 필터링
@@ -285,26 +267,52 @@
             });
         }
 
-        // 신청 상태 업데이트
-        async function updateApplicationStatus(applicationId, newStatus) {
-            const notes = prompt(`${newStatus === 'approved' ? '승인' : '거절'} 사유를 입력하세요 (선택사항):`);
+        // 개별 신청 삭제
+        async function deleteApplication(applicationId) {
+            if (!confirm('이 신청을 삭제하시겠습니까?')) {
+                return;
+            }
             
             try {
-                const response = await fetch(`/admin/api/partner-applications/${applicationId}/status`, {
-                    method: 'PUT',
+                const response = await fetch(`/admin/partner-applications/${applicationId}`, {
+                    method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        status: newStatus,
-                        notes: notes || ''
-                    })
+                    }
                 });
 
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert(`신청이 ${newStatus === 'approved' ? '승인' : '거절'}되었습니다.`);
+                    alert('신청이 삭제되었습니다.');
+                    location.reload();
+                } else {
+                    alert('오류: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('시스템 오류가 발생했습니다.');
+            }
+        }
+
+        // 전체 신청 삭제
+        async function clearAllApplications() {
+            if (!confirm('모든 제휴업체 신청을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/partner-applications/clear-all', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('모든 신청이 삭제되었습니다.');
                     location.reload();
                 } else {
                     alert('오류: ' + result.message);
