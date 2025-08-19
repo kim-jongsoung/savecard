@@ -54,6 +54,27 @@
             position: relative;
         }
         
+        /* 모바일 최적화 */
+        @media (max-width: 768px) {
+            .store-image {
+                height: 200px;
+            }
+            
+            .store-card {
+                margin-bottom: 20px;
+            }
+            
+            .store-image-overlay {
+                font-size: 0.7rem;
+                padding: 3px 6px;
+            }
+            
+            .store-detail-btn {
+                font-size: 0.7rem;
+                padding: 4px 8px;
+            }
+        }
+        
         .store-image-overlay {
             position: absolute;
             top: 8px;
@@ -445,36 +466,39 @@
         <div class="text-center py-3">
             <div class="d-flex justify-content-center gap-3 flex-wrap">
                 <a href="/" class="btn btn-outline-light">
-                    <i class="fas fa-home me-2"></i>메인페이지
+                    <i class="fas fa-home me-2"></i>메인
                 </a>
                 <a href="/register" class="btn btn-outline-light">
-                    <i class="fas fa-credit-card me-2"></i>할인카드 발급받기
-                </a>
-                <a href="/stores" class="btn btn-primary">
-                    <i class="fas fa-store me-2"></i>제휴업체 보기
+                    <i class="fas fa-credit-card me-2"></i>카드발급
                 </a>
             </div>
         </div>
-        
-        <!-- 헤더 섹션 -->
-        <div class="header-section">
-            <h1 class="header-title">
-                <i class="fas fa-store me-3"></i><%= title %>
-            </h1>
-            <p class="lead">괌 여행에서 할인 혜택을 받을 수 있는 모든 제휴업체를 확인하세요</p>
-        </div>
+
+        <h1 class="text-center text-white mb-4">
+            <i class="fas fa-store me-3"></i>제휴업체 목록
+        </h1>
 
         <!-- 카테고리 필터 -->
-        <div class="category-section">
-            <div class="category-filter">
-                <button class="btn filter-btn active" onclick="filterStores('all')">
+        <div class="text-center mb-4">
+            <div class="btn-group" role="group" aria-label="카테고리 필터">
+                <button type="button" class="btn btn-outline-light active" onclick="filterByCategory('all')">
                     <i class="fas fa-th me-2"></i>전체
                 </button>
-                <% Object.keys(categories).forEach(category => { %>
-                    <button class="btn filter-btn" onclick="filterStores('<%= category %>')">
-                        <i class="fas fa-tag me-2"></i><%= category %>
-                    </button>
-                <% }); %>
+                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('음식점')">
+                    <i class="fas fa-utensils me-2"></i>음식점
+                </button>
+                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('쇼핑')">
+                    <i class="fas fa-shopping-bag me-2"></i>쇼핑
+                </button>
+                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('관광')">
+                    <i class="fas fa-camera me-2"></i>관광
+                </button>
+                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('숙박')">
+                    <i class="fas fa-bed me-2"></i>숙박
+                </button>
+                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('기타')">
+                    <i class="fas fa-ellipsis-h me-2"></i>기타
+                </button>
             </div>
         </div>
 
