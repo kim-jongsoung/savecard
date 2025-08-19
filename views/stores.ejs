@@ -9,9 +9,10 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #87CEEB 0%, #4FC3F7 100%);
             min-height: 100vh;
-            padding: 20px 0;
+            margin: 0;
+            padding: 0;
         }
         
         .header-section {
@@ -28,16 +29,22 @@
         }
         
         .store-card {
-            background: white;
-            border-radius: 15px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
             overflow: hidden;
             margin-bottom: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
         
         .store-card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            border-color: #4FC3F7;
         }
         
         .store-image {
@@ -48,6 +55,9 @@
         
         .store-content {
             padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
         }
         
         .store-name {
@@ -58,23 +68,38 @@
         }
         
         .store-category {
-            background: #667eea;
+            background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
             color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
+            padding: 4px 12px;
+            border-radius: 12px;
             font-size: 0.8rem;
+            font-weight: 600;
             display: inline-block;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .discount-badge {
-            background: #28a745;
+            background: linear-gradient(135deg, #28a745, #20c997);
             color: white;
             padding: 8px 15px;
             border-radius: 25px;
             font-weight: bold;
             margin: 10px 0;
             display: inline-block;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .discount-info {
+            background: linear-gradient(135deg, #17a2b8, #6f42c1);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            margin: 8px 0;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
         }
         
         .usage-count-badge {
@@ -105,6 +130,9 @@
             color: #666;
             font-size: 0.9rem;
             margin: 5px 0;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.1);
         }
         
         .category-section {
@@ -329,6 +357,21 @@
 </head>
 <body>
     <div class="container">
+        <!-- 상단 네비게이션 메뉴 -->
+        <div class="text-center py-3">
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a href="/" class="btn btn-outline-light">
+                    <i class="fas fa-home me-2"></i>메인페이지
+                </a>
+                <a href="/register" class="btn btn-outline-light">
+                    <i class="fas fa-credit-card me-2"></i>할인카드 발급받기
+                </a>
+                <a href="/stores" class="btn btn-primary">
+                    <i class="fas fa-store me-2"></i>제휴업체 보기
+                </a>
+            </div>
+        </div>
+        
         <!-- 헤더 섹션 -->
         <div class="header-section">
             <h1 class="header-title">
@@ -387,6 +430,12 @@
                             <div class="discount-badge">
                                 <i class="fas fa-percent me-2"></i><%= store.discount %>
                             </div>
+                            
+                            <% if (store.discount_info) { %>
+                            <div class="discount-info">
+                                <i class="fas fa-info-circle me-2"></i><%= store.discount_info %>
+                            </div>
+                            <% } %>
                             
                             <!-- 누적 할인혜택 적용 횟수 -->
                             <div class="usage-count-badge">
