@@ -528,45 +528,36 @@
                 <div class="col-md-6 col-lg-4 store-item" data-category="<%= store.category %>">
                     <div class="store-card">
                         <img src="<%= store.image_url %>" alt="<%= store.name %>" class="store-image">
+                        <!-- 카테고리, 누적사용, 상세정보 아이콘들 (이미지와 업체이름 사이) -->
+                        <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+                            <span class="badge bg-primary">
+                                <i class="fas fa-fire me-1"></i><%= store.category %>
+                            </span>
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-fire me-1"></i><%= store.usage_count || 0 %>회
+                            </span>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="showStoreDetail('<%= store.id %>')" 
+                                    data-name="<%= store.name %>" 
+                                    data-description="<%= store.description || '' %>" 
+                                    data-address="<%= store.address || '' %>" 
+                                    data-website="<%= store.website || '' %>">
+                                <i class="fas fa-fire me-1"></i>상세정보
+                            </button>
+                        </div>
+                        
                         <div class="store-content">
                             <h6 class="store-name"><%= store.name %></h6>
                             <p class="text-muted small"><%= store.description %></p>
                             
-                            <!-- 카테고리, 누적사용, 상세정보 같은 라인 -->
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="store-category"><%= store.category %></div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-fire me-1"></i><%= store.usage_count || 0 %>회
-                                    </span>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="showStoreDetail('<%= store.id %>')" 
-                                            data-name="<%= store.name %>" 
-                                            data-description="<%= store.description || '' %>" 
-                                            data-address="<%= store.address || '' %>" 
-                                            data-website="<%= store.website || '' %>">
-                                        <i class="fas fa-info-circle me-1"></i>상세정보
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- 할인혜택 강조 -->
+                            <!-- 할인내용 한줄로 -->
                             <div class="mb-2">
-                                <div class="discount-highlight bg-success bg-opacity-10 border border-success p-3 rounded">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <i class="fas fa-percent text-success me-2"></i>
-                                        <strong class="text-success fs-6">할인혜택</strong>
-                                    </div>
-                                    <div class="text-success fw-bold"><%= store.discount || '할인 정보 없음' %></div>
-                                </div>
+                                <strong>할인내용:</strong> <%= store.discount || '할인 정보 없음' %>
                             </div>
                             
-                            <!-- 할인조건 -->
+                            <!-- 할인조건 검정글씨로 명확하게 -->
                             <% if (store.discount_info) { %>
                             <div class="mb-2">
-                                <div class="discount-condition bg-info bg-opacity-10 p-2 rounded">
-                                    <i class="fas fa-info-circle text-info me-1"></i>
-                                    <small class="text-info"><%= store.discount_info %></small>
-                                </div>
+                                <strong>적용조건:</strong> <%= store.discount_info %>
                             </div>
                             <% } %>
                         </div>
