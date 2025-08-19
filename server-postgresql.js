@@ -622,6 +622,8 @@ app.put('/admin/stores/:id', requireAuth, async (req, res) => {
             return res.redirect('/admin/stores?error=invalid_id');
         }
 
+        console.log('수정 요청 받은 데이터:', req.body);
+        
         const {
             name,
             category,
@@ -631,7 +633,8 @@ app.put('/admin/stores/:id', requireAuth, async (req, res) => {
             phone,
             website,
             description,
-            image_url
+            image_url,
+            usage_count
         } = req.body;
 
         if (!name || !category || !description || !discount) {
@@ -642,7 +645,7 @@ app.put('/admin/stores/:id', requireAuth, async (req, res) => {
             }
         }
 
-        const store = await dbHelpers.updateStore(id, {
+        const updateData = {
             name: name.trim(),
             category: category.trim(),
             discount: discount.trim(),
@@ -651,8 +654,13 @@ app.put('/admin/stores/:id', requireAuth, async (req, res) => {
             phone: phone ? phone.trim() : null,
             website: website ? website.trim() : null,
             description: description.trim(),
-            image_url: image_url ? image_url.trim() : null
-        });
+            image_url: image_url ? image_url.trim() : null,
+            usage_count: usage_count ? Number(usage_count) : 0
+        };
+        
+        console.log('updateStore 호출 전 데이터:', updateData);
+        const store = await dbHelpers.updateStore(id, updateData);
+        console.log('updateStore 결과:', store);
 
         if (!store) {
             if (wantsJson) {
