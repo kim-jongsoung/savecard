@@ -192,7 +192,7 @@
                                         <% } %>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary"><%= agency.user_count %>개</span>
+                                        <span class="badge bg-primary"><%= agency.card_count || 0 %>개</span>
                                     </td>
                                     <td><%= new Date(agency.created_at).toLocaleDateString('ko-KR') %></td>
                                     <td>
