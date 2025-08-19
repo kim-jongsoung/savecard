@@ -529,51 +529,45 @@
                     <div class="store-card">
                         <img src="<%= store.image_url %>" alt="<%= store.name %>" class="store-image">
                         <div class="store-content">
-                            <div class="store-category"><%= store.category %></div>
                             <h6 class="store-name"><%= store.name %></h6>
                             <p class="text-muted small"><%= store.description %></p>
                             
-                            <div class="mb-2">
-                                <div class="discount-info bg-light p-2 rounded">
-                                    <i class="fas fa-percent text-success me-1"></i>
-                                    <strong class="text-success">할인혜택:</strong>
-                                    <span class="ms-1"><%= store.discount || '할인 정보 없음' %></span>
+                            <!-- 카테고리, 누적사용, 상세정보 같은 라인 -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="store-category"><%= store.category %></div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-fire me-1"></i><%= store.usage_count || 0 %>회
+                                    </span>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="showStoreDetail('<%= store.id %>')" 
+                                            data-name="<%= store.name %>" 
+                                            data-description="<%= store.description || '' %>" 
+                                            data-address="<%= store.address || '' %>" 
+                                            data-website="<%= store.website || '' %>">
+                                        <i class="fas fa-info-circle me-1"></i>상세정보
+                                    </button>
                                 </div>
                             </div>
                             
+                            <!-- 할인혜택 강조 -->
+                            <div class="mb-2">
+                                <div class="discount-highlight bg-success bg-opacity-10 border border-success p-3 rounded">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="fas fa-percent text-success me-2"></i>
+                                        <strong class="text-success fs-6">할인혜택</strong>
+                                    </div>
+                                    <div class="text-success fw-bold"><%= store.discount || '할인 정보 없음' %></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 할인조건 -->
                             <% if (store.discount_info) { %>
                             <div class="mb-2">
                                 <div class="discount-condition bg-info bg-opacity-10 p-2 rounded">
                                     <i class="fas fa-info-circle text-info me-1"></i>
-                                    <strong class="text-info">적용조건:</strong>
-                                    <span class="ms-1"><%= store.discount_info %></span>
+                                    <small class="text-info"><%= store.discount_info %></small>
                                 </div>
                             </div>
-                            <% } %>
-                            
-                            <div class="mb-2">
-                                <strong>누적 사용:</strong>
-                                <span class="badge bg-warning text-dark ms-1">
-                                    <i class="fas fa-fire me-1"></i><%= store.usage_count || 0 %>회
-                                </span>
-                            </div>
-                            
-                            <div class="d-flex justify-content-center mt-3">
-                                <button class="btn btn-sm btn-outline-primary" onclick="showStoreDetail('<%= store.id %>')" 
-                                        data-name="<%= store.name %>" 
-                                        data-description="<%= store.description || '' %>" 
-                                        data-address="<%= store.address || '' %>" 
-                                        data-website="<%= store.website || '' %>">
-                                    <i class="fas fa-info-circle me-1"></i>상세정보
-                                </button>
-                            </div>
-                            
-                            <% if (store.address) { %>
-                                <div class="mt-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-map-marker-alt me-1"></i><%= store.address %>
-                                    </small>
-                                </div>
                             <% } %>
                         </div>
                     </div>
