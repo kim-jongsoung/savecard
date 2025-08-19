@@ -146,9 +146,15 @@ const dbHelpers = {
     async getUsers() {
         if (dbMode === 'postgresql') {
             const result = await pool.query(`
-                SELECT u.*, a.name as agency_name 
+                SELECT u.*, a.name as agency_name, 
+                       COALESCE(usage_stats.usage_count, 0) as usage_count
                 FROM users u 
                 LEFT JOIN agencies a ON u.agency_id = a.id 
+                LEFT JOIN (
+                    SELECT token, COUNT(*) as usage_count 
+                    FROM usages 
+                    GROUP BY token
+                ) usage_stats ON u.token = usage_stats.token
                 ORDER BY u.created_at DESC
             `);
             return result.rows;
