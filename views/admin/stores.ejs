@@ -556,15 +556,22 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const store = await response.json();
-                console.log('가져온 제휴업체 데이터:', store);
+                const result = await response.json();
+                console.log('가져온 제휴업체 응답:', result);
+                
+                if (!result.success) {
+                    throw new Error(result.message || '데이터를 불러올 수 없습니다.');
+                }
+                
+                const store = result.store;
+                console.log('제휴업체 데이터:', store);
                 
                 // 모달 필드에 데이터 채우기
                 document.getElementById('editStoreName').value = store.name || '';
                 document.getElementById('editStoreCategory').value = store.category || '';
                 document.getElementById('editStoreDescription').value = store.description || '';
-                // discount_info 필드 제거됨
-                document.getElementById('editStoreAddress').value = store.address || '';
+                document.getElementById('editStoreDiscount').value = store.discount || '';
+                document.getElementById('editStoreAddress').value = store.location || store.address || '';
                 document.getElementById('editStorePhone').value = store.phone || '';
                 document.getElementById('editStoreWebsite').value = store.website || '';
                 document.getElementById('editStoreImageUrl').value = store.image_url || '';
