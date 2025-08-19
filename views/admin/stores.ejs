@@ -273,6 +273,12 @@
                                     </div>
                                 </div>
                                 
+                                <% if (store.discount_info) { %>
+                                <div class="mb-2">
+                                    <strong>적용조건:</strong> <%= store.discount_info %>
+                                </div>
+                                <% } %>
+                                
                                 <div class="mb-2">
                                     <strong>누적 사용:</strong>
                                     <span class="badge bg-warning text-dark ms-1">

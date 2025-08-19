@@ -2385,33 +2385,6 @@ app.delete('/admin/agencies/:id/force', requireAuth, async (req, res) => {
 
 
 
-// 제휴업체 삭제 라우트 추가
-app.delete('/admin/stores/:id', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const store = await dbHelpers.deleteStore(id);
-        
-        if (!store) {
-            return res.json({
-                success: false,
-                message: '제휴업체를 찾을 수 없습니다.'
-            });
-        }
-        
-        res.json({
-            success: true,
-            message: '제휴업체가 성공적으로 삭제되었습니다.'
-        });
-        
-    } catch (error) {
-        console.error('제휴업체 삭제 오류:', error);
-        res.json({
-            success: false,
-            message: '제휴업체 삭제 중 오류가 발생했습니다.'
-        });
-    }
-});
 
 // 광고배너 개별 조회 라우트 추가 (수정 모달용)
 app.get('/admin/banners/:id', requireAuth, async (req, res) => {
