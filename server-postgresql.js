@@ -197,7 +197,17 @@ const dbHelpers = {
     // 여행사 관련
     async getAgencies() {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('SELECT * FROM agencies ORDER BY sort_order, name');
+            const result = await pool.query(`
+                SELECT a.*, 
+                       COALESCE(user_counts.card_count, 0) as card_count
+                FROM agencies a 
+                LEFT JOIN (
+                    SELECT agency_id, COUNT(*) as card_count 
+                    FROM users 
+                    GROUP BY agency_id
+                ) user_counts ON a.id = user_counts.agency_id
+                ORDER BY a.sort_order, a.name
+            `);
             return result.rows;
         } else {
             return await jsonDB.findAll('agencies');
