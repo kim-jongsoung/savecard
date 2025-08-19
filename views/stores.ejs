@@ -728,7 +728,7 @@
             }
         }
 
-        function filterStores(category) {
+        function filterByCategory(category) {
             const storeItems = document.querySelectorAll('.store-item');
             const bannerItems = document.querySelectorAll('.banner-item-integrated');
             const filterBtns = document.querySelectorAll('.filter-btn');
@@ -795,7 +795,6 @@
             } else {
                 websiteElement.textContent = '정보 없음';
             }
-            
             
             const modal = new bootstrap.Modal(document.getElementById('storeDetailModal'));
             modal.show();
