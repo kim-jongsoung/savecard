@@ -300,35 +300,8 @@
         
         .store-image {
             width: 100%;
-            height: 200px;
-            object-fit: contain;
-            background-color: #f8f9fa;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        /* 모바일에서도 데스크탑과 동일한 이미지 크기 유지 */
-        @media (max-width: 768px) {
-            .store-image {
-                height: 200px;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .store-image {
-                height: 200px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .store-image {
-                height: 200px;
-            }
-        }
-        
-        @media (max-width: 360px) {
-            .store-image {
-                height: 200px;
-            }
+            height: 150px;
+            object-fit: cover;
         }
         
         .banner-image {
@@ -587,17 +560,19 @@
                             <h6 class="store-name"><%= store.name %></h6>
                             <p class="text-muted small"><%= store.description %></p>
                             
-                            <!-- 할인내용 한줄로 -->
+                            <!-- 할인내용 박스로 강조 -->
                             <div class="mb-2">
-                                <strong>할인내용:</strong> <%= store.discount || '할인 정보 없음' %>
+                                <div class="discount-info bg-light p-2 rounded">
+                                    <i class="fas fa-percent text-success me-1"></i>
+                                    <strong class="text-success">할인혜택:</strong>
+                                    <span class="ms-1"><%= store.discount || '할인 정보 없음' %></span>
+                                </div>
                             </div>
                             
-                            <!-- 할인조건 강조박스 -->
+                            <!-- 할인조건 명확한 글씨로 -->
                             <% if (store.discount_info) { %>
                             <div class="mb-2">
-                                <div class="discount-condition bg-info bg-opacity-10 p-2 rounded border border-info">
-                                    <strong class="text-dark">적용조건:</strong> <%= store.discount_info %>
-                                </div>
+                                <strong>적용조건:</strong> <%= store.discount_info %>
                             </div>
                             <% } %>
                         </div>
