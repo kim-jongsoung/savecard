@@ -475,10 +475,27 @@ const dbHelpers = {
     async getUsages(token = null) {
         if (dbMode === 'postgresql') {
             if (token) {
-                const result = await pool.query('SELECT * FROM usages WHERE token = $1 ORDER BY used_at DESC', [token]);
+                const result = await pool.query(`
+                    SELECT u.*, 
+                           users.name as customer_name,
+                           agencies.name as agency_name
+                    FROM usages u
+                    LEFT JOIN users ON u.token = users.token
+                    LEFT JOIN agencies ON users.agency_id = agencies.id
+                    WHERE u.token = $1 
+                    ORDER BY u.used_at DESC
+                `, [token]);
                 return result.rows;
             } else {
-                const result = await pool.query('SELECT * FROM usages ORDER BY used_at DESC');
+                const result = await pool.query(`
+                    SELECT u.*, 
+                           users.name as customer_name,
+                           agencies.name as agency_name
+                    FROM usages u
+                    LEFT JOIN users ON u.token = users.token
+                    LEFT JOIN agencies ON users.agency_id = agencies.id
+                    ORDER BY u.used_at DESC
+                `);
                 return result.rows;
             }
         } else {
