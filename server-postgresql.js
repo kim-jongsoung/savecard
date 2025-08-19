@@ -318,7 +318,7 @@ const dbHelpers = {
     // 제휴업체 관련
     async getStores() {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('SELECT * FROM stores ORDER BY name');
+            const result = await pool.query('SELECT * FROM stores ORDER BY usage_count DESC, name ASC');
             return result.rows;
         } else {
             return await jsonDB.findAll('stores');
@@ -369,13 +369,14 @@ const dbHelpers = {
                 phone = null,
                 website = null,
                 description = null,
-                image_url = null
+                image_url = null,
+                usage_count = 0
             } = storeData;
             const result = await pool.query(
                 `UPDATE stores SET name = $1, category = $2, discount = $3, discount_info = $4, 
-                 address = $5, phone = $6, website = $7, description = $8, image_url = $9, updated_at = NOW() 
-                 WHERE id = $10 RETURNING *`,
-                [name, category, discount, discount_info, address, phone, website, description, image_url, id]
+                 address = $5, phone = $6, website = $7, description = $8, image_url = $9, usage_count = $10, updated_at = NOW() 
+                 WHERE id = $11 RETURNING *`,
+                [name, category, discount, discount_info, address, phone, website, description, image_url, usage_count, id]
             );
             return result.rows[0];
         } else {
