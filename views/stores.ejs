@@ -298,6 +298,39 @@
             border-color: #4FC3F7;
         }
         
+        .store-image {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        /* 모바일에서도 데스크탑과 동일한 이미지 크기 유지 */
+        @media (max-width: 768px) {
+            .store-image {
+                height: 200px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .store-image {
+                height: 200px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .store-image {
+                height: 200px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .store-image {
+                height: 200px;
+            }
+        }
+        
         .banner-image {
             width: 100%;
             height: 200px;
@@ -529,20 +562,25 @@
                     <div class="store-card">
                         <img src="<%= store.image_url %>" alt="<%= store.name %>" class="store-image">
                         <!-- 카테고리, 누적사용, 상세정보 아이콘들 (이미지와 업체이름 사이) -->
-                        <div class="d-flex justify-content-between align-items-center mb-2 px-2">
-                            <span class="badge bg-primary">
-                                <i class="fas fa-fire me-1"></i><%= store.category %>
-                            </span>
-                            <span class="badge bg-warning text-dark">
-                                <i class="fas fa-fire me-1"></i><%= store.usage_count || 0 %>회
-                            </span>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="showStoreDetail('<%= store.id %>')" 
-                                    data-name="<%= store.name %>" 
-                                    data-description="<%= store.description || '' %>" 
-                                    data-address="<%= store.address || '' %>" 
-                                    data-website="<%= store.website || '' %>">
-                                <i class="fas fa-fire me-1"></i>상세정보
-                            </button>
+                        <div class="d-flex align-items-center justify-content-start gap-3 my-3 px-2">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-fire text-primary me-1"></i>
+                                <span class="small"><%= store.category %></span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-fire text-warning me-1"></i>
+                                <span class="small"><%= store.usage_count || 0 %>회</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-fire text-secondary me-1"></i>
+                                <button class="btn btn-link p-0 small text-decoration-none" onclick="showStoreDetail('<%= store.id %>')" 
+                                        data-name="<%= store.name %>" 
+                                        data-description="<%= store.description || '' %>" 
+                                        data-address="<%= store.address || '' %>" 
+                                        data-website="<%= store.website || '' %>">
+                                    상세정보
+                                </button>
+                            </div>
                         </div>
                         
                         <div class="store-content">
@@ -554,10 +592,12 @@
                                 <strong>할인내용:</strong> <%= store.discount || '할인 정보 없음' %>
                             </div>
                             
-                            <!-- 할인조건 검정글씨로 명확하게 -->
+                            <!-- 할인조건 강조박스 -->
                             <% if (store.discount_info) { %>
                             <div class="mb-2">
-                                <strong>적용조건:</strong> <%= store.discount_info %>
+                                <div class="discount-condition bg-info bg-opacity-10 p-2 rounded border border-info">
+                                    <strong class="text-dark">적용조건:</strong> <%= store.discount_info %>
+                                </div>
                             </div>
                             <% } %>
                         </div>
