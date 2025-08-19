@@ -1349,8 +1349,48 @@ app.get('/view-card/:token', (req, res) => {
     if (!token) {
         return res.redirect('/issue');
     }
-    // /card?token=... 형식으로 리다이렉트
-    res.redirect(`/card?token=${encodeURIComponent(token)}`);
+    res.redirect(`/card?token=${token}`);
+});
+
+// 관리자 전용 - 고객 카드 보기
+app.get('/admin/view-card/:token', requireAuth, async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        const user = await dbHelpers.getUserByToken(token);
+        if (!user) {
+            return res.render('error', {
+                title: '카드를 찾을 수 없습니다',
+                message: '유효하지 않은 카드입니다.',
+                error: { status: 404 }
+            });
+        }
+
+        const agency = await dbHelpers.getAgencyById(user.agency_id);
+        
+        // 사용 이력 조회 (최근 10개)
+        const usages = await dbHelpers.getUsages(token);
+        const recentUsages = usages
+            .sort((a, b) => new Date(b.used_at) - new Date(a.used_at))
+            .slice(0, 10);
+
+        res.render('my-card', {
+            title: '고객 카드 보기 - ' + (user.name || user.customer_name),
+            user: {
+                ...user,
+                agency_name: agency ? agency.name : 'Unknown'
+            },
+            usages: recentUsages,
+            isAdminView: true
+        });
+    } catch (error) {
+        console.error('관리자 카드 보기 오류:', error);
+        res.render('error', {
+            title: '오류 발생',
+            message: '카드 정보를 불러오는 중 오류가 발생했습니다.',
+            error: { status: 500 }
+        });
+    }
 });
 
 // 카드 사용 페이지 (QR 스캔)
