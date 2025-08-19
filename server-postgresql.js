@@ -2360,35 +2360,6 @@ app.get('/admin/stores/:id', requireAuth, async (req, res) => {
     }
 });
 
-// 제휴업체 수정 라우트 추가
-app.put('/admin/stores/:id', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const storeData = req.body;
-        
-        const store = await dbHelpers.updateStore(id, storeData);
-        
-        if (!store) {
-            return res.json({
-                success: false,
-                message: '제휴업체를 찾을 수 없습니다.'
-            });
-        }
-        
-        res.json({
-            success: true,
-            message: '제휴업체 정보가 성공적으로 수정되었습니다.',
-            store: store
-        });
-        
-    } catch (error) {
-        console.error('제휴업체 수정 오류:', error);
-        res.json({
-            success: false,
-            message: '제휴업체 수정 중 오류가 발생했습니다.'
-        });
-    }
-});
 
 // 제휴업체 삭제 라우트 추가
 app.delete('/admin/stores/:id', requireAuth, async (req, res) => {
