@@ -66,6 +66,26 @@
             font-weight: 600;
         }
         
+        .store-detail-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            color: #007bff;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s ease;
+        }
+        
+        .store-detail-btn:hover {
+            background: rgba(255,255,255,1);
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
         .store-content {
             padding: 16px;
             flex-grow: 1;
@@ -490,6 +510,14 @@
                             <div class="store-image-overlay">
                                 <i class="fas fa-fire me-1"></i>사용 <%= store.usage_count || 0 %>회
                             </div>
+                            <button class="btn store-detail-btn" onclick="showStoreDetail('<%= store.id %>')" 
+                                    data-name="<%= store.name %>" 
+                                    data-description="<%= store.description || '' %>" 
+                                    data-address="<%= store.address || '' %>" 
+                                    data-phone="<%= store.phone || '' %>" 
+                                    data-website="<%= store.website || '' %>">
+                                <i class="fas fa-info-circle me-1"></i>상세
+                            </button>
                         </div>
                         <div class="store-content">
                             <div class="store-category"><%= store.category %></div>
@@ -507,17 +535,6 @@
                             <% } %>
                             
                             
-                            
-                            <div class="text-center mt-auto pt-2">
-                                <button class="btn btn-outline-primary btn-sm" onclick="showStoreDetail('<%= store.id %>')" 
-                                        data-name="<%= store.name %>" 
-                                        data-description="<%= store.description || '' %>" 
-                                        data-address="<%= store.address || '' %>" 
-                                        data-phone="<%= store.phone || '' %>" 
-                                        data-website="<%= store.website || '' %>">
-                                    <i class="fas fa-info-circle me-1"></i>상세정보
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
