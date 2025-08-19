@@ -613,19 +613,21 @@ app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
             return res.redirect('/admin/stores?error=invalid_id');
         }
 
+        let nextVal;
         if (dbMode === 'postgresql') {
             const current = await pool.query('SELECT is_active FROM stores WHERE id = $1', [id]);
             if (current.rowCount === 0) return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
-            const nextVal = !Boolean(current.rows[0].is_active);
+            nextVal = !Boolean(current.rows[0].is_active);
             await pool.query('UPDATE stores SET is_active = $1, updated_at = NOW() WHERE id = $2', [nextVal, id]);
         } else {
             const store = await jsonDB.findById('stores', id);
             if (!store) return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
-            await jsonDB.update('stores', id, { is_active: store.is_active === false ? true : false });
+            nextVal = store.is_active === false ? true : false;
+            await jsonDB.update('stores', id, { is_active: nextVal });
         }
 
         if (wantsJson) {
-            return res.json({ success: true });
+            return res.json({ success: true, is_active: nextVal });
         } else {
             return res.redirect('/admin/stores?toggle=1');
         }
