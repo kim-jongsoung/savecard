@@ -612,6 +612,33 @@ app.post('/admin/stores', requireAuth, async (req, res) => {
     }
 });
 
+// 제휴업체 개별 조회 라우트 (수정 모달용) - PUT보다 먼저 정의
+app.get('/admin/stores/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const store = await dbHelpers.getStoreById(id);
+        
+        if (!store) {
+            return res.json({
+                success: false,
+                message: '제휴업체를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            store: store
+        });
+        
+    } catch (error) {
+        console.error('제휴업체 조회 오류:', error);
+        res.json({
+            success: false,
+            message: '제휴업체 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 제휴업체 수정 라우트
 app.put('/admin/stores/:id', requireAuth, async (req, res) => {
     try {
@@ -2341,32 +2368,6 @@ app.delete('/admin/agencies/:id/force', requireAuth, async (req, res) => {
     }
 });
 
-// 제휴업체 개별 조회 라우트 추가 (수정 모달용)
-app.get('/admin/stores/:id', requireAuth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const store = await dbHelpers.getStoreById(id);
-        
-        if (!store) {
-            return res.json({
-                success: false,
-                message: '제휴업체를 찾을 수 없습니다.'
-            });
-        }
-        
-        res.json({
-            success: true,
-            store: store
-        });
-        
-    } catch (error) {
-        console.error('제휴업체 조회 오류:', error);
-        res.json({
-            success: false,
-            message: '제휴업체 조회 중 오류가 발생했습니다.'
-        });
-    }
-});
 
 
 // 제휴업체 삭제 라우트 추가
