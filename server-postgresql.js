@@ -753,19 +753,32 @@ app.delete('/admin/stores/:id', requireAuth, async (req, res) => {
 // 제휴업체 활성/비활성 토글
 app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
     try {
+        console.log('제휴업체 토글 요청:', req.params.id);
         const wantsJson = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json'));
         const id = Number(req.params.id);
+        
         if (!Number.isFinite(id)) {
+            console.log('유효하지 않은 ID:', req.params.id);
             if (wantsJson) return res.json({ success: false, message: '유효하지 않은 ID' });
             return res.redirect('/admin/stores?error=invalid_id');
         }
 
         let nextVal;
         if (dbMode === 'postgresql') {
+            console.log('PostgreSQL에서 현재 상태 조회 중...');
             const current = await pool.query('SELECT is_active FROM stores WHERE id = $1', [id]);
-            if (current.rowCount === 0) return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
-            nextVal = !Boolean(current.rows[0].is_active);
+            
+            if (current.rowCount === 0) {
+                console.log('업체를 찾을 수 없음:', id);
+                return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
+            }
+            
+            const currentStatus = current.rows[0].is_active;
+            nextVal = !Boolean(currentStatus);
+            console.log(`업체 ${id} 상태 변경: ${currentStatus} -> ${nextVal}`);
+            
             await pool.query('UPDATE stores SET is_active = $1, updated_at = NOW() WHERE id = $2', [nextVal, id]);
+            console.log('상태 업데이트 완료');
         } else {
             const store = await jsonDB.findById('stores', id);
             if (!store) return res.json({ success: false, message: '업체를 찾을 수 없습니다.' });
@@ -774,7 +787,8 @@ app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
         }
 
         if (wantsJson) {
-            return res.json({ success: true, is_active: nextVal });
+            console.log('JSON 응답 반환:', { success: true, is_active: nextVal });
+            return res.json({ success: true, is_active: nextVal, message: `제휴업체가 ${nextVal ? '활성화' : '비활성화'}되었습니다.` });
         } else {
             return res.redirect('/admin/stores?toggle=1');
         }

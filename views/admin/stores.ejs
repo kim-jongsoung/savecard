@@ -497,24 +497,35 @@
             }
 
             try {
+                console.log('토글 요청 시작:', storeId);
                 const response = await fetch(`/admin/stores/${storeId}/toggle`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
                     credentials: 'same-origin'
                 });
 
+                console.log('응답 상태:', response.status);
+                console.log('응답 헤더:', response.headers.get('content-type'));
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
                 const result = await response.json();
+                console.log('서버 응답:', result);
                 
                 if (result.success) {
+                    alert(result.message || '상태가 변경되었습니다.');
                     location.reload();
                 } else {
                     alert('오류: ' + result.message);
                 }
             } catch (error) {
-                console.error('Error:', error);
-                alert('상태 변경 중 오류가 발생했습니다.');
+                console.error('토글 오류:', error);
+                alert('상태 변경 중 오류가 발생했습니다: ' + error.message);
             }
         }
 
