@@ -141,9 +141,9 @@
                         <tbody>
                             <% users.forEach(user => { %>
                                 <tr>
-                                    <td><strong><%= user.customer_name %></strong></td>
+                                    <td><strong><%= user.name || user.customer_name || '-' %></strong></td>
                                     <td><%= user.email || '-' %></td>
-                                    <td><%= user.agency_name %></td>
+                                    <td><%= user.agency_name || '-' %></td>
                                     <td>
                                         <code class="small"><%= user.token.substring(0, 8) %>...</code>
                                         <button class="btn btn-sm btn-outline-secondary ms-1" 

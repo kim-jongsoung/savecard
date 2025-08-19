@@ -145,7 +145,12 @@ const dbHelpers = {
     // 사용자 관련
     async getUsers() {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
+            const result = await pool.query(`
+                SELECT u.*, a.name as agency_name 
+                FROM users u 
+                LEFT JOIN agencies a ON u.agency_id = a.id 
+                ORDER BY u.created_at DESC
+            `);
             return result.rows;
         } else {
             return await jsonDB.findAll('users');
