@@ -162,7 +162,7 @@
                                     <td><strong><%= usage.customer_name %></strong></td>
                                     <td><%= usage.agency_name %></td>
                                     <td>
-                                        <i class="fas fa-store me-1"></i><%= usage.store_code %>
+                                        <i class="fas fa-store me-1"></i><%= usage.store_name || usage.store_code || '제휴처 정보 없음' %>
                                     </td>
                                     <td>
                                         <i class="fas fa-clock me-1"></i>
