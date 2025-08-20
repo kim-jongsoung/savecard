@@ -1,0 +1,97 @@
+<!-- 모바일 상단 네비게이션 -->
+<nav class="mobile-nav d-md-none">
+    <div class="mobile-nav-container">
+        <div class="mobile-nav-tabs">
+            <a href="/" class="mobile-nav-tab <%= currentPage === 'home' ? 'active' : '' %>">
+                <i class="fas fa-home"></i>
+                <span>메인</span>
+            </a>
+            <a href="/register" class="mobile-nav-tab <%= currentPage === 'register' ? 'active' : '' %>">
+                <i class="fas fa-id-card"></i>
+                <span>카드발급</span>
+            </a>
+            <a href="/my-card" class="mobile-nav-tab <%= currentPage === 'my-card' ? 'active' : '' %>">
+                <i class="fas fa-credit-card"></i>
+                <span>내카드</span>
+            </a>
+            <a href="/stores" class="mobile-nav-tab <%= currentPage === 'stores' ? 'active' : '' %>">
+                <i class="fas fa-store"></i>
+                <span>제휴업체</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<style>
+.mobile-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.mobile-nav-container {
+    padding: 10px 15px;
+}
+
+.mobile-nav-tabs {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.mobile-nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 8px 12px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    min-width: 60px;
+}
+
+.mobile-nav-tab:hover,
+.mobile-nav-tab.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.mobile-nav-tab i {
+    font-size: 18px;
+    margin-bottom: 4px;
+}
+
+.mobile-nav-tab span {
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* 모바일에서 body에 상단 여백 추가 */
+@media (max-width: 767.98px) {
+    body {
+        padding-top: 70px;
+    }
+    
+    .container {
+        padding-top: 10px;
+    }
+}
+
+/* 데스크톱에서는 숨김 */
+@media (min-width: 768px) {
+    .mobile-nav {
+        display: none !important;
+    }
+    
+    body {
+        padding-top: 0 !important;
+    }
+}
+</style>
