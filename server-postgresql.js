@@ -10,21 +10,16 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
-let dbMode = 'postgresql';
-let pool, testConnection, createTables, migrateFromJSON, ensureAllColumns;
+const { pool, dbMode, testConnection, createTables, ensureAllColumns, migrateFromJSON } = require('./database');
 let jsonDB;
 
 try {
-    const dbModule = require('./database');
-    pool = dbModule.pool;
-    testConnection = dbModule.testConnection;
-    createTables = dbModule.createTables;
-    migrateFromJSON = dbModule.migrateFromJSON;
-    ensureAllColumns = dbModule.ensureAllColumns;
+    if (dbMode === 'json') {
+        console.log('📋 JSON 모드로 실행');
+        jsonDB = require('./utils/jsonDB');
+    }
 } catch (error) {
-    console.warn('⚠️ PostgreSQL 모듈 로드 실패, JSON 데이터베이스로 fallback:', error.message);
-    dbMode = 'json';
-    jsonDB = require('./utils/jsonDB');
+    console.warn('⚠️ 데이터베이스 모듈 로드 실패:', error.message);
 }
 
 const app = express();

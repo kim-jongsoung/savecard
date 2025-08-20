@@ -1,20 +1,30 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Railway PostgreSQL 연결 설정
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+// Railway PostgreSQL 연결 설정 (로컬에서는 JSON 모드로 fallback)
+let pool = null;
+let dbMode = 'json';
 
-// 환경변수 확인
-if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL && !process.env.DB_URL) {
-  console.warn('⚠️ PostgreSQL 연결 문자열이 설정되지 않았습니다.');
-  console.warn('환경변수 DATABASE_URL, POSTGRES_URL, 또는 DB_URL을 설정해주세요.');
+try {
+  if (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+    dbMode = 'postgresql';
+    console.log('✅ PostgreSQL 모드로 실행');
+  } else {
+    console.log('⚠️ PostgreSQL 연결 정보 없음 - JSON 모드로 fallback');
+    dbMode = 'json';
+  }
+} catch (error) {
+  console.warn('⚠️ PostgreSQL 연결 실패 - JSON 모드로 fallback:', error.message);
+  dbMode = 'json';
 }
 
 // 운영 안정화: 필요한 모든 컬럼을 사전에 보정(존재하지 않으면 추가)
 async function ensureAllColumns() {
+  if (dbMode !== 'postgresql' || !pool) return;
   const client = await pool.connect();
   try {
     // users
@@ -124,19 +134,27 @@ async function ensureAllColumns() {
 
 // 데이터베이스 연결 테스트
 async function testConnection() {
+  if (dbMode !== 'postgresql' || !pool) {
+    console.log('📋 JSON 모드로 실행 중 - 데이터베이스 연결 테스트 건너뜀');
+    return true;
+  }
   try {
     const client = await pool.connect();
     console.log('✅ Railway PostgreSQL 연결 성공!');
     client.release();
     return true;
   } catch (err) {
-    console.error('❌ 데이터베이스 연결 실패:', err.message);
+    console.error('❌ PostgreSQL 연결 실패:', err.message);
     return false;
   }
 }
 
 // 테이블 생성 함수
 async function createTables() {
+  if (dbMode !== 'postgresql' || !pool) {
+    console.log('📋 JSON 모드로 실행 중 - 테이블 생성 건너뜀');
+    return;
+  }
   const client = await pool.connect();
   
   try {
@@ -257,6 +275,11 @@ async function createTables() {
 
 // 기존 JSON 데이터를 PostgreSQL로 마이그레이션
 async function migrateFromJSON() {
+  if (dbMode !== 'postgresql' || !pool) {
+    console.log('📋 JSON 모드로 실행 중 - 마이그레이션 건너뜀');
+    return;
+  }
+  
   const fs = require('fs');
   const path = require('path');
   
@@ -274,8 +297,9 @@ async function migrateFromJSON() {
 
 module.exports = {
   pool,
+  dbMode,
   testConnection,
   createTables,
-  migrateFromJSON,
-  ensureAllColumns
+  ensureAllColumns,
+  migrateFromJSON
 };
