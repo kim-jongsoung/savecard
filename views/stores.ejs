@@ -452,46 +452,73 @@
             border-color: white;
             transform: scale(1.05);
         }
+        
+        /* 해시태그 스타일 */
+        .hashtag-filter {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 auto;
+            max-width: 800px;
+        }
+        
+        .hashtag {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-decoration: none;
+            user-select: none;
+        }
+        
+        .hashtag:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hashtag.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            font-weight: 600;
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+        
+        @media (max-width: 768px) {
+            .hashtag {
+                font-size: 12px;
+                padding: 5px 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- 모바일 네비게이션 포함 -->
     <%- include('partials/mobile-nav', { currentPage: 'stores' }) %>
     <div class="container">
-        <h1 class="text-center text-white mb-5 mt-5">
+        <h1 class="text-center text-white mb-3 mt-4">
             <i class="fas fa-store me-3"></i>제휴업체 목록
         </h1>
 
-        <!-- 카테고리 필터 -->
-        <div class="text-center mb-5" style="padding-top: 20px; padding-bottom: 20px;">
-            <div class="category-filter">
-                <button type="button" class="btn btn-outline-light active" onclick="filterByCategory('전체')">
-                    <i class="fas fa-th-large me-2"></i>전체
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('쇼핑')">
-                    <i class="fas fa-shopping-bag me-2"></i>쇼핑
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('카페')">
-                    <i class="fas fa-coffee me-2"></i>카페
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('레스토랑')">
-                    <i class="fas fa-utensils me-2"></i>레스토랑
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('바')">
-                    <i class="fas fa-cocktail me-2"></i>바
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('관광/액티비티')">
-                    <i class="fas fa-camera me-2"></i>관광/액티비티
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('스파/마사지')">
-                    <i class="fas fa-spa me-2"></i>스파/마사지
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('주유소')">
-                    <i class="fas fa-gas-pump me-2"></i>주유소
-                </button>
-                <button type="button" class="btn btn-outline-light" onclick="filterByCategory('기타')">
-                    <i class="fas fa-ellipsis-h me-2"></i>기타
-                </button>
+        <!-- 카테고리 필터 (해시태그 스타일) -->
+        <div class="text-center mb-4">
+            <div class="hashtag-filter">
+                <span class="hashtag active" onclick="filterByCategory('전체')">#전체</span>
+                <span class="hashtag" onclick="filterByCategory('쇼핑')">#쇼핑</span>
+                <span class="hashtag" onclick="filterByCategory('카페')">#카페</span>
+                <span class="hashtag" onclick="filterByCategory('레스토랑')">#레스토랑</span>
+                <span class="hashtag" onclick="filterByCategory('바')">#바</span>
+                <span class="hashtag" onclick="filterByCategory('관광/액티비티')">#관광액티비티</span>
+                <span class="hashtag" onclick="filterByCategory('스파/마사지')">#스파마사지</span>
+                <span class="hashtag" onclick="filterByCategory('주유소')">#주유소</span>
+                <span class="hashtag" onclick="filterByCategory('기타')">#기타</span>
             </div>
         </div>
 
