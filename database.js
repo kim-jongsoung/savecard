@@ -105,6 +105,7 @@ async function ensureAllColumns() {
       ADD COLUMN IF NOT EXISTS advertiser_name VARCHAR(255),
       ADD COLUMN IF NOT EXISTS image_url VARCHAR(500),
       ADD COLUMN IF NOT EXISTS link_url VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS description TEXT,
       ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
       ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0,
       ADD COLUMN IF NOT EXISTS display_locations INTEGER[] DEFAULT '{1}',

@@ -410,14 +410,15 @@ const dbHelpers = {
                 advertiser_name,
                 image_url,
                 link_url = null,
+                description = null,
                 is_active = true,
                 display_order = 0,
                 display_locations = [1]
             } = bannerData;
             const result = await pool.query(
-                `INSERT INTO banners (advertiser_name, image_url, link_url, is_active, display_order, display_locations)
-                 VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-                [advertiser_name, image_url, link_url, is_active, display_order, display_locations]
+                `INSERT INTO banners (advertiser_name, image_url, link_url, description, is_active, display_order, display_locations)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+                [advertiser_name, image_url, link_url, description, is_active, display_order, display_locations]
             );
             return result.rows[0];
         } else {
@@ -431,15 +432,16 @@ const dbHelpers = {
                 advertiser_name,
                 image_url,
                 link_url = null,
+                description = null,
                 is_active = true,
                 display_order = 0,
                 display_locations = [1]
             } = bannerData;
             const result = await pool.query(
-                `UPDATE banners SET advertiser_name = $1, image_url = $2, link_url = $3, 
-                 is_active = $4, display_order = $5, display_locations = $6, updated_at = NOW() 
-                 WHERE id = $7 RETURNING *`,
-                [advertiser_name, image_url, link_url, is_active, display_order, display_locations, id]
+                `UPDATE banners SET advertiser_name = $1, image_url = $2, link_url = $3, description = $4,
+                 is_active = $5, display_order = $6, display_locations = $7, updated_at = NOW() 
+                 WHERE id = $8 RETURNING *`,
+                [advertiser_name, image_url, link_url, description, is_active, display_order, display_locations, id]
             );
             return result.rows[0];
         } else {
@@ -1043,20 +1045,16 @@ app.post('/admin/banners', requireAuth, async (req, res) => {
             return res.redirect('/admin/banners?error=missing_image');
         }
 
-        // DB 스키마에 제목/설명 컬럼이 없으므로 광고주명에 제목을 우선 반영
+        // 배너 생성 (description 필드 포함)
         const banner = await dbHelpers.createBanner({
             advertiser_name: title || advertiser_name,
             image_url,
             link_url,
+            description,
             is_active: true,
             display_order,
             display_locations: finalLocations
         });
-
-        // JSON 모드의 경우 description 등 추가 필드도 저장
-        if (dbMode === 'json' && description) {
-            await jsonDB.update('banners', banner.id, { description });
-        }
 
         if (wantsJson) {
             return res.json({ success: true, message: '배너가 추가되었습니다.', banner });
