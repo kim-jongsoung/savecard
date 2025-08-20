@@ -420,13 +420,15 @@
     </style>
 </head>
 <body>
-    <!-- 모바일 네비게이션 포함 -->
-    <%- include('partials/mobile-nav', { currentPage: 'stores' }) %>
+    <!-- 네비게이션 포함 -->
+    <%- include('partials/mobile-nav') %>
+    <%- include('partials/desktop-nav') %>
     <!-- 비밀번호 인증 모달 -->
     <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
+{{ ... }}
                     <h5 class="modal-title" id="passwordModalLabel">
                         <i class="fas fa-lock me-2"></i>카드 비밀번호 입력
                     </h5>
