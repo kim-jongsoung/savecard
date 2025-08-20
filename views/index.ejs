@@ -425,14 +425,14 @@
             <% } %>
             
             <h1 class="hero-title">
-                GUAM SAVE
+                GUAM SAVE CARD
                 <% if (partnerAgency) { %>
                     <small class="text-light opacity-75 d-block" style="font-size: 0.5em; margin-top: 10px;">
                         (<%= partnerAgency.name %>)
                     </small>
                 <% } %>
             </h1>
-            <p class="hero-subtitle">괌 여행의 모든 할인 혜택을 한 번에!</p>
+            <p class="hero-subtitle">괄 여행 필수품, 단 하나의 QR로 30만원 이상의 혜택을!</p>
             <div class="cta-buttons">
                 <a href="<% if (partnerAgency) { %>/register?agency=<%= partnerAgency.code %><% } else { %>/register<% } %>" class="btn btn-primary btn-lg me-3">
                     <i class="fas fa-credit-card me-2"></i>할인카드 발급받기
@@ -454,30 +454,30 @@
             <div class="col-md-4">
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <i class="fas fa-qrcode"></i>
+                        <i class="fas fa-gem"></i>
                     </div>
-                    <h4>간편한 QR 할인</h4>
-                    <p>QR 코드 하나로 괌 전역의 제휴처에서 할인 혜택을 받으세요. 복잡한 쿠폰은 이제 그만!</p>
+                    <h4>💰 무료로 받는 30만원+ 혜택</h4>
+                    <p>제휴 매장에서만 받을 수 있는 독점 할인<br>쇼핑, 레스토랑, 투어, 교통까지 실속 있는 혜택<br>카드 한 장으로 여행 경비를 확 줄여드립니다</p>
                 </div>
             </div>
             
             <div class="col-md-4">
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <i class="fas fa-store"></i>
+                        <i class="fas fa-mobile-alt"></i>
                     </div>
-                    <h5>다양한 제휴업체</h5>
-                    <p>쇼핑, 레스토랑, 관광지 등 괌의 모든 주요 업체에서 할인 혜택을 제공합니다.</p>
+                    <h4>📲 초간편 발급 & 사용</h4>
+                    <p>발급비 무료 – 신청 즉시 QR 카드 발급<br>QR 스캔 한 번으로 즉시 할인 적용<br>복잡한 쿠폰, 번거로운 바우처는 이제 안녕!</p>
                 </div>
             </div>
             
             <div class="col-md-4 mb-4">
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <i class="fas fa-mobile-alt"></i>
+                        <i class="fas fa-globe-asia"></i>
                     </div>
-                    <h5>간편한 사용</h5>
-                    <p>QR 코드 스캔만으로 즉시 할인 혜택을 받을 수 있습니다.</p>
+                    <h4>🌏 괄 여행의 필수 아이템</h4>
+                    <p><strong>한국인 관광객 1,000명+</strong>이 이미 사용<br>5,000건 이상의 할인 적용으로 검증된 만족도<br>괄을 즐기는 똑똑한 방법, 이제 선택이 아닌 필수</p>
                 </div>
             </div>
         </div>
@@ -493,20 +493,20 @@
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="stat-item">
-                        <span class="stat-number">1000+</span>
-                        <span class="stat-label">발급된 카드</span>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="stat-item">
-                        <span class="stat-number">5000+</span>
-                        <span class="stat-label">할인 사용</span>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="stat-item">
                         <span class="stat-number">98%</span>
-                        <span class="stat-label">만족도</span>
+                        <span class="stat-label">사용자 만족도</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-item">
+                        <span class="stat-number">억단위</span>
+                        <span class="stat-label">누적 혜택 절감</span>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="stat-item">
+                        <span class="stat-number">1000+</span>
+                        <span class="stat-label">한국인 관광객</span>
                     </div>
                 </div>
             </div>
@@ -537,9 +537,49 @@
         </div>
         <% } %>
 
+        <!-- Success Stories Section -->
+        <div class="success-stories-section mb-5">
+            <div class="row">
+                <div class="col-12 text-center mb-4">
+                    <h3 class="text-white mb-3">🎆 사용자 후기 & 성공 사례</h3>
+                    <p class="text-white opacity-75">실제 사용자들의 생생한 후기를 확인해보세요</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-quote-left" style="color: #4FC3F7;"></i>
+                        </div>
+                        <p class="mb-3">"가족 4명이 3박 4일 괄 여행에서 <strong>25만원 절약</strong>했어요! 레스토랑, 쇼핑몰에서 엄청난 할인 받았습니다."</p>
+                        <small class="text-muted">- 김★★ 고객 (서울)</small>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-quote-left" style="color: #4FC3F7;"></i>
+                        </div>
+                        <p class="mb-3">"신혼여행에서 사용했는데 <strong>호텔 레스토랑부터 쇼핑까지</strong> 모든 곳에서 할인이 되더라고요. 정말 편리해요!"</p>
+                        <small class="text-muted">- 박★★ 고객 (부산)</small>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="feature-card text-center">
+                        <div class="feature-icon">
+                            <i class="fas fa-quote-left" style="color: #4FC3F7;"></i>
+                        </div>
+                        <p class="mb-3">"친구들과 같이 갔는데 <strong>QR 하나로 모든 곳에서 할인</strong>이 되니까 너무 신기하고 편해요. 다음에도 꼭 사용할거예요!"</p>
+                        <small class="text-muted">- 이★★ 고객 (대구)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- CTA Section -->
         <div class="text-center mb-5">
-            <h3 class="text-white mb-4">지금 바로 괌세이브카드를 발급받으세요!</h3>
+            <h3 class="text-white mb-4">🚀 지금 바로 발급하세요!</h3>
+            <p class="text-white mb-4 opacity-90">👉 무료 발급으로 괄 전역에서 VIP처럼 할인 혜택을 누리세요.</p>
             <a href="/register" class="btn btn-hero btn-lg">
                 <i class="fas fa-rocket me-2"></i>무료 발급 시작하기
             </a>
