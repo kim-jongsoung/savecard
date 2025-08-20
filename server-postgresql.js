@@ -1086,6 +1086,7 @@ app.get('/', async (req, res) => {
     try {
         res.render('index', {
             title: '괌세이브카드',
+            currentPage: 'home',
             agencies,
             banners,
             partnerAgency: null
@@ -1131,6 +1132,7 @@ app.get('/partner/:code', async (req, res) => {
 
         res.render('index', {
             title: `괌세이브카드 - ${partnerAgency.name}`,
+            currentPage: 'home',
             agencies,
             banners,
             partnerAgency: partnerAgency
@@ -1143,24 +1145,6 @@ app.get('/partner/:code', async (req, res) => {
             message: '페이지를 불러오는 중 오류가 발생했습니다.',
             error: { status: 500, message: error.message }
         });
-    }
-});
-
-// 진단용 라우트 (임시)
-app.get('/__diag', async (req, res) => {
-    try {
-        const [agencies, banners] = await Promise.all([
-            dbHelpers.getAgencies().catch(e => { console.warn('diag agencies fail', e.message); return []; }),
-            dbHelpers.getBanners().catch(e => { console.warn('diag banners fail', e.message); return []; })
-        ]);
-        res.json({
-            ok: true,
-            mode: dbMode,
-            agencies_count: agencies.length,
-            banners_count: banners.length
-        });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e.message, mode: dbMode });
     }
 });
 
@@ -1186,6 +1170,7 @@ app.get('/partner/:agencyCode', async (req, res) => {
         
         res.render('index', {
             title: `${agency.name} - 괌세이브카드`,
+            currentPage: 'home',
             agency: agency,
             banners: banners,
             partnerMode: true,
@@ -1279,6 +1264,7 @@ app.get('/stores', async (req, res) => {
         
         res.render('stores', {
             title: '제휴업체',
+            currentPage: 'stores',
             stores: stores,
             banners: banners,
             categories: categories
@@ -1287,6 +1273,7 @@ app.get('/stores', async (req, res) => {
         console.error('제휴업체 목록 오류:', error);
         res.render('stores', {
             title: '제휴업체',
+            currentPage: 'stores',
             stores: [],
             banners: [],
             categories: {}
@@ -1314,6 +1301,7 @@ app.get('/partner-apply', (req, res) => {
 app.get('/login', (req, res) => {
     res.render('login', {
         title: '로그인',
+        currentPage: 'my-card',
         error: null,
         success: null
     });
@@ -1327,6 +1315,7 @@ app.post('/login', async (req, res) => {
         if (!email || !password) {
             return res.render('login', {
                 title: '로그인',
+                currentPage: 'my-card',
                 error: '이메일과 비밀번호를 입력해주세요.',
                 success: null
             });
@@ -1335,6 +1324,7 @@ app.post('/login', async (req, res) => {
         if (!/^[0-9]{4}$/.test(password)) {
             return res.render('login', {
                 title: '로그인',
+                currentPage: 'my-card',
                 error: '비밀번호는 4자리 숫자여야 합니다.',
                 success: null
             });
@@ -1353,6 +1343,7 @@ app.post('/login', async (req, res) => {
         if (!user) {
             return res.render('login', {
                 title: '로그인',
+                currentPage: 'my-card',
                 error: '등록되지 않은 이메일입니다.',
                 success: null
             });
@@ -1361,6 +1352,7 @@ app.post('/login', async (req, res) => {
         if (!user.pin) {
             return res.render('login', {
                 title: '로그인',
+                currentPage: 'my-card',
                 error: '비밀번호가 설정되지 않았습니다. 관리자에게 문의해주세요.',
                 success: null
             });
@@ -1371,6 +1363,7 @@ app.post('/login', async (req, res) => {
         if (!isPasswordValid) {
             return res.render('login', {
                 title: '로그인',
+                currentPage: 'my-card',
                 error: '비밀번호가 일치하지 않습니다.',
                 success: null
             });
@@ -1383,6 +1376,7 @@ app.post('/login', async (req, res) => {
         console.error('사용자 로그인 오류:', error);
         res.render('login', {
             title: '로그인',
+            currentPage: 'my-card',
             error: '로그인 처리 중 오류가 발생했습니다.',
             success: null
         });
@@ -1402,6 +1396,7 @@ app.get('/register', async (req, res) => {
         
         res.render('register', {
             title: '카드 발급',
+            currentPage: 'register',
             agencies: agencies,
             error: null,
             success: null,
@@ -1411,6 +1406,7 @@ app.get('/register', async (req, res) => {
         console.error('카드 발급 페이지 오류:', error);
         res.render('register', {
             title: '카드 발급',
+            currentPage: 'register',
             agencies: [],
             error: null,
             success: null,
@@ -1431,6 +1427,7 @@ app.get('/login', (req, res) => {
 app.get('/my-card', (req, res) => {
     res.render('my-card', {
         title: '내 카드',
+        currentPage: 'my-card',
         user: null,
         usages: []
     });
@@ -1711,6 +1708,7 @@ app.get('/my-card', async (req, res) => {
         
         res.render('my-card', {
             title: '내 카드',
+            currentPage: 'my-card',
             user: { ...user, agency_name: agency ? agency.name : 'Unknown' },
             usages: usages.slice(0, 5)
         });
@@ -1800,7 +1798,8 @@ app.get('/card', async (req, res) => {
             : null;
 
         res.render('card', {
-            title: '괌세이브카드',
+            title: '괄세이브카드',
+            currentPage: 'card',
             user: { 
                 ...user, 
                 agency_name: agency ? agency.name : 'Unknown',
