@@ -1250,6 +1250,11 @@ app.get('/register/success', async (req, res) => {
 // 제휴업체 목록 페이지
 app.get('/stores', async (req, res) => {
     try {
+        let partnerAgency = null;
+        if (req.query.agency) {
+            partnerAgency = await dbHelpers.getAgencyByCode(req.query.agency);
+        }
+        
         const stores = await dbHelpers.getStores();
         const banners = await dbHelpers.getBanners();
         
@@ -1268,7 +1273,8 @@ app.get('/stores', async (req, res) => {
             currentPage: 'stores',
             stores: stores,
             banners: banners,
-            categories: categories
+            categories: categories,
+            partnerAgency: partnerAgency
         });
     } catch (error) {
         console.error('제휴업체 목록 오류:', error);
@@ -1277,7 +1283,8 @@ app.get('/stores', async (req, res) => {
             currentPage: 'stores',
             stores: [],
             banners: [],
-            categories: {}
+            categories: {},
+            partnerAgency: null
         });
     }
 });
@@ -1299,13 +1306,30 @@ app.get('/partner-apply', (req, res) => {
 });
 
 // 사용자 로그인 페이지
-app.get('/login', (req, res) => {
-    res.render('login', {
-        title: '로그인',
-        currentPage: 'my-card',
-        error: null,
-        success: null
-    });
+app.get('/login', async (req, res) => {
+    try {
+        let partnerAgency = null;
+        if (req.query.agency) {
+            partnerAgency = await dbHelpers.getAgencyByCode(req.query.agency);
+        }
+        
+        res.render('login', {
+            title: '로그인',
+            currentPage: 'my-card',
+            error: null,
+            success: null,
+            partnerAgency: partnerAgency
+        });
+    } catch (error) {
+        console.error('로그인 페이지 오류:', error);
+        res.render('login', {
+            title: '로그인',
+            currentPage: 'my-card',
+            error: null,
+            success: null,
+            partnerAgency: null
+        });
+    }
 });
 
 // 사용자 로그인 처리
@@ -1401,7 +1425,8 @@ app.get('/register', async (req, res) => {
             agencies: agencies,
             error: null,
             success: null,
-            selectedAgency: selectedAgency
+            selectedAgency: selectedAgency,
+            partnerAgency: selectedAgency
         });
     } catch (error) {
         console.error('카드 발급 페이지 오류:', error);
@@ -1411,7 +1436,8 @@ app.get('/register', async (req, res) => {
             agencies: [],
             error: null,
             success: null,
-            selectedAgency: null
+            selectedAgency: null,
+            partnerAgency: null
         });
     }
 });
