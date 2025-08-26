@@ -437,10 +437,10 @@
                 <a href="<% if (partnerAgency) { %>/register?agency=<%= partnerAgency.code %><% } else { %>/register<% } %>" class="btn btn-primary btn-lg me-3">
                     <i class="fas fa-credit-card me-2"></i>할인카드 발급받기
                 </a>
-                <a href="/login" class="btn btn-outline-light btn-lg me-3">
+                <a href="<% if (partnerAgency) { %>/login?agency=<%= partnerAgency.code %><% } else { %>/login<% } %>" class="btn btn-outline-light btn-lg me-3">
                     <i class="fas fa-id-card me-2"></i>내 카드 보기
                 </a>
-                <a href="/stores" class="btn btn-outline-light btn-lg me-3">
+                <a href="<% if (partnerAgency) { %>/stores?agency=<%= partnerAgency.code %><% } else { %>/stores<% } %>" class="btn btn-outline-light btn-lg me-3">
                     <i class="fas fa-store me-2"></i>제휴업체 보기
                 </a>
                 <a href="#features" class="btn btn-outline-light btn-lg">
@@ -580,7 +580,7 @@
         <div class="text-center mb-5">
             <h3 class="text-white mb-4">🚀 지금 바로 발급하세요!</h3>
             <p class="text-white mb-4 opacity-90">👉 무료 발급으로 괌 전역에서 VIP처럼 할인 혜택을 누리세요.</p>
-            <a href="/register" class="btn btn-hero btn-lg">
+            <a href="<% if (partnerAgency) { %>/register?agency=<%= partnerAgency.code %><% } else { %>/register<% } %>" class="btn btn-hero btn-lg">
                 <i class="fas fa-rocket me-2"></i>무료 발급 시작하기
             </a>
         </div>
