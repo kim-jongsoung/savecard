@@ -375,37 +375,40 @@
         }
         
         .partner-banner-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 30px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-            border: 2px solid rgba(255,255,255,0.2);
-            color: white;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: var(--text-dark);
         }
         
         .partner-banner-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
-            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            border-color: var(--primary-color);
         }
         
         .btn-partner-apply {
-            background: rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: none;
             padding: 12px 24px;
             border-radius: 25px;
             font-weight: 600;
+            font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
         }
         
         .btn-partner-apply:hover {
-            background: white;
-            color: #667eea;
-            border-color: white;
-            transform: scale(1.05);
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(79, 195, 247, 0.4);
         }
     </style>
 </head>
@@ -605,8 +608,8 @@
                         <h4 class="mb-2">
                             <i class="fas fa-store me-2"></i>한국인 관광객에게 매장을 알리고 혜택을 제공하세요
                         </h4>
-                        <p class="mb-1">괌세이브카드에 입점하면 매출이 달라집니다.</p>
-                        <small class="text-light">Promote your store to Korean tourists and increase your sales.<br>Join Guam Save Card and see the difference in your business.</small>
+                        <p class="mb-1" style="color: var(--text-light);">괌세이브카드에 입점하면 매출이 달라집니다.</p>
+                        <small style="color: var(--text-light); opacity: 0.8;">Promote your store to Korean tourists and increase your sales.<br>Join Guam Save Card and see the difference in your business.</small>
                     </div>
                     <div class="col-md-4 text-end">
                         <button class="btn btn-partner-apply">
