@@ -6,8 +6,21 @@
   <title><%= title %> - 괌세이브카드</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --max-width: 1240px;
+      --primary-color: #4FC3F7;
+      --secondary-color: #667eea;
+      --accent-color: #87CEEB;
+      --text-dark: #333;
+      --text-light: #666;
+    }
+    
     body { 
+      font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif;
       background: linear-gradient(135deg, #87CEEB 0%, #4FC3F7 100%);
       min-height: 100vh;
       margin: 0;
@@ -22,7 +35,7 @@
   <!-- 네비게이션 포함 -->
   <%- include('partials/mobile-nav') %>
   <%- include('partials/desktop-nav') %>
-  <div class="container">
+  <div class="container" style="max-width: var(--max-width);">
     <div class="login-card">
       <div class="text-center mb-3">
         <i class="fas fa-user-circle fa-3x text-primary mb-2"></i>

@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>괌세이브카드 제휴업체 매뉴얼</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+        
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            padding: 60px;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .slide.active {
+            display: flex;
+        }
+        
+        .slide h1 {
+            font-size: 3.5rem;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .slide h2 {
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            color: #87CEEB;
+        }
+        
+        .slide h3 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #FFD700;
+        }
+        
+        .slide p, .slide li {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            max-width: 900px;
+            line-height: 1.8;
+        }
+        
+        .slide ul {
+            text-align: left;
+            max-width: 800px;
+        }
+        
+        .slide li {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+        
+        .highlight {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .step-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 15px 0;
+            max-width: 700px;
+        }
+        
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 30px 0;
+        }
+        
+        .benefit-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 15px 25px;
+            margin: 0 10px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .slide-counter {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+        }
+        
+        .qr-demo {
+            width: 200px;
+            height: 200px;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            color: #333;
+            font-size: 1.2rem;
+        }
+        
+        .contact-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .slide {
+                padding: 30px 20px;
+            }
+            
+            .slide h1 {
+                font-size: 2.5rem;
+            }
+            
+            .slide h2 {
+                font-size: 2rem;
+            }
+            
+            .slide p, .slide li {
+                font-size: 1.2rem;
+            }
+            
+            .benefit-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 슬라이드 카운터 -->
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / <span id="total-slides">12</span>
+    </div>
+    
+    <!-- 네비게이션 -->
+    <div class="navigation">
+        <button class="nav-btn" onclick="prevSlide()">◀ 이전</button>
+        <button class="nav-btn" onclick="nextSlide()">다음 ▶</button>
+    </div>
+
+    <!-- 슬라이드 1: 타이틀 -->
+    <div class="slide active">
+        <div class="icon">🏝️</div>
+        <h1>괌세이브카드</h1>
+        <h2>제휴업체 & 계약여행사 매뉴얼</h2>
+        <div class="highlight">
+            <p>스마트한 할인카드 시스템으로<br>고객 만족도와 매출을 동시에 높이세요!</p>
+        </div>
+        <p style="margin-top: 40px; font-size: 1.2rem; opacity: 0.8;">
+            🌐 www.guamsavecard.com
+        </p>
+    </div>
+
+    <!-- 슬라이드 2: 서비스 소개 -->
+    <div class="slide">
+        <h2>🎯 괌세이브카드란?</h2>
+        <div class="highlight">
+            <h3>괌 여행객을 위한 디지털 할인카드 시스템</h3>
+            <p>QR 코드 기반의 간편한 할인 처리로<br>고객과 제휴업체 모두에게 편리함을 제공합니다</p>
+        </div>
+        
+        <div class="benefit-grid">
+            <div class="benefit-card">
+                <div class="icon">📱</div>
+                <h3>모바일 최적화</h3>
+                <p>스마트폰으로 간편하게 사용</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">⚡</div>
+                <h3>실시간 처리</h3>
+                <p>즉시 할인 적용 및 이력 저장</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">🔄</div>
+                <h3>무제한 사용</h3>
+                <p>하루 여러 번 사용 가능</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬라이드 3: 제휴업체 혜택 -->
+    <div class="slide">
+        <h2>💼 제휴업체 혜택</h2>
+        
+        <div class="benefit-grid">
+            <div class="benefit-card">
+                <div class="icon">👥</div>
+                <h3>고객 유치</h3>
+                <p>여행사를 통한 안정적인 고객 확보</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">📈</div>
+                <h3>매출 증대</h3>
+                <p>할인 혜택으로 구매 유도 및 재방문 촉진</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">🎯</div>
+                <h3>타겟 마케팅</h3>
+                <p>한국 관광객 대상 집중 마케팅</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">💰</div>
+                <h3>비용 절약</h3>
+                <p>별도 시스템 구축 없이 간편 도입</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬라이드 4: 계약여행사 혜택 -->
+    <div class="slide">
+        <h2>✈️ 계약여행사 혜택</h2>
+        
+        <div class="benefit-grid">
+            <div class="benefit-card">
+                <div class="icon">⭐</div>
+                <h3>고객 만족도 향상</h3>
+                <p>다양한 할인 혜택으로 여행 만족도 증대</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">🎁</div>
+                <h3>부가 서비스</h3>
+                <p>여행 패키지의 추가 가치 제공</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">📊</div>
+                <h3>고객 관리</h3>
+                <p>발급 현황 및 사용 통계 확인</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">🔗</div>
+                <h3>파트너십</h3>
+                <p>제휴업체와의 네트워크 구축</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬라이드 5: 고객 카드 발급 과정 -->
+    <div class="slide">
+        <h2>📋 고객 카드 발급 과정</h2>
+        
+        <div class="step-box">
+            <h3>1단계: 발급 페이지 접속</h3>
+            <p>www.guamsavecard.com/register</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>2단계: 정보 입력</h3>
+            <p>• 고객명 (한글/영문)<br>
+            • 계약여행사 선택<br>
+            • 4자리 비밀번호 설정</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>3단계: 카드 발급 완료</h3>
+            <p>• QR 코드 자동 생성<br>
+            • 카드 링크 제공<br>
+            • 즉시 사용 가능</p>
+        </div>
+    </div>
+
+    <!-- 슬라이드 6: 제휴업체 할인 처리 방법 -->
+    <div class="slide">
+        <h2>🛍️ 제휴업체 할인 처리 방법</h2>
+        
+        <div class="step-box">
+            <h3>1단계: 고객 카드 확인</h3>
+            <p>고객이 QR 코드 또는 카드 링크를 제시</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>2단계: 제휴처명 입력</h3>
+            <p>카드 페이지 하단에 업체명을 정확히 입력</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>3단계: 할인 처리 완료</h3>
+            <p>"할인 사용 처리" 버튼 클릭 → 완료 메시지 확인</p>
+        </div>
+        
+        <div class="highlight">
+            <p><strong>💡 팁:</strong> 하루에 여러 번 사용 가능하며, 모든 사용 내역이 자동 기록됩니다</p>
+        </div>
+    </div>
+
+    <!-- 슬라이드 7: QR 코드 사용 예시 -->
+    <div class="slide">
+        <h2>📱 QR 코드 사용 예시</h2>
+        
+        <div class="qr-demo">
+            QR 코드 샘플<br>
+            (실제 카드에서 생성)
+        </div>
+        
+        <div class="highlight">
+            <h3>사용 시나리오</h3>
+            <p>1. 고객이 스마트폰으로 QR 코드 제시<br>
+            2. 직원이 카드 페이지에서 업체명 입력<br>
+            3. 할인 적용 후 결제 진행<br>
+            4. 시스템에 자동으로 사용 기록 저장</p>
+        </div>
+    </div>
+
+    <!-- 슬라이드 8: 파트너 페이지 활용 -->
+    <div class="slide">
+        <h2>🤝 파트너 페이지 활용</h2>
+        
+        <div class="highlight">
+            <h3>전용 파트너 페이지</h3>
+            <p>www.guamsavecard.com/partner/[여행사코드]</p>
+        </div>
+        
+        <div class="benefit-grid">
+            <div class="benefit-card">
+                <div class="icon">🎨</div>
+                <h3>브랜딩</h3>
+                <p>여행사 로고와 정보가 표시되는 전용 페이지</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">🔗</div>
+                <h3>직접 연결</h3>
+                <p>고객이 바로 해당 여행사 페이지로 접속</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">📈</div>
+                <h3>추적 가능</h3>
+                <p>파트너별 발급 및 사용 현황 분석</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬라이드 9: 관리 시스템 -->
+    <div class="slide">
+        <h2>⚙️ 관리 시스템</h2>
+        
+        <div class="benefit-grid">
+            <div class="benefit-card">
+                <div class="icon">📊</div>
+                <h3>실시간 대시보드</h3>
+                <p>• 발급 현황<br>• 사용 통계<br>• 인기 제휴처</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">👥</div>
+                <h3>고객 관리</h3>
+                <p>• 발급된 카드 목록<br>• 사용 이력 조회<br>• 고객 정보 관리</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">🏪</div>
+                <h3>제휴처 관리</h3>
+                <p>• 제휴업체 등록<br>• 할인 정책 설정<br>• 사용 현황 분석</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">📱</div>
+                <h3>광고 시스템</h3>
+                <p>• 배너 광고 관리<br>• 수익 창출<br>• 타겟 광고</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬라이드 10: 기술적 특징 -->
+    <div class="slide">
+        <h2>💻 기술적 특징</h2>
+        
+        <div class="benefit-grid">
+            <div class="benefit-card">
+                <div class="icon">🔒</div>
+                <h3>보안</h3>
+                <p>• 암호화된 데이터 저장<br>• 세션 기반 인증<br>• SQL 인젝션 방지</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">📱</div>
+                <h3>반응형 디자인</h3>
+                <p>• 모든 기기에서 최적화<br>• 터치 친화적 UI<br>• 빠른 로딩 속도</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">☁️</div>
+                <h3>클라우드 기반</h3>
+                <p>• 24/7 서비스 가용성<br>• 자동 백업<br>• 확장 가능한 인프라</p>
+            </div>
+            <div class="benefit-card">
+                <div class="icon">📈</div>
+                <h3>분석 도구</h3>
+                <p>• 실시간 통계<br>• 사용 패턴 분석<br>• 리포트 생성</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 슬라이드 11: 도입 절차 -->
+    <div class="slide">
+        <h2>🚀 도입 절차</h2>
+        
+        <div class="step-box">
+            <h3>1단계: 계약 체결</h3>
+            <p>제휴 계약서 작성 및 서비스 조건 협의</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>2단계: 정보 등록</h3>
+            <p>• 업체/여행사 정보 시스템 등록<br>
+            • 로고 및 브랜딩 자료 제공<br>
+            • 할인 정책 설정</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>3단계: 교육 및 테스트</h3>
+            <p>• 직원 교육 진행<br>
+            • 시스템 사용법 안내<br>
+            • 테스트 카드로 실습</p>
+        </div>
+        
+        <div class="step-box">
+            <h3>4단계: 서비스 시작</h3>
+            <p>• 공식 서비스 오픈<br>
+            • 고객 안내 및 홍보<br>
+            • 지속적인 지원 제공</p>
+        </div>
+    </div>
+
+    <!-- 슬라이드 12: 연락처 및 마무리 -->
+    <div class="slide">
+        <h2>📞 연락처 & 지원</h2>
+        
+        <div class="contact-info">
+            <h3>🌐 웹사이트</h3>
+            <p style="font-size: 1.6rem; color: #FFD700;">www.guamsavecard.com</p>
+        </div>
+        
+        <div class="contact-info">
+            <h3>📧 문의사항</h3>
+            <p>기술 지원, 제휴 문의, 시스템 관련 질문<br>
+            언제든지 연락주시면 신속하게 도움드리겠습니다</p>
+        </div>
+        
+        <div class="highlight">
+            <h3>🎯 함께 성장하는 파트너십</h3>
+            <p>괌세이브카드와 함께<br>
+            더 나은 고객 서비스와<br>
+            성공적인 비즈니스를 만들어가세요!</p>
+        </div>
+        
+        <p style="margin-top: 40px; font-size: 1.8rem;">
+            🏝️ 감사합니다! ✨
+        </p>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        document.getElementById('total-slides').textContent = totalSlides;
+        
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+        }
+        
+        function nextSlide() {
+            showSlide(currentSlide + 1);
+        }
+        
+        function prevSlide() {
+            showSlide(currentSlide - 1);
+        }
+        
+        // 키보드 네비게이션
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+        
+        // 터치 네비게이션 (모바일)
+        let startX = 0;
+        document.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].clientX;
+        });
+        
+        document.addEventListener('touchend', function(e) {
+            const endX = e.changedTouches[0].clientX;
+            const diff = startX - endX;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    nextSlide();
+                } else {
+                    prevSlide();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
