@@ -2,19 +2,19 @@
 <nav class="desktop-nav d-none d-md-block">
     <div class="desktop-nav-container">
         <div class="desktop-nav-tabs">
-            <a href="/" class="desktop-nav-tab <%= currentPage === 'home' ? 'active' : '' %>">
+            <a href="<% if (typeof partnerAgency !== 'undefined' && partnerAgency) { %>/partner/<%= partnerAgency.code %><% } else { %>/<% } %>" class="desktop-nav-tab <%= currentPage === 'home' ? 'active' : '' %>">
                 <i class="fas fa-home"></i>
                 <span>메인</span>
             </a>
-            <a href="/register" class="desktop-nav-tab <%= currentPage === 'register' ? 'active' : '' %>">
+            <a href="<% if (typeof partnerAgency !== 'undefined' && partnerAgency) { %>/register?agency=<%= partnerAgency.code %><% } else { %>/register<% } %>" class="desktop-nav-tab <%= currentPage === 'register' ? 'active' : '' %>">
                 <i class="fas fa-id-card"></i>
                 <span>모바일카드발급</span>
             </a>
-            <a href="/login" class="desktop-nav-tab <%= currentPage === 'my-card' ? 'active' : '' %>">
+            <a href="<% if (typeof partnerAgency !== 'undefined' && partnerAgency) { %>/login?agency=<%= partnerAgency.code %><% } else { %>/login<% } %>" class="desktop-nav-tab <%= currentPage === 'my-card' ? 'active' : '' %>">
                 <i class="fas fa-credit-card"></i>
                 <span>내카드보기</span>
             </a>
-            <a href="/stores" class="desktop-nav-tab <%= currentPage === 'stores' ? 'active' : '' %>">
+            <a href="<% if (typeof partnerAgency !== 'undefined' && partnerAgency) { %>/stores?agency=<%= partnerAgency.code %><% } else { %>/stores<% } %>" class="desktop-nav-tab <%= currentPage === 'stores' ? 'active' : '' %>">
                 <i class="fas fa-store"></i>
                 <span>제휴업체</span>
             </a>
