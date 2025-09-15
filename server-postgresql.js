@@ -73,6 +73,53 @@ function requireAuth(req, res, next) {
     }
 }
 
+// 서버 시작 시 데이터베이스 초기화
+async function initializeDatabase() {
+  try {
+    if (dbMode === 'postgresql') {
+      console.log('PostgreSQL 데이터베이스 초기화 중...');
+      await createTables();
+      
+      // reservations 테이블 강제 생성 (누락된 경우 대비)
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS reservations (
+            id SERIAL PRIMARY KEY,
+            company VARCHAR(50) DEFAULT 'NOL',
+            reservation_number VARCHAR(50),
+            confirmation_number VARCHAR(50),
+            booking_channel VARCHAR(100),
+            product_name VARCHAR(200),
+            amount DECIMAL(10,2),
+            package_type VARCHAR(100),
+            usage_date DATE,
+            usage_time TIME,
+            korean_name VARCHAR(100),
+            english_name VARCHAR(100),
+            email VARCHAR(150),
+            phone VARCHAR(20),
+            kakao_id VARCHAR(100),
+            guest_count INTEGER,
+            memo TEXT,
+            issue_code_id INTEGER REFERENCES issue_codes(id),
+            code_issued BOOLEAN DEFAULT FALSE,
+            code_issued_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        console.log('✅ reservations 테이블 강제 생성 완료');
+      } catch (tableError) {
+        console.log('⚠️ reservations 테이블 생성 시도 중 오류:', tableError.message);
+      }
+      
+      await migrateFromJSON();
+    }
+  } catch (error) {
+    console.error('데이터베이스 초기화 오류:', error);
+  }
+}
+
 // 데이터베이스 연결 확인 미들웨어
 async function checkDatabase(req, res, next) {
     try {
