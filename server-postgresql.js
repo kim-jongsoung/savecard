@@ -875,6 +875,7 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
 
         res.render('admin/dashboard', {
             title: '관리자 대시보드',
+            adminUsername: req.session.adminUsername || 'admin',
             stats: {
                 totalUsers: users.length,
                 totalAgencies: agencies.length,
@@ -889,6 +890,7 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
         console.error('관리자 대시보드 오류:', error);
         res.render('admin/dashboard', {
             title: '관리자 대시보드',
+            adminUsername: req.session.adminUsername || 'admin',
             stats: { totalUsers: 0, totalAgencies: 0, totalStores: 0, totalUsages: 0 },
             recentUsages: [],
             error: 'dashboard_error'
