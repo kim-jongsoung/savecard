@@ -572,31 +572,94 @@ app.get('/health', (req, res) => {
     });
 });
 
-// 데이터베이스 연결 테스트 라우트
+// 데이터베이스 테스트 엔드포인트
 app.get('/db-test', async (req, res) => {
     try {
         if (dbMode === 'postgresql') {
-            const result = await pool.query('SELECT NOW() as current_time');
+            const result = await pool.query('SELECT NOW()');
             res.json({ 
-                status: 'OK', 
-                database: 'PostgreSQL Connected',
-                mode: 'postgresql',
-                current_time: result.rows[0].current_time
+                status: 'PostgreSQL Connected', 
+                time: result.rows[0].now,
+                mode: dbMode 
             });
         } else {
             res.json({ 
-                status: 'OK', 
-                database: 'JSON Database Active',
-                mode: 'json',
-                current_time: new Date().toISOString()
+                status: 'JSON Mode', 
+                mode: dbMode 
             });
         }
     } catch (error) {
         res.status(500).json({ 
-            status: 'ERROR', 
-            database: 'Connection Failed',
-            mode: dbMode,
-            error: error.message
+            status: 'Database Error', 
+            error: error.message,
+            mode: dbMode 
+        });
+    }
+});
+
+// 예약 테이블 생성 및 확인 엔드포인트
+app.get('/create-reservations-table', async (req, res) => {
+    try {
+        if (dbMode !== 'postgresql') {
+            return res.json({ status: 'JSON Mode - 테이블 생성 불필요' });
+        }
+
+        // 예약 테이블 생성
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS reservations (
+                id SERIAL PRIMARY KEY,
+                company VARCHAR(50) DEFAULT 'NOL',
+                reservation_number VARCHAR(50),
+                confirmation_number VARCHAR(50),
+                booking_channel VARCHAR(100),
+                product_name VARCHAR(200),
+                amount DECIMAL(10,2),
+                package_type VARCHAR(100),
+                usage_date DATE,
+                usage_time TIME,
+                korean_name VARCHAR(100),
+                english_name VARCHAR(100),
+                email VARCHAR(150),
+                phone VARCHAR(20),
+                kakao_id VARCHAR(100),
+                guest_count INTEGER,
+                memo TEXT,
+                issue_code_id INTEGER REFERENCES issue_codes(id),
+                code_issued BOOLEAN DEFAULT FALSE,
+                code_issued_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'reservations'
+        `);
+
+        // 컬럼 정보 확인
+        const columns = await pool.query(`
+            SELECT column_name, data_type, is_nullable
+            FROM information_schema.columns 
+            WHERE table_name = 'reservations'
+            ORDER BY ordinal_position
+        `);
+
+        res.json({
+            status: 'success',
+            message: 'reservations 테이블 생성 완료',
+            tableExists: tableCheck.rows.length > 0,
+            columns: columns.rows
+        });
+
+    } catch (error) {
+        console.error('테이블 생성 오류:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error.message
         });
     }
 });
