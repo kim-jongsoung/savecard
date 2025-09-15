@@ -277,7 +277,7 @@ async function createTables() {
       )
     `);
 
-    // 발급 코드 테이블
+    // 발급 코드 테이블 생성
     await client.query(`
       CREATE TABLE IF NOT EXISTS issue_codes (
         id SERIAL PRIMARY KEY,
@@ -286,12 +286,48 @@ async function createTables() {
         used_by_user_id INTEGER REFERENCES users(id),
         used_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP,
-        notes TEXT,
         is_delivered BOOLEAN DEFAULT FALSE,
         delivered_at TIMESTAMP
       )
     `);
+    console.log('✅ issue_codes 테이블 생성 완료');
+
+    // 예약 데이터 테이블 생성
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reservations (
+        id SERIAL PRIMARY KEY,
+        reservation_number VARCHAR(50) UNIQUE NOT NULL,
+        confirmation_number VARCHAR(50),
+        channel VARCHAR(20),
+        product_name VARCHAR(200) NOT NULL,
+        total_amount DECIMAL(10,2),
+        package_type VARCHAR(100),
+        usage_date DATE,
+        usage_time TIME,
+        quantity INTEGER DEFAULT 1,
+        
+        -- 예약자 정보
+        korean_name VARCHAR(100) NOT NULL,
+        english_first_name VARCHAR(50),
+        english_last_name VARCHAR(50),
+        email VARCHAR(200) NOT NULL,
+        phone VARCHAR(50) NOT NULL,
+        kakao_id VARCHAR(100),
+        guest_count VARCHAR(100),
+        memo TEXT,
+        
+        -- 시스템 정보
+        reservation_datetime TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        -- 발급 코드 연동
+        issue_code_id INTEGER REFERENCES issue_codes(id),
+        code_issued BOOLEAN DEFAULT FALSE,
+        code_issued_at TIMESTAMP
+      )
+    `);
+    console.log('✅ reservations 테이블 생성 완료');
 
     console.log('✅ 모든 테이블이 성공적으로 생성되었습니다!');
     

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4FC3F7;
+            --secondary-color: #667eea;
+            --accent-color: #87CEEB;
+            --text-dark: #333;
+            --text-light: #666;
+        }
+        
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        
+        .container-fluid {
+            max-width: 1240px;
+        }
+        
+        .sidebar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border: none;
+            font-weight: 500;
+        }
+        
+        .badge {
+            font-size: 0.75em;
+            padding: 6px 12px;
+        }
+        
+        .parsing-area {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .parsed-preview {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 4px solid var(--primary-color);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 사이드바 -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar p-3">
+                    <h4 class="mb-4">
+                        <i class="fas fa-credit-card me-2"></i>
+                        관리자 패널
+                    </h4>
+                    <p class="small mb-4">안녕하세요, <%= adminUsername %>님</p>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/admin/dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i> 대시보드
+                        </a>
+                        <a class="nav-link" href="/admin/agencies">
+                            <i class="fas fa-building me-2"></i> 여행사 관리
+                        </a>
+                        <a class="nav-link" href="/admin/stores">
+                            <i class="fas fa-store me-2"></i> 제휴업체 관리
+                        </a>
+                        <a class="nav-link" href="/admin/users">
+                            <i class="fas fa-users me-2"></i> 사용자 관리
+                        </a>
+                        <a class="nav-link" href="/admin/usages">
+                            <i class="fas fa-history me-2"></i> 사용 이력
+                        </a>
+                        <a class="nav-link" href="/admin/banners">
+                            <i class="fas fa-image me-2"></i> 광고 배너 관리
+                        </a>
+                        <a class="nav-link" href="/admin/issue-codes">
+                            <i class="fas fa-ticket-alt me-2"></i> 발급 코드 관리
+                        </a>
+                        <a class="nav-link active" href="/admin/reservations">
+                            <i class="fas fa-calendar-check me-2"></i> 예약 관리
+                        </a>
+                        <hr class="my-3">
+                        <a class="nav-link" href="/admin/logout">
+                            <i class="fas fa-sign-out-alt me-2"></i> 로그아웃
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- 메인 콘텐츠 -->
+            <div class="col-md-9 col-lg-10">
+                <div class="p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-calendar-check me-2 text-primary"></i><%= title %></h2>
+                    </div>
+
+                    <!-- 통계 카드 -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-calendar-alt fa-2x text-primary mb-2"></i>
+                                    <h4 class="card-title"><%= stats.total_reservations || 0 %></h4>
+                                    <p class="card-text text-muted">총 예약</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                    <h4 class="card-title"><%= stats.codes_issued || 0 %></h4>
+                                    <p class="card-text text-muted">코드 발급 완료</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                                    <h4 class="card-title"><%= stats.codes_pending || 0 %></h4>
+                                    <p class="card-text text-muted">코드 발급 대기</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 예약 데이터 등록 -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>예약 데이터 등록</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="parsing-area">
+                                <h6><i class="fas fa-paste me-2"></i>예약 데이터 붙여넣기</h6>
+                                <p class="text-muted small">NOL 예약 확인서의 내용을 아래에 붙여넣으면 자동으로 파싱됩니다.</p>
+                                
+                                <form id="reservationParseForm">
+                                    <div class="mb-3">
+                                        <textarea class="form-control" id="reservationText" rows="10" 
+                                                placeholder="예약 데이터를 여기에 붙여넣으세요...&#10;&#10;예시:&#10;롱혼 스테이크 하우스&#10;예약접수&#10;예약 일시&#10;2025-09-15 01:38:29&#10;예약 번호&#10;458136&#10;..."></textarea>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-primary" onclick="parseReservationData()">
+                                            <i class="fas fa-magic me-2"></i>데이터 파싱
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                                            <i class="fas fa-eraser me-2"></i>초기화
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <!-- 파싱 결과 미리보기 -->
+                                <div id="parsedPreview" class="parsed-preview" style="display: none;">
+                                    <h6><i class="fas fa-eye me-2"></i>파싱 결과 미리보기</h6>
+                                    <div id="parsedContent"></div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-success" onclick="saveReservation()">
+                                            <i class="fas fa-save me-2"></i>예약 저장
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="hideParsedPreview()">
+                                            <i class="fas fa-times me-2"></i>취소
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 예약 목록 -->
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i>예약 목록</h5>
+                            <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                                <i class="fas fa-sync-alt me-1"></i>새로고침
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <% if (reservations && reservations.length > 0) { %>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>예약번호</th>
+                                                <th>상품명</th>
+                                                <th>예약자</th>
+                                                <th>이용일</th>
+                                                <th>금액</th>
+                                                <th>발급코드</th>
+                                                <th>상태</th>
+                                                <th>등록일</th>
+                                                <th>관리</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% reservations.forEach(function(reservation) { %>
+                                                <tr>
+                                                    <td><strong><%= reservation.reservation_number %></strong></td>
+                                                    <td><%= reservation.product_name || '-' %></td>
+                                                    <td>
+                                                        <%= reservation.korean_name %><br>
+                                                        <small class="text-muted"><%= reservation.email %></small>
+                                                    </td>
+                                                    <td>
+                                                        <% if (reservation.usage_date) { %>
+                                                            <%= new Date(reservation.usage_date).toLocaleDateString('ko-KR') %>
+                                                            <% if (reservation.usage_time) { %>
+                                                                <br><small class="text-muted"><%= reservation.usage_time %></small>
+                                                            <% } %>
+                                                        <% } else { %>
+                                                            -
+                                                        <% } %>
+                                                    </td>
+                                                    <td>
+                                                        <% if (reservation.total_amount) { %>
+                                                            $<%= reservation.total_amount %>
+                                                        <% } else { %>
+                                                            -
+                                                        <% } %>
+                                                    </td>
+                                                    <td>
+                                                        <% if (reservation.issue_code) { %>
+                                                            <code><%= reservation.issue_code %></code>
+                                                        <% } else { %>
+                                                            <span class="text-muted">미발급</span>
+                                                        <% } %>
+                                                    </td>
+                                                    <td>
+                                                        <% if (reservation.code_issued) { %>
+                                                            <span class="badge bg-success">코드발급완료</span>
+                                                        <% } else { %>
+                                                            <span class="badge bg-warning">발급대기</span>
+                                                        <% } %>
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">
+                                                            <%= new Date(reservation.created_at).toLocaleDateString('ko-KR') %>
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        <% if (!reservation.code_issued) { %>
+                                                            <button class="btn btn-sm btn-outline-primary" 
+                                                                    onclick="assignCode(<%= reservation.id %>)">
+                                                                <i class="fas fa-ticket-alt me-1"></i>코드연결
+                                                            </button>
+                                                        <% } else { %>
+                                                            <span class="text-success small">
+                                                                <i class="fas fa-check-circle me-1"></i>완료
+                                                            </span>
+                                                        <% } %>
+                                                    </td>
+                                                </tr>
+                                            <% }); %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <% } else { %>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">등록된 예약이 없습니다</h5>
+                                    <p class="text-muted">위의 예약 데이터 등록 기능을 사용해서 예약을 추가해보세요.</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let parsedReservationData = null;
+
+        function parseReservationData() {
+            const text = document.getElementById('reservationText').value.trim();
+            if (!text) {
+                alert('예약 데이터를 입력해주세요.');
+                return;
+            }
+
+            fetch('/admin/reservations/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reservationText: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    parsedReservationData = data.parsedData;
+                    showParsedPreview(data.parsedData);
+                } else {
+                    alert('파싱 실패: ' + data.message);
+                    if (data.parsedData) {
+                        parsedReservationData = data.parsedData;
+                        showParsedPreview(data.parsedData);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('파싱 중 오류가 발생했습니다.');
+            });
+        }
+
+        function showParsedPreview(data) {
+            const preview = document.getElementById('parsedPreview');
+            const content = document.getElementById('parsedContent');
+            
+            let html = '<div class="row">';
+            html += `<div class="col-md-6">
+                        <h6>기본 정보</h6>
+                        <p><strong>예약번호:</strong> ${data.reservation_number || '미파싱'}</p>
+                        <p><strong>확인번호:</strong> ${data.confirmation_number || '미파싱'}</p>
+                        <p><strong>채널:</strong> ${data.channel || '미파싱'}</p>
+                        <p><strong>상품명:</strong> ${data.product_name || '미파싱'}</p>
+                        <p><strong>금액:</strong> $${data.total_amount || '미파싱'}</p>
+                        <p><strong>이용일:</strong> ${data.usage_date || '미파싱'} ${data.usage_time || ''}</p>
+                     </div>`;
+            html += `<div class="col-md-6">
+                        <h6>예약자 정보</h6>
+                        <p><strong>이름:</strong> ${data.korean_name || '미파싱'}</p>
+                        <p><strong>영문명:</strong> ${data.english_last_name || ''} ${data.english_first_name || ''}</p>
+                        <p><strong>이메일:</strong> ${data.email || '미파싱'}</p>
+                        <p><strong>전화번호:</strong> ${data.phone || '미파싱'}</p>
+                        <p><strong>카카오ID:</strong> ${data.kakao_id || '미파싱'}</p>
+                        <p><strong>인원:</strong> ${data.guest_count || '미파싱'}</p>
+                     </div>`;
+            html += '</div>';
+            
+            content.innerHTML = html;
+            preview.style.display = 'block';
+        }
+
+        function hideParsedPreview() {
+            document.getElementById('parsedPreview').style.display = 'none';
+            parsedReservationData = null;
+        }
+
+        function saveReservation() {
+            if (!parsedReservationData) {
+                alert('저장할 데이터가 없습니다.');
+                return;
+            }
+
+            fetch('/admin/reservations/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reservationText: document.getElementById('reservationText').value })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('예약이 성공적으로 저장되었습니다!');
+                    location.reload();
+                } else {
+                    alert('저장 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            });
+        }
+
+        function clearForm() {
+            document.getElementById('reservationText').value = '';
+            hideParsedPreview();
+        }
+
+        function assignCode(reservationId) {
+            // 사용 가능한 발급 코드 목록을 가져와서 선택할 수 있게 하는 기능
+            // 현재는 간단히 구현
+            const codeId = prompt('연결할 발급 코드 ID를 입력하세요:');
+            if (!codeId) return;
+
+            fetch(`/admin/reservations/${reservationId}/assign-code`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ issueCodeId: parseInt(codeId) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('발급 코드가 성공적으로 연결되었습니다!');
+                    location.reload();
+                } else {
+                    alert('연결 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('연결 중 오류가 발생했습니다.');
+            });
+        }
+    </script>
+</body>
+</html>

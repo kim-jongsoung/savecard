@@ -2710,7 +2710,274 @@ app.listen(PORT, async () => {
     }
 });
 
-// ==================== 발급 코드 관리 API ====================
+// ==================== 예약 데이터 파싱 함수 ====================
+
+function parseReservationText(text) {
+    const data = {};
+    
+    // 기본 정보 추출
+    const reservationNumberMatch = text.match(/예약 번호\s*(\d+)/);
+    if (reservationNumberMatch) data.reservation_number = reservationNumberMatch[1];
+    
+    const confirmationMatch = text.match(/예약 확인 번호\s*([A-Z0-9:]+)/);
+    if (confirmationMatch) data.confirmation_number = confirmationMatch[1];
+    
+    const channelMatch = text.match(/예약 채널\s*([A-Z]+)/);
+    if (channelMatch) data.channel = channelMatch[1];
+    
+    // 예약 일시
+    const datetimeMatch = text.match(/(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/);
+    if (datetimeMatch) data.reservation_datetime = datetimeMatch[1];
+    
+    // 상품 정보
+    const productLines = text.split('\n');
+    for (let i = 0; i < productLines.length; i++) {
+        const line = productLines[i].trim();
+        if (line.includes('예약한 상품')) {
+            const nextLine = productLines[i + 1]?.trim();
+            if (nextLine && !nextLine.includes('총 수량')) {
+                data.product_name = nextLine;
+            }
+        }
+    }
+    
+    // 금액 정보
+    const amountMatch = text.match(/\$(\d+\.?\d*)/);
+    if (amountMatch) data.total_amount = parseFloat(amountMatch[1]);
+    
+    // 패키지 정보
+    const packageMatch = text.match(/(\d+인 패키지)/);
+    if (packageMatch) data.package_type = packageMatch[1];
+    
+    // 이용 예정일과 시간
+    const usageDateMatch = text.match(/이용예정일 (\d{4}-\d{2}-\d{2})/);
+    if (usageDateMatch) data.usage_date = usageDateMatch[1];
+    
+    const usageTimeMatch = text.match(/(\d{2}:\d{2})/);
+    if (usageTimeMatch) data.usage_time = usageTimeMatch[1];
+    
+    // 예약자 정보
+    const nameMatch = text.match(/이름\s*([가-힣]+)/);
+    if (nameMatch) data.korean_name = nameMatch[1];
+    
+    const emailMatch = text.match(/이메일\s*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) data.email = emailMatch[1];
+    
+    const phoneMatch = text.match(/전화번호\s*\+?82?\s?(\d{2,3}[-\s]?\d{4}[-\s]?\d{4})/);
+    if (phoneMatch) data.phone = phoneMatch[1];
+    
+    // 영문명
+    const englishLastMatch = text.match(/영문 성\*?\s*([a-zA-Z]+)/);
+    if (englishLastMatch) data.english_last_name = englishLastMatch[1];
+    
+    const englishFirstMatch = text.match(/영문 이름\*?\s*([a-zA-Z]+)/);
+    if (englishFirstMatch) data.english_first_name = englishFirstMatch[1];
+    
+    // 카카오톡 ID
+    const kakaoMatch = text.match(/카카오톡 아이디\*?\s*([a-zA-Z0-9_]+)/);
+    if (kakaoMatch) data.kakao_id = kakaoMatch[1];
+    
+    // 인원 정보
+    const guestCountMatch = text.match(/총 (\d+인[^)]*\))/);
+    if (guestCountMatch) data.guest_count = guestCountMatch[1];
+    
+    // 메모
+    const memoMatch = text.match(/메모\s*(.+?)$/s);
+    if (memoMatch) data.memo = memoMatch[1].trim();
+    
+    return data;
+}
+
+// ==================== 예약 관리 API ====================
+
+// 예약 등록 (텍스트 파싱)
+app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
+    try {
+        const { reservationText } = req.body;
+        
+        if (!reservationText || !reservationText.trim()) {
+            return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
+        }
+        
+        // 텍스트 파싱
+        const parsedData = parseReservationText(reservationText);
+        
+        // 필수 필드 검증
+        if (!parsedData.reservation_number || !parsedData.korean_name || !parsedData.email) {
+            return res.json({ 
+                success: false, 
+                message: '필수 정보가 누락되었습니다. (예약번호, 이름, 이메일)',
+                parsedData 
+            });
+        }
+        
+        if (dbMode === 'postgresql') {
+            // 중복 예약번호 확인
+            const existingReservation = await pool.query(
+                'SELECT id FROM reservations WHERE reservation_number = $1',
+                [parsedData.reservation_number]
+            );
+            
+            if (existingReservation.rows.length > 0) {
+                return res.json({ 
+                    success: false, 
+                    message: '이미 등록된 예약번호입니다.',
+                    parsedData 
+                });
+            }
+            
+            // 예약 데이터 저장
+            const insertQuery = `
+                INSERT INTO reservations (
+                    reservation_number, confirmation_number, channel, product_name,
+                    total_amount, package_type, usage_date, usage_time, quantity,
+                    korean_name, english_first_name, english_last_name, email, phone,
+                    kakao_id, guest_count, memo, reservation_datetime
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                RETURNING id
+            `;
+            
+            const values = [
+                parsedData.reservation_number,
+                parsedData.confirmation_number,
+                parsedData.channel,
+                parsedData.product_name,
+                parsedData.total_amount,
+                parsedData.package_type,
+                parsedData.usage_date,
+                parsedData.usage_time,
+                parsedData.quantity || 1,
+                parsedData.korean_name,
+                parsedData.english_first_name,
+                parsedData.english_last_name,
+                parsedData.email,
+                parsedData.phone,
+                parsedData.kakao_id,
+                parsedData.guest_count,
+                parsedData.memo,
+                parsedData.reservation_datetime
+            ];
+            
+            const result = await pool.query(insertQuery, values);
+            
+            return res.json({ 
+                success: true, 
+                message: '예약이 성공적으로 등록되었습니다.',
+                reservationId: result.rows[0].id,
+                parsedData 
+            });
+        } else {
+            return res.json({ 
+                success: false, 
+                message: 'PostgreSQL 모드에서만 사용 가능합니다.' 
+            });
+        }
+        
+    } catch (error) {
+        console.error('예약 등록 오류:', error);
+        return res.json({ 
+            success: false, 
+            message: '예약 등록 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// 예약 목록 조회
+app.get('/admin/reservations', requireAuth, async (req, res) => {
+    try {
+        if (dbMode === 'postgresql') {
+            const reservationsQuery = await pool.query(`
+                SELECT 
+                    r.*,
+                    ic.code as issue_code
+                FROM reservations r
+                LEFT JOIN issue_codes ic ON r.issue_code_id = ic.id
+                ORDER BY r.created_at DESC
+                LIMIT 100
+            `);
+            
+            const statsQuery = await pool.query(`
+                SELECT 
+                    COUNT(*) as total_reservations,
+                    COUNT(CASE WHEN code_issued = true THEN 1 END) as codes_issued,
+                    COUNT(CASE WHEN code_issued = false THEN 1 END) as codes_pending
+                FROM reservations
+            `);
+            
+            const reservations = reservationsQuery.rows;
+            const stats = statsQuery.rows[0];
+            
+            res.render('admin/reservations', {
+                title: '예약 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                reservations: reservations,
+                stats: stats
+            });
+        } else {
+            res.render('admin/reservations', {
+                title: '예약 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                reservations: [],
+                stats: { total_reservations: 0, codes_issued: 0, codes_pending: 0 }
+            });
+        }
+    } catch (error) {
+        console.error('예약 목록 조회 오류:', error);
+        res.status(500).render('error', { 
+            title: '오류', 
+            message: '예약 목록을 불러올 수 없습니다.' 
+        });
+    }
+});
+
+// 예약에 발급 코드 연결
+app.post('/admin/reservations/:id/assign-code', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        const { issueCodeId } = req.body;
+        
+        if (dbMode === 'postgresql') {
+            // 발급 코드가 사용 가능한지 확인
+            const codeCheck = await pool.query(
+                'SELECT id, is_used FROM issue_codes WHERE id = $1',
+                [issueCodeId]
+            );
+            
+            if (codeCheck.rows.length === 0 || codeCheck.rows[0].is_used) {
+                return res.json({ 
+                    success: false, 
+                    message: '사용할 수 없는 발급 코드입니다.' 
+                });
+            }
+            
+            // 예약에 코드 연결
+            await pool.query(`
+                UPDATE reservations 
+                SET issue_code_id = $1, code_issued = true, code_issued_at = CURRENT_TIMESTAMP
+                WHERE id = $2
+            `, [issueCodeId, reservationId]);
+            
+            return res.json({ 
+                success: true, 
+                message: '발급 코드가 성공적으로 연결되었습니다.' 
+            });
+        } else {
+            return res.json({ 
+                success: false, 
+                message: 'PostgreSQL 모드에서만 사용 가능합니다.' 
+            });
+        }
+        
+    } catch (error) {
+        console.error('코드 연결 오류:', error);
+        return res.json({ 
+            success: false, 
+            message: '코드 연결 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
+// ==================== 발급 코드 관련 API ====================
 
 // 랜덤 코드 생성 함수 (a1234b 형태)
 function generateIssueCode() {
