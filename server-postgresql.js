@@ -2971,32 +2971,39 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         
         // 데이터베이스에 저장
         if (dbMode === 'postgresql') {
+            // PostgreSQL에 저장 (기존 테이블 구조에 맞게 수정)
             const insertQuery = `
                 INSERT INTO reservations (
-                    company, reservation_number, confirmation_number, booking_channel, product_name, 
-                    amount, package_type, usage_date, usage_time, korean_name, english_name, 
-                    email, phone, kakao_id, guest_count, memo
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                RETURNING *
+                    reservation_number, confirmation_number, channel, 
+                    product_name, total_amount, package_type, usage_date, usage_time,
+                    korean_name, english_first_name, english_last_name, email, phone, kakao_id, 
+                    guest_count, memo, created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             `;
             
+            // 영문명을 first_name과 last_name으로 분리
+            const englishNameParts = (parsedData.english_name || '').split(' ');
+            const englishFirstName = englishNameParts[0] || '';
+            const englishLastName = englishNameParts.slice(1).join(' ') || '';
+            
             const values = [
-                parsedData.company || 'OTHER',
-                parsedData.reservation_number || null,
-                parsedData.confirmation_number || null,
-                parsedData.booking_channel || null,
-                parsedData.product_name || null,
-                parsedData.amount || null,
-                parsedData.package_type || null,
-                parsedData.usage_date || null,
-                parsedData.usage_time || null,
-                parsedData.korean_name || null,
-                parsedData.english_name || null,
-                parsedData.email || null,
-                parsedData.phone || null,
-                parsedData.kakao_id || null,
-                parsedData.guest_count || null,
-                parsedData.memo || null
+                parsedData.reservation_number,
+                parsedData.confirmation_number,
+                parsedData.booking_channel,
+                parsedData.product_name,
+                parsedData.amount,
+                parsedData.package_type,
+                parsedData.usage_date,
+                parsedData.usage_time,
+                parsedData.korean_name,
+                englishFirstName,
+                englishLastName,
+                parsedData.email,
+                parsedData.phone,
+                parsedData.kakao_id,
+                parsedData.guest_count,
+                parsedData.memo,
+                new Date()
             ];
             
             const result = await pool.query(insertQuery, values);
@@ -3024,19 +3031,41 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
         if (dbMode === 'postgresql') {
-            // 통계 조회
+            // 통계 조회 (기존 테이블 구조에 맞게 수정)
             const statsQuery = await pool.query(`
                 SELECT 
                     COUNT(*) as total_reservations,
                     COUNT(CASE WHEN code_issued = true THEN 1 END) as code_issued,
-                    COUNT(CASE WHEN code_issued = false THEN 1 END) as pending_codes,
-                    COUNT(DISTINCT company) as companies
+                    COUNT(CASE WHEN code_issued = false OR code_issued IS NULL THEN 1 END) as pending_codes,
+                    1 as companies
                 FROM reservations
             `);
             
-            // 예약 목록 조회
+            // 예약 목록 조회 (기존 테이블 구조에 맞게 수정)
             const reservationsQuery = await pool.query(`
-                SELECT * FROM reservations 
+                SELECT 
+                    id,
+                    reservation_number,
+                    confirmation_number,
+                    channel as booking_channel,
+                    product_name,
+                    total_amount as amount,
+                    package_type,
+                    usage_date,
+                    usage_time,
+                    korean_name,
+                    CONCAT(english_first_name, ' ', english_last_name) as english_name,
+                    email,
+                    phone,
+                    kakao_id,
+                    guest_count,
+                    memo,
+                    issue_code_id,
+                    code_issued,
+                    code_issued_at,
+                    created_at,
+                    'NOL' as company
+                FROM reservations 
                 ORDER BY created_at DESC 
                 LIMIT 50
             `);
@@ -3067,44 +3096,36 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
     }
 });
 
-// 예약에서 발급 코드 자동 생성
+// 예약에서 발급 코드 생성
 app.post('/admin/reservations/:id/generate-code', requireAuth, async (req, res) => {
     try {
         const reservationId = req.params.id;
         
         if (dbMode === 'postgresql') {
-            // 예약 정보 조회
-            const reservationQuery = await pool.query(
+            // 예약 정보 확인
+            const reservationCheck = await pool.query(
                 'SELECT * FROM reservations WHERE id = $1',
                 [reservationId]
             );
             
-            if (reservationQuery.rows.length === 0) {
+            if (reservationCheck.rows.length === 0) {
                 return res.json({ success: false, message: '예약을 찾을 수 없습니다.' });
             }
             
-            const reservation = reservationQuery.rows[0];
+            const reservation = reservationCheck.rows[0];
             
+            // 이미 코드가 발급된 경우
             if (reservation.code_issued) {
                 return res.json({ success: false, message: '이미 발급 코드가 생성되었습니다.' });
             }
             
-            // 발급 코드 생성 (6자리 랜덤 코드)
-            function generateCode() {
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                let result = '';
-                for (let i = 0; i < 6; i++) {
-                    result += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                return result;
-            }
-            
+            // 새로운 발급 코드 생성
             let newCode;
             let isUnique = false;
+            let attempts = 0;
             
-            // 중복되지 않는 코드 생성
-            while (!isUnique) {
-                newCode = generateCode();
+            while (!isUnique && attempts < 10) {
+                newCode = generateIssueCode();
                 const existingCode = await pool.query(
                     'SELECT id FROM issue_codes WHERE code = $1',
                     [newCode]
@@ -3112,20 +3133,25 @@ app.post('/admin/reservations/:id/generate-code', requireAuth, async (req, res) 
                 if (existingCode.rows.length === 0) {
                     isUnique = true;
                 }
+                attempts++;
             }
             
-            // issue_codes 테이블에 코드 추가
-            const insertCodeQuery = await pool.query(
-                'INSERT INTO issue_codes (code) VALUES ($1) RETURNING *',
-                [newCode]
+            if (!isUnique) {
+                return res.json({ success: false, message: '고유한 코드 생성에 실패했습니다.' });
+            }
+            
+            // issue_codes 테이블에 코드 저장
+            const codeResult = await pool.query(
+                'INSERT INTO issue_codes (code, created_at) VALUES ($1, $2) RETURNING id',
+                [newCode, new Date()]
             );
             
-            const issueCode = insertCodeQuery.rows[0];
+            const issueCodeId = codeResult.rows[0].id;
             
             // 예약 테이블 업데이트
             await pool.query(
-                'UPDATE reservations SET issue_code_id = $1, code_issued = true, code_issued_at = CURRENT_TIMESTAMP WHERE id = $2',
-                [issueCode.id, reservationId]
+                'UPDATE reservations SET issue_code_id = $1, code_issued = true, code_issued_at = $2 WHERE id = $3',
+                [issueCodeId, new Date(), reservationId]
             );
             
             res.json({ 
@@ -3133,9 +3159,11 @@ app.post('/admin/reservations/:id/generate-code', requireAuth, async (req, res) 
                 message: '발급 코드가 성공적으로 생성되었습니다.',
                 code: newCode
             });
+            
         } else {
-            res.json({ success: false, message: 'PostgreSQL 연결이 필요합니다.' });
+            res.json({ success: false, message: 'JSON 모드에서는 지원되지 않습니다.' });
         }
+        
     } catch (error) {
         console.error('발급 코드 생성 오류:', error);
         res.json({ success: false, message: '발급 코드 생성 중 오류가 발생했습니다.' });
