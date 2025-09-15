@@ -6,50 +6,6 @@ const { connectDB, dbHelpers } = require('./database');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-
-// Google Generative AI 초기화 (환경변수 사용)
-let GoogleGenerativeAI = null;
-let genAI = null;
-
-try {
-    GoogleGenerativeAI = require('@google/generative-ai').GoogleGenerativeAI;
-    const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIzaSyA80U_G3viDBxezYtiwS_F49TMgYlBE-t8';
-    
-    if (GOOGLE_AI_API_KEY) {
-        genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
-        console.log('🤖 Google AI 초기화 완료 - API 키:', GOOGLE_AI_API_KEY.substring(0, 10) + '...');
-        
-        // API 키 유효성 테스트
-        testGoogleAI();
-    } else {
-        console.log('⚠️ GOOGLE_AI_API_KEY가 설정되지 않음. AI 파싱 기능 비활성화');
-    }
-} catch (error) {
-    console.log('⚠️ Google AI 패키지 로드 실패. AI 파싱 기능 비활성화:', error.message);
-}
-
-// Google AI API 키 유효성 테스트 함수
-async function testGoogleAI() {
-    if (!genAI) return;
-    
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const result = await model.generateContent("Hello");
-        const response = await result.response;
-        console.log('✅ Google AI API 키 유효성 확인 완료');
-    } catch (error) {
-        console.error('❌ Google AI API 키 오류:', error.message);
-        if (error.message.includes('API_KEY_INVALID')) {
-            console.error('🔑 API 키가 유효하지 않습니다. Google AI Studio에서 새 키를 발급받으세요.');
-        } else if (error.message.includes('QUOTA_EXCEEDED')) {
-            console.error('📊 API 할당량을 초과했습니다.');
-        } else if (error.message.includes('PERMISSION_DENIED')) {
-            console.error('🚫 API 키에 Generative AI 권한이 없습니다.');
-        }
-        // API 오류 시 genAI를 null로 설정하여 fallback 사용
-        genAI = null;
-    }
-}
 // nodemailer 제거됨
 require('dotenv').config();
 
@@ -2866,88 +2822,10 @@ app.listen(PORT, async () => {
 
 // ==================== 예약 데이터 파싱 함수 ====================
 
-// Google AI를 활용한 고급 예약 데이터 파싱 함수
-async function parseReservationWithGoogleAI(text) {
-    // Google AI가 초기화되지 않은 경우 기존 파싱 함수 사용
-    if (!genAI || !GoogleGenerativeAI) {
-        console.log('⚠️ Google AI 미사용, 기존 파싱 함수 사용');
-        return parseReservationToJSON(text);
-    }
-    
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        
-        const prompt = `
-다음 예약 텍스트를 분석하여 JSON 형태로 변환해주세요. 정확한 정보만 추출하고, 없는 정보는 null로 설정하세요.
 
-예약 텍스트:
-${text}
-
-다음 JSON 스키마에 맞춰 응답해주세요:
-{
-  "reservation_code": "예약번호 (문자+숫자 조합)",
-  "platform_name": "예약 플랫폼 (NOL, KLOOK, VIATOR, GETYOURGUIDE, EXPEDIA 등)",
-  "reservation_channel": "예약 채널 (웹, 앱, 전화 등)",
-  "product_name": "상품명",
-  "reservation_status": "예약상태 (접수, 확정, 취소 등)",
-  "total_quantity": "총 수량 (숫자)",
-  "total_price": "총 금액 (숫자만, 달러 기준)",
-  
-  "usage_date": "이용일 (YYYY-MM-DD 형식)",
-  "usage_time": "이용시간 (HH:MM 형식)",
-  "package_type": "패키지 타입",
-  "package_count": "패키지 수량 (숫자)",
-  
-  "name_kr": "예약자 한글명",
-  "name_en_first": "영문 이름",
-  "name_en_last": "영문 성",
-  "phone": "전화번호",
-  "email": "이메일 주소",
-  "kakao_id": "카카오톡 ID",
-  "people_adult": "성인 인원수 (숫자)",
-  "people_child": "소아 인원수 (숫자)",
-  "people_infant": "유아 인원수 (숫자)",
-  "memo": "메모 또는 특이사항",
-  
-  "adult_unit_price": "성인 단가 (숫자)",
-  "child_unit_price": "소아 단가 (숫자)",
-  "infant_unit_price": "유아 단가 (숫자)",
-  "platform_sale_amount": "플랫폼 판매 금액 (숫자)",
-  "platform_settlement_amount": "정산 금액 (숫자)",
-  "payment_status": "결제 상태 (대기, 완료, 취소 등)",
-  "payment_date": "결제일 (YYYY-MM-DD 형식)",
-  
-  "policy_text": "취소/환불 정책 내용"
-}
-
-응답은 반드시 유효한 JSON 형태로만 해주세요. 설명이나 다른 텍스트는 포함하지 마세요.
-`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const jsonText = response.text().trim();
-        
-        // JSON 파싱 시도
-        try {
-            const parsedData = JSON.parse(jsonText);
-            console.log('🤖 Google AI 파싱 성공:', parsedData);
-            return parsedData;
-        } catch (parseError) {
-            console.error('❌ Google AI 응답 JSON 파싱 실패:', parseError);
-            // fallback으로 기존 파싱 함수 사용
-            return parseReservationToJSON(text);
-        }
-        
-    } catch (error) {
-        console.error('❌ Google AI 파싱 오류:', error);
-        // fallback으로 기존 파싱 함수 사용
-        return parseReservationToJSON(text);
-    }
-}
-
-// 고급 로컬 AI 파싱 함수 (Google AI 대안)
+// AI 수준의 고급 로컬 파싱 함수 
 function parseReservationToJSON(text) {
-    console.log('로컬 AI 파싱 시작...');
+    console.log('🤖 AI 수준 파싱 시작...');
     
     // 더 지능적인 파싱을 위한 정규식 및 패턴 매칭
     const lines = text.split('\n').map(line => line.trim()).filter(line => line);
@@ -3010,95 +2888,218 @@ function parseReservationToJSON(text) {
         data.platform_name = 'OTHER';
     }
     
-    // 각 줄별 파싱
+    // AI 수준의 지능형 패턴 매칭
     for (const line of lines) {
         const lowerLine = line.toLowerCase();
         
-        // 예약번호 (다양한 패턴)
-        if (lowerLine.includes('예약') && (lowerLine.includes('번호') || lowerLine.includes('number'))) {
-            const match = line.match(/[A-Z0-9]{4,}/g);
-            if (match) data.reservation_code = match[match.length - 1];
+        // 예약번호 (다양한 패턴 - 더 정교하게)
+        if (lowerLine.includes('예약') || lowerLine.includes('reservation') || lowerLine.includes('booking')) {
+            const reservationPatterns = [
+                /(?:예약번호|reservation|booking)[\s:：]*([A-Z0-9]{4,})/i,
+                /([A-Z]{2,}\d{4,})/g,
+                /(\d{4,}[A-Z]{2,})/g,
+                /([A-Z0-9]{6,})/g
+            ];
+            
+            for (const pattern of reservationPatterns) {
+                const match = line.match(pattern);
+                if (match && !data.reservation_code) {
+                    data.reservation_code = match[1] || match[0];
+                    break;
+                }
+            }
         }
         
-        // 상품명
-        if (lowerLine.includes('상품') || lowerLine.includes('product') || lowerLine.includes('투어') || lowerLine.includes('tour')) {
+        // 상품명 (더 지능적으로)
+        if (lowerLine.includes('상품') || lowerLine.includes('product') || lowerLine.includes('투어') || 
+            lowerLine.includes('tour') || lowerLine.includes('activity') || lowerLine.includes('체험')) {
             const parts = line.split(/[:：]/);
             if (parts.length > 1) {
                 data.product_name = parts[1].trim();
+            } else if (lowerLine.includes('투어') || lowerLine.includes('tour')) {
+                // 투어명이 단독으로 있는 경우
+                data.product_name = line.trim();
             }
         }
         
         // 금액 (더 정확한 패턴)
-        if (lowerLine.includes('금액') || lowerLine.includes('price') || lowerLine.includes('amount') || line.includes('$')) {
-            const priceMatch = line.match(/\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
-            if (priceMatch) {
-                data.total_price = parseFloat(priceMatch[1].replace(/,/g, ''));
-                data.platform_sale_amount = data.total_price;
-                data.platform_settlement_amount = data.total_price;
+        const pricePatterns = [
+            /\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+            /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*달러/,
+            /(?:금액|price|amount|total)[\s:：]*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+            /(\d{1,3}(?:,\d{3})*)\s*원/
+        ];
+        
+        for (const pattern of pricePatterns) {
+            const match = line.match(pattern);
+            if (match && !data.total_price) {
+                let price = parseFloat(match[1].replace(/,/g, ''));
+                // 원화인 경우 달러로 환산 (대략 1200원 = 1달러)
+                if (line.includes('원')) {
+                    price = Math.round(price / 1200 * 100) / 100;
+                }
+                data.total_price = price;
+                data.platform_sale_amount = price;
+                data.platform_settlement_amount = price;
+                break;
             }
         }
         
-        // 날짜 (다양한 형식)
-        if (lowerLine.includes('날짜') || lowerLine.includes('date') || lowerLine.includes('이용')) {
-            const dateMatch = line.match(/(\d{4}[-\/년]\d{1,2}[-\/월]\d{1,2}일?)/);
-            if (dateMatch) {
-                data.usage_date = dateMatch[1].replace(/[년월일]/g, '').replace(/\//g, '-');
+        // 날짜 (다양한 형식 지원)
+        const datePatterns = [
+            /(\d{4})[-\/년]\s*(\d{1,2})[-\/월]\s*(\d{1,2})일?/,
+            /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+            /(\d{4})-(\d{1,2})-(\d{1,2})/,
+            /(\d{1,2})\s*월\s*(\d{1,2})\s*일/
+        ];
+        
+        if (lowerLine.includes('날짜') || lowerLine.includes('date') || lowerLine.includes('이용') || 
+            lowerLine.includes('visit') || lowerLine.includes('체크인')) {
+            for (const pattern of datePatterns) {
+                const match = line.match(pattern);
+                if (match && !data.usage_date) {
+                    let year, month, day;
+                    if (pattern.toString().includes('\\d{4}')) {
+                        [, year, month, day] = match;
+                    } else {
+                        [, month, day, year] = match;
+                    }
+                    
+                    if (year && month && day) {
+                        data.usage_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    }
+                    break;
+                }
             }
         }
         
-        // 시간
+        // 시간 (더 정교하게)
         if (lowerLine.includes('시간') || lowerLine.includes('time')) {
-            const timeMatch = line.match(/(\d{1,2}:\d{2})/);
-            if (timeMatch) data.usage_time = timeMatch[1];
-        }
-        
-        // 한글명
-        if (lowerLine.includes('한글') || lowerLine.includes('이름') || lowerLine.includes('성명')) {
-            const parts = line.split(/[:：]/);
-            if (parts.length > 1) {
-                data.name_kr = parts[1].trim();
+            const timePatterns = [
+                /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/,
+                /(\d{1,2})시\s*(\d{2})?분?/
+            ];
+            
+            for (const pattern of timePatterns) {
+                const match = line.match(pattern);
+                if (match && !data.usage_time) {
+                    let hour = parseInt(match[1]);
+                    let minute = parseInt(match[2] || '0');
+                    const ampm = match[3];
+                    
+                    if (ampm && ampm.toLowerCase() === 'pm' && hour !== 12) {
+                        hour += 12;
+                    } else if (ampm && ampm.toLowerCase() === 'am' && hour === 12) {
+                        hour = 0;
+                    }
+                    
+                    data.usage_time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    break;
+                }
             }
         }
         
-        // 영문명
+        // 한글명 (더 정확하게)
+        if ((lowerLine.includes('한글') || lowerLine.includes('이름') || lowerLine.includes('성명') || 
+             lowerLine.includes('예약자')) && !lowerLine.includes('영문')) {
+            const namePatterns = [
+                /(?:한글명|이름|성명|예약자)[\s:：]*([가-힣]{2,})/,
+                /([가-힣]{2,})/
+            ];
+            
+            for (const pattern of namePatterns) {
+                const match = line.match(pattern);
+                if (match && !data.name_kr) {
+                    data.name_kr = match[1];
+                    break;
+                }
+            }
+        }
+        
+        // 영문명 (더 정확하게)
         if (lowerLine.includes('영문') || lowerLine.includes('english')) {
             const parts = line.split(/[:：]/);
             if (parts.length > 1) {
                 const englishName = parts[1].trim();
-                const nameParts = englishName.split(' ');
+                const nameParts = englishName.split(/\s+/);
                 data.name_en_first = nameParts[0] || '';
                 data.name_en_last = nameParts.slice(1).join(' ') || '';
             }
         }
         
-        // 이메일
+        // 이메일 (더 정확한 패턴)
         const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-        if (emailMatch) data.email = emailMatch[1];
-        
-        // 전화번호
-        if (lowerLine.includes('전화') || lowerLine.includes('phone') || lowerLine.includes('tel')) {
-            const phoneMatch = line.match(/([\d\-\+\(\)\s]{8,})/);
-            if (phoneMatch) data.phone = phoneMatch[1].trim();
+        if (emailMatch && !data.email) {
+            data.email = emailMatch[1];
         }
         
-        // 인원수
-        if (lowerLine.includes('인원') || lowerLine.includes('guest') || lowerLine.includes('pax')) {
-            const adultMatch = line.match(/성인\s*(\d+)/);
-            const childMatch = line.match(/소아\s*(\d+)/);
-            const infantMatch = line.match(/유아\s*(\d+)/);
-            const totalMatch = line.match(/(\d+)\s*명/);
+        // 전화번호 (국제번호 포함)
+        if (lowerLine.includes('전화') || lowerLine.includes('phone') || lowerLine.includes('tel') || 
+            lowerLine.includes('mobile') || lowerLine.includes('핸드폰')) {
+            const phonePatterns = [
+                /(\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,9})/,
+                /(010[-\s]?\d{4}[-\s]?\d{4})/,
+                /(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})/
+            ];
+            
+            for (const pattern of phonePatterns) {
+                const match = line.match(pattern);
+                if (match && !data.phone) {
+                    data.phone = match[1].trim();
+                    break;
+                }
+            }
+        }
+        
+        // 인원수 (더 정교하게)
+        if (lowerLine.includes('인원') || lowerLine.includes('guest') || lowerLine.includes('pax') || 
+            lowerLine.includes('people') || lowerLine.includes('성인') || lowerLine.includes('소아')) {
+            
+            const adultMatch = line.match(/성인[\s:：]*(\d+)/i);
+            const childMatch = line.match(/(?:소아|어린이|child)[\s:：]*(\d+)/i);
+            const infantMatch = line.match(/(?:유아|infant|baby)[\s:：]*(\d+)/i);
+            const totalMatch = line.match(/(?:총\s*)?(\d+)\s*(?:명|인|pax|people)/i);
             
             if (adultMatch) data.people_adult = parseInt(adultMatch[1]);
             if (childMatch) data.people_child = parseInt(childMatch[1]);
             if (infantMatch) data.people_infant = parseInt(infantMatch[1]);
-            if (totalMatch && !adultMatch) data.people_adult = parseInt(totalMatch[1]);
+            if (totalMatch && !adultMatch && !childMatch && !infantMatch) {
+                data.people_adult = parseInt(totalMatch[1]);
+            }
+        }
+        
+        // 패키지 타입
+        if (lowerLine.includes('패키지') || lowerLine.includes('package') || lowerLine.includes('옵션')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length > 1) {
+                data.package_type = parts[1].trim();
+            }
+        }
+        
+        // 카카오톡 ID
+        if (lowerLine.includes('카카오') || lowerLine.includes('kakao')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length > 1) {
+                data.kakao_id = parts[1].trim();
+            }
         }
         
         // 메모/특이사항
-        if (lowerLine.includes('메모') || lowerLine.includes('특이') || lowerLine.includes('요청')) {
+        if (lowerLine.includes('메모') || lowerLine.includes('특이') || lowerLine.includes('요청') || 
+            lowerLine.includes('note') || lowerLine.includes('remark')) {
             const parts = line.split(/[:：]/);
             if (parts.length > 1) {
                 data.memo = parts[1].trim();
+            }
+        }
+        
+        // 취소 정책
+        if (lowerLine.includes('취소') || lowerLine.includes('환불') || lowerLine.includes('cancellation') || 
+            lowerLine.includes('refund') || lowerLine.includes('policy')) {
+            if (!data.policy_text) {
+                data.policy_text = line.trim();
+            } else {
+                data.policy_text += ' ' + line.trim();
             }
         }
     }
@@ -3107,7 +3108,7 @@ function parseReservationToJSON(text) {
     data.total_quantity = (data.people_adult || 0) + (data.people_child || 0) + (data.people_infant || 0);
     if (data.total_quantity === 0) data.total_quantity = 1;
     
-    console.log('로컬 AI 파싱 완료:', data);
+    console.log('✅ AI 수준 파싱 완료:', data);
     return data;
 }
 
@@ -3119,7 +3120,6 @@ function parseReservationTextAdvanced(text) {
     const englishNameParts = (parsedData.english_name || '').split(' ');
     const englishFirstName = englishNameParts[0] || '';
     const englishLastName = englishNameParts.slice(1).join(' ') || '';
-{{ ... }}
     
     // JSON 스키마 형태로 변환 (새로운 6개 테이블 구조)
     const jsonSchema = {
@@ -3511,8 +3511,8 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
         
-        // Google AI를 활용한 텍스트 파싱
-        const parsedData = await parseReservationWithGoogleAI(reservationText);
+        // AI 수준의 지능형 텍스트 파싱
+        const parsedData = parseReservationToJSON(reservationText);
         
         // 지능형 필수 필드 검증 (더 유연하게)
         const missingFields = [];
