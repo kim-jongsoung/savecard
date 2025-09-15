@@ -1,11 +1,16 @@
 const express = require('express');
-const session = require('express-session');
 const path = require('path');
-const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
+const session = require('express-session');
+const { Pool } = require('pg');
+const { connectDB, dbHelpers } = require('./database');
 const QRCode = require('qrcode');
-const fs = require('fs-extra');
+const crypto = require('crypto');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const bcrypt = require('bcryptjs');
+
+// Google Generative AI 초기화
+const GOOGLE_AI_API_KEY = 'AIzaSyA80U_G3viDBxezYtiwS_F49TMgYlBE-t8';
+const genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
 // nodemailer 제거됨
 require('dotenv').config();
 
@@ -2822,7 +2827,80 @@ app.listen(PORT, async () => {
 
 // ==================== 예약 데이터 파싱 함수 ====================
 
-// 새로운 JSON 스키마 기반 예약 데이터 변환 함수 (새로운 6개 테이블 구조)
+// Google AI를 활용한 고급 예약 데이터 파싱 함수
+async function parseReservationWithGoogleAI(text) {
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        
+        const prompt = `
+다음 예약 텍스트를 분석하여 JSON 형태로 변환해주세요. 정확한 정보만 추출하고, 없는 정보는 null로 설정하세요.
+
+예약 텍스트:
+${text}
+
+다음 JSON 스키마에 맞춰 응답해주세요:
+{
+  "reservation_code": "예약번호 (문자+숫자 조합)",
+  "platform_name": "예약 플랫폼 (NOL, KLOOK, VIATOR, GETYOURGUIDE, EXPEDIA 등)",
+  "reservation_channel": "예약 채널 (웹, 앱, 전화 등)",
+  "product_name": "상품명",
+  "reservation_status": "예약상태 (접수, 확정, 취소 등)",
+  "total_quantity": "총 수량 (숫자)",
+  "total_price": "총 금액 (숫자만, 달러 기준)",
+  
+  "usage_date": "이용일 (YYYY-MM-DD 형식)",
+  "usage_time": "이용시간 (HH:MM 형식)",
+  "package_type": "패키지 타입",
+  "package_count": "패키지 수량 (숫자)",
+  
+  "name_kr": "예약자 한글명",
+  "name_en_first": "영문 이름",
+  "name_en_last": "영문 성",
+  "phone": "전화번호",
+  "email": "이메일 주소",
+  "kakao_id": "카카오톡 ID",
+  "people_adult": "성인 인원수 (숫자)",
+  "people_child": "소아 인원수 (숫자)",
+  "people_infant": "유아 인원수 (숫자)",
+  "memo": "메모 또는 특이사항",
+  
+  "adult_unit_price": "성인 단가 (숫자)",
+  "child_unit_price": "소아 단가 (숫자)",
+  "infant_unit_price": "유아 단가 (숫자)",
+  "platform_sale_amount": "플랫폼 판매 금액 (숫자)",
+  "platform_settlement_amount": "정산 금액 (숫자)",
+  "payment_status": "결제 상태 (대기, 완료, 취소 등)",
+  "payment_date": "결제일 (YYYY-MM-DD 형식)",
+  
+  "policy_text": "취소/환불 정책 내용"
+}
+
+응답은 반드시 유효한 JSON 형태로만 해주세요. 설명이나 다른 텍스트는 포함하지 마세요.
+`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const jsonText = response.text().trim();
+        
+        // JSON 파싱 시도
+        try {
+            const parsedData = JSON.parse(jsonText);
+            console.log('🤖 Google AI 파싱 성공:', parsedData);
+            return parsedData;
+        } catch (parseError) {
+            console.error('❌ Google AI 응답 JSON 파싱 실패:', parseError);
+            // fallback으로 기존 파싱 함수 사용
+            return parseReservationToJSON(text);
+        }
+        
+    } catch (error) {
+        console.error('❌ Google AI 파싱 오류:', error);
+        // fallback으로 기존 파싱 함수 사용
+        return parseReservationToJSON(text);
+    }
+}
+
+// AI 수준의 지능형 예약 데이터 파싱 함수 (새로운 6개 테이블 구조)
 function parseReservationToJSON(text) {
     const parsedData = parseReservationTextAdvanced(text);
     
@@ -3221,17 +3299,17 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
         
-        // 텍스트 파싱
-        const parsedData = parseReservationText(reservationText);
+        // Google AI를 활용한 텍스트 파싱
+        const parsedData = await parseReservationWithGoogleAI(reservationText);
         
         // 지능형 필수 필드 검증 (더 유연하게)
         const missingFields = [];
         
-        if (!parsedData.reservation_number) {
+        if (!parsedData.reservation_code) {
             missingFields.push('예약번호');
         }
         
-        if (!parsedData.korean_name && !parsedData.english_name) {
+        if (!parsedData.name_kr && !parsedData.name_en_first) {
             missingFields.push('예약자명');
         }
         
@@ -3542,83 +3620,165 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     }
 });
 
-// 새로운 6개 테이블 구조에 맞는 예약 관리 페이지 (JOIN 쿼리)
+// 예약 관리 페이지 (새/구 테이블 구조 호환)
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
         if (dbMode === 'postgresql') {
-            // 통계 조회 (새로운 테이블 구조)
-            const statsQuery = await pool.query(`
-                SELECT 
-                    COUNT(DISTINCT r.reservation_id) as total_reservations,
-                    COUNT(DISTINCT CASE WHEN p.payment_status = '완료' THEN r.reservation_id END) as code_issued,
-                    COUNT(DISTINCT CASE WHEN p.payment_status != '완료' OR p.payment_status IS NULL THEN r.reservation_id END) as pending_codes,
-                    COUNT(DISTINCT r.platform_name) as companies
-                FROM reservations r
-                LEFT JOIN reservation_payments p ON r.reservation_id = p.reservation_id
+            // 먼저 새로운 테이블 구조가 있는지 확인
+            const tableCheck = await pool.query(`
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name IN ('reservations', 'reservation_schedules', 'reservation_customers', 'reservation_payments')
             `);
             
-            // 예약 목록 조회 (6개 테이블 JOIN)
-            const reservationsQuery = await pool.query(`
-                SELECT 
-                    r.reservation_id,
-                    r.reservation_code,
-                    r.reservation_channel,
-                    r.platform_name,
-                    r.reservation_status,
-                    r.reservation_datetime,
-                    r.product_name,
-                    r.total_quantity,
-                    r.total_price,
-                    r.created_at,
-                    
-                    s.usage_date,
-                    s.usage_time,
-                    s.package_type,
-                    s.package_count,
-                    
-                    c.name_kr,
-                    c.name_en_first,
-                    c.name_en_last,
-                    CONCAT(c.name_en_first, ' ', c.name_en_last) as english_name,
-                    c.phone,
-                    c.email,
-                    c.kakao_id,
-                    c.people_adult,
-                    c.people_child,
-                    c.people_infant,
-                    c.memo,
-                    
-                    p.adult_unit_price,
-                    p.child_unit_price,
-                    p.infant_unit_price,
-                    p.platform_sale_amount,
-                    p.platform_settlement_amount,
-                    p.payment_status,
-                    p.payment_date,
-                    
-                    pol.policy_text,
-                    
-                    CASE WHEN p.payment_status = '완료' THEN true ELSE false END as code_issued,
-                    p.payment_date as code_issued_at
-                    
-                FROM reservations r
-                LEFT JOIN reservation_schedules s ON r.reservation_id = s.reservation_id
-                LEFT JOIN reservation_customers c ON r.reservation_id = c.reservation_id
-                LEFT JOIN reservation_payments p ON r.reservation_id = p.reservation_id
-                LEFT JOIN cancellation_policies pol ON r.reservation_id = pol.reservation_id
-                ORDER BY r.created_at DESC 
-                LIMIT 50
-            `);
+            const hasNewTables = tableCheck.rows.length >= 4;
             
-            const stats = statsQuery.rows[0];
-            const reservations = reservationsQuery.rows;
-            
-            res.render('admin/reservations', {
-                title: '예약 관리',
-                adminUsername: req.session.adminUsername || 'admin',
-                stats: stats,
-                reservations: reservations
-            });
+            if (hasNewTables) {
+                // 새로운 6개 테이블 구조 사용
+                const statsQuery = await pool.query(`
+                    SELECT 
+                        COUNT(DISTINCT r.reservation_id) as total_reservations,
+                        COUNT(DISTINCT CASE WHEN p.payment_status = '완료' THEN r.reservation_id END) as code_issued,
+                        COUNT(DISTINCT CASE WHEN p.payment_status != '완료' OR p.payment_status IS NULL THEN r.reservation_id END) as pending_codes,
+                        COUNT(DISTINCT r.platform_name) as companies
+                    FROM reservations r
+                    LEFT JOIN reservation_payments p ON r.reservation_id = p.reservation_id
+                `);
+                
+                const reservationsQuery = await pool.query(`
+                    SELECT 
+                        r.reservation_id,
+                        r.reservation_code,
+                        r.reservation_channel,
+                        r.platform_name,
+                        r.reservation_status,
+                        r.reservation_datetime,
+                        r.product_name,
+                        r.total_quantity,
+                        r.total_price,
+                        r.created_at,
+                        
+                        s.usage_date,
+                        s.usage_time,
+                        s.package_type,
+                        s.package_count,
+                        
+                        c.name_kr,
+                        c.name_en_first,
+                        c.name_en_last,
+                        CONCAT(c.name_en_first, ' ', c.name_en_last) as english_name,
+                        c.phone,
+                        c.email,
+                        c.kakao_id,
+                        c.people_adult,
+                        c.people_child,
+                        c.people_infant,
+                        c.memo,
+                        
+                        p.adult_unit_price,
+                        p.child_unit_price,
+                        p.infant_unit_price,
+                        p.platform_sale_amount,
+                        p.platform_settlement_amount,
+                        p.payment_status,
+                        p.payment_date,
+                        
+                        pol.policy_text,
+                        
+                        CASE WHEN p.payment_status = '완료' THEN true ELSE false END as code_issued,
+                        p.payment_date as code_issued_at
+                        
+                    FROM reservations r
+                    LEFT JOIN reservation_schedules s ON r.reservation_id = s.reservation_id
+                    LEFT JOIN reservation_customers c ON r.reservation_id = c.reservation_id
+                    LEFT JOIN reservation_payments p ON r.reservation_id = p.reservation_id
+                    LEFT JOIN cancellation_policies pol ON r.reservation_id = pol.reservation_id
+                    ORDER BY r.created_at DESC 
+                    LIMIT 50
+                `);
+                
+                const stats = statsQuery.rows[0];
+                const reservations = reservationsQuery.rows;
+                
+                res.render('admin/reservations', {
+                    title: '예약 관리',
+                    adminUsername: req.session.adminUsername || 'admin',
+                    stats: stats,
+                    reservations: reservations
+                });
+            } else {
+                // 기존 단일 테이블 구조 사용 (fallback)
+                console.log('새로운 테이블 구조가 없어 기존 구조 사용');
+                
+                // 기존 reservations 테이블이 있는지 확인
+                const oldTableCheck = await pool.query(`
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'reservations'
+                `);
+                
+                if (oldTableCheck.rows.length > 0) {
+                    const statsQuery = await pool.query(`
+                        SELECT 
+                            COUNT(*) as total_reservations,
+                            COUNT(CASE WHEN code_issued = true THEN 1 END) as code_issued,
+                            COUNT(CASE WHEN code_issued = false OR code_issued IS NULL THEN 1 END) as pending_codes,
+                            1 as companies
+                        FROM reservations
+                    `);
+                    
+                    const reservationsQuery = await pool.query(`
+                        SELECT 
+                            id as reservation_id,
+                            reservation_number as reservation_code,
+                            channel as reservation_channel,
+                            'NOL' as platform_name,
+                            '접수' as reservation_status,
+                            product_name,
+                            guest_count as total_quantity,
+                            total_amount as total_price,
+                            usage_date,
+                            usage_time,
+                            package_type,
+                            korean_name as name_kr,
+                            CONCAT(english_first_name, ' ', english_last_name) as english_name,
+                            email,
+                            phone,
+                            kakao_id,
+                            guest_count as people_adult,
+                            0 as people_child,
+                            0 as people_infant,
+                            memo,
+                            total_amount as platform_sale_amount,
+                            code_issued,
+                            code_issued_at,
+                            created_at
+                        FROM reservations 
+                        ORDER BY created_at DESC 
+                        LIMIT 50
+                    `);
+                    
+                    const stats = statsQuery.rows[0];
+                    const reservations = reservationsQuery.rows;
+                    
+                    res.render('admin/reservations', {
+                        title: '예약 관리',
+                        adminUsername: req.session.adminUsername || 'admin',
+                        stats: stats,
+                        reservations: reservations
+                    });
+                } else {
+                    // 테이블이 없는 경우
+                    res.render('admin/reservations', {
+                        title: '예약 관리',
+                        adminUsername: req.session.adminUsername || 'admin',
+                        stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0 },
+                        reservations: []
+                    });
+                }
+            }
         } else {
             res.render('admin/reservations', {
                 title: '예약 관리',
@@ -3631,7 +3791,7 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
         console.error('예약 관리 페이지 로드 오류:', error);
         res.status(500).render('error', { 
             title: '오류', 
-            message: '예약 관리 페이지를 불러올 수 없습니다.' 
+            message: '예약 관리 페이지를 불러올 수 없습니다: ' + error.message 
         });
     }
 });
