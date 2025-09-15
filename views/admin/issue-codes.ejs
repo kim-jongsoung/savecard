@@ -130,7 +130,7 @@
 
         <!-- 통계 카드 -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-key fa-2x text-primary mb-2"></i>
@@ -139,7 +139,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-clock fa-2x text-warning mb-2"></i>
@@ -179,11 +179,12 @@
                         <thead>
                             <tr>
                                 <th>코드</th>
-                                <th>생성일</th>
                                 <th>상태</th>
+                                <th>전달상태</th>
                                 <th>사용자</th>
                                 <th>사용일</th>
                                 <th>메모</th>
+                                <th>생성일</th>
                                 <th>작업</th>
                             </tr>
                         </thead>
@@ -197,12 +198,18 @@
                                                 <i class="fas fa-copy"></i>
                                             </button>
                                         </td>
-                                        <td><%= new Date(code.created_at).toLocaleDateString('ko-KR') %></td>
                                         <td>
                                             <% if (code.is_used) { %>
                                                 <span class="badge bg-success">사용됨</span>
                                             <% } else { %>
                                                 <span class="badge bg-warning">미사용</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if (code.is_delivered) { %>
+                                                <span class="badge bg-info">전달완료</span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary">미전달</span>
                                             <% } %>
                                         </td>
                                         <td>
@@ -226,23 +233,31 @@
                                                 <span class="text-muted">-</span>
                                             <% } %>
                                         </td>
+                                        <td><%= new Date(code.created_at).toLocaleDateString('ko-KR') %></td>
                                         <td>
-                                            <% if (!code.is_used) { %>
-                                                <button class="btn btn-sm btn-outline-primary me-1" onclick="editCode('<%= code.id %>', '<%= code.notes || '' %>')">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCode('<%= code.id %>')">
-                                                    <i class="fas fa-trash"></i>
+                                            <% if (!code.is_delivered) { %>
+                                                <button class="btn btn-sm btn-success me-1" onclick="markAsDelivered(<%= code.id %>)" title="전달 완료 표시">
+                                                    <i class="fas fa-paper-plane"></i>
                                                 </button>
                                             <% } else { %>
-                                                <span class="text-muted">사용됨</span>
+                                                <button class="btn btn-sm btn-outline-secondary me-1" onclick="markAsUndelivered(<%= code.id %>)" title="미전달로 변경">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            <% } %>
+                                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editCode(<%= code.id %>, '<%= code.notes || '' %>')">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <% if (!code.is_used) { %>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCode(<%= code.id %>)">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             <% } %>
                                         </td>
                                     </tr>
                                 <% }); %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
+                                    <td colspan="8" class="text-center text-muted py-4">
                                         <i class="fas fa-inbox fa-2x mb-3"></i>
                                         <p>생성된 발급 코드가 없습니다.</p>
                                     </td>
@@ -423,6 +438,56 @@
                 .catch(error => {
                     console.error('Error:', error);
                     alert('코드 삭제 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        // 전달 완료 표시
+        function markAsDelivered(id) {
+            fetch(`/admin/issue-codes/${id}/delivery`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_delivered: true })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('코드가 전달 완료되었습니다.');
+                    location.reload();
+                } else {
+                    alert('코드 전달 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('코드 전달 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 미전달로 변경
+        function markAsUndelivered(id) {
+            if (confirm('정말로 미전달 상태로 변경하시겠습니까?')) {
+                fetch(`/admin/issue-codes/${id}/delivery`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_delivered: false })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('코드가 미전달 상태로 변경되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('코드 전달 실패: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('코드 전달 중 오류가 발생했습니다.');
                 });
             }
         }

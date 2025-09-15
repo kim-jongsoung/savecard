@@ -128,12 +128,14 @@ async function ensureAllColumns() {
     await client.query(`
       ALTER TABLE issue_codes
       ADD COLUMN IF NOT EXISTS code VARCHAR(20),
-      ADD COLUMN IF NOT EXISTS is_used BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS is_used BOOLEAN DEFAULT FALSE,
       ADD COLUMN IF NOT EXISTS used_by_user_id INTEGER,
       ADD COLUMN IF NOT EXISTS used_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS notes TEXT
+      ADD COLUMN IF NOT EXISTS notes TEXT,
+      ADD COLUMN IF NOT EXISTS is_delivered BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP
     `);
 
     console.log('🛠️ 모든 테이블 컬럼 보정 완료');
@@ -279,13 +281,15 @@ async function createTables() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS issue_codes (
         id SERIAL PRIMARY KEY,
-        code VARCHAR(20) UNIQUE NOT NULL,
-        is_used BOOLEAN DEFAULT false,
+        code VARCHAR(10) UNIQUE NOT NULL,
+        is_used BOOLEAN DEFAULT FALSE,
         used_by_user_id INTEGER REFERENCES users(id),
         used_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         expires_at TIMESTAMP,
-        notes TEXT
+        notes TEXT,
+        is_delivered BOOLEAN DEFAULT FALSE,
+        delivered_at TIMESTAMP
       )
     `);
 

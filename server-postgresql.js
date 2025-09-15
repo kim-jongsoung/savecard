@@ -529,6 +529,38 @@ function formatDate(date) {
     return `${month}/${day}/${year}`;
 }
 
+// 발급 코드 전달 상태 업데이트 API
+app.put('/admin/issue-codes/:id/delivery', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_delivered } = req.body;
+        
+        if (dbMode === 'postgresql') {
+            const delivered_at = is_delivered ? new Date() : null;
+            
+            const result = await pool.query(
+                'UPDATE issue_codes SET is_delivered = $1, delivered_at = $2 WHERE id = $3 RETURNING *',
+                [is_delivered, delivered_at, id]
+            );
+            
+            if (result.rows.length === 0) {
+                return res.json({ success: false, message: '코드를 찾을 수 없습니다.' });
+            }
+            
+            res.json({ 
+                success: true, 
+                message: is_delivered ? '전달 완료로 표시되었습니다.' : '미전달로 표시되었습니다.',
+                code: result.rows[0]
+            });
+        } else {
+            res.json({ success: false, message: 'PostgreSQL 모드에서만 사용 가능합니다.' });
+        }
+    } catch (error) {
+        console.error('전달 상태 업데이트 오류:', error);
+        res.json({ success: false, message: '전달 상태 업데이트 중 오류가 발생했습니다.' });
+    }
+});
+
 // ==================== 메인 라우트 ====================
 
 // 헬스체크 라우트 (디버깅용)
@@ -1942,17 +1974,13 @@ app.post('/card/use', async (req, res) => {
         console.error('카드 사용 처리 오류:', error);
         res.json({
             success: false,
-            message: '처리 중 오류가 발생했습니다.'
+            message: '카드 사용 처리 중 오류가 발생했습니다.'
         });
     }
 });
 
-// ==================== 관리자 라우트 ====================
-
-// 관리자 로그인/로그아웃은 routes/admin.js에서 처리하므로 중복 제거
-
-// 관리자 대시보드 (루트 경로는 라우터에서 처리하지 않음)
-app.get('/admin', requireAuth, async (req, res) => {
+// 관리자 대시보드
+app.get('/admin/dashboard', requireAuth, async (req, res) => {
     try {
         const [users, agencies, stores, usages, banners] = await Promise.all([
             dbHelpers.getUsers(),
@@ -2706,10 +2734,16 @@ app.get('/admin/issue-codes', requireAuth, async (req, res) => {
                     COUNT(*) as total_codes,
                     COUNT(CASE WHEN is_used = false THEN 1 END) as unused_codes,
                     COUNT(CASE WHEN is_used = true THEN 1 END) as used_codes,
+                    COUNT(CASE WHEN is_delivered = false THEN 1 END) as undelivered_codes,
+                    COUNT(CASE WHEN is_delivered = true THEN 1 END) as delivered_codes,
                     CASE 
                         WHEN COUNT(*) > 0 THEN ROUND((COUNT(CASE WHEN is_used = true THEN 1 END)::numeric / COUNT(*)::numeric) * 100, 1)
                         ELSE 0 
-                    END as usage_rate
+                    END as usage_rate,
+                    CASE 
+                        WHEN COUNT(*) > 0 THEN ROUND((COUNT(CASE WHEN is_delivered = true THEN 1 END)::numeric / COUNT(*)::numeric) * 100, 1)
+                        ELSE 0 
+                    END as delivery_rate
                 FROM issue_codes
             `);
             
@@ -2738,7 +2772,7 @@ app.get('/admin/issue-codes', requireAuth, async (req, res) => {
             res.render('admin/issue-codes', {
                 title: '발급 코드 관리',
                 adminUsername: req.session.adminUsername || 'admin',
-                stats: { total_codes: 0, unused_codes: 0, used_codes: 0, usage_rate: 0 },
+                stats: { total_codes: 0, unused_codes: 0, used_codes: 0, undelivered_codes: 0, delivered_codes: 0, usage_rate: 0, delivery_rate: 0 },
                 codes: []
             });
         }
