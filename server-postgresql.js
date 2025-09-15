@@ -852,6 +852,11 @@ app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
 
 // ==================== 관리자 페이지 라우트 ====================
 
+// 관리자 메인 페이지 (대시보드로 리다이렉트)
+app.get('/admin', requireAuth, (req, res) => {
+    res.redirect('/admin/dashboard');
+});
+
 // 관리자 대시보드
 app.get('/admin/dashboard', requireAuth, async (req, res) => {
     try {
