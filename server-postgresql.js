@@ -5,18 +5,24 @@ const { Pool } = require('pg');
 const { connectDB, dbHelpers } = require('./database');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const bcrypt = require('bcryptjs');
 
 // Google Generative AI 초기화 (환경변수 사용)
-const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
+let GoogleGenerativeAI = null;
 let genAI = null;
 
-if (GOOGLE_AI_API_KEY) {
-    genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
-    console.log('🤖 Google AI 초기화 완료');
-} else {
-    console.log('⚠️ GOOGLE_AI_API_KEY 환경변수가 설정되지 않음. AI 파싱 기능 비활성화');
+try {
+    GoogleGenerativeAI = require('@google/generative-ai').GoogleGenerativeAI;
+    const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
+    
+    if (GOOGLE_AI_API_KEY) {
+        genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
+        console.log('🤖 Google AI 초기화 완료');
+    } else {
+        console.log('⚠️ GOOGLE_AI_API_KEY 환경변수가 설정되지 않음. AI 파싱 기능 비활성화');
+    }
+} catch (error) {
+    console.log('⚠️ Google AI 패키지 로드 실패. AI 파싱 기능 비활성화:', error.message);
 }
 // nodemailer 제거됨
 require('dotenv').config();
@@ -2837,7 +2843,7 @@ app.listen(PORT, async () => {
 // Google AI를 활용한 고급 예약 데이터 파싱 함수
 async function parseReservationWithGoogleAI(text) {
     // Google AI가 초기화되지 않은 경우 기존 파싱 함수 사용
-    if (!genAI) {
+    if (!genAI || !GoogleGenerativeAI) {
         console.log('⚠️ Google AI 미사용, 기존 파싱 함수 사용');
         return parseReservationToJSON(text);
     }
