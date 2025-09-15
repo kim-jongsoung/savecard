@@ -13,16 +13,42 @@ let genAI = null;
 
 try {
     GoogleGenerativeAI = require('@google/generative-ai').GoogleGenerativeAI;
-    const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
+    const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIzaSyA80U_G3viDBxezYtiwS_F49TMgYlBE-t8';
     
     if (GOOGLE_AI_API_KEY) {
         genAI = new GoogleGenerativeAI(GOOGLE_AI_API_KEY);
-        console.log('🤖 Google AI 초기화 완료');
+        console.log('🤖 Google AI 초기화 완료 - API 키:', GOOGLE_AI_API_KEY.substring(0, 10) + '...');
+        
+        // API 키 유효성 테스트
+        testGoogleAI();
     } else {
-        console.log('⚠️ GOOGLE_AI_API_KEY 환경변수가 설정되지 않음. AI 파싱 기능 비활성화');
+        console.log('⚠️ GOOGLE_AI_API_KEY가 설정되지 않음. AI 파싱 기능 비활성화');
     }
 } catch (error) {
     console.log('⚠️ Google AI 패키지 로드 실패. AI 파싱 기능 비활성화:', error.message);
+}
+
+// Google AI API 키 유효성 테스트 함수
+async function testGoogleAI() {
+    if (!genAI) return;
+    
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const result = await model.generateContent("Hello");
+        const response = await result.response;
+        console.log('✅ Google AI API 키 유효성 확인 완료');
+    } catch (error) {
+        console.error('❌ Google AI API 키 오류:', error.message);
+        if (error.message.includes('API_KEY_INVALID')) {
+            console.error('🔑 API 키가 유효하지 않습니다. Google AI Studio에서 새 키를 발급받으세요.');
+        } else if (error.message.includes('QUOTA_EXCEEDED')) {
+            console.error('📊 API 할당량을 초과했습니다.');
+        } else if (error.message.includes('PERMISSION_DENIED')) {
+            console.error('🚫 API 키에 Generative AI 권한이 없습니다.');
+        }
+        // API 오류 시 genAI를 null로 설정하여 fallback 사용
+        genAI = null;
+    }
 }
 // nodemailer 제거됨
 require('dotenv').config();
@@ -2919,14 +2945,181 @@ ${text}
     }
 }
 
-// AI 수준의 지능형 예약 데이터 파싱 함수 (새로운 6개 테이블 구조)
+// 고급 로컬 AI 파싱 함수 (Google AI 대안)
 function parseReservationToJSON(text) {
-    const parsedData = parseReservationTextAdvanced(text);
+    console.log('로컬 AI 파싱 시작...');
+    
+    // 더 지능적인 파싱을 위한 정규식 및 패턴 매칭
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const fullText = text.toLowerCase();
+    
+    // 기본 데이터 구조
+    const data = {
+        // 예약 기본 정보
+        reservation_code: null,
+        platform_name: null,
+        reservation_channel: '웹',
+        product_name: null,
+        reservation_status: '접수',
+        total_quantity: 1,
+        total_price: null,
+        
+        // 일정 정보
+        usage_date: null,
+        usage_time: null,
+        package_type: null,
+        package_count: 1,
+        
+        // 고객 정보
+        name_kr: null,
+        name_en_first: null,
+        name_en_last: null,
+        phone: null,
+        email: null,
+        kakao_id: null,
+        people_adult: 1,
+        people_child: 0,
+        people_infant: 0,
+        memo: null,
+        
+        // 결제 정보
+        adult_unit_price: null,
+        child_unit_price: null,
+        infant_unit_price: null,
+        platform_sale_amount: null,
+        platform_settlement_amount: null,
+        payment_status: '대기',
+        payment_date: null,
+        
+        // 정책
+        policy_text: null
+    };
+    
+    // 플랫폼 자동 감지 (더 정확하게)
+    if (fullText.includes('nol') || fullText.includes('엔오엘')) {
+        data.platform_name = 'NOL';
+    } else if (fullText.includes('klook') || fullText.includes('클룩')) {
+        data.platform_name = 'KLOOK';
+    } else if (fullText.includes('viator') || fullText.includes('비아토르')) {
+        data.platform_name = 'VIATOR';
+    } else if (fullText.includes('getyourguide') || fullText.includes('겟유어가이드')) {
+        data.platform_name = 'GETYOURGUIDE';
+    } else if (fullText.includes('expedia') || fullText.includes('익스피디아')) {
+        data.platform_name = 'EXPEDIA';
+    } else {
+        data.platform_name = 'OTHER';
+    }
+    
+    // 각 줄별 파싱
+    for (const line of lines) {
+        const lowerLine = line.toLowerCase();
+        
+        // 예약번호 (다양한 패턴)
+        if (lowerLine.includes('예약') && (lowerLine.includes('번호') || lowerLine.includes('number'))) {
+            const match = line.match(/[A-Z0-9]{4,}/g);
+            if (match) data.reservation_code = match[match.length - 1];
+        }
+        
+        // 상품명
+        if (lowerLine.includes('상품') || lowerLine.includes('product') || lowerLine.includes('투어') || lowerLine.includes('tour')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length > 1) {
+                data.product_name = parts[1].trim();
+            }
+        }
+        
+        // 금액 (더 정확한 패턴)
+        if (lowerLine.includes('금액') || lowerLine.includes('price') || lowerLine.includes('amount') || line.includes('$')) {
+            const priceMatch = line.match(/\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
+            if (priceMatch) {
+                data.total_price = parseFloat(priceMatch[1].replace(/,/g, ''));
+                data.platform_sale_amount = data.total_price;
+                data.platform_settlement_amount = data.total_price;
+            }
+        }
+        
+        // 날짜 (다양한 형식)
+        if (lowerLine.includes('날짜') || lowerLine.includes('date') || lowerLine.includes('이용')) {
+            const dateMatch = line.match(/(\d{4}[-\/년]\d{1,2}[-\/월]\d{1,2}일?)/);
+            if (dateMatch) {
+                data.usage_date = dateMatch[1].replace(/[년월일]/g, '').replace(/\//g, '-');
+            }
+        }
+        
+        // 시간
+        if (lowerLine.includes('시간') || lowerLine.includes('time')) {
+            const timeMatch = line.match(/(\d{1,2}:\d{2})/);
+            if (timeMatch) data.usage_time = timeMatch[1];
+        }
+        
+        // 한글명
+        if (lowerLine.includes('한글') || lowerLine.includes('이름') || lowerLine.includes('성명')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length > 1) {
+                data.name_kr = parts[1].trim();
+            }
+        }
+        
+        // 영문명
+        if (lowerLine.includes('영문') || lowerLine.includes('english')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length > 1) {
+                const englishName = parts[1].trim();
+                const nameParts = englishName.split(' ');
+                data.name_en_first = nameParts[0] || '';
+                data.name_en_last = nameParts.slice(1).join(' ') || '';
+            }
+        }
+        
+        // 이메일
+        const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        if (emailMatch) data.email = emailMatch[1];
+        
+        // 전화번호
+        if (lowerLine.includes('전화') || lowerLine.includes('phone') || lowerLine.includes('tel')) {
+            const phoneMatch = line.match(/([\d\-\+\(\)\s]{8,})/);
+            if (phoneMatch) data.phone = phoneMatch[1].trim();
+        }
+        
+        // 인원수
+        if (lowerLine.includes('인원') || lowerLine.includes('guest') || lowerLine.includes('pax')) {
+            const adultMatch = line.match(/성인\s*(\d+)/);
+            const childMatch = line.match(/소아\s*(\d+)/);
+            const infantMatch = line.match(/유아\s*(\d+)/);
+            const totalMatch = line.match(/(\d+)\s*명/);
+            
+            if (adultMatch) data.people_adult = parseInt(adultMatch[1]);
+            if (childMatch) data.people_child = parseInt(childMatch[1]);
+            if (infantMatch) data.people_infant = parseInt(infantMatch[1]);
+            if (totalMatch && !adultMatch) data.people_adult = parseInt(totalMatch[1]);
+        }
+        
+        // 메모/특이사항
+        if (lowerLine.includes('메모') || lowerLine.includes('특이') || lowerLine.includes('요청')) {
+            const parts = line.split(/[:：]/);
+            if (parts.length > 1) {
+                data.memo = parts[1].trim();
+            }
+        }
+    }
+    
+    // 총 수량 계산
+    data.total_quantity = (data.people_adult || 0) + (data.people_child || 0) + (data.people_infant || 0);
+    if (data.total_quantity === 0) data.total_quantity = 1;
+    
+    console.log('로컬 AI 파싱 완료:', data);
+    return data;
+}
+
+// 기존 파싱 함수 (백업용)
+function parseReservationTextAdvanced(text) {
+    const parsedData = parseReservationText(text);
     
     // 영문명을 first_name과 last_name으로 분리
     const englishNameParts = (parsedData.english_name || '').split(' ');
     const englishFirstName = englishNameParts[0] || '';
     const englishLastName = englishNameParts.slice(1).join(' ') || '';
+{{ ... }}
     
     // JSON 스키마 형태로 변환 (새로운 6개 테이블 구조)
     const jsonSchema = {
