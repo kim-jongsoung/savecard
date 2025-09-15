@@ -1490,7 +1490,7 @@ app.post('/issue', async (req, res) => {
             return res.json({ success: false, message: '발급 코드를 입력해주세요.' });
         }
 
-        const codeValidation = await validateIssueCode(issue_code.trim());
+        const codeValidation = await validateIssueCode(issue_code.trim().toLowerCase());
         if (!codeValidation.valid) {
             return res.json({ success: false, message: codeValidation.message });
         }
@@ -2677,13 +2677,22 @@ app.listen(PORT, async () => {
 
 // ==================== 발급 코드 관리 API ====================
 
-// 랜덤 코드 생성 함수
+// 랜덤 코드 생성 함수 (a1234b 형태)
 function generateIssueCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 8; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    
+    // 첫 글자: 소문자
+    let result = letters.charAt(Math.floor(Math.random() * letters.length));
+    
+    // 중간 4자리: 숫자
+    for (let i = 0; i < 4; i++) {
+        result += numbers.charAt(Math.floor(Math.random() * numbers.length));
     }
+    
+    // 마지막 글자: 소문자
+    result += letters.charAt(Math.floor(Math.random() * letters.length));
+    
     return result;
 }
 
@@ -2836,7 +2845,7 @@ async function validateIssueCode(code) {
         try {
             const result = await pool.query(
                 'SELECT id, is_used FROM issue_codes WHERE code = $1',
-                [code.toUpperCase()]
+                [code.toLowerCase()]
             );
             
             if (result.rows.length === 0) {
@@ -2853,5 +2862,6 @@ async function validateIssueCode(code) {
             return { valid: false, message: '코드 검증 중 오류가 발생했습니다.' };
         }
     }
+    
     return { valid: false, message: 'PostgreSQL 모드에서만 사용 가능합니다.' };
 }

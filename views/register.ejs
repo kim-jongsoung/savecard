@@ -204,9 +204,12 @@
                            class="form-control" 
                            id="issue_code" 
                            name="issue_code" 
-                           placeholder="발급 코드를 입력하세요"
-                           style="text-transform: uppercase;"
-                           required>
+                           required 
+                           placeholder="발급 코드를 입력하세요 (예: a1234b)" 
+                           style="text-transform: lowercase;" 
+                           maxlength="6"
+                           pattern="[a-z][0-9]{4}[a-z]"
+                           title="6자리 소문자+숫자+소문자 형태로 입력하세요 (예: a1234b)">
                     <div class="form-text">
                         <i class="fas fa-info-circle me-1"></i>
                         구매 시 제공받은 발급 코드를 입력해주세요.
