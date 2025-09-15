@@ -6,6 +6,7 @@ const { connectDB } = require('./database');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const cors = require('cors');
 // nodemailer 제거됨
 require('dotenv').config();
 
