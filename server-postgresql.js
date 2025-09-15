@@ -1480,10 +1480,20 @@ app.get('/issue', async (req, res) => {
 // 카드 발급 처리
 app.post('/issue', async (req, res) => {
     try {
-        const { name, email } = req.body;
+        const { name, email, issue_code } = req.body;
         let { agency_id, agency_code } = req.body;
         const pin = (req.body.pin || '').toString().trim();
         const phone = (req.body.phone || '').toString().trim() || null; // 선택 입력
+
+        // 발급 코드 검증 (필수)
+        if (!issue_code || !issue_code.trim()) {
+            return res.json({ success: false, message: '발급 코드를 입력해주세요.' });
+        }
+
+        const codeValidation = await validateIssueCode(issue_code.trim());
+        if (!codeValidation.valid) {
+            return res.json({ success: false, message: codeValidation.message });
+        }
 
         // agency_id 우선, 없으면 agency_code로 조회
         let agency = null;
@@ -1624,6 +1634,19 @@ app.post('/issue', async (req, res) => {
                 }
             } else {
                 throw e;
+            }
+        }
+        
+        // 발급 코드를 사용됨으로 표시
+        if (dbMode === 'postgresql' && codeValidation.codeId) {
+            try {
+                await pool.query(
+                    'UPDATE issue_codes SET is_used = true, used_by_user_id = $1, used_at = NOW() WHERE id = $2',
+                    [user.id, codeValidation.codeId]
+                );
+            } catch (codeUpdateError) {
+                console.error('발급 코드 업데이트 오류:', codeUpdateError);
+                // 코드 업데이트 실패해도 카드 발급은 성공으로 처리
             }
         }
         
@@ -2651,3 +2674,184 @@ app.listen(PORT, async () => {
         console.log('⚠️ 주의: Railway 배포 시 데이터가 초기화될 수 있습니다.');
     }
 });
+
+// ==================== 발급 코드 관리 API ====================
+
+// 랜덤 코드 생성 함수
+function generateIssueCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// 발급 코드 관리 페이지
+app.get('/admin/issue-codes', requireAuth, async (req, res) => {
+    try {
+        if (dbMode === 'postgresql') {
+            // 통계 조회
+            const statsQuery = await pool.query(`
+                SELECT 
+                    COUNT(*) as total_codes,
+                    COUNT(CASE WHEN is_used = false THEN 1 END) as unused_codes,
+                    COUNT(CASE WHEN is_used = true THEN 1 END) as used_codes,
+                    CASE 
+                        WHEN COUNT(*) > 0 THEN ROUND((COUNT(CASE WHEN is_used = true THEN 1 END)::numeric / COUNT(*)::numeric) * 100, 1)
+                        ELSE 0 
+                    END as usage_rate
+                FROM issue_codes
+            `);
+            
+            // 코드 목록 조회 (사용자 정보 포함)
+            const codesQuery = await pool.query(`
+                SELECT 
+                    ic.*,
+                    u.name as user_name
+                FROM issue_codes ic
+                LEFT JOIN users u ON ic.used_by_user_id = u.id
+                ORDER BY ic.created_at DESC
+                LIMIT 100
+            `);
+            
+            const stats = statsQuery.rows[0];
+            const codes = codesQuery.rows;
+            
+            res.render('admin/issue-codes', {
+                title: '발급 코드 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                stats: stats,
+                codes: codes
+            });
+        } else {
+            // JSON 모드 (기본 데이터)
+            res.render('admin/issue-codes', {
+                title: '발급 코드 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                stats: { total_codes: 0, unused_codes: 0, used_codes: 0, usage_rate: 0 },
+                codes: []
+            });
+        }
+    } catch (error) {
+        console.error('발급 코드 페이지 로드 오류:', error);
+        res.status(500).render('error', { 
+            title: '오류', 
+            message: '발급 코드 페이지를 불러올 수 없습니다.' 
+        });
+    }
+});
+
+// 발급 코드 생성 API
+app.post('/admin/issue-codes/generate', requireAuth, async (req, res) => {
+    try {
+        const { count = 1, notes = '' } = req.body;
+        const codeCount = Math.min(Math.max(parseInt(count), 1), 100); // 1-100개 제한
+        
+        if (dbMode === 'postgresql') {
+            const generatedCodes = [];
+            
+            for (let i = 0; i < codeCount; i++) {
+                let code;
+                let isUnique = false;
+                let attempts = 0;
+                
+                // 중복되지 않는 코드 생성 (최대 10회 시도)
+                while (!isUnique && attempts < 10) {
+                    code = generateIssueCode();
+                    const existingCode = await pool.query('SELECT id FROM issue_codes WHERE code = $1', [code]);
+                    if (existingCode.rows.length === 0) {
+                        isUnique = true;
+                    }
+                    attempts++;
+                }
+                
+                if (isUnique) {
+                    await pool.query(
+                        'INSERT INTO issue_codes (code, notes) VALUES ($1, $2)',
+                        [code, notes]
+                    );
+                    generatedCodes.push(code);
+                } else {
+                    console.warn('코드 생성 실패: 중복 방지 시도 초과');
+                }
+            }
+            
+            res.json({ 
+                success: true, 
+                message: `${generatedCodes.length}개의 코드가 생성되었습니다.`,
+                codes: generatedCodes
+            });
+        } else {
+            res.json({ success: false, message: 'PostgreSQL 모드에서만 사용 가능합니다.' });
+        }
+    } catch (error) {
+        console.error('발급 코드 생성 오류:', error);
+        res.json({ success: false, message: '코드 생성 중 오류가 발생했습니다.' });
+    }
+});
+
+// 발급 코드 수정 API
+app.put('/admin/issue-codes/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { notes } = req.body;
+        
+        if (dbMode === 'postgresql') {
+            await pool.query(
+                'UPDATE issue_codes SET notes = $1 WHERE id = $2 AND is_used = false',
+                [notes, id]
+            );
+            
+            res.json({ success: true, message: '코드가 수정되었습니다.' });
+        } else {
+            res.json({ success: false, message: 'PostgreSQL 모드에서만 사용 가능합니다.' });
+        }
+    } catch (error) {
+        console.error('발급 코드 수정 오류:', error);
+        res.json({ success: false, message: '코드 수정 중 오류가 발생했습니다.' });
+    }
+});
+
+// 발급 코드 삭제 API
+app.delete('/admin/issue-codes/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (dbMode === 'postgresql') {
+            await pool.query('DELETE FROM issue_codes WHERE id = $1 AND is_used = false', [id]);
+            res.json({ success: true, message: '코드가 삭제되었습니다.' });
+        } else {
+            res.json({ success: false, message: 'PostgreSQL 모드에서만 사용 가능합니다.' });
+        }
+    } catch (error) {
+        console.error('발급 코드 삭제 오류:', error);
+        res.json({ success: false, message: '코드 삭제 중 오류가 발생했습니다.' });
+    }
+});
+
+// 발급 코드 검증 함수
+async function validateIssueCode(code) {
+    if (dbMode === 'postgresql') {
+        try {
+            const result = await pool.query(
+                'SELECT id, is_used FROM issue_codes WHERE code = $1',
+                [code.toUpperCase()]
+            );
+            
+            if (result.rows.length === 0) {
+                return { valid: false, message: '존재하지 않는 발급 코드입니다.' };
+            }
+            
+            if (result.rows[0].is_used) {
+                return { valid: false, message: '이미 사용된 발급 코드입니다.' };
+            }
+            
+            return { valid: true, codeId: result.rows[0].id };
+        } catch (error) {
+            console.error('발급 코드 검증 오류:', error);
+            return { valid: false, message: '코드 검증 중 오류가 발생했습니다.' };
+        }
+    }
+    return { valid: false, message: 'PostgreSQL 모드에서만 사용 가능합니다.' };
+}

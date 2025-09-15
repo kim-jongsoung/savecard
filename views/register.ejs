@@ -195,6 +195,27 @@
                     </div>
                 </div>
 
+                <!-- 발급 코드 입력 -->
+                <div class="mb-3">
+                    <label for="issue_code" class="form-label">
+                        <i class="fas fa-key me-2"></i>발급 코드
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="issue_code" 
+                           name="issue_code" 
+                           placeholder="발급 코드를 입력하세요"
+                           style="text-transform: uppercase;"
+                           required>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        구매 시 제공받은 발급 코드를 입력해주세요.
+                    </div>
+                    <div id="codeError" class="text-danger mt-1" style="display:none;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>올바른 발급 코드를 입력해주세요.
+                    </div>
+                </div>
+
                 <div class="mb-4">
                     <label for="agency_code" class="form-label">
                         <i class="fas fa-building me-2"></i>여행사

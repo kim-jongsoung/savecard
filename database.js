@@ -124,6 +124,18 @@ async function ensureAllColumns() {
       ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     `);
 
+    // issue_codes
+    await client.query(`
+      ALTER TABLE issue_codes
+      ADD COLUMN IF NOT EXISTS code VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS is_used BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS used_by_user_id INTEGER,
+      ADD COLUMN IF NOT EXISTS used_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS notes TEXT
+    `);
+
     console.log('🛠️ 모든 테이블 컬럼 보정 완료');
   } catch (err) {
     console.warn('⚠️ 컬럼 보정 중 경고:', err.message);
@@ -260,6 +272,20 @@ async function createTables() {
         click_count INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // 발급 코드 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS issue_codes (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(20) UNIQUE NOT NULL,
+        is_used BOOLEAN DEFAULT false,
+        used_by_user_id INTEGER REFERENCES users(id),
+        used_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP,
+        notes TEXT
       )
     `);
 
