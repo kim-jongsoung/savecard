@@ -4071,6 +4071,8 @@ app.post('/api/register-reservation', async (req, res) => {
         // AI 수준 파싱 실행
         const parsedData = parseReservationToJSON(reservationText);
         console.log('📊 파싱 완료:', parsedData);
+        console.log('🔍 한글 이름 확인:', parsedData.korean_name);
+        console.log('🔍 영문 이름 확인:', parsedData.english_first_name, parsedData.english_last_name);
         
         // 데이터베이스에 저장
         if (dbMode === 'postgresql') {
