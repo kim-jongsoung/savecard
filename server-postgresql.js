@@ -122,6 +122,16 @@ async function migrateReservationsSchema() {
       }
     }
     
+    // korean_name 컬럼의 NOT NULL 제약조건 제거 (부분 데이터 허용)
+    if (existingColumns.includes('korean_name')) {
+      try {
+        await pool.query('ALTER TABLE reservations ALTER COLUMN korean_name DROP NOT NULL');
+        console.log('✅ korean_name NOT NULL 제약조건 제거 완료');
+      } catch (error) {
+        console.log('⚠️ korean_name NOT NULL 제약조건 제거 건너뜀:', error.message);
+      }
+    }
+    
     // 기존 데이터 마이그레이션
     if (existingColumns.includes('company')) {
       await pool.query(`
@@ -184,10 +194,10 @@ async function initializeDatabase() {
             package_type VARCHAR(50),
             
             -- 결제 정보
-            total_amount DECIMAL(12,2),
+            total_amount DECIMAL(10,2),
             adult_unit_price DECIMAL(10,2) DEFAULT 0,
             child_unit_price DECIMAL(10,2) DEFAULT 0,
-            payment_status VARCHAR(20) DEFAULT '대기',
+            payment_status VARCHAR(50) DEFAULT '대기',
             
             -- 코드 발급 정보
             code_issued BOOLEAN DEFAULT FALSE,
