@@ -4007,6 +4007,192 @@ app.get('/admin/issue-codes', requireAuth, async (req, res) => {
     }
 });
 
+// 발급 코드 생성 API
+app.post('/admin/issue-codes/generate', requireAuth, async (req, res) => {
+    try {
+        const { count = 1, notes = '' } = req.body;
+        
+        if (count < 1 || count > 100) {
+            return res.status(400).json({
+                success: false,
+                message: '코드 개수는 1개에서 100개 사이여야 합니다.'
+            });
+        }
+        
+        if (dbMode === 'postgresql') {
+            // issue_codes 테이블 존재 확인 및 생성
+            const tableCheck = await pool.query(`
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'issue_codes'
+            `);
+            
+            if (tableCheck.rows.length === 0) {
+                // issue_codes 테이블 생성
+                await pool.query(`
+                    CREATE TABLE issue_codes (
+                        id SERIAL PRIMARY KEY,
+                        code VARCHAR(20) UNIQUE NOT NULL,
+                        user_name VARCHAR(100),
+                        user_phone VARCHAR(20),
+                        user_email VARCHAR(100),
+                        qr_code_url TEXT,
+                        is_delivered BOOLEAN DEFAULT FALSE,
+                        delivered_at TIMESTAMP,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
+                console.log('✅ issue_codes 테이블 생성 완료');
+            }
+            
+            const generatedCodes = [];
+            
+            for (let i = 0; i < count; i++) {
+                // 고유한 코드 생성 (a1234b 형태)
+                let code;
+                let isUnique = false;
+                let attempts = 0;
+                
+                while (!isUnique && attempts < 10) {
+                    const letters = 'abcdefghijklmnopqrstuvwxyz';
+                    const numbers = '0123456789';
+                    
+                    const firstLetter = letters[Math.floor(Math.random() * letters.length)];
+                    const lastLetter = letters[Math.floor(Math.random() * letters.length)];
+                    const middleNumbers = Array.from({length: 4}, () => 
+                        numbers[Math.floor(Math.random() * numbers.length)]
+                    ).join('');
+                    
+                    code = firstLetter + middleNumbers + lastLetter;
+                    
+                    // 중복 확인
+                    const duplicateCheck = await pool.query(
+                        'SELECT id FROM issue_codes WHERE code = $1',
+                        [code]
+                    );
+                    
+                    if (duplicateCheck.rows.length === 0) {
+                        isUnique = true;
+                    }
+                    attempts++;
+                }
+                
+                if (!isUnique) {
+                    return res.status(500).json({
+                        success: false,
+                        message: '고유한 코드 생성에 실패했습니다. 다시 시도해주세요.'
+                    });
+                }
+                
+                // 코드 저장
+                const result = await pool.query(
+                    'INSERT INTO issue_codes (code, notes) VALUES ($1, $2) RETURNING *',
+                    [code, notes]
+                );
+                
+                generatedCodes.push(result.rows[0].code);
+            }
+            
+            console.log(`✅ ${count}개의 발급 코드 생성 완료:`, generatedCodes);
+            
+            res.json({
+                success: true,
+                message: `${count}개의 코드가 생성되었습니다.`,
+                codes: generatedCodes
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'PostgreSQL 모드에서만 사용 가능합니다.'
+            });
+        }
+    } catch (error) {
+        console.error('❌ 발급 코드 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '코드 생성 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 발급 코드 수정 API
+app.put('/admin/issue-codes/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { notes } = req.body;
+        
+        if (dbMode === 'postgresql') {
+            const result = await pool.query(
+                'UPDATE issue_codes SET notes = $1 WHERE id = $2 RETURNING *',
+                [notes, id]
+            );
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: '코드를 찾을 수 없습니다.'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: '코드가 수정되었습니다.',
+                code: result.rows[0]
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'PostgreSQL 모드에서만 사용 가능합니다.'
+            });
+        }
+    } catch (error) {
+        console.error('❌ 발급 코드 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '코드 수정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 발급 코드 삭제 API
+app.delete('/admin/issue-codes/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (dbMode === 'postgresql') {
+            const result = await pool.query(
+                'DELETE FROM issue_codes WHERE id = $1 RETURNING *',
+                [id]
+            );
+            
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: '코드를 찾을 수 없습니다.'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: '코드가 삭제되었습니다.'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'PostgreSQL 모드에서만 사용 가능합니다.'
+            });
+        }
+    } catch (error) {
+        console.error('❌ 발급 코드 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '코드 삭제 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 예약 관리 페이지
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
