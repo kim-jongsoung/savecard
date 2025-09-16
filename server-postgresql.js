@@ -2819,284 +2819,333 @@ function parseReservationToJSON(text) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line);
     const fullText = text.toLowerCase();
     
-    // 기본 데이터 구조
+    // 기본 데이터 구조 (단일 테이블 구조에 맞게)
     const data = {
-        // 예약 기본 정보
-        reservation_code: null,
-        platform_name: null,
-        reservation_channel: '웹',
+        reservation_number: null,
+        channel: '웹',
+        platform_name: 'NOL',
         product_name: null,
-        reservation_status: '접수',
-        total_quantity: 1,
-        total_price: null,
-        
-        // 일정 정보
-        usage_date: null,
-        usage_time: null,
-        package_type: null,
-        package_count: 1,
-        
-        // 고객 정보
-        name_kr: null,
-        name_en_first: null,
-        name_en_last: null,
+        korean_name: null,
+        english_first_name: null,
+        english_last_name: null,
         phone: null,
         email: null,
         kakao_id: null,
+        usage_date: null,
+        usage_time: null,
+        guest_count: 1,
         people_adult: 1,
         people_child: 0,
         people_infant: 0,
-        memo: null,
-        
-        // 결제 정보
+        package_type: null,
+        total_amount: null,
         adult_unit_price: null,
         child_unit_price: null,
-        infant_unit_price: null,
-        platform_sale_amount: null,
-        platform_settlement_amount: null,
         payment_status: '대기',
-        payment_date: null,
-        
-        // 정책
-        policy_text: null
+        code_issued: false,
+        memo: null
     };
     
-    // 플랫폼 자동 감지 (더 정확하게)
-    if (fullText.includes('nol') || fullText.includes('엔오엘')) {
+    // 플랫폼 자동 감지 (NOL 인터파크 특화)
+    if (fullText.includes('nol') || fullText.includes('인터파크') || fullText.includes('interpark')) {
         data.platform_name = 'NOL';
-    } else if (fullText.includes('klook') || fullText.includes('클룩')) {
+    } else if (fullText.includes('klook')) {
         data.platform_name = 'KLOOK';
-    } else if (fullText.includes('viator') || fullText.includes('비아토르')) {
+    } else if (fullText.includes('viator')) {
         data.platform_name = 'VIATOR';
-    } else if (fullText.includes('getyourguide') || fullText.includes('겟유어가이드')) {
+    } else if (fullText.includes('getyourguide')) {
         data.platform_name = 'GETYOURGUIDE';
-    } else if (fullText.includes('expedia') || fullText.includes('익스피디아')) {
+    } else if (fullText.includes('expedia')) {
         data.platform_name = 'EXPEDIA';
-    } else {
-        data.platform_name = 'OTHER';
     }
-    
-    // AI 수준의 지능형 패턴 매칭
-    for (const line of lines) {
-        const lowerLine = line.toLowerCase();
-        
-        // 예약번호 (다양한 패턴 - 더 정교하게)
-        if (lowerLine.includes('예약') || lowerLine.includes('reservation') || lowerLine.includes('booking')) {
-            const reservationPatterns = [
-                /(?:예약번호|reservation|booking)[\s:：]*([A-Z0-9]{4,})/i,
-                /([A-Z]{2,}\d{4,})/g,
-                /(\d{4,}[A-Z]{2,})/g,
-                /([A-Z0-9]{6,})/g
-            ];
-            
-            for (const pattern of reservationPatterns) {
-                const match = line.match(pattern);
-                if (match && !data.reservation_code) {
-                    data.reservation_code = match[1] || match[0];
-                    break;
-                }
-            }
-        }
-        
-        // 상품명 (더 지능적으로)
-        if (lowerLine.includes('상품') || lowerLine.includes('product') || lowerLine.includes('투어') || 
-            lowerLine.includes('tour') || lowerLine.includes('activity') || lowerLine.includes('체험')) {
-            const parts = line.split(/[:：]/);
-            if (parts.length > 1) {
-                data.product_name = parts[1].trim();
-            } else if (lowerLine.includes('투어') || lowerLine.includes('tour')) {
-                // 투어명이 단독으로 있는 경우
-                data.product_name = line.trim();
-            }
-        }
-        
-        // 금액 (더 정확한 패턴)
-        const pricePatterns = [
-            /\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-            /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*달러/,
-            /(?:금액|price|amount|total)[\s:：]*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
-            /(\d{1,3}(?:,\d{3})*)\s*원/
+
+    console.log(`🔍 감지된 플랫폼: ${data.platform_name}`);
+
+    // NOL 인터파크 특화 패턴 매칭
+    if (data.platform_name === 'NOL') {
+        console.log('🎯 NOL 인터파크 특화 파싱 모드 활성화');
+
+        // NOL 특화 예약번호 패턴
+        const nolReservationPatterns = [
+            /예약번호[\s:：]*([A-Z0-9\-]{8,})/i,
+            /주문번호[\s:：]*([A-Z0-9\-]{8,})/i,
+            /확인번호[\s:：]*([A-Z0-9\-]{8,})/i,
+            /NOL[\s\-]?(\d{8,})/i,
+            /([A-Z]{2}\d{8,})/
         ];
-        
-        for (const pattern of pricePatterns) {
-            const match = line.match(pattern);
-            if (match && !data.total_price) {
-                let price = parseFloat(match[1].replace(/,/g, ''));
-                // 원화인 경우 달러로 환산 (대략 1200원 = 1달러)
-                if (line.includes('원')) {
-                    price = Math.round(price / 1200 * 100) / 100;
-                }
-                data.total_price = price;
-                data.platform_sale_amount = price;
-                data.platform_settlement_amount = price;
+
+        for (const pattern of nolReservationPatterns) {
+            const match = text.match(pattern);
+            if (match && !data.reservation_number) {
+                data.reservation_number = match[1];
+                console.log(`✅ NOL 예약번호 발견: ${data.reservation_number}`);
                 break;
             }
         }
-        
-        // 날짜 (다양한 형식 지원)
-        const datePatterns = [
-            /(\d{4})[-\/년]\s*(\d{1,2})[-\/월]\s*(\d{1,2})일?/,
-            /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
-            /(\d{4})-(\d{1,2})-(\d{1,2})/,
-            /(\d{1,2})\s*월\s*(\d{1,2})\s*일/
+
+        // NOL 특화 상품명 패턴
+        const nolProductPatterns = [
+            /상품명[\s:：]*(.+?)(?:\n|$)/i,
+            /투어명[\s:：]*(.+?)(?:\n|$)/i,
+            /\[NOL\]\s*(.+?)(?:\n|$)/i,
+            /괌\s*(.+?투어)/i,
+            /(.+?(?:투어|tour|티켓|ticket|입장권).+)/i
+        ];
+
+        for (const pattern of nolProductPatterns) {
+            const match = text.match(pattern);
+            if (match && !data.product_name) {
+                data.product_name = match[1].trim();
+                console.log(`✅ NOL 상품명 발견: ${data.product_name}`);
+                break;
+            }
+        }
+
+        // NOL 특화 날짜 패턴 (한국 형식)
+        const nolDatePatterns = [
+            /이용일[\s:：]*(\d{4})년?\s*(\d{1,2})월\s*(\d{1,2})일/i,
+            /방문일[\s:：]*(\d{4})년?\s*(\d{1,2})월\s*(\d{1,2})일/i,
+            /체크인[\s:：]*(\d{4})년?\s*(\d{1,2})월\s*(\d{1,2})일/i,
+            /(\d{4})\-(\d{1,2})\-(\d{1,2})/,
+            /(\d{1,2})\/(\d{1,2})\/(\d{4})/
+        ];
+
+        for (const pattern of nolDatePatterns) {
+            const match = text.match(pattern);
+            if (match && !data.usage_date) {
+                let year, month, day;
+                if (pattern.toString().includes('년')) {
+                    [, year, month, day] = match;
+                } else if (pattern.toString().includes('\\d{4}')) {
+                    [, year, month, day] = match;
+                } else {
+                    [, month, day, year] = match;
+                }
+
+                if (year && month && day) {
+                    data.usage_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    console.log(`✅ NOL 이용일 발견: ${data.usage_date}`);
+                }
+                break;
+            }
+        }
+
+        // NOL 특화 금액 패턴 (원화 → 달러 환산)
+        const nolPricePatterns = [
+            /총\s*금액[\s:：]*(\d{1,3}(?:,\d{3})*)\s*원/i,
+            /결제\s*금액[\s:：]*(\d{1,3}(?:,\d{3})*)\s*원/i,
+            /(\d{1,3}(?:,\d{3})*)\s*원/,
+            /\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+            /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*달러/
+        ];
+
+        for (const pattern of nolPricePatterns) {
+            const match = text.match(pattern);
+            if (match && !data.total_amount) {
+                let price = parseFloat(match[1].replace(/,/g, ''));
+                // 원화인 경우 달러로 환산 (1300원 = 1달러 기준)
+                if (match[0].includes('원')) {
+                    price = Math.round(price / 1300 * 100) / 100;
+                    console.log(`💱 원화 → 달러 환산: ${match[1]}원 → $${price}`);
+                }
+                data.total_amount = price;
+                break;
+            }
+        }
+
+        // NOL 특화 인원수 패턴 (개선된 로직)
+        const nolPeoplePatterns = [
+            { pattern: /성인\s*(\d+)\s*명/gi, type: 'adult' },
+            { pattern: /어른\s*(\d+)\s*명/gi, type: 'adult' },
+            { pattern: /대인\s*(\d+)\s*명/gi, type: 'adult' },
+            { pattern: /소아\s*(\d+)\s*명/gi, type: 'child' },
+            { pattern: /어린이\s*(\d+)\s*명/gi, type: 'child' },
+            { pattern: /유아\s*(\d+)\s*명/gi, type: 'infant' },
+            { pattern: /총\s*(\d+)\s*명/gi, type: 'total' }
         ];
         
-        if (lowerLine.includes('날짜') || lowerLine.includes('date') || lowerLine.includes('이용') || 
-            lowerLine.includes('visit') || lowerLine.includes('체크인')) {
-            for (const pattern of datePatterns) {
-                const match = line.match(pattern);
-                if (match && !data.usage_date) {
-                    let year, month, day;
-                    if (pattern.toString().includes('\\d{4}')) {
-                        [, year, month, day] = match;
-                    } else {
-                        [, month, day, year] = match;
-                    }
-                    
-                    if (year && month && day) {
-                        data.usage_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                    }
-                    break;
+        for (const { pattern, type } of nolPeoplePatterns) {
+            const matches = [...text.matchAll(pattern)];
+            for (const match of matches) {
+                const count = parseInt(match[1]);
+                if (type === 'adult') {
+                    data.people_adult = count;
+                    console.log(`👥 NOL 성인 인원수 발견: ${count}명`);
+                } else if (type === 'child') {
+                    data.people_child = count;
+                    console.log(`👥 NOL 소아 인원수 발견: ${count}명`);
+                } else if (type === 'infant') {
+                    data.people_infant = count;
+                    console.log(`👥 NOL 유아 인원수 발견: ${count}명`);
+                } else if (type === 'total' && data.people_adult === 1 && data.people_child === 0) {
+                    data.people_adult = count;
+                    console.log(`👥 NOL 총 인원수 발견: ${count}명 (성인으로 설정)`);
                 }
             }
         }
-        
-        // 시간 (더 정교하게)
-        if (lowerLine.includes('시간') || lowerLine.includes('time')) {
-            const timePatterns = [
-                /(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/,
-                /(\d{1,2})시\s*(\d{2})?분?/
+    }
+
+    // 라인별 파싱 (일반 패턴)
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lowerLine = line.toLowerCase();
+        const nextLine = i + 1 < lines.length ? lines[i + 1] : null;
+
+        console.log(`📝 파싱 중: ${line}`);
+
+        // 예약번호 (일반 패턴)
+        if (!data.reservation_number) {
+            const reservationPatterns = [
+                /(?:예약번호|reservation|booking|order)[\s:：#]*([A-Z0-9\-]{6,})/i,
+                /([A-Z]{2,}\d{6,})/,
+                /(\d{10,})/,
+                /([A-Z0-9]{8,})/
             ];
-            
-            for (const pattern of timePatterns) {
+
+            for (const pattern of reservationPatterns) {
                 const match = line.match(pattern);
-                if (match && !data.usage_time) {
-                    let hour = parseInt(match[1]);
-                    let minute = parseInt(match[2] || '0');
-                    const ampm = match[3];
-                    
-                    if (ampm && ampm.toLowerCase() === 'pm' && hour !== 12) {
-                        hour += 12;
-                    } else if (ampm && ampm.toLowerCase() === 'am' && hour === 12) {
-                        hour = 0;
-                    }
-                    
-                    data.usage_time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                if (match) {
+                    data.reservation_number = match[1];
                     break;
                 }
             }
         }
-        
-        // 한글명 (더 정확하게)
-        if ((lowerLine.includes('한글') || lowerLine.includes('이름') || lowerLine.includes('성명') || 
-             lowerLine.includes('예약자')) && !lowerLine.includes('영문')) {
+
+        // 상품명 (일반 패턴)
+        if (!data.product_name && (lowerLine.includes('상품') || lowerLine.includes('투어') || 
+            lowerLine.includes('tour') || lowerLine.includes('activity') || lowerLine.includes('티켓'))) {
+            const productPatterns = [
+                /(?:상품명|투어명|상품|tour|activity)[\s:：]*(.+)/i,
+                /(.+(?:투어|tour|티켓|ticket|입장권).+)/i
+            ];
+
+            for (const pattern of productPatterns) {
+                const match = line.match(pattern);
+                if (match) {
+                    data.product_name = match[1].trim();
+                    break;
+                }
+            }
+        }
+
+        // 한글 이름 (개선된 패턴)
+        if (!data.korean_name && (lowerLine.includes('한글') || lowerLine.includes('이름') || 
+            lowerLine.includes('성명')) && !lowerLine.includes('영문')) {
             const namePatterns = [
-                /(?:한글명|이름|성명|예약자)[\s:：]*([가-힣]{2,})/,
+                /(?:한글명|이름|성명)[\s:：]*([가-힣]{2,})/,
                 /([가-힣]{2,})/
             ];
             
             for (const pattern of namePatterns) {
                 const match = line.match(pattern);
-                if (match && !data.name_kr) {
-                    data.name_kr = match[1];
+                if (match && match[1] !== '한글명' && match[1] !== '이름' && match[1] !== '성명') {
+                    data.korean_name = match[1];
                     break;
                 }
             }
         }
-        
-        // 영문명 (더 정확하게)
-        if (lowerLine.includes('영문') || lowerLine.includes('english')) {
+
+        // 영문 이름
+        if ((!data.english_first_name || !data.english_last_name) && 
+            (lowerLine.includes('영문') || lowerLine.includes('english'))) {
             const parts = line.split(/[:：]/);
             if (parts.length > 1) {
                 const englishName = parts[1].trim();
                 const nameParts = englishName.split(/\s+/);
-                data.name_en_first = nameParts[0] || '';
-                data.name_en_last = nameParts.slice(1).join(' ') || '';
+                if (nameParts.length >= 2) {
+                    data.english_first_name = nameParts[0];
+                    data.english_last_name = nameParts.slice(1).join(' ');
+                }
             }
         }
-        
-        // 이메일 (더 정확한 패턴)
-        const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-        if (emailMatch && !data.email) {
-            data.email = emailMatch[1];
+
+        // 이메일
+        if (!data.email) {
+            const emailMatch = line.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+            if (emailMatch) {
+                data.email = emailMatch[1];
+            }
         }
-        
-        // 전화번호 (국제번호 포함)
-        if (lowerLine.includes('전화') || lowerLine.includes('phone') || lowerLine.includes('tel') || 
-            lowerLine.includes('mobile') || lowerLine.includes('핸드폰')) {
+
+        // 전화번호
+        if (!data.phone && (lowerLine.includes('전화') || lowerLine.includes('phone') || 
+            lowerLine.includes('mobile'))) {
             const phonePatterns = [
                 /(\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,9})/,
                 /(010[-\s]?\d{4}[-\s]?\d{4})/,
                 /(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})/
             ];
-            
+
             for (const pattern of phonePatterns) {
                 const match = line.match(pattern);
-                if (match && !data.phone) {
-                    data.phone = match[1].trim();
+                if (match) {
+                    data.phone = match[1].replace(/\s/g, '');
                     break;
                 }
             }
         }
-        
-        // 인원수 (더 정교하게)
-        if (lowerLine.includes('인원') || lowerLine.includes('guest') || lowerLine.includes('pax') || 
-            lowerLine.includes('people') || lowerLine.includes('성인') || lowerLine.includes('소아')) {
-            
-            const adultMatch = line.match(/성인[\s:：]*(\d+)/i);
-            const childMatch = line.match(/(?:소아|어린이|child)[\s:：]*(\d+)/i);
-            const infantMatch = line.match(/(?:유아|infant|baby)[\s:：]*(\d+)/i);
-            const totalMatch = line.match(/(?:총\s*)?(\d+)\s*(?:명|인|pax|people)/i);
-            
-            if (adultMatch) data.people_adult = parseInt(adultMatch[1]);
-            if (childMatch) data.people_child = parseInt(childMatch[1]);
-            if (infantMatch) data.people_infant = parseInt(infantMatch[1]);
-            if (totalMatch && !adultMatch && !childMatch && !infantMatch) {
-                data.people_adult = parseInt(totalMatch[1]);
-            }
-        }
-        
-        // 패키지 타입
-        if (lowerLine.includes('패키지') || lowerLine.includes('package') || lowerLine.includes('옵션')) {
+
+        // 카카오톡 아이디 (개선된 패턴)
+        if (!data.kakao_id && lowerLine.includes('카카오톡 아이디')) {
             const parts = line.split(/[:：]/);
-            if (parts.length > 1) {
-                data.package_type = parts[1].trim();
-            }
-        }
-        
-        // 카카오톡 ID
-        if (lowerLine.includes('카카오') || lowerLine.includes('kakao')) {
-            const parts = line.split(/[:：]/);
-            if (parts.length > 1) {
+            if (parts.length > 1 && parts[1].trim().length > 0) {
                 data.kakao_id = parts[1].trim();
-            }
-        }
-        
-        // 메모/특이사항
-        if (lowerLine.includes('메모') || lowerLine.includes('특이') || lowerLine.includes('요청') || 
-            lowerLine.includes('note') || lowerLine.includes('remark')) {
-            const parts = line.split(/[:：]/);
-            if (parts.length > 1) {
-                data.memo = parts[1].trim();
-            }
-        }
-        
-        // 취소 정책
-        if (lowerLine.includes('취소') || lowerLine.includes('환불') || lowerLine.includes('cancellation') || 
-            lowerLine.includes('refund') || lowerLine.includes('policy')) {
-            if (!data.policy_text) {
-                data.policy_text = line.trim();
-            } else {
-                data.policy_text += ' ' + line.trim();
+            } else if (nextLine && nextLine.trim().length > 0 && !nextLine.includes(':')) {
+                data.kakao_id = nextLine.trim();
             }
         }
     }
     
-    // 총 수량 계산
-    data.total_quantity = (data.people_adult || 0) + (data.people_child || 0) + (data.people_infant || 0);
-    if (data.total_quantity === 0) data.total_quantity = 1;
+    // 데이터 후처리 및 검증
+    console.log('🔍 파싱된 데이터 검증 중...');
     
-    console.log('✅ AI 수준 파싱 완료:', data);
+    // 필수 데이터 검증 및 기본값 설정
+    if (!data.reservation_number) {
+        console.log('⚠️ 예약번호가 없습니다. 임시 번호를 생성합니다.');
+        data.reservation_number = 'TEMP_' + Date.now();
+    }
+    
+    if (!data.korean_name) {
+        console.log('⚠️ 한글 이름이 없습니다.');
+    }
+    
+    if (!data.english_first_name || !data.english_last_name) {
+        console.log('⚠️ 영문 이름이 불완전합니다.');
+    }
+    
+    if (!data.product_name) {
+        console.log('⚠️ 상품명이 없습니다.');
+        data.product_name = '상품명 미확인';
+    }
+    
+    if (!data.usage_date) {
+        console.log('⚠️ 이용일이 없습니다.');
+    }
+    
+    if (!data.total_amount) {
+        console.log('⚠️ 총 금액이 없습니다.');
+    }
+    
+    // 전화번호 정리
+    if (data.phone) {
+        data.phone = data.phone.replace(/[^\d\+\-]/g, '');
+    }
+    
+    // 단가 계산 (총 금액을 성인 수로 나눔)
+    if (data.total_amount && data.people_adult > 0) {
+        data.adult_unit_price = Math.round(data.total_amount / data.people_adult);
+    }
+    
+    console.log('✅ 파싱 완료:', {
+        reservation_number: data.reservation_number,
+        korean_name: data.korean_name,
+        english_name: `${data.english_first_name} ${data.english_last_name}`,
+        product_name: data.product_name,
+        usage_date: data.usage_date,
+        people_adult: data.people_adult,
+        total_amount: data.total_amount
+    });
+    
     return data;
 }
 
