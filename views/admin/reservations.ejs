@@ -350,16 +350,15 @@
                                 <% reservations.forEach((reservation, index) => { %>
                                     <tr class="reservation-row" onclick="toggleDetails(<%= index %>)">
                                         <td>
-                                            <span class="company-badge company-<%= (reservation.company || 'other').toLowerCase() %>">
-                                                <%= reservation.company || 'OTHER' %>
+                                            <span class="company-badge company-<%= (reservation.platform_name || 'other').toLowerCase() %>">
+                                                <%= reservation.platform_name || 'NOL' %>
                                             </span>
                                         </td>
-                                        <td><%= reservation.reservation_code || '-' %></td>
-                                        <td><%= reservation.name_kr || '-' %></td>
+                                        <td><%= reservation.reservation_number || '-' %></td>
                                         <td><%= reservation.product_name || '-' %></td>
+                                        <td><%= reservation.korean_name || '-' %></td>
                                         <td><%= reservation.usage_date ? new Date(reservation.usage_date).toLocaleDateString('ko-KR') : '-' %></td>
-                                        <td><%= reservation.total_quantity || '-' %></td>
-                                        <td><%= reservation.total_price ? '$' + reservation.total_price.toLocaleString() : '-' %></td>
+                                        <td><%= reservation.total_amount ? '$' + reservation.total_amount.toLocaleString() : '-' %></td>
                                         <td>
                                             <% if (reservation.code_issued) { %>
                                                 <span class="badge bg-success">발급 완료</span>
@@ -369,21 +368,21 @@
                                         </td>
                                         <td>
                                             <div class="reservation-actions">
-                                                <button class="btn btn-sm btn-info" onclick="viewReservation(<%= reservation.reservation_id %>); event.stopPropagation();" title="상세보기">
+                                                <button class="btn btn-sm btn-info" onclick="viewReservation(<%= reservation.id %>); event.stopPropagation();" title="상세보기">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-warning" onclick="editReservation(<%= reservation.reservation_id %>); event.stopPropagation();" title="수정">
+                                                <button class="btn btn-sm btn-warning" onclick="editReservation(<%= reservation.id %>); event.stopPropagation();" title="수정">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-danger" onclick="deleteReservation(<%= reservation.reservation_id %>); event.stopPropagation();" title="삭제">
+                                                <button class="btn btn-sm btn-danger" onclick="deleteReservation(<%= reservation.id %>); event.stopPropagation();" title="삭제">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                                 <% if (!reservation.code_issued) { %>
-                                                    <button class="btn btn-sm btn-success" onclick="generateCode(<%= reservation.reservation_id %>); event.stopPropagation();" title="코드 생성">
+                                                    <button class="btn btn-sm btn-success" onclick="generateCode(<%= reservation.id %>); event.stopPropagation();" title="코드 생성">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
                                                 <% } else { %>
-                                                    <button class="btn btn-sm btn-outline-success" onclick="viewCode(<%= reservation.reservation_id %>); event.stopPropagation();" title="코드 보기">
+                                                    <button class="btn btn-sm btn-outline-success" onclick="viewCode(<%= reservation.id %>); event.stopPropagation();" title="코드 보기">
                                                         <i class="fas fa-qrcode"></i>
                                                     </button>
                                                 <% } %>
@@ -396,16 +395,16 @@
                                                 <div class="row">
                                                     <div class="col-md-6">
                                                         <h6><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
-                                                        <p><strong>예약번호:</strong> <%= reservation.reservation_code || '-' %></p>
+                                                        <p><strong>예약번호:</strong> <%= reservation.reservation_number || '-' %></p>
                                                         <p><strong>플랫폼:</strong> <%= reservation.platform_name || '-' %></p>
-                                                        <p><strong>예약채널:</strong> <%= reservation.reservation_channel || '-' %></p>
+                                                        <p><strong>예약채널:</strong> <%= reservation.channel || '-' %></p>
                                                         <p><strong>상품명:</strong> <%= reservation.product_name || '-' %></p>
-                                                        <p><strong>예약상태:</strong> <%= reservation.reservation_status || '-' %></p>
-                                                        <p><strong>총 금액:</strong> <%= reservation.total_price ? '$' + reservation.total_price.toLocaleString() : '-' %></p>
+                                                        <p><strong>결제상태:</strong> <%= reservation.payment_status || '-' %></p>
+                                                        <p><strong>총 금액:</strong> <%= reservation.total_amount ? '$' + reservation.total_amount.toLocaleString() : '-' %></p>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <h6><i class="fas fa-user me-2"></i>예약자 정보</h6>
-                                                        <p><strong>한글명:</strong> <%= reservation.name_kr || '-' %></p>
+                                                        <p><strong>한글명:</strong> <%= reservation.korean_name || '-' %></p>
                                                         <p><strong>영문명:</strong> <%= reservation.english_name || '-' %></p>
                                                         <p><strong>이메일:</strong> <%= reservation.email || '-' %></p>
                                                         <p><strong>전화번호:</strong> <%= reservation.phone || '-' %></p>
@@ -419,16 +418,16 @@
                                                         <p><strong>이용일:</strong> <%= reservation.usage_date ? new Date(reservation.usage_date).toLocaleDateString('ko-KR') : '-' %></p>
                                                         <p><strong>이용시간:</strong> <%= reservation.usage_time || '-' %></p>
                                                         <p><strong>패키지:</strong> <%= reservation.package_type || '-' %></p>
-                                                        <p><strong>패키지 수량:</strong> <%= reservation.package_count || '-' %></p>
+                                                        <p><strong>인원수:</strong> <%= reservation.guest_count || '-' %></p>
                                                         <p><strong>등록일:</strong> <%= reservation.created_at ? new Date(reservation.created_at).toLocaleString('ko-KR') : '-' %></p>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <h6><i class="fas fa-credit-card me-2"></i>결제 정보</h6>
                                                         <p><strong>성인 단가:</strong> <%= reservation.adult_unit_price ? '$' + reservation.adult_unit_price.toLocaleString() : '-' %></p>
                                                         <p><strong>소아 단가:</strong> <%= reservation.child_unit_price ? '$' + reservation.child_unit_price.toLocaleString() : '-' %></p>
-                                                        <p><strong>플랫폼 결제액:</strong> <%= reservation.platform_sale_amount ? '$' + reservation.platform_sale_amount.toLocaleString() : '-' %></p>
-                                                        <p><strong>정산 금액:</strong> <%= reservation.platform_settlement_amount ? '$' + reservation.platform_settlement_amount.toLocaleString() : '-' %></p>
+                                                        <p><strong>총 금액:</strong> <%= reservation.total_amount ? '$' + reservation.total_amount.toLocaleString() : '-' %></p>
                                                         <p><strong>결제 상태:</strong> <%= reservation.payment_status || '-' %></p>
+                                                        <p><strong>코드 발급:</strong> <%= reservation.code_issued ? '완료' : '대기' %></p>
                                                     </div>
                                                 </div>
                                                 <% if (reservation.memo || reservation.policy_text) { %>

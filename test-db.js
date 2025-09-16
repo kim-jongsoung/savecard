@@ -31,6 +31,20 @@ async function testConnection() {
       console.log(`   - ${row.table_name}`);
     });
     
+    // reservations 테이블 데이터 확인
+    if (tables.rows.some(row => row.table_name === 'reservations')) {
+      console.log('\n📊 reservations 테이블 데이터:');
+      const reservations = await client.query('SELECT id, reservation_number, korean_name, product_name, created_at FROM reservations ORDER BY created_at DESC LIMIT 10');
+      console.log(`총 ${reservations.rows.length}개의 예약 데이터:`);
+      reservations.rows.forEach(row => {
+        console.log(`   ID: ${row.id}, 예약번호: ${row.reservation_number}, 이름: ${row.korean_name}, 상품: ${row.product_name}, 생성일: ${row.created_at}`);
+      });
+      
+      // 전체 예약 수 확인
+      const count = await client.query('SELECT COUNT(*) as total FROM reservations');
+      console.log(`\n📈 전체 예약 수: ${count.rows[0].total}개`);
+    }
+    
     client.release();
     await pool.end();
     
