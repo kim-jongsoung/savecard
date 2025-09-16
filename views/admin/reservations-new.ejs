@@ -375,8 +375,8 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    parsedReservationData = data.parsedData;
-                    displayParsedData(data.parsedData);
+                    parsedReservationData = data.parsed_data;
+                    displayParsedData(data.parsed_data);
                 } else {
                     alert('파싱 실패: ' + data.message);
                 }
