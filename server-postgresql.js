@@ -122,13 +122,16 @@ async function migrateReservationsSchema() {
       }
     }
     
-    // korean_name 컬럼의 NOT NULL 제약조건 제거 (부분 데이터 허용)
-    if (existingColumns.includes('korean_name')) {
-      try {
-        await pool.query('ALTER TABLE reservations ALTER COLUMN korean_name DROP NOT NULL');
-        console.log('✅ korean_name NOT NULL 제약조건 제거 완료');
-      } catch (error) {
-        console.log('⚠️ korean_name NOT NULL 제약조건 제거 건너뜀:', error.message);
+    // 모든 컬럼의 NOT NULL 제약조건 제거 (부분 데이터 허용)
+    const columnsToMakeNullable = ['korean_name', 'email', 'phone', 'product_name'];
+    for (const columnName of columnsToMakeNullable) {
+      if (existingColumns.includes(columnName)) {
+        try {
+          await pool.query(`ALTER TABLE reservations ALTER COLUMN ${columnName} DROP NOT NULL`);
+          console.log(`✅ ${columnName} NOT NULL 제약조건 제거 완료`);
+        } catch (error) {
+          console.log(`⚠️ ${columnName} NOT NULL 제약조건 제거 건너뜀:`, error.message);
+        }
       }
     }
     
