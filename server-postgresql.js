@@ -3215,7 +3215,7 @@ function parseReservationToJSON(text) {
     console.log('✅ 파싱 완료:', {
         reservation_number: data.reservation_number,
         korean_name: data.korean_name,
-        english_name: `${data.english_first_name} ${data.english_last_name}`,
+        english_name: `${data.english_first_name || ''} ${data.english_last_name || ''}`.trim(),
         product_name: data.product_name,
         usage_date: data.usage_date,
         people_adult: data.people_adult,
@@ -3973,7 +3973,7 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                         COALESCE(platform_name, 'NOL') as platform_name,
                         product_name,
                         korean_name,
-                        COALESCE(english_first_name || ' ' || english_last_name, '') as english_name,
+                        COALESCE(COALESCE(english_first_name, '') || ' ' || COALESCE(english_last_name, ''), '') as english_name,
                         phone,
                         email,
                         kakao_id,
