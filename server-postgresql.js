@@ -77,6 +77,76 @@ function requireAuth(req, res, next) {
     }
 }
 
+// 예약 테이블 스키마 마이그레이션
+async function migrateReservationsSchema() {
+  try {
+    console.log('🔧 예약 테이블 스키마 마이그레이션 시작...');
+    
+    // 현재 테이블 구조 확인
+    const tableInfo = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'reservations'
+    `);
+    
+    const existingColumns = tableInfo.rows.map(row => row.column_name);
+    console.log('기존 컬럼들:', existingColumns);
+    
+    // 누락된 컬럼들 추가
+    const columnsToAdd = [
+      { name: 'platform_name', type: 'VARCHAR(50)', default: "'NOL'" },
+      { name: 'channel', type: 'VARCHAR(50)', default: "'웹'" },
+      { name: 'english_first_name', type: 'VARCHAR(100)', default: 'NULL' },
+      { name: 'english_last_name', type: 'VARCHAR(100)', default: 'NULL' },
+      { name: 'people_adult', type: 'INTEGER', default: '1' },
+      { name: 'people_child', type: 'INTEGER', default: '0' },
+      { name: 'people_infant', type: 'INTEGER', default: '0' },
+      { name: 'total_amount', type: 'DECIMAL(12,2)', default: 'NULL' },
+      { name: 'adult_unit_price', type: 'DECIMAL(10,2)', default: '0' },
+      { name: 'child_unit_price', type: 'DECIMAL(10,2)', default: '0' },
+      { name: 'payment_status', type: 'VARCHAR(20)', default: "'대기'" }
+    ];
+    
+    for (const column of columnsToAdd) {
+      if (!existingColumns.includes(column.name)) {
+        try {
+          await pool.query(`
+            ALTER TABLE reservations 
+            ADD COLUMN ${column.name} ${column.type} DEFAULT ${column.default}
+          `);
+          console.log(`✅ ${column.name} 컬럼 추가 완료`);
+        } catch (error) {
+          console.log(`⚠️ ${column.name} 컬럼 추가 실패:`, error.message);
+        }
+      }
+    }
+    
+    // 기존 데이터 마이그레이션
+    if (existingColumns.includes('company')) {
+      await pool.query(`
+        UPDATE reservations 
+        SET platform_name = COALESCE(company, 'NOL') 
+        WHERE platform_name IS NULL OR platform_name = ''
+      `);
+      console.log('✅ company -> platform_name 데이터 이동 완료');
+    }
+    
+    if (existingColumns.includes('amount')) {
+      await pool.query(`
+        UPDATE reservations 
+        SET total_amount = amount 
+        WHERE total_amount IS NULL AND amount IS NOT NULL
+      `);
+      console.log('✅ amount -> total_amount 데이터 이동 완료');
+    }
+    
+    console.log('✅ 예약 테이블 스키마 마이그레이션 완료');
+    
+  } catch (error) {
+    console.error('❌ 스키마 마이그레이션 실패:', error);
+  }
+}
+
 // 서버 시작 시 데이터베이스 초기화
 async function initializeDatabase() {
   try {
@@ -89,30 +159,49 @@ async function initializeDatabase() {
         await pool.query(`
           CREATE TABLE IF NOT EXISTS reservations (
             id SERIAL PRIMARY KEY,
-            company VARCHAR(50) DEFAULT 'NOL',
-            reservation_number VARCHAR(50),
-            confirmation_number VARCHAR(50),
-            booking_channel VARCHAR(100),
+            reservation_number VARCHAR(100) UNIQUE NOT NULL,
+            channel VARCHAR(50) DEFAULT '웹',
+            platform_name VARCHAR(50) DEFAULT 'NOL',
             product_name VARCHAR(200),
-            amount DECIMAL(10,2),
-            package_type VARCHAR(100),
+            
+            -- 예약자 정보
+            korean_name VARCHAR(100),
+            english_first_name VARCHAR(100),
+            english_last_name VARCHAR(100),
+            phone VARCHAR(50),
+            email VARCHAR(200),
+            kakao_id VARCHAR(100),
+            
+            -- 이용 정보
             usage_date DATE,
             usage_time TIME,
-            korean_name VARCHAR(100),
-            english_name VARCHAR(100),
-            email VARCHAR(150),
-            phone VARCHAR(20),
-            kakao_id VARCHAR(100),
-            guest_count INTEGER,
-            memo TEXT,
-            issue_code_id INTEGER REFERENCES issue_codes(id),
+            guest_count INTEGER DEFAULT 1,
+            people_adult INTEGER DEFAULT 1,
+            people_child INTEGER DEFAULT 0,
+            people_infant INTEGER DEFAULT 0,
+            package_type VARCHAR(50),
+            
+            -- 결제 정보
+            total_amount DECIMAL(12,2),
+            adult_unit_price DECIMAL(10,2) DEFAULT 0,
+            child_unit_price DECIMAL(10,2) DEFAULT 0,
+            payment_status VARCHAR(20) DEFAULT '대기',
+            
+            -- 코드 발급 정보
             code_issued BOOLEAN DEFAULT FALSE,
             code_issued_at TIMESTAMP,
+            
+            -- 기타
+            memo TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
         console.log('✅ reservations 테이블 강제 생성 완료');
+        
+        // 기존 테이블에 누락된 컬럼 추가
+        await migrateReservationsSchema();
+        
       } catch (tableError) {
         console.log('⚠️ reservations 테이블 생성 시도 중 오류:', tableError.message);
       }
