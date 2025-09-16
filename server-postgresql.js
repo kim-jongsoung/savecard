@@ -2800,11 +2800,7 @@ async function initializeDatabase() {
             
         } catch (error) {
             console.error('❌ PostgreSQL 초기화 중 오류:', error);
-            console.warn('⚠️ JSON 데이터베이스로 fallback 합니다.');
-            dbMode = 'json';
-            if (!jsonDB) {
-                jsonDB = require('./utils/jsonDB');
-            }
+            throw error; // JSON fallback 제거, PostgreSQL 전용 운영
         }
     } else {
         console.log('📁 JSON 파일 기반 데이터베이스를 사용합니다.');

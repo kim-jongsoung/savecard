@@ -292,7 +292,7 @@ async function createTables() {
     `);
     console.log('✅ issue_codes 테이블 생성 완료');
 
-    // 1. reservations (예약 기본) 테이블 생성
+    // 1. reservations (예약 기본) 테이블 생성 - 먼저 생성
     await client.query(`
         CREATE TABLE IF NOT EXISTS reservations (
             reservation_id SERIAL PRIMARY KEY,
@@ -308,6 +308,7 @@ async function createTables() {
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    console.log('✅ reservations 테이블 생성 완료');
 
     // 2. reservation_schedules (이용 일정) 테이블 생성
     await client.query(`
@@ -321,6 +322,7 @@ async function createTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    console.log('✅ reservation_schedules 테이블 생성 완료');
 
     // 3. reservation_customers (예약자 및 고객 정보) 테이블 생성
     await client.query(`
@@ -340,6 +342,7 @@ async function createTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    console.log('✅ reservation_customers 테이블 생성 완료');
 
     // 4. reservation_payments (결제 내역) 테이블 생성
     await client.query(`
@@ -359,6 +362,7 @@ async function createTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    console.log('✅ reservation_payments 테이블 생성 완료');
 
     // 5. cancellation_policies (취소/환불 규정) 테이블 생성
     await client.query(`
@@ -369,6 +373,7 @@ async function createTables() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    console.log('✅ cancellation_policies 테이블 생성 완료');
 
     // 6. reservation_logs (예약 변경 이력) 테이블 생성
     await client.query(`
@@ -382,7 +387,7 @@ async function createTables() {
             new_data JSONB
         )
     `);
-    console.log('✅ reservations 테이블 생성 완료');
+    console.log('✅ reservation_logs 테이블 생성 완료');
 
     console.log('✅ 모든 테이블이 성공적으로 생성되었습니다!');
     
