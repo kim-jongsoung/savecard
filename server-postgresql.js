@@ -3793,6 +3793,79 @@ function parseReservationText(text) {
 
 // ==================== 예약 관리 API ====================
 
+// 예약 관리 페이지
+app.get('/admin/reservations', requireAuth, async (req, res) => {
+    try {
+        if (dbMode === 'postgresql') {
+            // 통계 쿼리
+            const statsQuery = await pool.query(`
+                SELECT 
+                    COUNT(*) as total_reservations,
+                    COUNT(CASE WHEN code_issued = true THEN 1 END) as code_issued,
+                    COUNT(CASE WHEN code_issued = false OR code_issued IS NULL THEN 1 END) as pending_codes,
+                    COUNT(DISTINCT platform_name) as companies
+                FROM reservations
+            `);
+            
+            // 예약 목록 쿼리 (단일 테이블)
+            const reservationsQuery = await pool.query(`
+                SELECT 
+                    id,
+                    reservation_number,
+                    channel,
+                    platform_name,
+                    product_name,
+                    korean_name,
+                    CONCAT(english_first_name, ' ', english_last_name) as english_name,
+                    phone,
+                    email,
+                    kakao_id,
+                    usage_date,
+                    usage_time,
+                    guest_count,
+                    people_adult,
+                    people_child,
+                    people_infant,
+                    package_type,
+                    total_amount,
+                    adult_unit_price,
+                    child_unit_price,
+                    payment_status,
+                    code_issued,
+                    code_issued_at,
+                    memo,
+                    created_at
+                FROM reservations 
+                ORDER BY created_at DESC 
+                LIMIT 50
+            `);
+            
+            const stats = statsQuery.rows[0];
+            const reservations = reservationsQuery.rows;
+            
+            res.render('admin/reservations', {
+                title: '예약 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                stats: stats,
+                reservations: reservations
+            });
+        } else {
+            res.render('admin/reservations', {
+                title: '예약 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0 },
+                reservations: []
+            });
+        }
+    } catch (error) {
+        console.error('예약 관리 페이지 로드 오류:', error);
+        res.status(500).render('error', { 
+            title: '오류', 
+            message: '예약 관리 페이지를 불러올 수 없습니다: ' + error.message 
+        });
+    }
+});
+
 // 새로운 JSON 스키마 기반 예약 데이터 변환 API
 app.post('/admin/reservations/convert-json', requireAuth, async (req, res) => {
     try {
