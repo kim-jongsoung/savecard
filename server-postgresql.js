@@ -8,12 +8,31 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 // nodemailer 제거됨
-// 환경변수 로드 - Railway에서는 기본 환경변수만 사용
-if (!process.env.DATABASE_URL) {
+// Railway 환경 감지 및 포트 설정
+const originalPort = process.env.PORT;
+console.log('🔍 원본 PORT 환경변수:', originalPort);
+
+// Railway 환경 여부 확인 (여러 방법으로 감지)
+const isRailway = !!(
+    process.env.RAILWAY_ENVIRONMENT_NAME || 
+    process.env.RAILWAY_PROJECT_ID || 
+    process.env.RAILWAY_SERVICE_ID ||
+    process.env.RAILWAY_ENVIRONMENT ||
+    (originalPort && originalPort !== '8080' && originalPort !== '3000')
+);
+
+console.log('🚂 Railway 환경 감지:', isRailway);
+
+// Railway가 아닌 경우에만 .env 파일 로드
+if (!isRailway) {
     require('dotenv').config();
     console.log('📁 로컬 환경 - .env 파일 로드됨');
-} else {
-    console.log('☁️ Railway 환경 - 환경변수 직접 사용');
+}
+
+// Railway 환경에서는 원본 PORT 복원
+if (isRailway && originalPort) {
+    process.env.PORT = originalPort;
+    console.log('🔧 Railway PORT 복원:', originalPort);
 }
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
