@@ -2748,33 +2748,21 @@ app.delete('/admin/banners/:id', requireAuth, async (req, res) => {
     }
 });
 
-// 서버 시작 및 데이터베이스 초기화
-app.listen(PORT, async () => {
-    console.log(`🚀 괌세이브카드 서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`📊 데이터베이스 모드: ${dbMode.toUpperCase()}`);
-    
+// 데이터베이스 초기화 함수 (서버 시작 전에 실행)
+async function initializeDatabase() {
     if (dbMode === 'postgresql') {
         try {
             // 데이터베이스 연결 테스트
             await testConnection();
+            console.log('✅ PostgreSQL 연결 성공');
             
-            // 데이터베이스 초기화 함수
-            async function initializeDatabase() {
-                if (dbMode === 'postgresql') {
-                    try {
-                        console.log('PostgreSQL 데이터베이스 초기화 중...');
-                        
-                        // 테이블 존재 확인 및 생성
-                        await createTables();
-                        
-                        // 모든 컬럼 보정
-                        await ensureAllColumns();
-                    } catch (error) {
-                        console.error('데이터베이스 초기화 오류:', error);
-                    }
-                }
-            }
-            await initializeDatabase();
+            console.log('PostgreSQL 데이터베이스 초기화 중...');
+            
+            // 테이블 존재 확인 및 생성
+            await createTables();
+            
+            // 모든 컬럼 보정
+            await ensureAllColumns();
             
             // JSON 데이터 마이그레이션 (최초 1회만)
             try {
@@ -2822,7 +2810,7 @@ app.listen(PORT, async () => {
         console.log('📁 JSON 파일 기반 데이터베이스를 사용합니다.');
         console.log('⚠️ 주의: Railway 배포 시 데이터가 초기화될 수 있습니다.');
     }
-});
+}
 
 // ==================== 예약 데이터 파싱 함수 ====================
 
@@ -4047,28 +4035,54 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
 
 // ==================== 서버 시작 ====================
 
-// 서버 시작 - Railway 환경에서 0.0.0.0으로 바인딩
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`📊 관리자 페이지: http://localhost:${PORT}/admin`);
-    console.log(`💳 카드 페이지: http://localhost:${PORT}/card`);
-    console.log(`🔧 데이터베이스 모드: ${dbMode}`);
-});
-
-// 서버 에러 핸들링
-server.on('error', (error) => {
-    console.error('❌ 서버 시작 오류:', error);
-    if (error.code === 'EADDRINUSE') {
-        console.error(`포트 ${PORT}가 이미 사용 중입니다.`);
+// 데이터베이스 초기화 후 서버 시작
+async function startServer() {
+    try {
+        await initializeDatabase();
+        
+        const server = app.listen(PORT, () => {
+            console.log(`🚀 서버가 포트 ${PORT}에서 실행 중입니다.`);
+            console.log(`📊 관리자 페이지: http://localhost:${PORT}/admin`);
+            console.log(`💳 카드 페이지: http://localhost:${PORT}/card`);
+        });
+        
+        return server;
+    } catch (error) {
+        console.error('❌ 서버 시작 실패:', error);
+        process.exit(1);
     }
-    process.exit(1);
-});
+}
 
-// 프로세스 종료 시 정리
-process.on('SIGTERM', () => {
-    console.log('🔄 SIGTERM 신호 수신, 서버 종료 중...');
-    server.close(() => {
-        console.log('✅ 서버가 정상적으로 종료되었습니다.');
-        process.exit(0);
+// 서버 시작 및 에러 핸들링
+startServer().then(serverInstance => {
+    console.log('✅ 서버 초기화 및 시작 완료');
+    
+    serverInstance.on('error', (error) => {
+        console.error('❌ 서버 오류:', error);
+        if (error.code === 'EADDRINUSE') {
+            console.error(`포트 ${PORT}가 이미 사용 중입니다.`);
+        }
+        process.exit(1);
     });
+    
+    // 프로세스 종료 시 정리
+    process.on('SIGTERM', () => {
+        console.log('🔄 SIGTERM 신호 수신, 서버 종료 중...');
+        serverInstance.close(() => {
+            console.log('✅ 서버가 정상적으로 종료되었습니다.');
+            process.exit(0);
+        });
+    });
+    
+    process.on('SIGINT', () => {
+        console.log('🔄 SIGINT 신호 수신, 서버 종료 중...');
+        serverInstance.close(() => {
+            console.log('✅ 서버가 정상적으로 종료되었습니다.');
+            process.exit(0);
+        });
+    });
+    
+}).catch(error => {
+    console.error('❌ 서버 초기화 실패:', error);
+    process.exit(1);
 });
