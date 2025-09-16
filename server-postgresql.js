@@ -8,32 +8,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 // nodemailer 제거됨
-// Railway 환경 감지 및 포트 설정
-const originalPort = process.env.PORT;
-console.log('🔍 원본 PORT 환경변수:', originalPort);
-
-// Railway 환경 여부 확인 (여러 방법으로 감지)
-const isRailway = !!(
-    process.env.RAILWAY_ENVIRONMENT_NAME || 
-    process.env.RAILWAY_PROJECT_ID || 
-    process.env.RAILWAY_SERVICE_ID ||
-    process.env.RAILWAY_ENVIRONMENT ||
-    (originalPort && originalPort !== '8080' && originalPort !== '3000')
-);
-
-console.log('🚂 Railway 환경 감지:', isRailway);
-
-// Railway가 아닌 경우에만 .env 파일 로드
-if (!isRailway) {
-    require('dotenv').config();
-    console.log('📁 로컬 환경 - .env 파일 로드됨');
-}
-
-// Railway 환경에서는 원본 PORT 복원
-if (isRailway && originalPort) {
-    process.env.PORT = originalPort;
-    console.log('🔧 Railway PORT 복원:', originalPort);
-}
+// 간단하고 확실한 환경변수 처리
+require('dotenv').config();
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
 const { pool, dbMode, testConnection, createTables, ensureAllColumns, migrateFromJSON } = require('./database');
@@ -49,9 +25,9 @@ try {
 }
 
 const app = express();
-// Railway나 다른 클라우드 환경에서 제공하는 PORT 환경변수 우선 사용
-const PORT = process.env.PORT || 3000;
-console.log('🚀 최종 PORT 설정:', PORT, '(환경변수 PORT:', process.env.PORT, ')');
+// Railway에서는 동적 포트 사용, 로컬에서는 3000 사용
+const PORT = process.env.NODE_ENV === 'production' ? process.env.PORT : 3000;
+console.log('🚀 최종 PORT 설정:', PORT, '(NODE_ENV:', process.env.NODE_ENV, ')');
 
 // 이메일 기능 완전 제거됨
 
