@@ -8,11 +8,17 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 // nodemailer 제거됨
-// Railway 환경에서는 .env 파일의 PORT 설정을 무시하고 Railway의 PORT 사용
-const railwayPort = process.env.PORT;
-require('dotenv').config();
-if (railwayPort) {
-    process.env.PORT = railwayPort;
+// Railway 환경 감지 및 .env 조건부 로드
+const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID;
+const isProduction = process.env.NODE_ENV === 'production';
+
+console.log('🔍 환경 감지:', { isRailway: !!isRailway, isProduction, currentPort: process.env.PORT });
+
+if (!isRailway && !isProduction) {
+    require('dotenv').config();
+    console.log('📁 .env 파일 로드됨');
+} else {
+    console.log('☁️ 클라우드 환경 - .env 파일 건너뜀');
 }
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
@@ -31,6 +37,7 @@ try {
 const app = express();
 // Railway나 다른 클라우드 환경에서 제공하는 PORT 환경변수 우선 사용
 const PORT = process.env.PORT || 3000;
+console.log('🚀 최종 PORT 설정:', PORT, '(환경변수 PORT:', process.env.PORT, ')');
 
 // 이메일 기능 완전 제거됨
 
