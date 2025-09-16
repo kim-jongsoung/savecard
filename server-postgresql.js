@@ -81,6 +81,7 @@ function requireAuth(req, res, next) {
 async function migrateReservationsSchema() {
   try {
     console.log('🔧 예약 테이블 스키마 마이그레이션 시작...');
+    console.log('🔧 현재 시간:', new Date().toISOString());
     
     // 현재 테이블 구조 확인
     const tableInfo = await pool.query(`
@@ -151,7 +152,8 @@ async function migrateReservationsSchema() {
 async function initializeDatabase() {
   try {
     if (dbMode === 'postgresql') {
-      console.log('PostgreSQL 데이터베이스 초기화 중...');
+      console.log('🚀 PostgreSQL 데이터베이스 초기화 중...');
+      console.log('🚀 초기화 시작 시간:', new Date().toISOString());
       await createTables();
       
       // reservations 테이블 강제 생성 (누락된 경우 대비)
