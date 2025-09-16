@@ -2839,65 +2839,7 @@ app.delete('/admin/banners/:id', requireAuth, async (req, res) => {
     }
 });
 
-// 데이터베이스 초기화 함수 (서버 시작 전에 실행)
-async function initializeDatabase() {
-    if (dbMode === 'postgresql') {
-        try {
-            // 데이터베이스 연결 테스트
-            await testConnection();
-            console.log('✅ PostgreSQL 연결 성공');
-            
-            console.log('PostgreSQL 데이터베이스 초기화 중...');
-            
-            // 테이블 존재 확인 및 생성
-            await createTables();
-            
-            // 모든 컬럼 보정
-            await ensureAllColumns();
-            
-            // JSON 데이터 마이그레이션 (최초 1회만)
-            try {
-                await migrateFromJSON();
-                console.log('🔄 데이터 마이그레이션이 완료되었습니다.');
-            } catch (error) {
-                console.warn('⚠️ 데이터 마이그레이션 건너뜀:', error.message);
-            }
-            
-            // logo_url 컬럼 존재 확인 및 추가 함수
-            async function ensureLogoUrlColumn() {
-                try {
-                    // agencies 테이블에 logo_url 컬럼이 있는지 확인
-                    const columnCheck = await pool.query(`
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name = 'agencies' AND column_name = 'logo_url'
-                    `);
-                    
-                    if (columnCheck.rows.length === 0) {
-                        console.log('logo_url 컬럼이 없습니다. 추가하는 중...');
-                        await pool.query('ALTER TABLE agencies ADD COLUMN logo_url VARCHAR(500)');
-                        console.log('✅ logo_url 컬럼이 성공적으로 추가되었습니다.');
-                    } else {
-                        console.log('✅ logo_url 컬럼이 이미 존재합니다.');
-                    }
-                } catch (error) {
-                    console.warn('⚠️ logo_url 컬럼 확인/추가 건너뜀:', error.message);
-                }
-            }
-            
-            
-            // 제휴업체 자동 삭제 비활성화 (수동 관리 모드)
-            console.log('📋 제휴업체 수동 관리 모드 - 기존 데이터 유지');
-            
-        } catch (error) {
-            console.error('❌ PostgreSQL 초기화 중 오류:', error);
-            throw error; // JSON fallback 제거, PostgreSQL 전용 운영
-        }
-    } else {
-        console.log('📁 JSON 파일 기반 데이터베이스를 사용합니다.');
-        console.log('⚠️ 주의: Railway 배포 시 데이터가 초기화될 수 있습니다.');
-    }
-}
+// 중복된 initializeDatabase 함수 제거됨 - 위의 올바른 마이그레이션 로직이 있는 함수 사용
 
 // ==================== 예약 데이터 파싱 함수 ====================
 
