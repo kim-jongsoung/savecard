@@ -150,8 +150,8 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-clock fa-2x text-warning mb-2"></i>
-                        <h4 class="text-warning"><%= stats.unused_codes %></h4>
-                        <small class="text-muted">미사용 코드</small>
+                        <h4 class="text-warning"><%= stats.pending %></h4>
+                        <small class="text-muted">미전달 코드</small>
                     </div>
                 </div>
             </div>
@@ -159,8 +159,8 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
-                        <h4 class="text-success"><%= stats.used_codes %></h4>
-                        <small class="text-muted">사용된 코드</small>
+                        <h4 class="text-success"><%= stats.delivered %></h4>
+                        <small class="text-muted">전달 완료</small>
                     </div>
                 </div>
             </div>
@@ -168,8 +168,8 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-percentage fa-2x text-info mb-2"></i>
-                        <h4 class="text-info"><%= stats.usage_rate %>%</h4>
-                        <small class="text-muted">사용률</small>
+                        <h4 class="text-info"><%= Math.round((stats.delivered / Math.max(stats.total_codes, 1)) * 100) %>%</h4>
+                        <small class="text-muted">전달률</small>
                     </div>
                 </div>
             </div>

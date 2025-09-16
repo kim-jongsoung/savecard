@@ -3918,6 +3918,95 @@ function parseReservationText(text) {
 
 // ==================== 예약 관리 API ====================
 
+// 발급 코드 관리 페이지
+app.get('/admin/issue-codes', requireAuth, async (req, res) => {
+    try {
+        console.log('🎫 발급 코드 관리 페이지 접근 시도');
+        
+        if (dbMode === 'postgresql') {
+            // issue_codes 테이블 존재 확인
+            const tableCheck = await pool.query(`
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'issue_codes'
+            `);
+            
+            if (tableCheck.rows.length === 0) {
+                console.log('⚠️ issue_codes 테이블이 존재하지 않음');
+                return res.render('admin/issue-codes', {
+                    title: '발급 코드 관리',
+                    adminUsername: req.session.adminUsername || 'admin',
+                    stats: { total_codes: 0, delivered: 0, pending: 0 },
+                    codes: []
+                });
+            }
+            
+            // 통계 쿼리
+            let stats = { total_codes: 0, delivered: 0, pending: 0 };
+            try {
+                const statsQuery = await pool.query(`
+                    SELECT 
+                        COUNT(*) as total_codes,
+                        COUNT(CASE WHEN is_delivered = true THEN 1 END) as delivered,
+                        COUNT(CASE WHEN is_delivered = false OR is_delivered IS NULL THEN 1 END) as pending
+                    FROM issue_codes
+                `);
+                stats = statsQuery.rows[0];
+                console.log('📊 발급 코드 통계:', stats);
+            } catch (statsError) {
+                console.error('⚠️ 발급 코드 통계 쿼리 오류:', statsError.message);
+            }
+            
+            // 발급 코드 목록 쿼리
+            let codes = [];
+            try {
+                const codesQuery = await pool.query(`
+                    SELECT 
+                        id,
+                        code,
+                        user_name,
+                        user_phone,
+                        user_email,
+                        qr_code_url,
+                        COALESCE(is_delivered, false) as is_delivered,
+                        delivered_at,
+                        created_at
+                    FROM issue_codes 
+                    ORDER BY created_at DESC 
+                    LIMIT 100
+                `);
+                codes = codesQuery.rows;
+                console.log('🎫 발급 코드 목록 쿼리 성공, 개수:', codes.length);
+            } catch (listError) {
+                console.error('⚠️ 발급 코드 목록 쿼리 오류:', listError.message);
+            }
+            
+            res.render('admin/issue-codes', {
+                title: '발급 코드 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                stats: stats,
+                codes: codes
+            });
+        } else {
+            console.log('📁 JSON 모드로 실행 중');
+            res.render('admin/issue-codes', {
+                title: '발급 코드 관리',
+                adminUsername: req.session.adminUsername || 'admin',
+                stats: { total_codes: 0, delivered: 0, pending: 0 },
+                codes: []
+            });
+        }
+    } catch (error) {
+        console.error('❌ 발급 코드 관리 페이지 로드 오류:', error);
+        res.status(500).json({ 
+            error: true,
+            message: '발급 코드 관리 페이지를 불러올 수 없습니다: ' + error.message,
+            stack: error.stack
+        });
+    }
+});
+
 // 예약 관리 페이지
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
