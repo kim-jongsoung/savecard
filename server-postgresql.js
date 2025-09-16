@@ -8,17 +8,12 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 // nodemailer 제거됨
-// Railway 환경 감지 및 .env 조건부 로드
-const isRailway = process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID;
-const isProduction = process.env.NODE_ENV === 'production';
-
-console.log('🔍 환경 감지:', { isRailway: !!isRailway, isProduction, currentPort: process.env.PORT });
-
-if (!isRailway && !isProduction) {
+// 환경변수 로드 - Railway에서는 기본 환경변수만 사용
+if (!process.env.DATABASE_URL) {
     require('dotenv').config();
-    console.log('📁 .env 파일 로드됨');
+    console.log('📁 로컬 환경 - .env 파일 로드됨');
 } else {
-    console.log('☁️ 클라우드 환경 - .env 파일 건너뜀');
+    console.log('☁️ Railway 환경 - 환경변수 직접 사용');
 }
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
@@ -4057,10 +4052,28 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
 
 // ==================== 서버 시작 ====================
 
-// 서버 시작
-app.listen(PORT, () => {
+// 서버 시작 - Railway 환경에서 0.0.0.0으로 바인딩
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 서버가 포트 ${PORT}에서 실행 중입니다.`);
     console.log(`📊 관리자 페이지: http://localhost:${PORT}/admin`);
     console.log(`💳 카드 페이지: http://localhost:${PORT}/card`);
     console.log(`🔧 데이터베이스 모드: ${dbMode}`);
+});
+
+// 서버 에러 핸들링
+server.on('error', (error) => {
+    console.error('❌ 서버 시작 오류:', error);
+    if (error.code === 'EADDRINUSE') {
+        console.error(`포트 ${PORT}가 이미 사용 중입니다.`);
+    }
+    process.exit(1);
+});
+
+// 프로세스 종료 시 정리
+process.on('SIGTERM', () => {
+    console.log('🔄 SIGTERM 신호 수신, 서버 종료 중...');
+    server.close(() => {
+        console.log('✅ 서버가 정상적으로 종료되었습니다.');
+        process.exit(0);
+    });
 });
