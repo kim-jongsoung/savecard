@@ -8,7 +8,12 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 // nodemailer 제거됨
+// Railway 환경에서는 .env 파일의 PORT 설정을 무시하고 Railway의 PORT 사용
+const railwayPort = process.env.PORT;
 require('dotenv').config();
+if (railwayPort) {
+    process.env.PORT = railwayPort;
+}
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
 const { pool, dbMode, testConnection, createTables, ensureAllColumns, migrateFromJSON } = require('./database');
@@ -24,6 +29,7 @@ try {
 }
 
 const app = express();
+// Railway나 다른 클라우드 환경에서 제공하는 PORT 환경변수 우선 사용
 const PORT = process.env.PORT || 3000;
 
 // 이메일 기능 완전 제거됨
