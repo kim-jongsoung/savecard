@@ -50,6 +50,62 @@
             padding: 10px 20px;
         }
         
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #e83e8c);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .reservation-actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .reservation-actions .btn {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+        
+        .modal-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.5em 0.75em;
+        }
+        
         .btn-outline-primary {
             border-color: #667eea;
             color: #667eea;
@@ -211,6 +267,16 @@
         <!-- 예약 데이터 등록 -->
         <div class="card mb-4">
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6><i class="fas fa-plus me-2"></i>예약 등록</h6>
+                        <p class="text-muted small mb-0">텍스트 파싱 또는 직접 입력으로 예약을 등록하세요.</p>
+                    </div>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addReservationModal">
+                        <i class="fas fa-keyboard me-2"></i>직접 입력
+                    </button>
+                </div>
+                
                 <div class="parsing-area">
                     <h6><i class="fas fa-paste me-2"></i>예약 데이터 붙여넣기</h6>
                     <p class="text-muted small">NOL, KLOOK, VIATOR 등 다양한 업체의 예약 확인서 내용을 붙여넣으면 자동으로 파싱됩니다.</p>
@@ -302,15 +368,26 @@
                                             <% } %>
                                         </td>
                                         <td>
-                                            <% if (!reservation.code_issued) { %>
-                                                <button class="btn btn-sm btn-primary" onclick="generateCode(<%= reservation.reservation_id %>); event.stopPropagation();">
-                                                    <i class="fas fa-plus me-1"></i>코드 생성
+                                            <div class="reservation-actions">
+                                                <button class="btn btn-sm btn-info" onclick="viewReservation(<%= reservation.reservation_id %>); event.stopPropagation();" title="상세보기">
+                                                    <i class="fas fa-eye"></i>
                                                 </button>
-                                            <% } else { %>
-                                                <button class="btn btn-sm btn-outline-info" onclick="viewCode(<%= reservation.reservation_id %>); event.stopPropagation();">
-                                                    <i class="fas fa-eye me-1"></i>코드 보기
+                                                <button class="btn btn-sm btn-warning" onclick="editReservation(<%= reservation.reservation_id %>); event.stopPropagation();" title="수정">
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
-                                            <% } %>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteReservation(<%= reservation.reservation_id %>); event.stopPropagation();" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                <% if (!reservation.code_issued) { %>
+                                                    <button class="btn btn-sm btn-success" onclick="generateCode(<%= reservation.reservation_id %>); event.stopPropagation();" title="코드 생성">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                <% } else { %>
+                                                    <button class="btn btn-sm btn-outline-success" onclick="viewCode(<%= reservation.reservation_id %>); event.stopPropagation();" title="코드 보기">
+                                                        <i class="fas fa-qrcode"></i>
+                                                    </button>
+                                                <% } %>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr id="details-<%= index %>" class="reservation-details-row" style="display: none;">
@@ -609,6 +686,455 @@
                 alert('코드 조회 중 오류가 발생했습니다.');
             });
         }
+
+        // 예약 상세보기
+        function viewReservation(reservationId) {
+            fetch('/admin/reservations/' + reservationId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    populateViewModal(data.reservation);
+                    const modal = new bootstrap.Modal(document.getElementById('viewReservationModal'));
+                    modal.show();
+                } else {
+                    alert('예약 정보를 불러올 수 없습니다: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('예약 정보 조회 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 예약 수정
+        function editReservation(reservationId) {
+            fetch('/admin/reservations/' + reservationId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    populateEditModal(data.reservation);
+                    const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
+                    modal.show();
+                } else {
+                    alert('예약 정보를 불러올 수 없습니다: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('예약 정보 조회 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 예약 삭제
+        function deleteReservation(reservationId) {
+            if (confirm('정말로 이 예약을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+                fetch('/admin/reservations/' + reservationId, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('예약이 삭제되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('예약 삭제 실패: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('예약 삭제 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        // 직접 예약 추가
+        function addReservation() {
+            const formData = new FormData(document.getElementById('addReservationForm'));
+            const data = Object.fromEntries(formData.entries());
+
+            fetch('/admin/reservations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('예약이 등록되었습니다.');
+                    bootstrap.Modal.getInstance(document.getElementById('addReservationModal')).hide();
+                    location.reload();
+                } else {
+                    alert('예약 등록 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('예약 등록 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 예약 수정 저장
+        function updateReservation() {
+            const formData = new FormData(document.getElementById('editReservationForm'));
+            const data = Object.fromEntries(formData.entries());
+            const reservationId = document.getElementById('editReservationId').value;
+
+            fetch('/admin/reservations/' + reservationId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('예약이 수정되었습니다.');
+                    bootstrap.Modal.getInstance(document.getElementById('editReservationModal')).hide();
+                    location.reload();
+                } else {
+                    alert('예약 수정 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('예약 수정 중 오류가 발생했습니다.');
+            });
+        }
+
+        // 상세보기 모달 데이터 채우기
+        function populateViewModal(reservation) {
+            document.getElementById('viewReservationCode').textContent = reservation.reservation_code || '-';
+            document.getElementById('viewPlatformName').textContent = reservation.platform_name || '-';
+            document.getElementById('viewProductName').textContent = reservation.product_name || '-';
+            document.getElementById('viewNameKr').textContent = reservation.name_kr || '-';
+            document.getElementById('viewNameEn').textContent = (reservation.name_en_first + ' ' + reservation.name_en_last).trim() || '-';
+            document.getElementById('viewEmail').textContent = reservation.email || '-';
+            document.getElementById('viewPhone').textContent = reservation.phone || '-';
+            document.getElementById('viewUsageDate').textContent = reservation.usage_date ? new Date(reservation.usage_date).toLocaleDateString('ko-KR') : '-';
+            document.getElementById('viewUsageTime').textContent = reservation.usage_time || '-';
+            document.getElementById('viewTotalPrice').textContent = reservation.total_price ? '$' + reservation.total_price.toLocaleString() : '-';
+            document.getElementById('viewPeopleAdult').textContent = reservation.people_adult || 0;
+            document.getElementById('viewPeopleChild').textContent = reservation.people_child || 0;
+            document.getElementById('viewPeopleInfant').textContent = reservation.people_infant || 0;
+            document.getElementById('viewMemo').textContent = reservation.memo || '-';
+        }
+
+        // 수정 모달 데이터 채우기
+        function populateEditModal(reservation) {
+            document.getElementById('editReservationId').value = reservation.reservation_id;
+            document.getElementById('editReservationCode').value = reservation.reservation_code || '';
+            document.getElementById('editPlatformName').value = reservation.platform_name || '';
+            document.getElementById('editProductName').value = reservation.product_name || '';
+            document.getElementById('editNameKr').value = reservation.name_kr || '';
+            document.getElementById('editNameEnFirst').value = reservation.name_en_first || '';
+            document.getElementById('editNameEnLast').value = reservation.name_en_last || '';
+            document.getElementById('editEmail').value = reservation.email || '';
+            document.getElementById('editPhone').value = reservation.phone || '';
+            document.getElementById('editUsageDate').value = reservation.usage_date ? reservation.usage_date.split('T')[0] : '';
+            document.getElementById('editUsageTime').value = reservation.usage_time || '';
+            document.getElementById('editTotalPrice').value = reservation.total_price || '';
+            document.getElementById('editPeopleAdult').value = reservation.people_adult || 0;
+            document.getElementById('editPeopleChild').value = reservation.people_child || 0;
+            document.getElementById('editPeopleInfant').value = reservation.people_infant || 0;
+            document.getElementById('editMemo').value = reservation.memo || '';
+        }
     </script>
+
+    <!-- 직접 예약 추가 모달 -->
+    <div class="modal fade" id="addReservationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>예약 직접 입력</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addReservationForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">예약번호 *</label>
+                                    <input type="text" class="form-control" name="reservation_code" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">플랫폼</label>
+                                    <select class="form-control" name="platform_name">
+                                        <option value="NOL">NOL</option>
+                                        <option value="KLOOK">KLOOK</option>
+                                        <option value="VIATOR">VIATOR</option>
+                                        <option value="GETYOURGUIDE">GETYOURGUIDE</option>
+                                        <option value="EXPEDIA">EXPEDIA</option>
+                                        <option value="OTHER">기타</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">상품명 *</label>
+                                    <input type="text" class="form-control" name="product_name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">총 금액 ($)</label>
+                                    <input type="number" step="0.01" class="form-control" name="total_price">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>예약자 정보</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">한글명 *</label>
+                                    <input type="text" class="form-control" name="name_kr" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">영문 이름</label>
+                                            <input type="text" class="form-control" name="name_en_first">
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">영문 성</label>
+                                            <input type="text" class="form-control" name="name_en_last">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">이메일</label>
+                                    <input type="email" class="form-control" name="email">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">전화번호</label>
+                                    <input type="text" class="form-control" name="phone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-warning mb-3"><i class="fas fa-calendar me-2"></i>이용 정보</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">이용일</label>
+                                    <input type="date" class="form-control" name="usage_date">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">이용시간</label>
+                                    <input type="time" class="form-control" name="usage_time">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info mb-3"><i class="fas fa-users me-2"></i>인원 정보</h6>
+                                <div class="row">
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">성인</label>
+                                            <input type="number" class="form-control" name="people_adult" value="1" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">소아</label>
+                                            <input type="number" class="form-control" name="people_child" value="0" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">유아</label>
+                                            <input type="number" class="form-control" name="people_infant" value="0" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">메모</label>
+                                    <textarea class="form-control" name="memo" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-success" onclick="addReservation()">
+                        <i class="fas fa-save me-2"></i>저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 예약 상세보기 모달 -->
+    <div class="modal fade" id="viewReservationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-eye me-2"></i>예약 상세보기</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
+                            <p><strong>예약번호:</strong> <span id="viewReservationCode"></span></p>
+                            <p><strong>플랫폼:</strong> <span id="viewPlatformName"></span></p>
+                            <p><strong>상품명:</strong> <span id="viewProductName"></span></p>
+                            <p><strong>총 금액:</strong> <span id="viewTotalPrice"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>예약자 정보</h6>
+                            <p><strong>한글명:</strong> <span id="viewNameKr"></span></p>
+                            <p><strong>영문명:</strong> <span id="viewNameEn"></span></p>
+                            <p><strong>이메일:</strong> <span id="viewEmail"></span></p>
+                            <p><strong>전화번호:</strong> <span id="viewPhone"></span></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-warning mb-3"><i class="fas fa-calendar me-2"></i>이용 정보</h6>
+                            <p><strong>이용일:</strong> <span id="viewUsageDate"></span></p>
+                            <p><strong>이용시간:</strong> <span id="viewUsageTime"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-info mb-3"><i class="fas fa-users me-2"></i>인원 정보</h6>
+                            <p><strong>성인:</strong> <span id="viewPeopleAdult"></span>명</p>
+                            <p><strong>소아:</strong> <span id="viewPeopleChild"></span>명</p>
+                            <p><strong>유아:</strong> <span id="viewPeopleInfant"></span>명</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-secondary mb-3"><i class="fas fa-sticky-note me-2"></i>메모</h6>
+                            <p id="viewMemo" class="text-muted"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 예약 수정 모달 -->
+    <div class="modal fade" id="editReservationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>예약 수정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editReservationForm">
+                        <input type="hidden" id="editReservationId" name="reservation_id">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">예약번호 *</label>
+                                    <input type="text" class="form-control" id="editReservationCode" name="reservation_code" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">플랫폼</label>
+                                    <select class="form-control" id="editPlatformName" name="platform_name">
+                                        <option value="NOL">NOL</option>
+                                        <option value="KLOOK">KLOOK</option>
+                                        <option value="VIATOR">VIATOR</option>
+                                        <option value="GETYOURGUIDE">GETYOURGUIDE</option>
+                                        <option value="EXPEDIA">EXPEDIA</option>
+                                        <option value="OTHER">기타</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">상품명 *</label>
+                                    <input type="text" class="form-control" id="editProductName" name="product_name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">총 금액 ($)</label>
+                                    <input type="number" step="0.01" class="form-control" id="editTotalPrice" name="total_price">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success mb-3"><i class="fas fa-user me-2"></i>예약자 정보</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">한글명 *</label>
+                                    <input type="text" class="form-control" id="editNameKr" name="name_kr" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">영문 이름</label>
+                                            <input type="text" class="form-control" id="editNameEnFirst" name="name_en_first">
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">영문 성</label>
+                                            <input type="text" class="form-control" id="editNameEnLast" name="name_en_last">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">이메일</label>
+                                    <input type="email" class="form-control" id="editEmail" name="email">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">전화번호</label>
+                                    <input type="text" class="form-control" id="editPhone" name="phone">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-warning mb-3"><i class="fas fa-calendar me-2"></i>이용 정보</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">이용일</label>
+                                    <input type="date" class="form-control" id="editUsageDate" name="usage_date">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">이용시간</label>
+                                    <input type="time" class="form-control" id="editUsageTime" name="usage_time">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info mb-3"><i class="fas fa-users me-2"></i>인원 정보</h6>
+                                <div class="row">
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">성인</label>
+                                            <input type="number" class="form-control" id="editPeopleAdult" name="people_adult" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">소아</label>
+                                            <input type="number" class="form-control" id="editPeopleChild" name="people_child" min="0">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">유아</label>
+                                            <input type="number" class="form-control" id="editPeopleInfant" name="people_infant" min="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">메모</label>
+                                    <textarea class="form-control" id="editMemo" name="memo" rows="3"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-warning" onclick="updateReservation()">
+                        <i class="fas fa-save me-2"></i>수정 저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
