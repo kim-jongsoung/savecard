@@ -292,102 +292,49 @@ async function createTables() {
     `);
     console.log('✅ issue_codes 테이블 생성 완료');
 
-    // 1. reservations (예약 기본) 테이블 생성 - 먼저 생성
+    // 단일 통합 예약 테이블 생성 (모든 정보를 하나의 테이블에)
     await client.query(`
         CREATE TABLE IF NOT EXISTS reservations (
-            reservation_id SERIAL PRIMARY KEY,
-            reservation_code VARCHAR(100) UNIQUE NOT NULL,
-            reservation_channel VARCHAR(50),
-            platform_name VARCHAR(50),
-            reservation_status VARCHAR(20) DEFAULT '접수',
-            reservation_datetime TIMESTAMP,
+            id SERIAL PRIMARY KEY,
+            reservation_number VARCHAR(100) UNIQUE NOT NULL,
+            channel VARCHAR(50) DEFAULT '웹',
+            platform_name VARCHAR(50) DEFAULT 'NOL',
             product_name VARCHAR(200),
-            total_quantity INTEGER DEFAULT 1,
-            total_price DECIMAL(12,2),
+            
+            -- 예약자 정보
+            korean_name VARCHAR(100),
+            english_first_name VARCHAR(100),
+            english_last_name VARCHAR(100),
+            phone VARCHAR(50),
+            email VARCHAR(200),
+            kakao_id VARCHAR(100),
+            
+            -- 이용 정보
+            usage_date DATE,
+            usage_time TIME,
+            guest_count INTEGER DEFAULT 1,
+            people_adult INTEGER DEFAULT 1,
+            people_child INTEGER DEFAULT 0,
+            people_infant INTEGER DEFAULT 0,
+            package_type VARCHAR(50),
+            
+            -- 결제 정보
+            total_amount DECIMAL(12,2),
+            adult_unit_price DECIMAL(10,2) DEFAULT 0,
+            child_unit_price DECIMAL(10,2) DEFAULT 0,
+            payment_status VARCHAR(20) DEFAULT '대기',
+            
+            -- 코드 발급 정보
+            code_issued BOOLEAN DEFAULT FALSE,
+            code_issued_at TIMESTAMP,
+            
+            -- 기타
+            memo TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     `);
-    console.log('✅ reservations 테이블 생성 완료');
-
-    // 2. reservation_schedules (이용 일정) 테이블 생성
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS reservation_schedules (
-            schedule_id SERIAL PRIMARY KEY,
-            reservation_id INTEGER REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-            usage_date DATE,
-            usage_time TIME,
-            package_type VARCHAR(50),
-            package_count INTEGER DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-    console.log('✅ reservation_schedules 테이블 생성 완료');
-
-    // 3. reservation_customers (예약자 및 고객 정보) 테이블 생성
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS reservation_customers (
-            customer_id SERIAL PRIMARY KEY,
-            reservation_id INTEGER REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-            name_kr VARCHAR(100),
-            name_en_first VARCHAR(100),
-            name_en_last VARCHAR(100),
-            phone VARCHAR(50),
-            email VARCHAR(200),
-            kakao_id VARCHAR(100),
-            people_adult INTEGER DEFAULT 0,
-            people_child INTEGER DEFAULT 0,
-            people_infant INTEGER DEFAULT 0,
-            memo TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-    console.log('✅ reservation_customers 테이블 생성 완료');
-
-    // 4. reservation_payments (결제 내역) 테이블 생성
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS reservation_payments (
-            payment_id SERIAL PRIMARY KEY,
-            reservation_id INTEGER REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-            adult_unit_price DECIMAL(10,2) DEFAULT 0,
-            child_unit_price DECIMAL(10,2) DEFAULT 0,
-            infant_unit_price DECIMAL(10,2) DEFAULT 0,
-            adult_count INTEGER DEFAULT 0,
-            child_count INTEGER DEFAULT 0,
-            infant_count INTEGER DEFAULT 0,
-            platform_sale_amount DECIMAL(12,2),
-            platform_settlement_amount DECIMAL(12,2),
-            payment_status VARCHAR(20) DEFAULT '대기',
-            payment_date DATE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-    console.log('✅ reservation_payments 테이블 생성 완료');
-
-    // 5. cancellation_policies (취소/환불 규정) 테이블 생성
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS cancellation_policies (
-            policy_id SERIAL PRIMARY KEY,
-            reservation_id INTEGER REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-            policy_text TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-    console.log('✅ cancellation_policies 테이블 생성 완료');
-
-    // 6. reservation_logs (예약 변경 이력) 테이블 생성
-    await client.query(`
-        CREATE TABLE IF NOT EXISTS reservation_logs (
-            log_id SERIAL PRIMARY KEY,
-            reservation_id INTEGER REFERENCES reservations(reservation_id) ON DELETE CASCADE,
-            action VARCHAR(50),
-            changed_by VARCHAR(100),
-            changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            old_data JSONB,
-            new_data JSONB
-        )
-    `);
-    console.log('✅ reservation_logs 테이블 생성 완료');
+    console.log('✅ 통합 reservations 테이블 생성 완료');
 
     console.log('✅ 모든 테이블이 성공적으로 생성되었습니다!');
     
