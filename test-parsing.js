@@ -212,34 +212,37 @@ function parseReservationToJSON(text) {
                 data.email = emailMatch[1];
             }
         }
-        
-        // 전화번호
-        if (!data.phone && (lowerLine.includes('전화') || lowerLine.includes('phone') || 
-            lowerLine.includes('mobile'))) {
-            const phonePatterns = [
-                /(\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,9})/,
-                /(010[-\s]?\d{4}[-\s]?\d{4})/,
-                /(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})/
-            ];
-            
-            for (const pattern of phonePatterns) {
-                const match = line.match(pattern);
-                if (match) {
-                    data.phone = match[1].replace(/\s/g, '');
-                    break;
+
+        // 한글 이름 (개선된 패턴)
+        if (!data.korean_name) {
+            // 명시적 한글명 패턴 - 콜론 뒤의 이름 추출
+            if (lowerLine.includes('한글') || lowerLine.includes('이름') || lowerLine.includes('성명')) {
+                const namePatterns = [
+                    /(?:한글명|이름|성명)[\s:：]+([가-힣]{2,})/,
+                    /한글[\s:：]+([가-힣]{2,})/
+                ];
+                
+                for (const pattern of namePatterns) {
+                    const match = line.match(pattern);
+                    if (match && match[1] !== '한글명' && match[1] !== '이름' && match[1] !== '성명') {
+                        data.korean_name = match[1];
+                        console.log(`✅ 한글 이름 발견: ${data.korean_name}`);
+                        break;
+                    }
+                }
+            }
+            // 단독 한글 이름 패턴 (라인에 한글 이름만 있는 경우)
+            else {
+                const koreanNameMatch = line.match(/^([가-힣]{2,4})$/);
+                if (koreanNameMatch) {
+                    data.korean_name = koreanNameMatch[1];
+                    console.log(`✅ 단독 한글 이름 발견: ${data.korean_name}`);
                 }
             }
         }
-        
-        // 카카오톡 아이디
-        if (!data.kakao_id && lowerLine.includes('카카오톡 아이디')) {
-            const kakaoMatch = nextLine || line.split(/[:：]/)[1];
-            if (kakaoMatch && kakaoMatch.trim().length > 0) {
-                data.kakao_id = kakaoMatch.trim();
-            }
-        }
-    }
-    
+
+// ...
+
     // 데이터 후처리 및 검증
     console.log('🔍 파싱된 데이터 검증 중...');
     
@@ -337,6 +340,20 @@ Total Amount: $150.00
 Payment Status: Confirmed
 `;
 
+// 테스트 데이터 3: 부분 정보만 있는 경우
+const testData3 = `
+상품명: 괌 돌핀 투어
+이용일: 2025년 1월 25일
+성인 1명
+`;
+
+// 테스트 데이터 4: 최소 정보만 있는 경우
+const testData4 = `
+김철수
+010-1234-5678
+괌 투어
+`;
+
 console.log('🧪 NOL 인터파크 파싱 테스트 시작...\n');
 
 console.log('=== 테스트 1: NOL 인터파크 형식 ===');
@@ -355,4 +372,20 @@ try {
     console.error('테스트 2 오류:', error.message);
 }
 
-console.log('\n✅ 파싱 테스트 완료');
+console.log('\n=== 테스트 3: 부분 정보만 있는 경우 ===');
+try {
+    const result3 = parseReservationToJSON(testData3);
+    console.log('파싱 결과:', JSON.stringify(result3, null, 2));
+} catch (error) {
+    console.error('테스트 3 오류:', error.message);
+}
+
+console.log('\n=== 테스트 4: 최소 정보만 있는 경우 ===');
+try {
+    const result4 = parseReservationToJSON(testData4);
+    console.log('파싱 결과:', JSON.stringify(result4, null, 2));
+} catch (error) {
+    console.error('테스트 4 오류:', error.message);
+}
+
+console.log('\n✅ 모든 파싱 테스트 완료');

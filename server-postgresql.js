@@ -3029,18 +3029,29 @@ function parseReservationToJSON(text) {
         }
 
         // 한글 이름 (개선된 패턴)
-        if (!data.korean_name && (lowerLine.includes('한글') || lowerLine.includes('이름') || 
-            lowerLine.includes('성명')) && !lowerLine.includes('영문')) {
-            const namePatterns = [
-                /(?:한글명|이름|성명)[\s:：]*([가-힣]{2,})/,
-                /([가-힣]{2,})/
-            ];
-            
-            for (const pattern of namePatterns) {
-                const match = line.match(pattern);
-                if (match && match[1] !== '한글명' && match[1] !== '이름' && match[1] !== '성명') {
-                    data.korean_name = match[1];
-                    break;
+        if (!data.korean_name) {
+            // 명시적 한글명 패턴 - 콜론 뒤의 이름 추출
+            if (lowerLine.includes('한글') || lowerLine.includes('이름') || lowerLine.includes('성명')) {
+                const namePatterns = [
+                    /(?:한글명|이름|성명)[\s:：]+([가-힣]{2,})/,
+                    /한글[\s:：]+([가-힣]{2,})/
+                ];
+                
+                for (const pattern of namePatterns) {
+                    const match = line.match(pattern);
+                    if (match && match[1] !== '한글명' && match[1] !== '이름' && match[1] !== '성명') {
+                        data.korean_name = match[1];
+                        console.log(`✅ 한글 이름 발견: ${data.korean_name}`);
+                        break;
+                    }
+                }
+            }
+            // 단독 한글 이름 패턴 (라인에 한글 이름만 있는 경우)
+            else {
+                const koreanNameMatch = line.match(/^([가-힣]{2,4})$/);
+                if (koreanNameMatch) {
+                    data.korean_name = koreanNameMatch[1];
+                    console.log(`✅ 단독 한글 이름 발견: ${data.korean_name}`);
                 }
             }
         }
@@ -3067,20 +3078,39 @@ function parseReservationToJSON(text) {
             }
         }
 
-        // 전화번호
-        if (!data.phone && (lowerLine.includes('전화') || lowerLine.includes('phone') || 
-            lowerLine.includes('mobile'))) {
-            const phonePatterns = [
-                /(\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,9})/,
-                /(010[-\s]?\d{4}[-\s]?\d{4})/,
-                /(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})/
-            ];
-
-            for (const pattern of phonePatterns) {
-                const match = line.match(pattern);
-                if (match) {
-                    data.phone = match[1].replace(/\s/g, '');
-                    break;
+        // 전화번호 (개선된 패턴)
+        if (!data.phone) {
+            // 명시적 전화번호 패턴
+            if (lowerLine.includes('전화') || lowerLine.includes('phone') || lowerLine.includes('mobile')) {
+                const phonePatterns = [
+                    /(\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,9})/,
+                    /(010[-\s]?\d{4}[-\s]?\d{4})/,
+                    /(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})/
+                ];
+                
+                for (const pattern of phonePatterns) {
+                    const match = line.match(pattern);
+                    if (match) {
+                        data.phone = match[1].replace(/\s/g, '');
+                        break;
+                    }
+                }
+            }
+            // 단독 전화번호 패턴 (라인에 전화번호만 있는 경우)
+            else {
+                const phonePatterns = [
+                    /^(\+\d{1,3}[-\s]?\d{1,4}[-\s]?\d{1,4}[-\s]?\d{1,9})$/,
+                    /^(010[-\s]?\d{4}[-\s]?\d{4})$/,
+                    /^(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})$/
+                ];
+                
+                for (const pattern of phonePatterns) {
+                    const match = line.match(pattern);
+                    if (match) {
+                        data.phone = match[1].replace(/\s/g, '');
+                        console.log(`✅ 단독 전화번호 발견: ${data.phone}`);
+                        break;
+                    }
                 }
             }
         }
@@ -3991,34 +4021,175 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         // AI 수준의 지능형 텍스트 파싱
         const parsedData = parseReservationToJSON(reservationText);
         
-        // 지능형 필수 필드 검증 (더 유연하게)
-        const missingFields = [];
+        // 부분 데이터 허용 - 확인된 정보만으로도 등록 가능
+        console.log('📊 파싱된 데이터 확인:', {
+            reservation_number: parsedData.reservation_number,
+            korean_name: parsedData.korean_name,
+            english_first_name: parsedData.english_first_name,
+            product_name: parsedData.product_name,
+            usage_date: parsedData.usage_date,
+            total_amount: parsedData.total_amount
+        });
         
-        if (!parsedData.reservation_code) {
-            missingFields.push('예약번호');
+        // 최소한의 데이터라도 있으면 등록 진행
+        let hasMinimumData = false;
+        const availableData = [];
+        
+        if (parsedData.reservation_number) {
+            hasMinimumData = true;
+            availableData.push('예약번호');
         }
         
-        if (!parsedData.name_kr && !parsedData.name_en_first) {
-            missingFields.push('예약자명');
+        if (parsedData.korean_name || parsedData.english_first_name) {
+            hasMinimumData = true;
+            availableData.push('예약자명');
         }
         
-        if (missingFields.length > 0) {
+        if (parsedData.product_name) {
+            hasMinimumData = true;
+            availableData.push('상품명');
+        }
+        
+        if (parsedData.usage_date) {
+            hasMinimumData = true;
+            availableData.push('이용일');
+        }
+        
+        if (parsedData.total_amount) {
+            hasMinimumData = true;
+            availableData.push('금액');
+        }
+        
+        if (parsedData.phone || parsedData.email) {
+            hasMinimumData = true;
+            availableData.push('연락처');
+        }
+        
+        // 아무 데이터도 없는 경우에만 실패
+        if (!hasMinimumData) {
             return res.json({ 
                 success: false, 
-                message: `필수 정보가 누락되었습니다: ${missingFields.join(', ')}`,
+                message: '파싱 가능한 예약 정보를 찾을 수 없습니다. 예약번호, 예약자명, 상품명 중 하나 이상이 필요합니다.',
                 parsed_data: parsedData
             });
         }
         
-        // 6개 테이블에 데이터 저장
-        const result = await saveReservationToSixTables(parsedData);
+        // 부족한 정보는 기본값으로 보완
+        if (!parsedData.reservation_number) {
+            parsedData.reservation_number = 'AUTO_' + Date.now();
+            console.log('⚠️ 예약번호 자동 생성:', parsedData.reservation_number);
+        }
         
-        res.json({
-            success: true,
-            message: result.message,
-            reservation_id: result.reservation_id,
-            parsed_data: parsedData
-        });
+        if (!parsedData.korean_name && !parsedData.english_first_name) {
+            parsedData.korean_name = '예약자명 미확인';
+            console.log('⚠️ 예약자명 기본값 설정');
+        }
+        
+        if (!parsedData.product_name) {
+            parsedData.product_name = '상품명 미확인';
+            console.log('⚠️ 상품명 기본값 설정');
+        }
+        
+        console.log(`✅ 부분 데이터로 예약 등록 진행 (확인된 정보: ${availableData.join(', ')})`);
+        
+        // 단일 테이블 구조에 맞게 데이터 매핑
+        const reservationData = {
+            reservation_number: parsedData.reservation_number,
+            channel: parsedData.channel || '웹',
+            platform_name: parsedData.platform_name || 'NOL',
+            product_name: parsedData.product_name,
+            korean_name: parsedData.korean_name,
+            english_first_name: parsedData.english_first_name,
+            english_last_name: parsedData.english_last_name,
+            phone: parsedData.phone,
+            email: parsedData.email,
+            kakao_id: parsedData.kakao_id,
+            usage_date: parsedData.usage_date,
+            usage_time: parsedData.usage_time,
+            guest_count: parsedData.guest_count || 1,
+            people_adult: parsedData.people_adult || 1,
+            people_child: parsedData.people_child || 0,
+            people_infant: parsedData.people_infant || 0,
+            package_type: parsedData.package_type,
+            total_amount: parsedData.total_amount,
+            adult_unit_price: parsedData.adult_unit_price,
+            child_unit_price: parsedData.child_unit_price,
+            payment_status: parsedData.payment_status || '대기',
+            code_issued: false,
+            memo: parsedData.memo
+        };
+        
+        // 단일 테이블에 데이터 저장 (PostgreSQL)
+        if (dbMode === 'postgresql') {
+            try {
+                const insertQuery = `
+                    INSERT INTO reservations (
+                        reservation_number, channel, platform_name, product_name,
+                        korean_name, english_first_name, english_last_name,
+                        phone, email, kakao_id, usage_date, usage_time,
+                        guest_count, people_adult, people_child, people_infant,
+                        package_type, total_amount, adult_unit_price, child_unit_price,
+                        payment_status, code_issued, memo, created_at
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW()
+                    ) RETURNING id
+                `;
+                
+                const values = [
+                    reservationData.reservation_number,
+                    reservationData.channel,
+                    reservationData.platform_name,
+                    reservationData.product_name,
+                    reservationData.korean_name,
+                    reservationData.english_first_name,
+                    reservationData.english_last_name,
+                    reservationData.phone,
+                    reservationData.email,
+                    reservationData.kakao_id,
+                    reservationData.usage_date,
+                    reservationData.usage_time,
+                    reservationData.guest_count,
+                    reservationData.people_adult,
+                    reservationData.people_child,
+                    reservationData.people_infant,
+                    reservationData.package_type,
+                    reservationData.total_amount,
+                    reservationData.adult_unit_price,
+                    reservationData.child_unit_price,
+                    reservationData.payment_status,
+                    reservationData.code_issued,
+                    reservationData.memo
+                ];
+                
+                const result = await pool.query(insertQuery, values);
+                const reservationId = result.rows[0].id;
+                
+                console.log(`✅ 예약 등록 성공 (ID: ${reservationId})`);
+                
+                res.json({
+                    success: true,
+                    message: `예약이 성공적으로 등록되었습니다. (확인된 정보: ${availableData.join(', ')})`,
+                    reservation_id: reservationId,
+                    parsed_data: reservationData,
+                    available_data: availableData
+                });
+                
+            } catch (dbError) {
+                console.error('데이터베이스 저장 오류:', dbError);
+                res.json({
+                    success: false,
+                    message: '데이터베이스 저장 중 오류가 발생했습니다: ' + dbError.message,
+                    parsed_data: reservationData
+                });
+            }
+        } else {
+            res.json({
+                success: false,
+                message: 'PostgreSQL 모드가 아닙니다.',
+                parsed_data: reservationData
+            });
+        }
         
     } catch (error) {
         console.error('예약 파싱 및 저장 오류:', error);
