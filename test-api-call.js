@@ -55,10 +55,13 @@ async function testAPI(testName, reservationText) {
             });
 
             res.on('end', () => {
+                console.log(`\n=== ${testName} 결과 ===`);
+                console.log('상태 코드:', res.statusCode);
+                console.log('응답 헤더:', res.headers);
+                console.log('응답 데이터 (처음 200자):', responseData.substring(0, 200));
+                
                 try {
                     const result = JSON.parse(responseData);
-                    console.log(`\n=== ${testName} 결과 ===`);
-                    console.log('상태 코드:', res.statusCode);
                     
                     if (result.success) {
                         console.log('✅ 성공!');

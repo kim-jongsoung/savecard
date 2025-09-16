@@ -4112,6 +4112,7 @@ app.post('/api/register-reservation', async (req, res) => {
         
         console.log('🎯 공개 API 예약 파싱 요청 받음');
         console.log('입력 텍스트 길이:', reservationText.length);
+        console.log('현재 시간:', new Date().toISOString());
         
         // AI 수준 파싱 실행
         const parsedData = parseReservationToJSON(reservationText);
