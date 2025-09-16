@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예약 파싱 기능 테스트</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4FC3F7;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        button {
+            background: linear-gradient(135deg, #4FC3F7, #667eea);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #4FC3F7;
+        }
+        .success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 예약 데이터 파싱 기능 테스트</h1>
+        
+        <!-- 테스트 1: NOL 인터파크 형식 -->
+        <div class="test-section">
+            <h3>📋 테스트 1: NOL 인터파크 형식 (완전한 데이터)</h3>
+            <textarea id="test1">NOL 인터파크 예약 확인서
+예약번호: NOL20250115001
+상품명: 괌 언더워터월드 입장권 + 돌핀 워칭 투어
+이용일: 2025년 1월 20일
+이용시간: 오전 10:00
+예약자 정보:
+한글명: 김철수
+영문명: KIM CHULSOO
+전화번호: 010-1234-5678
+이메일: chulsoo@email.com
+카카오톡 아이디: chulsoo123
+인원수:
+성인 2명
+소아 1명
+총 금액: 195,000원
+결제상태: 결제완료</textarea>
+            <button onclick="testParsing('test1', 1)">파싱 테스트</button>
+            <div id="result1" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- 테스트 2: 부분 정보 -->
+        <div class="test-section">
+            <h3>📋 테스트 2: 부분 정보만 있는 경우</h3>
+            <textarea id="test2">상품명: 괌 돌핀 투어
+이용일: 2025년 1월 25일
+성인 1명
+김영희
+010-9876-5432</textarea>
+            <button onclick="testParsing('test2', 2)">파싱 테스트</button>
+            <div id="result2" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- 테스트 3: KLOOK 형식 -->
+        <div class="test-section">
+            <h3>📋 테스트 3: KLOOK 형식</h3>
+            <textarea id="test3">KLOOK Activity Confirmation
+Booking Reference: KLOOK-ABC123456
+Activity: Guam Underwater World + Dolphin Watching
+Date: January 20, 2025
+Time: 10:00 AM
+Guest: 이민수 (LEE MINSU)
+Phone: +82-10-1111-2222
+Email: minsu@email.com
+Adults: 1, Children: 0
+Total: $120.00
+Voucher Code: UW2025-789</textarea>
+            <button onclick="testParsing('test3', 3)">파싱 테스트</button>
+            <div id="result3" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- 테스트 4: 최소 정보 -->
+        <div class="test-section">
+            <h3>📋 테스트 4: 최소 정보 (이름과 전화번호만)</h3>
+            <textarea id="test4">박지영
+010-5555-7777
+괌 투어</textarea>
+            <button onclick="testParsing('test4', 4)">파싱 테스트</button>
+            <div id="result4" class="result" style="display:none;"></div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <button onclick="runAllTests()" style="background: linear-gradient(135deg, #28a745, #20c997); font-size: 18px; padding: 15px 30px;">
+                🚀 모든 테스트 실행
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 개별 파싱 테스트
+        async function testParsing(textareaId, testNumber) {
+            const textarea = document.getElementById(textareaId);
+            const resultDiv = document.getElementById(`result${testNumber}`);
+            const text = textarea.value.trim();
+            
+            if (!text) {
+                showResult(resultDiv, '❌ 테스트 텍스트를 입력해주세요.', 'error');
+                return;
+            }
+            
+            showResult(resultDiv, '⏳ 파싱 중...', '');
+            
+            try {
+                const response = await fetch('/api/register-reservation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        reservationText: text
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const formatted = JSON.stringify(result, null, 2);
+                    showResult(resultDiv, 
+                        `✅ 파싱 및 저장 성공!\n\n파싱된 데이터:\n${formatted}`, 
+                        'success'
+                    );
+                } else {
+                    showResult(resultDiv, 
+                        `❌ 파싱 실패: ${result.message || '알 수 없는 오류'}`, 
+                        'error'
+                    );
+                }
+                
+            } catch (error) {
+                showResult(resultDiv, 
+                    `❌ 네트워크 오류: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+        
+        // 결과 표시
+        function showResult(resultDiv, message, type) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = `result ${type}`;
+            
+            if (message.includes('파싱된 데이터:')) {
+                const parts = message.split('파싱된 데이터:');
+                resultDiv.innerHTML = `
+                    <div>${parts[0]}</div>
+                    <pre>${parts[1]}</pre>
+                `;
+            } else {
+                resultDiv.innerHTML = `<pre>${message}</pre>`;
+            }
+        }
+        
+        // 모든 테스트 실행
+        async function runAllTests() {
+            console.log('🚀 모든 테스트 실행 시작...');
+            
+            for (let i = 1; i <= 4; i++) {
+                console.log(`테스트 ${i} 실행 중...`);
+                await testParsing(`test${i}`, i);
+                
+                // 테스트 간 간격
+                if (i < 4) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+            
+            console.log('✅ 모든 테스트 완료');
+        }
+        
+        // 페이지 로드시 안내
+        window.onload = function() {
+            console.log('📋 예약 파싱 테스트 페이지 로드 완료');
+            console.log('각 테스트를 개별적으로 실행하거나 "모든 테스트 실행" 버튼을 클릭하세요.');
+        };
+    </script>
+</body>
+</html>

@@ -4098,7 +4098,99 @@ app.post('/admin/reservations/convert-json', requireAuth, async (req, res) => {
     }
 });
 
-// 예약 등록 (텍스트 파싱)
+// 공개 예약 등록 API (텍스트 파싱)
+app.post('/api/register-reservation', async (req, res) => {
+    try {
+        const { reservationText } = req.body;
+        
+        if (!reservationText || reservationText.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '예약 텍스트가 필요합니다.'
+            });
+        }
+        
+        console.log('🎯 공개 API 예약 파싱 요청 받음');
+        console.log('입력 텍스트 길이:', reservationText.length);
+        
+        // AI 수준 파싱 실행
+        const parsedData = parseReservationToJSON(reservationText);
+        console.log('📊 파싱 완료:', parsedData);
+        
+        // 데이터베이스에 저장
+        if (dbMode === 'postgresql') {
+            const insertQuery = `
+                INSERT INTO reservations (
+                    reservation_number, channel, platform_name, product_name,
+                    korean_name, english_first_name, english_last_name,
+                    phone, email, kakao_id,
+                    usage_date, usage_time, guest_count,
+                    people_adult, people_child, people_infant,
+                    package_type, total_amount, adult_unit_price, child_unit_price,
+                    payment_status, code_issued, memo
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                    $21, $22, $23
+                ) RETURNING *
+            `;
+            
+            const values = [
+                parsedData.reservation_number,
+                parsedData.channel || '웹',
+                parsedData.platform_name || 'NOL',
+                parsedData.product_name,
+                parsedData.korean_name,
+                parsedData.english_first_name,
+                parsedData.english_last_name,
+                parsedData.phone,
+                parsedData.email,
+                parsedData.kakao_id,
+                parsedData.usage_date,
+                parsedData.usage_time,
+                parsedData.guest_count || 1,
+                parsedData.people_adult || 1,
+                parsedData.people_child || 0,
+                parsedData.people_infant || 0,
+                parsedData.package_type,
+                parsedData.total_amount,
+                parsedData.adult_unit_price,
+                parsedData.child_unit_price,
+                parsedData.payment_status || '대기',
+                parsedData.code_issued || false,
+                parsedData.memo
+            ];
+            
+            const result = await pool.query(insertQuery, values);
+            console.log('✅ 데이터베이스 저장 완료, ID:', result.rows[0].id);
+            
+            res.json({
+                success: true,
+                message: '예약이 성공적으로 등록되었습니다.',
+                data: result.rows[0],
+                parsed_data: parsedData
+            });
+        } else {
+            // JSON 모드 처리
+            res.json({
+                success: true,
+                message: '예약 파싱이 완료되었습니다. (JSON 모드)',
+                data: parsedData,
+                parsed_data: parsedData
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ 공개 API 예약 등록 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 등록 중 오류가 발생했습니다: ' + error.message,
+            error: error.stack
+        });
+    }
+});
+
+// 예약 등록 (텍스트 파싱) - 관리자용
 app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     try {
         const { reservationText } = req.body;
