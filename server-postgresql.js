@@ -3918,6 +3918,24 @@ function parseReservationText(text) {
 
 // ==================== 예약 관리 API ====================
 
+// 임시 디버깅 엔드포인트 - 발급코드 데이터 직접 확인
+app.get('/admin/debug-codes', requireAuth, async (req, res) => {
+    try {
+        if (dbMode === 'postgresql') {
+            const result = await pool.query('SELECT * FROM issue_codes ORDER BY created_at DESC LIMIT 20');
+            res.json({
+                success: true,
+                count: result.rows.length,
+                codes: result.rows
+            });
+        } else {
+            res.json({ success: false, message: 'PostgreSQL 모드가 아님' });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message, stack: error.stack });
+    }
+});
+
 // 발급 코드 관리 페이지
 app.get('/admin/issue-codes', requireAuth, async (req, res) => {
     try {
