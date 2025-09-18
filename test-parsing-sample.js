@@ -76,7 +76,7 @@ const expectedResult = {
   "phone": "010-7939-3990",
   "kakao_id": "ddendde",
   "guest_count": 3,
-  "memo": null,
+  "memo": "호텔: 츠바키. 카카오톡 아이디: ddendde. 기타 정보: 개별이동 + 점심포함 패키지, 성인 2명 소아 1명 총 3명, 이용예정일 2025-10-09",
   "reservation_datetime": "2025-09-17T02:27:14",
   "platform_name": "VASCO",
   "people_adult": 2,
