@@ -2857,8 +2857,24 @@ app.delete('/admin/banners/:id', requireAuth, async (req, res) => {
 // ==================== 예약 데이터 파싱 함수 ====================
 
 
-// AI 수준의 고급 로컬 파싱 함수 
-function parseReservationToJSON(text) {
+// OpenAI API를 사용한 지능형 파싱 함수
+async function parseReservationToJSON(text) {
+    // OpenAI 파싱 사용
+    const { parseBooking } = require('./utils/aiParser');
+    
+    try {
+        console.log('🤖 OpenAI 파싱 시작...');
+        const result = await parseBooking(text);
+        console.log('✅ OpenAI 파싱 완료');
+        return result;
+    } catch (error) {
+        console.error('❌ OpenAI 파싱 실패, 로컬 파싱으로 폴백:', error.message);
+        return parseReservationToJSONLocal(text);
+    }
+}
+
+// 기존 로컬 파싱 함수 (폴백용)
+function parseReservationToJSONLocal(text) {
     console.log('🤖 AI 수준 파싱 시작...');
     
     // 더 지능적인 파싱을 위한 정규식 및 패턴 매칭
@@ -4428,7 +4444,7 @@ app.post('/admin/reservations/convert-json', requireAuth, async (req, res) => {
         }
         
         // JSON 스키마로 변환
-        const jsonData = parseReservationToJSON(reservationText);
+        const jsonData = await parseReservationToJSON(reservationText);
         
         // JSON만 반환 (요청사항에 따라)
         res.json(jsonData);
@@ -4546,8 +4562,8 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
         
-        // AI 수준의 지능형 텍스트 파싱
-        const parsedData = parseReservationToJSON(reservationText);
+        // OpenAI 지능형 텍스트 파싱
+        const parsedData = await parseReservationToJSON(reservationText);
         
         // 부분 데이터 허용 - 확인된 정보만으로도 등록 가능
         console.log('📊 파싱된 데이터 확인:', {
