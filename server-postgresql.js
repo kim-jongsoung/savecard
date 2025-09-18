@@ -4322,103 +4322,219 @@ app.delete('/admin/issue-codes/:id', requireAuth, async (req, res) => {
     }
 });
 
-// 예약 관리 페이지
+// 예약 관리 페이지 (검수형 백엔드 통합)
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
         console.log('📋 예약 관리 페이지 접근 시도');
         console.log('🔍 dbMode:', dbMode);
         
+        // 페이징 파라미터
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const status = req.query.status || '';
+        
         if (dbMode === 'postgresql') {
-            // 테이블 존재 확인
+            // 테이블 존재 확인 (reservations와 reservation_drafts 모두)
             const tableCheck = await pool.query(`
                 SELECT table_name 
                 FROM information_schema.tables 
                 WHERE table_schema = 'public' 
-                AND table_name = 'reservations'
+                AND table_name IN ('reservations', 'reservation_drafts')
             `);
             
-            console.log('📊 reservations 테이블 존재 여부:', tableCheck.rows.length > 0);
+            const existingTables = tableCheck.rows.map(row => row.table_name);
+            console.log('📊 존재하는 테이블:', existingTables);
             
-            if (tableCheck.rows.length === 0) {
-                console.log('⚠️ reservations 테이블이 존재하지 않음');
+            if (existingTables.length === 0) {
+                console.log('⚠️ 예약 관련 테이블이 존재하지 않음');
                 return res.render('admin/reservations', {
                     title: '예약 관리',
                     adminUsername: req.session.adminUsername || 'admin',
-                    stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0 },
-                    reservations: []
+                    stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0, drafts_pending: 0, drafts_ready: 0 },
+                    reservations: [],
+                    drafts: [],
+                    pagination: { page: 1, totalPages: 1, hasNext: false, hasPrev: false }
                 });
             }
             
-            // 통계 쿼리 (안전한 방식)
-            let stats = { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0 };
+            // 통계 쿼리 (reservations + drafts)
+            let stats = { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0, drafts_pending: 0, drafts_ready: 0 };
             try {
-                const statsQuery = await pool.query(`
-                    SELECT 
-                        COUNT(*) as total_reservations,
-                        COUNT(CASE WHEN code_issued = true THEN 1 END) as code_issued,
-                        COUNT(CASE WHEN code_issued = false OR code_issued IS NULL THEN 1 END) as pending_codes,
-                        COUNT(DISTINCT COALESCE(platform_name, 'NOL')) as companies
-                    FROM reservations
-                `);
-                stats = statsQuery.rows[0];
+                // 예약 통계
+                if (existingTables.includes('reservations')) {
+                    const reservationStats = await pool.query(`
+                        SELECT 
+                            COUNT(*) as total_reservations,
+                            COUNT(CASE WHEN code_issued = true THEN 1 END) as code_issued,
+                            COUNT(CASE WHEN code_issued = false OR code_issued IS NULL THEN 1 END) as pending_codes,
+                            COUNT(DISTINCT COALESCE(platform_name, 'NOL')) as companies
+                        FROM reservations
+                        WHERE payment_status != 'cancelled'
+                    `);
+                    stats = { ...stats, ...reservationStats.rows[0] };
+                }
+                
+                // 드래프트 통계
+                if (existingTables.includes('reservation_drafts')) {
+                    const draftStats = await pool.query(`
+                        SELECT 
+                            COUNT(CASE WHEN status = 'pending' THEN 1 END) as drafts_pending,
+                            COUNT(CASE WHEN status = 'ready' THEN 1 END) as drafts_ready
+                        FROM reservation_drafts
+                        WHERE status IN ('pending', 'ready')
+                    `);
+                    stats = { ...stats, ...draftStats.rows[0] };
+                }
+                
                 console.log('📊 통계 쿼리 성공:', stats);
             } catch (statsError) {
                 console.error('⚠️ 통계 쿼리 오류:', statsError.message);
             }
             
-            // 예약 목록 쿼리 (안전한 방식)
+            // 예약 목록 쿼리 (검색 및 필터링 포함)
             let reservations = [];
+            let totalCount = 0;
             try {
-                const reservationsQuery = await pool.query(`
-                    SELECT 
-                        id,
-                        reservation_number,
-                        COALESCE(channel, '웹') as channel,
-                        COALESCE(platform_name, 'NOL') as platform_name,
-                        product_name,
-                        korean_name,
-                        COALESCE(COALESCE(english_first_name, '') || ' ' || COALESCE(english_last_name, ''), '') as english_name,
-                        phone,
-                        email,
-                        kakao_id,
-                        usage_date,
-                        usage_time,
-                        COALESCE(guest_count, 1) as guest_count,
-                        COALESCE(people_adult, 1) as people_adult,
-                        COALESCE(people_child, 0) as people_child,
-                        COALESCE(people_infant, 0) as people_infant,
-                        package_type,
-                        total_amount,
-                        COALESCE(adult_unit_price, 0) as adult_unit_price,
-                        COALESCE(child_unit_price, 0) as child_unit_price,
-                        COALESCE(payment_status, '대기') as payment_status,
-                        COALESCE(code_issued, false) as code_issued,
-                        code_issued_at,
-                        memo,
-                        created_at
-                    FROM reservations 
-                    ORDER BY created_at DESC 
-                    LIMIT 50
-                `);
-                reservations = reservationsQuery.rows;
-                console.log('📋 예약 목록 쿼리 성공, 개수:', reservations.length);
+                if (existingTables.includes('reservations')) {
+                    let whereClause = "WHERE payment_status != 'cancelled'";
+                    let queryParams = [];
+                    let paramIndex = 1;
+                    
+                    // 검색 조건
+                    if (search) {
+                        whereClause += ` AND (
+                            reservation_number ILIKE $${paramIndex} OR 
+                            korean_name ILIKE $${paramIndex} OR 
+                            product_name ILIKE $${paramIndex} OR
+                            email ILIKE $${paramIndex}
+                        )`;
+                        queryParams.push(`%${search}%`);
+                        paramIndex++;
+                    }
+                    
+                    // 상태 필터
+                    if (status === 'issued') {
+                        whereClause += ` AND code_issued = true`;
+                    } else if (status === 'pending') {
+                        whereClause += ` AND (code_issued = false OR code_issued IS NULL)`;
+                    }
+                    
+                    // 총 개수 조회
+                    const countQuery = `SELECT COUNT(*) as total FROM reservations ${whereClause}`;
+                    const countResult = await pool.query(countQuery, queryParams);
+                    totalCount = parseInt(countResult.rows[0].total);
+                    
+                    // 예약 목록 조회
+                    const reservationsQuery = await pool.query(`
+                        SELECT 
+                            id,
+                            reservation_number,
+                            COALESCE(channel, '웹') as channel,
+                            COALESCE(platform_name, 'NOL') as platform_name,
+                            product_name,
+                            korean_name,
+                            COALESCE(COALESCE(english_first_name, '') || ' ' || COALESCE(english_last_name, ''), '') as english_name,
+                            phone,
+                            email,
+                            kakao_id,
+                            usage_date,
+                            usage_time,
+                            COALESCE(guest_count, 1) as guest_count,
+                            COALESCE(people_adult, 1) as people_adult,
+                            COALESCE(people_child, 0) as people_child,
+                            COALESCE(people_infant, 0) as people_infant,
+                            package_type,
+                            total_amount,
+                            COALESCE(adult_unit_price, 0) as adult_unit_price,
+                            COALESCE(child_unit_price, 0) as child_unit_price,
+                            COALESCE(payment_status, '대기') as payment_status,
+                            COALESCE(code_issued, false) as code_issued,
+                            code_issued_at,
+                            memo,
+                            created_at,
+                            updated_at
+                        FROM reservations 
+                        ${whereClause}
+                        ORDER BY created_at DESC 
+                        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+                    `, [...queryParams, limit, offset]);
+                    
+                    reservations = reservationsQuery.rows;
+                    console.log('📋 예약 목록 쿼리 성공, 개수:', reservations.length);
+                }
             } catch (listError) {
                 console.error('⚠️ 예약 목록 쿼리 오류:', listError.message);
             }
+            
+            // 드래프트 목록 조회 (최근 10개)
+            let drafts = [];
+            try {
+                if (existingTables.includes('reservation_drafts')) {
+                    const draftsQuery = await pool.query(`
+                        SELECT 
+                            id,
+                            raw_text,
+                            status,
+                            confidence,
+                            flags,
+                            created_at,
+                            updated_at,
+                            CASE 
+                                WHEN manual_json IS NOT NULL THEN manual_json
+                                WHEN normalized_json IS NOT NULL THEN normalized_json
+                                ELSE parsed_json
+                            END as display_data
+                        FROM reservation_drafts 
+                        WHERE status IN ('pending', 'ready')
+                        ORDER BY created_at DESC 
+                        LIMIT 10
+                    `);
+                    drafts = draftsQuery.rows.map(draft => {
+                        try {
+                            draft.display_data = typeof draft.display_data === 'string' ? 
+                                JSON.parse(draft.display_data) : draft.display_data;
+                        } catch (e) {
+                            draft.display_data = {};
+                        }
+                        return draft;
+                    });
+                    console.log('📋 드래프트 목록 쿼리 성공, 개수:', drafts.length);
+                }
+            } catch (draftError) {
+                console.error('⚠️ 드래프트 목록 쿼리 오류:', draftError.message);
+            }
+            
+            // 페이징 정보
+            const totalPages = Math.ceil(totalCount / limit);
+            const pagination = {
+                page,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+                totalCount
+            };
             
             res.render('admin/reservations', {
                 title: '예약 관리',
                 adminUsername: req.session.adminUsername || 'admin',
                 stats: stats,
-                reservations: reservations
+                reservations: reservations,
+                drafts: drafts,
+                pagination: pagination,
+                search: search,
+                status: status
             });
         } else {
             console.log('📁 JSON 모드로 실행 중');
             res.render('admin/reservations', {
                 title: '예약 관리',
                 adminUsername: req.session.adminUsername || 'admin',
-                stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0 },
-                reservations: []
+                stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0, drafts_pending: 0, drafts_ready: 0 },
+                reservations: [],
+                drafts: [],
+                pagination: { page: 1, totalPages: 1, hasNext: false, hasPrev: false }
             });
         }
     } catch (error) {

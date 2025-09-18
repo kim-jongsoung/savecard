@@ -226,7 +226,7 @@
 
         <!-- 통계 카드 -->
         <div class="row mb-4">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-calendar-alt fa-2x text-primary mb-2"></i>
@@ -235,7 +235,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
@@ -244,7 +244,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-clock fa-2x text-warning mb-2"></i>
@@ -253,12 +253,30 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center">
                     <div class="card-body">
                         <i class="fas fa-building fa-2x text-info mb-2"></i>
                         <h4 class="card-title"><%= stats.companies || 0 %></h4>
                         <p class="card-text text-muted">업체 수</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-edit fa-2x text-warning mb-2"></i>
+                        <h4 class="card-title"><%= stats.drafts_pending || 0 %></h4>
+                        <p class="card-text text-muted">검수 대기</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-double fa-2x text-success mb-2"></i>
+                        <h4 class="card-title"><%= stats.drafts_ready || 0 %></h4>
+                        <p class="card-text text-muted">승인 대기</p>
                     </div>
                 </div>
             </div>
@@ -325,10 +343,101 @@
             </div>
         </div>
 
+        <!-- 드래프트 관리 섹션 -->
+        <% if (drafts && drafts.length > 0) { %>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-edit me-2"></i>검수 대기 드래프트</h5>
+                <p class="text-muted small mb-0">파싱된 예약 데이터를 검수하고 승인하세요</p>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>상태</th>
+                                <th>신뢰도</th>
+                                <th>예약자</th>
+                                <th>상품명</th>
+                                <th>금액</th>
+                                <th>생성일</th>
+                                <th>액션</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% drafts.forEach(draft => { %>
+                                <tr>
+                                    <td><%= draft.id %></td>
+                                    <td>
+                                        <% if (draft.status === 'pending') { %>
+                                            <span class="badge bg-warning">검수 대기</span>
+                                        <% } else if (draft.status === 'ready') { %>
+                                            <span class="badge bg-success">승인 대기</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (draft.confidence >= 0.8) { %>
+                                            <span class="badge bg-success">높음</span>
+                                        <% } else if (draft.confidence >= 0.6) { %>
+                                            <span class="badge bg-warning">보통</span>
+                                        <% } else { %>
+                                            <span class="badge bg-danger">낮음</span>
+                                        <% } %>
+                                    </td>
+                                    <td><%= draft.display_data.korean_name || '-' %></td>
+                                    <td><%= draft.display_data.product_name || '-' %></td>
+                                    <td><%= draft.display_data.total_amount ? '$' + draft.display_data.total_amount : '-' %></td>
+                                    <td><%= new Date(draft.created_at).toLocaleDateString('ko-KR') %></td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-info" onclick="viewDraft(<%= draft.id %>)" title="상세보기">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <% if (draft.status === 'pending') { %>
+                                                <button class="btn btn-sm btn-warning" onclick="editDraft(<%= draft.id %>)" title="수정">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            <% } %>
+                                            <% if (draft.status === 'ready') { %>
+                                                <button class="btn btn-sm btn-success" onclick="commitDraft(<%= draft.id %>)" title="승인">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
         <!-- 예약 목록 -->
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5><i class="fas fa-list me-2"></i>예약 목록</h5>
+                <div class="d-flex gap-2">
+                    <!-- 검색 폼 -->
+                    <form method="GET" class="d-flex gap-2">
+                        <input type="text" name="search" class="form-control form-control-sm" 
+                               placeholder="예약번호, 이름, 상품명 검색..." 
+                               value="<%= search %>" style="width: 200px;">
+                        <select name="status" class="form-select form-select-sm" style="width: 120px;">
+                            <option value="">전체</option>
+                            <option value="issued" <%= status === 'issued' ? 'selected' : '' %>>발급완료</option>
+                            <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>발급대기</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <a href="/admin/reservations" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </form>
+                </div>
             </div>
             <div class="card-body">
                 <% if (reservations && reservations.length > 0) { %>
@@ -459,6 +568,34 @@
                         <h5 class="text-muted">등록된 예약이 없습니다</h5>
                         <p class="text-muted">위의 예약 데이터 등록 기능을 사용해서 예약을 추가해보세요.</p>
                     </div>
+                <% } %>
+                
+                <!-- 페이징 -->
+                <% if (pagination && pagination.totalPages > 1) { %>
+                <nav aria-label="예약 목록 페이징" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <% if (pagination.hasPrev) { %>
+                            <li class="page-item">
+                                <a class="page-link" href="?page=<%= pagination.page - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= status ? '&status=' + status : '' %>">이전</a>
+                            </li>
+                        <% } %>
+                        
+                        <% for (let i = Math.max(1, pagination.page - 2); i <= Math.min(pagination.totalPages, pagination.page + 2); i++) { %>
+                            <li class="page-item <%= i === pagination.page ? 'active' : '' %>">
+                                <a class="page-link" href="?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= status ? '&status=' + status : '' %>"><%= i %></a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (pagination.hasNext) { %>
+                            <li class="page-item">
+                                <a class="page-link" href="?page=<%= pagination.page + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %><%= status ? '&status=' + status : '' %>">다음</a>
+                            </li>
+                        <% } %>
+                    </ul>
+                    <div class="text-center text-muted small">
+                        총 <%= pagination.totalCount || 0 %>개 중 <%= ((pagination.page - 1) * 20) + 1 %>-<%= Math.min(pagination.page * 20, pagination.totalCount || 0) %>개 표시
+                    </div>
+                </nav>
                 <% } %>
             </div>
         </div>
@@ -710,6 +847,72 @@
             URL.revokeObjectURL(url);
         }
 
+        // 드래프트 관리 함수들
+        function viewDraft(draftId) {
+            window.open(`/admin/drafts/${draftId}`, '_blank');
+        }
+
+        function editDraft(draftId) {
+            window.location.href = `/admin/drafts/${draftId}/edit`;
+        }
+
+        function commitDraft(draftId) {
+            if (confirm('이 드래프트를 최종 예약으로 승인하시겠습니까?')) {
+                fetch(`/admin/drafts/${draftId}/commit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('드래프트가 성공적으로 승인되어 예약으로 등록되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('승인 실패: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('승인 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        // 기존 예약 관리 함수들
+        function viewReservation(reservationId) {
+            window.open(`/admin/reservations/${reservationId}`, '_blank');
+        }
+
+        function editReservation(reservationId) {
+            window.location.href = `/admin/reservations/${reservationId}/edit`;
+        }
+
+        function deleteReservation(reservationId) {
+            if (confirm('이 예약을 취소하시겠습니까? (완전 삭제가 아닌 취소 상태로 변경됩니다)')) {
+                fetch(`/admin/reservations/${reservationId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('예약이 취소되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('취소 실패: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('취소 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
         function viewCode(reservationId) {
             fetch('/admin/reservations/' + reservationId + '/code')
             .then(response => response.json())
@@ -723,25 +926,6 @@
             .catch(error => {
                 console.error('Error:', error);
                 alert('코드 조회 중 오류가 발생했습니다.');
-            });
-        }
-
-        // 예약 상세보기
-        function viewReservation(reservationId) {
-            fetch('/admin/reservations/' + reservationId)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    populateViewModal(data.reservation);
-                    const modal = new bootstrap.Modal(document.getElementById('viewReservationModal'));
-                    modal.show();
-                } else {
-                    alert('예약 정보를 불러올 수 없습니다: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('예약 정보 조회 중 오류가 발생했습니다.');
             });
         }
 

@@ -18,7 +18,7 @@ try {
 /**
  * OpenAI API를 사용하여 예약 텍스트를 JSON으로 파싱
  * @param {string} rawText - 파싱할 원본 예약 텍스트
- * @returns {Promise<Object>} - 파싱된 예약 데이터 JSON
+ * @returns {Promise<Object>} - 파싱된 예약 데이터 JSON (confidence, extracted_notes 포함)
  */
 async function parseBooking(rawText) {
     // OpenAI API 키가 없으면 에러 발생
@@ -54,6 +54,10 @@ adult_unit_price, child_unit_price, payment_status
 - id는 null (DB 자동생성)
 - issue_code_id는 null
 
+🔍 추가 필드 (검수용):
+- confidence: 파싱 신뢰도 (0.0~1.0, 소수점 2자리)
+- extracted_notes: 파싱 과정에서 발견한 특이사항이나 애매한 부분 설명
+
 ✅ 출력 예시:
 {
   "id": null,
@@ -86,7 +90,9 @@ adult_unit_price, child_unit_price, payment_status
   "people_infant": 0,
   "adult_unit_price": 101.33,
   "child_unit_price": 101.33,
-  "payment_status": "confirmed"
+  "payment_status": "confirmed",
+  "confidence": 0.95,
+  "extracted_notes": "모든 필수 정보가 명확하게 제공됨. 항공편과 호텔 정보 확실함."
 }
 
 📋 memo 필드 작성 규칙:
@@ -98,6 +104,12 @@ adult_unit_price, child_unit_price, payment_status
 - 중요 안내사항
 - 기타 모든 고객 메모나 요청사항
 - 원본 텍스트에서 찾을 수 있는 모든 부가 정보를 자연스러운 문장으로 정리
+
+📊 confidence 평가 기준:
+- 0.9~1.0: 모든 핵심 정보 명확, 검수 불필요
+- 0.7~0.8: 대부분 정보 확실, 일부 확인 필요
+- 0.5~0.6: 기본 정보만 확실, 많은 부분 검수 필요
+- 0.0~0.4: 정보 부족하거나 애매함, 전면 검수 필요
 `;
 
         const userPrompt = `
