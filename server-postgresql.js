@@ -4828,7 +4828,7 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
                     ) RETURNING id
                 `;
                 
-                const values = [
+                let values = [
                     reservationData.reservation_number,
                     reservationData.channel,
                     reservationData.platform_name,
