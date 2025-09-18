@@ -3983,10 +3983,6 @@ app.get('/admin/issue-codes', requireAuth, async (req, res) => {
                     SELECT 
                         id,
                         code,
-                        user_name,
-                        user_phone,
-                        user_email,
-                        qr_code_url,
                         COALESCE(is_delivered, false) as is_delivered,
                         delivered_at,
                         COALESCE(is_used, false) as is_used,
