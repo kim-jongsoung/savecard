@@ -292,6 +292,26 @@ async function createTables() {
     `);
     console.log('✅ issue_codes 테이블 생성 완료');
 
+    // 예약 드래프트 테이블 생성 (검수형 워크플로우)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reservation_drafts (
+        draft_id SERIAL PRIMARY KEY,
+        raw_text TEXT NOT NULL,
+        parsed_json JSONB,
+        normalized_json JSONB,
+        manual_json JSONB,
+        confidence DECIMAL(3,2) DEFAULT 0.8,
+        extracted_notes TEXT,
+        status VARCHAR(20) DEFAULT 'pending_review',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        reviewed_by VARCHAR(100),
+        reviewed_at TIMESTAMP,
+        committed_reservation_id INTEGER
+      )
+    `);
+    console.log('✅ reservation_drafts 테이블 생성 완료');
+
     // 단일 통합 예약 테이블 생성 (모든 정보를 하나의 테이블에)
     await client.query(`
         CREATE TABLE IF NOT EXISTS reservations (
