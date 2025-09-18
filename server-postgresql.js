@@ -4615,7 +4615,7 @@ app.post('/api/register-reservation', async (req, res) => {
                 ) RETURNING *
             `;
             
-            const values = [
+            let values = [
                 parsedData.reservation_number,
                 parsedData.channel || '웹',
                 parsedData.platform_name || 'NOL',
