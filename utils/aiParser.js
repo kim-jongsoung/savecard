@@ -31,11 +31,11 @@ async function parseBooking(rawText) {
         console.log('📝 입력 텍스트 길이:', rawText.length);
 
         const systemPrompt = `
-당신은 예약 정보를 정확하게 파싱하는 전문가입니다.
-아래 예약 텍스트를 반드시 이 JSON 스키마에 맞게 변환해줘.
-출력은 JSON 오브젝트만 반환하고, 다른 텍스트는 포함하지 마.
+나는 다양한 여행사/예약사에서 붙여넣은 예약 텍스트(rawText)를 
+PostgreSQL DB 스키마에 맞게 항상 동일한 JSON 구조로 변환하고 싶어. 
+출력은 반드시 JSON 오브젝트 하나만 반환해야 하고, 다른 텍스트나 설명은 절대 포함하지 마. 
 
-스키마 필드:
+🎯 JSON 스키마 (DB 컬럼):
 id, reservation_number, confirmation_number, channel, product_name, total_amount,
 package_type, usage_date, usage_time, quantity,
 korean_name, english_first_name, english_last_name, email, phone, kakao_id,
@@ -45,56 +45,47 @@ issue_code_id, code_issued, code_issued_at, platform_name,
 people_adult, people_child, people_infant,
 adult_unit_price, child_unit_price, payment_status
 
-중요한 파싱 규칙:
-1. 예약번호는 숫자로만 구성된 것을 찾으세요 (예: 460033)
-2. 확인번호는 "PROD:" 등이 포함된 것을 찾으세요 (예: PROD:9e052e)
-3. 채널은 "NOL", "KLOOK", "VIATOR" 등을 찾으세요
-4. 금액에서 "$" 기호와 쉼표를 제거하고 숫자(float)만 추출하세요
-5. 날짜는 YYYY-MM-DD 형식으로 변환하세요
-6. 시간은 HH:MM 형식으로 변환하세요
-7. 전화번호에서 "+82 "를 제거하고 "010-"으로 시작하게 하세요
-8. 성인/소아 인원수는 "성인 3소아 0" 형태에서 추출하세요
-9. 단가는 총금액을 총인원수로 나누어 계산하세요 (float)
-10. 예약확정 상태면 payment_status를 "confirmed"로 설정하세요
-11. 바우처가 등록되었으면 code_issued를 true로 설정하세요
-12. 필드 누락 금지, 모르면 null
-13. 금액은 숫자(float), 인원은 정수
-14. created_at, updated_at은 "NOW()" 문자열로 채워라
-15. id는 null로 설정 (DB에서 자동생성)
-16. issue_code_id는 null로 설정
+📌 규칙:
+- 모든 필드는 반드시 포함 (값을 모르면 null)
+- 금액은 숫자(float), 인원은 정수
+- 날짜는 YYYY-MM-DD, 시간은 HH:MM
+- created_at, updated_at은 "NOW()" 문자열로 채운다
+- 취소된 예약은 payment_status="cancelled"
+- id는 null (DB 자동생성)
+- issue_code_id는 null
 
-JSON 스키마 예시:
+✅ 출력 예시:
 {
   "id": null,
-  "reservation_number": "460033",
-  "confirmation_number": "PROD:9e052e",
-  "channel": "NOL",
-  "product_name": "괌 공항-호텔 왕복 편도 픽업 셔틀",
-  "total_amount": 45.00,
-  "package_type": "왕복 셔틀",
-  "usage_date": "2025-11-11",
-  "usage_time": "09:35",
+  "reservation_number": "459447",
+  "confirmation_number": "PROD:d7cb49",
+  "channel": "NOL 인터파크",
+  "product_name": "괌 정글리버크루즈 원주민문화체험 맹글로브숲 수공예품만들기 물소타기",
+  "total_amount": 304.00,
+  "package_type": "개별이동 + 점심포함",
+  "usage_date": "2025-10-09",
+  "usage_time": null,
   "quantity": 3,
-  "korean_name": "홍연숙",
-  "english_first_name": "Yeonsook",
-  "english_last_name": "Hong",
-  "email": "yeonssuk@naver.com",
-  "phone": "010-3007-4644",
-  "kakao_id": "yeonssuk@naver.com",
+  "korean_name": "구병모",
+  "english_first_name": "BYUNGMO",
+  "english_last_name": "KU",
+  "email": "ddendden@naver.com",
+  "phone": "010-7939-3990",
+  "kakao_id": "ddendde",
   "guest_count": 3,
-  "memo": "출국편 LJ0920 / 11월14일 00:20",
-  "reservation_datetime": "2025-09-18T00:45:26",
+  "memo": null,
+  "reservation_datetime": "2025-09-17T02:27:14",
   "created_at": "NOW()",
   "updated_at": "NOW()",
   "issue_code_id": null,
   "code_issued": true,
-  "code_issued_at": "2025-09-18T10:11:09",
+  "code_issued_at": "2025-09-17T11:22:47",
   "platform_name": "VASCO",
-  "people_adult": 3,
-  "people_child": 0,
+  "people_adult": 2,
+  "people_child": 1,
   "people_infant": 0,
-  "adult_unit_price": 15.00,
-  "child_unit_price": null,
+  "adult_unit_price": 101.33,
+  "child_unit_price": 101.33,
   "payment_status": "confirmed"
 }
 `;
