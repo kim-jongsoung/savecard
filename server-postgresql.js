@@ -13,6 +13,8 @@ require('dotenv').config();
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
 const { pool, dbMode, testConnection, createTables, ensureAllColumns, migrateFromJSON } = require('./database');
+const { normalizeReservationData } = require('./utils/normalize');
+const { parseBooking } = require('./utils/aiParser');
 let jsonDB;
 
 try {
