@@ -151,7 +151,7 @@ ${rawText}
 function postProcessData(data) {
     // 기본값 설정
     const processed = {
-        reservation_number: data.reservation_number || `AI_${Date.now().toString().slice(-8)}`,
+        reservation_number: data.reservation_number || `AI_${Date.now()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
         confirmation_number: data.confirmation_number || null,
         channel: data.channel || '웹',
         product_name: data.product_name || '상품명 미확인',
@@ -275,7 +275,7 @@ function getDefaultBookingData(rawText) {
     console.log('⚠️ OpenAI API 실패 - 기본 구조 반환');
     
     return {
-        reservation_number: `FALLBACK_${Date.now().toString().slice(-8)}`,
+        reservation_number: `FALLBACK_${Date.now()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`,
         confirmation_number: null,
         channel: '웹',
         product_name: '상품명 미확인',

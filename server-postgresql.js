@@ -4525,14 +4525,33 @@ app.post('/api/register-reservation', async (req, res) => {
                 parsedData.memo
             ];
             
-            const result = await pool.query(insertQuery, values);
-            
-            res.json({
-                success: true,
-                message: '예약이 성공적으로 등록되었습니다.',
-                reservation_id: result.rows[0].id,
-                parsed_data: parsedData
-            });
+            try {
+                const result = await pool.query(insertQuery, values);
+                
+                res.json({
+                    success: true,
+                    message: '예약이 성공적으로 등록되었습니다.',
+                    reservation_id: result.rows[0].id,
+                    parsed_data: parsedData
+                });
+            } catch (dbError) {
+                if (dbError.code === '23505' && dbError.constraint === 'reservations_reservation_number_key') {
+                    // 예약번호 중복 시 새로운 번호로 재시도
+                    console.log('⚠️ 예약번호 중복 감지, 새 번호로 재시도...');
+                    parsedData.reservation_number = `RETRY_${Date.now()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+                    values[0] = parsedData.reservation_number;
+                    
+                    const retryResult = await pool.query(insertQuery, values);
+                    res.json({
+                        success: true,
+                        message: '예약이 성공적으로 등록되었습니다. (예약번호 자동 변경)',
+                        reservation_id: retryResult.rows[0].id,
+                        parsed_data: parsedData
+                    });
+                } else {
+                    throw dbError;
+                }
+            }
         }
         
     } catch (error) {
