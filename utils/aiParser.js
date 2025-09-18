@@ -19,33 +19,47 @@ async function parseBooking(rawText) {
 당신은 예약 정보를 정확하게 파싱하는 전문가입니다.
 주어진 예약 텍스트에서 다음 JSON 스키마에 맞는 정보를 추출해주세요.
 
+중요한 파싱 규칙:
+1. 예약번호는 숫자로만 구성된 것을 찾으세요 (예: 459447)
+2. 확인번호는 "PROD:" 등이 포함된 것을 찾으세요 (예: PROD:d7cb49)
+3. 채널은 "NOL 인터파크", "KLOOK", "VIATOR" 등을 찾으세요
+4. 금액에서 "$" 기호와 쉼표를 제거하고 숫자만 추출하세요
+5. 날짜는 YYYY-MM-DD 형식으로 변환하세요
+6. 전화번호에서 "+82 "를 제거하고 "010-"으로 시작하게 하세요
+7. 성인/소아 인원수는 "성인 2소아 1" 형태에서 추출하세요
+8. 단가는 총금액을 총인원수로 나누어 계산하세요
+9. 예약확정 상태면 payment_status를 "confirmed"로 설정하세요
+10. 바우처가 등록되었으면 code_issued를 true로 설정하세요
+
 JSON 스키마:
 {
   "reservation_number": "예약번호 (문자열)",
   "confirmation_number": "확인번호 (문자열, 없으면 null)",
-  "channel": "예약채널 (웹/모바일/전화 등, 기본값: 웹)",
+  "channel": "예약채널 (NOL 인터파크, KLOOK 등)",
   "product_name": "상품명 (문자열)",
   "total_amount": "총 금액 (숫자, 달러 기준)",
-  "package_type": "패키지 타입 (문자열, 없으면 null)",
+  "package_type": "패키지 타입 (개별이동 + 점심포함 등)",
   "usage_date": "이용일 (YYYY-MM-DD 형식)",
   "usage_time": "이용시간 (HH:MM 형식, 없으면 null)",
-  "quantity": "수량 (숫자, 기본값: 1)",
+  "quantity": "수량 (숫자)",
   "korean_name": "한글 이름 (문자열)",
   "english_first_name": "영문 이름 (문자열)",
   "english_last_name": "영문 성 (문자열)",
   "email": "이메일 (문자열)",
-  "phone": "전화번호 (문자열)",
+  "phone": "전화번호 (010-0000-0000 형식)",
   "kakao_id": "카카오톡 ID (문자열, 없으면 null)",
   "guest_count": "총 인원수 (숫자)",
   "memo": "메모 (문자열, 없으면 null)",
-  "reservation_datetime": "예약일시 (YYYY-MM-DD HH:MM:SS 형식, 없으면 null)",
-  "platform_name": "플랫폼명 (NOL/KLOOK/VIATOR/AGODA 등)",
+  "reservation_datetime": "예약일시 (YYYY-MM-DDTHH:MM:SS 형식)",
+  "platform_name": "플랫폼명 (VASCO, NOL 등)",
   "people_adult": "성인 인원수 (숫자)",
   "people_child": "소아 인원수 (숫자, 기본값: 0)",
   "people_infant": "유아 인원수 (숫자, 기본값: 0)",
-  "adult_unit_price": "성인 단가 (숫자, 없으면 null)",
-  "child_unit_price": "소아 단가 (숫자, 없으면 null)",
-  "payment_status": "결제상태 (완료/대기/취소 등, 기본값: 대기)"
+  "adult_unit_price": "성인 단가 (숫자, 총금액/총인원으로 계산)",
+  "child_unit_price": "소아 단가 (숫자, 성인과 동일하게 계산)",
+  "payment_status": "결제상태 (confirmed/pending/cancelled)",
+  "code_issued": "바우처 발급 여부 (true/false)",
+  "code_issued_at": "바우처 발급일시 (YYYY-MM-DDTHH:MM:SS 형식, 없으면 null)"
 }
 
 중요 규칙:
