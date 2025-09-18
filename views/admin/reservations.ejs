@@ -526,21 +526,45 @@
         function displayParsedData(data) {
             const content = document.getElementById('parsedContent');
             content.innerHTML = `
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-robot me-2"></i><strong>OpenAI 파싱 결과</strong>
+                    <span class="badge bg-${data.parsing_confidence === 'high' ? 'success' : data.parsing_confidence === 'medium' ? 'warning' : 'secondary'} ms-2">
+                        ${data.parsing_confidence === 'high' ? '높은 신뢰도' : data.parsing_confidence === 'medium' ? '보통 신뢰도' : '낮은 신뢰도'}
+                    </span>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>업체:</strong> ${data.company || '-'}</p>
+                        <h6 class="text-primary"><i class="fas fa-info-circle me-2"></i>예약 정보</h6>
                         <p><strong>예약번호:</strong> ${data.reservation_number || '-'}</p>
-                        <p><strong>확인번호:</strong> ${data.confirmation_number || '-'}</p>
+                        <p><strong>채널:</strong> ${data.channel || '-'}</p>
+                        <p><strong>플랫폼:</strong> ${data.platform_name || '-'}</p>
                         <p><strong>상품명:</strong> ${data.product_name || '-'}</p>
-                        <p><strong>금액:</strong> ${data.amount ? '$' + data.amount.toLocaleString() : '-'}</p>
+                        <p><strong>패키지 타입:</strong> ${data.package_type || '-'}</p>
+                        <p><strong>총 금액:</strong> ${data.total_amount ? '$' + data.total_amount.toLocaleString() : '-'}</p>
+                        <p><strong>결제 상태:</strong> ${data.payment_status || '-'}</p>
+                        
+                        <h6 class="text-primary mt-3"><i class="fas fa-calendar me-2"></i>일정 정보</h6>
                         <p><strong>이용일:</strong> ${data.usage_date || '-'}</p>
+                        <p><strong>이용시간:</strong> ${data.usage_time || '-'}</p>
+                        <p><strong>예약일시:</strong> ${data.reservation_datetime || '-'}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>예약자(한글):</strong> ${data.korean_name || '-'}</p>
-                        <p><strong>예약자(영문):</strong> ${data.english_name || '-'}</p>
+                        <h6 class="text-primary"><i class="fas fa-user me-2"></i>예약자 정보</h6>
+                        <p><strong>한글명:</strong> ${data.korean_name || '-'}</p>
+                        <p><strong>영문 성:</strong> ${data.english_first_name || '-'}</p>
+                        <p><strong>영문 이름:</strong> ${data.english_last_name || '-'}</p>
                         <p><strong>이메일:</strong> ${data.email || '-'}</p>
                         <p><strong>전화번호:</strong> ${data.phone || '-'}</p>
-                        <p><strong>인원수:</strong> ${data.guest_count || '-'}명</p>
+                        <p><strong>카카오ID:</strong> ${data.kakao_id || '-'}</p>
+                        
+                        <h6 class="text-primary mt-3"><i class="fas fa-users me-2"></i>인원 정보</h6>
+                        <p><strong>총 수량:</strong> ${data.quantity || '-'}</p>
+                        <p><strong>총 인원:</strong> ${data.guest_count || '-'}명</p>
+                        <p><strong>성인:</strong> ${data.people_adult || '-'}명 ${data.adult_unit_price ? '($' + data.adult_unit_price + '/인)' : ''}</p>
+                        <p><strong>아동:</strong> ${data.people_child || '-'}명 ${data.child_unit_price ? '($' + data.child_unit_price + '/인)' : ''}</p>
+                        <p><strong>유아:</strong> ${data.people_infant || '-'}명</p>
+                        
+                        ${data.memo ? `<h6 class="text-primary mt-3"><i class="fas fa-sticky-note me-2"></i>메모</h6><p>${data.memo}</p>` : ''}
                     </div>
                 </div>
             `;
