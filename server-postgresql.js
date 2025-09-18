@@ -4689,228 +4689,81 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
         
-        // OpenAI 지능형 텍스트 파싱
+        // OpenAI 지능형 텍스트 파싱 (검수형 워크플로우)
         console.log('🤖 OpenAI 파싱 시작...');
         let parsedData;
         let parsingMethod = 'OpenAI';
+        let confidence = 0.8;
+        let extractedNotes = '';
         
         try {
-            parsedData = await parseReservationToJSON(reservationText);
+            const aiResult = await parseBooking(reservationText);
+            parsedData = aiResult;
+            confidence = aiResult.confidence || 0.8;
+            extractedNotes = aiResult.extracted_notes || '';
             console.log('✅ OpenAI 파싱 성공');
-            parsingMethod = 'OpenAI';
         } catch (error) {
             console.error('❌ OpenAI 파싱 실패:', error.message);
             // OpenAI 실패 시 로컬 파싱으로 폴백
             console.log('🔄 로컬 파싱으로 폴백...');
             parsedData = parseReservationToJSONLocal(reservationText);
             parsingMethod = '로컬';
+            confidence = 0.5;
+            extractedNotes = '로컬 파싱으로 처리됨 - 수동 검수 필요';
         }
         
-        // 파싱 방법 추가
-        parsedData.parsing_method = parsingMethod;
+        // 정규화 처리
+        const normalizedData = normalizeReservationData(parsedData);
         
-        // 부분 데이터 허용 - 확인된 정보만으로도 등록 가능
-        console.log('📊 파싱된 데이터 확인:', {
-            reservation_number: parsedData.reservation_number,
-            korean_name: parsedData.korean_name,
-            english_first_name: parsedData.english_first_name,
-            product_name: parsedData.product_name,
-            usage_date: parsedData.usage_date,
-            total_amount: parsedData.total_amount
-        });
-        
-        // 최소한의 데이터라도 있으면 등록 진행
-        let hasMinimumData = false;
-        const availableData = [];
-        
-        if (parsedData.reservation_number) {
-            hasMinimumData = true;
-            availableData.push('예약번호');
-        }
-        
-        if (parsedData.korean_name || parsedData.english_first_name) {
-            hasMinimumData = true;
-            availableData.push('예약자명');
-        }
-        
-        if (parsedData.product_name) {
-            hasMinimumData = true;
-            availableData.push('상품명');
-        }
-        
-        if (parsedData.usage_date) {
-            hasMinimumData = true;
-            availableData.push('이용일');
-        }
-        
-        if (parsedData.total_amount) {
-            hasMinimumData = true;
-            availableData.push('금액');
-        }
-        
-        if (parsedData.phone || parsedData.email) {
-            hasMinimumData = true;
-            availableData.push('연락처');
-        }
-        
-        // 아무 데이터도 없는 경우에만 실패
-        if (!hasMinimumData) {
-            return res.json({ 
-                success: false, 
-                message: '파싱 가능한 예약 정보를 찾을 수 없습니다. 예약번호, 예약자명, 상품명 중 하나 이상이 필요합니다.',
-                parsed_data: parsedData
-            });
-        }
-        
-        // 부족한 정보는 기본값으로 보완 (파싱 품질에 따른 처리)
-        if (!parsedData.reservation_number) {
-            if (parsedData.parsing_confidence === 'high') {
-                parsedData.reservation_number = 'HIGH_' + Date.now().toString().slice(-8);
-            } else {
-                parsedData.reservation_number = 'AUTO_' + Date.now().toString().slice(-8);
-            }
-            console.log('⚠️ 예약번호 자동 생성:', parsedData.reservation_number);
-        }
-        
-        if (!parsedData.korean_name && !parsedData.english_first_name) {
-            parsedData.korean_name = '예약자명 미확인';
-            console.log('⚠️ 예약자명 기본값 설정');
-        }
-        
-        if (!parsedData.product_name) {
-            parsedData.product_name = '상품명 미확인';
-            console.log('⚠️ 상품명 기본값 설정');
-        }
-        
-        console.log(`✅ 부분 데이터로 예약 등록 진행 (확인된 정보: ${availableData.join(', ')})`);
-        
-        // 단일 테이블 구조에 맞게 데이터 매핑
-        const reservationData = {
-            reservation_number: parsedData.reservation_number,
-            channel: parsedData.channel || '웹',
-            platform_name: parsedData.platform_name || 'NOL',
-            product_name: parsedData.product_name,
-            korean_name: parsedData.korean_name,
-            english_first_name: parsedData.english_first_name,
-            english_last_name: parsedData.english_last_name,
-            phone: parsedData.phone,
-            email: parsedData.email,
-            kakao_id: parsedData.kakao_id,
-            usage_date: parsedData.usage_date,
-            usage_time: parsedData.usage_time,
-            guest_count: parsedData.guest_count || 1,
-            people_adult: parsedData.people_adult || 1,
-            people_child: parsedData.people_child || 0,
-            people_infant: parsedData.people_infant || 0,
-            package_type: parsedData.package_type,
-            total_amount: parsedData.total_amount,
-            adult_unit_price: parsedData.adult_unit_price,
-            child_unit_price: parsedData.child_unit_price,
-            payment_status: parsedData.payment_status || '대기',
-            code_issued: false,
-            memo: parsedData.memo
-        };
-        
-        // 단일 테이블에 데이터 저장 (PostgreSQL)
+        // 드래프트로 저장 (검수형 워크플로우)
         if (dbMode === 'postgresql') {
             try {
                 const insertQuery = `
-                    INSERT INTO reservations (
-                        reservation_number, channel, platform_name, product_name,
-                        korean_name, english_first_name, english_last_name,
-                        phone, email, kakao_id, usage_date, usage_time,
-                        guest_count, people_adult, people_child, people_infant,
-                        package_type, total_amount, adult_unit_price, child_unit_price,
-                        payment_status, code_issued, memo, created_at
-                    ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW()
-                    ) RETURNING id
+                    INSERT INTO reservation_drafts (
+                        raw_text, parsed_json, normalized_json, 
+                        confidence, extracted_notes, status, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+                    RETURNING draft_id
                 `;
                 
-                let values = [
-                    reservationData.reservation_number,
-                    reservationData.channel,
-                    reservationData.platform_name,
-                    reservationData.product_name,
-                    reservationData.korean_name,
-                    reservationData.english_first_name,
-                    reservationData.english_last_name,
-                    reservationData.phone,
-                    reservationData.email,
-                    reservationData.kakao_id,
-                    reservationData.usage_date,
-                    reservationData.usage_time,
-                    reservationData.guest_count,
-                    reservationData.people_adult,
-                    reservationData.people_child,
-                    reservationData.people_infant,
-                    reservationData.package_type,
-                    reservationData.total_amount,
-                    reservationData.adult_unit_price,
-                    reservationData.child_unit_price,
-                    reservationData.payment_status,
-                    reservationData.code_issued,
-                    reservationData.memo
+                const values = [
+                    reservationText,
+                    JSON.stringify(parsedData),
+                    JSON.stringify(normalizedData),
+                    confidence,
+                    extractedNotes,
+                    'pending_review'
                 ];
                 
                 const result = await pool.query(insertQuery, values);
-                const reservationId = result.rows[0].id;
+                const draftId = result.rows[0].draft_id;
                 
-                console.log(`✅ 예약 등록 성공 (ID: ${reservationId})`);
+                console.log(`✅ 드래프트 생성 성공 (ID: ${draftId})`);
                 
                 res.json({
                     success: true,
-                    message: `예약이 성공적으로 등록되었습니다. (확인된 정보: ${availableData.join(', ')})`,
-                    reservation_id: reservationId,
-                    parsed_data: reservationData,
+                    message: '파싱이 완료되었습니다. 검수 후 승인해주세요.',
+                    draft_id: draftId,
+                    parsed_data: normalizedData,
                     parsing_method: parsingMethod,
-                    available_data: availableData
+                    confidence: confidence,
+                    extracted_notes: extractedNotes,
+                    workflow: 'draft_created'
                 });
                 
             } catch (dbError) {
-                if (dbError.code === '23505' && dbError.constraint === 'reservations_reservation_number_key') {
-                    // 예약번호 중복 시 새로운 번호로 재시도
-                    console.log('⚠️ 예약번호 중복 감지, 새 번호로 재시도...');
-                    reservationData.reservation_number = `RETRY_${Date.now()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-                    values[0] = reservationData.reservation_number;
-                    
-                    try {
-                        const retryResult = await pool.query(insertQuery, values);
-                        const reservationId = retryResult.rows[0].id;
-                        
-                        console.log(`✅ 예약 등록 성공 (ID: ${reservationId}, 새 예약번호: ${reservationData.reservation_number})`);
-                        
-                        res.json({
-                            success: true,
-                            message: `예약이 성공적으로 등록되었습니다. (예약번호 자동 변경, 확인된 정보: ${availableData.join(', ')})`,
-                            reservation_id: reservationId,
-                            parsed_data: reservationData,
-                            parsing_method: parsingMethod,
-                            available_data: availableData
-                        });
-                    } catch (retryError) {
-                        console.error('재시도 중 데이터베이스 저장 오류:', retryError);
-                        res.json({
-                            success: false,
-                            message: '데이터베이스 저장 중 오류가 발생했습니다: ' + retryError.message,
-                            parsed_data: reservationData
-                        });
-                    }
-                } else {
-                    console.error('데이터베이스 저장 오류:', dbError);
-                    res.json({
-                        success: false,
-                        message: '데이터베이스 저장 중 오류가 발생했습니다: ' + dbError.message,
-                        parsed_data: reservationData
-                    });
-                }
+                console.error('드래프트 저장 오류:', dbError);
+                res.json({
+                    success: false,
+                    message: '드래프트 저장 중 오류가 발생했습니다: ' + dbError.message,
+                    parsed_data: normalizedData
+                });
             }
         } else {
             res.json({
                 success: false,
                 message: 'PostgreSQL 모드가 아닙니다.',
-                parsed_data: reservationData
+                parsed_data: normalizedData
             });
         }
         
