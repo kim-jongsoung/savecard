@@ -73,7 +73,7 @@ adult_unit_price, child_unit_price, payment_status
   "phone": "010-7939-3990",
   "kakao_id": "ddendde",
   "guest_count": 3,
-  "memo": null,
+  "memo": "중요사항: 괌 출국편 새벽 3시 및 3시 이후 출발편은 전날 23:30-00:00 사이 픽업합니다. 1)진에어 LJ0913/ 11월11일/ 09:35분 2)진에어 LJ0920/ 11월14일/ 00:20분 3)캐리어 3개",
   "reservation_datetime": "2025-09-17T02:27:14",
   "created_at": "NOW()",
   "updated_at": "NOW()",
@@ -86,8 +86,28 @@ adult_unit_price, child_unit_price, payment_status
   "people_infant": 0,
   "adult_unit_price": 101.33,
   "child_unit_price": 101.33,
-  "payment_status": "confirmed"
+  "payment_status": "confirmed",
+  "departure_flight": "LJ0913",
+  "departure_date": "2025-11-11",
+  "departure_time": "09:35",
+  "return_flight": "LJ0920", 
+  "return_date": "2025-11-14",
+  "return_time": "00:20",
+  "luggage_count": 3,
+  "luggage_notes": "캐리어 3개",
+  "important_notes": "괌 출국편 새벽 3시 및 3시 이후 출발편은 전날 23:30-00:00 사이 픽업합니다. 동의 하시는 분만 구매 부탁드립니다."
 }
+
+📋 중요사항 파싱 규칙:
+- departure_flight: 출국 항공편 코드 (예: LJ0913)
+- departure_date: 괌 도착날짜 YYYY-MM-DD
+- departure_time: 괌 도착시간 HH:MM
+- return_flight: 귀국 항공편 코드 (예: LJ0920)
+- return_date: 괌 출발날짜 YYYY-MM-DD  
+- return_time: 괌 출발시간 HH:MM
+- luggage_count: 캐리어/골프백/유모차 총 개수
+- luggage_notes: 짐 관련 세부사항
+- important_notes: 중요사항 전체 텍스트
 `;
 
         const userPrompt = `

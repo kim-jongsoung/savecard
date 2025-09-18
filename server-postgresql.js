@@ -2283,8 +2283,9 @@ app.post('/admin/agencies', requireAuth, async (req, res) => {
         
         res.json({
             success: true,
-            message: '여행사가 성공적으로 추가되었습니다.',
-            agency: agency
+            message: '파싱 완료',
+            parsed_data: agency,
+            parsing_method: 'createAgency'
         });
         
     } catch (error) {
@@ -4728,6 +4729,7 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
                     message: `예약이 성공적으로 등록되었습니다. (확인된 정보: ${availableData.join(', ')})`,
                     reservation_id: reservationId,
                     parsed_data: reservationData,
+                    parsing_method: parsingMethod,
                     available_data: availableData
                 });
                 
