@@ -73,7 +73,7 @@ adult_unit_price, child_unit_price, payment_status
   "phone": "010-7939-3990",
   "kakao_id": "ddendde",
   "guest_count": 3,
-  "memo": "중요사항: 괌 출국편 새벽 3시 및 3시 이후 출발편은 전날 23:30-00:00 사이 픽업합니다. 1)진에어 LJ0913/ 11월11일/ 09:35분 2)진에어 LJ0920/ 11월14일/ 00:20분 3)캐리어 3개",
+  "memo": "중요사항: 괌 출국편 새벽 3시 및 3시 이후 출발편은 전날 23:30-00:00 사이 픽업합니다. 동의 하시는 분만 구매 부탁드립니다. 1) LJ0917 / 9월 20일 / 새벽 02:30 2) LJ0918 / 9월 23일 / 새벽 03:40",
   "reservation_datetime": "2025-09-17T02:27:14",
   "created_at": "NOW()",
   "updated_at": "NOW()",
@@ -87,27 +87,31 @@ adult_unit_price, child_unit_price, payment_status
   "adult_unit_price": 101.33,
   "child_unit_price": 101.33,
   "payment_status": "confirmed",
-  "departure_flight": "LJ0913",
-  "departure_date": "2025-11-11",
-  "departure_time": "09:35",
-  "return_flight": "LJ0920", 
-  "return_date": "2025-11-14",
-  "return_time": "00:20",
-  "luggage_count": 3,
-  "luggage_notes": "캐리어 3개",
+  "departure_flight": "LJ0917",
+  "departure_date": "2025-09-20",
+  "departure_time": "02:30",
+  "return_flight": "LJ0918", 
+  "return_date": "2025-09-23",
+  "return_time": "03:40",
+  "golf_bags": 0,
+  "strollers": 0,
+  "luggage_count": 0,
+  "luggage_notes": null,
   "important_notes": "괌 출국편 새벽 3시 및 3시 이후 출발편은 전날 23:30-00:00 사이 픽업합니다. 동의 하시는 분만 구매 부탁드립니다."
 }
 
 📋 중요사항 파싱 규칙:
-- departure_flight: 출국 항공편 코드 (예: LJ0913)
-- departure_date: 괌 도착날짜 YYYY-MM-DD
-- departure_time: 괌 도착시간 HH:MM
-- return_flight: 귀국 항공편 코드 (예: LJ0920)
-- return_date: 괌 출발날짜 YYYY-MM-DD  
-- return_time: 괌 출발시간 HH:MM
-- luggage_count: 캐리어/골프백/유모차 총 개수
-- luggage_notes: 짐 관련 세부사항
-- important_notes: 중요사항 전체 텍스트
+- memo: 중요사항 전체 텍스트를 반드시 memo 필드에 저장
+- departure_flight: 출국 항공편 코드 (예: LJ0917)
+- departure_date: 괌 도착날짜 YYYY-MM-DD (예: 2025-09-20)
+- departure_time: 괌 도착시간 HH:MM (새벽 02:30 → 02:30)
+- return_flight: 귀국 항공편 코드 (예: LJ0918)
+- return_date: 괌 출발날짜 YYYY-MM-DD (예: 2025-09-23)
+- return_time: 괌 출발시간 HH:MM (새벽 03:40 → 03:40)
+- golf_bags: 골프백 수량 (숫자)
+- strollers: 유모차 수량 (숫자)
+- luggage_count: 캐리어/기타 짐 수량
+- important_notes: 픽업 시간 등 특별 안내사항
 `;
 
         const userPrompt = `
