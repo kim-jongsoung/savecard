@@ -4522,24 +4522,6 @@ app.post('/api/register-reservation', async (req, res) => {
                 parsedData.payment_status || '대기',
                 parsedData.code_issued || false,
                 parsedData.memo
-            ];
-            
-            const result = await pool.query(insertQuery, values);
-            console.log('✅ 데이터베이스 저장 완료, ID:', result.rows[0].id);
-            
-            res.json({
-                success: true,
-                message: '예약이 성공적으로 등록되었습니다.',
-                data: result.rows[0],
-                parsed_data: parsedData
-            });
-        } else {
-            // JSON 모드 처리
-            res.json({
-                success: true,
-                message: '예약 파싱이 완료되었습니다. (JSON 모드)',
-                data: parsedData,
-                parsed_data: parsedData
             });
         }
         
@@ -4563,7 +4545,17 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         }
         
         // OpenAI 지능형 텍스트 파싱
-        const parsedData = await parseReservationToJSON(reservationText);
+        console.log('🤖 OpenAI 파싱 시작...');
+        let parsedData;
+        try {
+            parsedData = await parseReservationToJSON(reservationText);
+            console.log('✅ OpenAI 파싱 성공');
+        } catch (error) {
+            console.error('❌ OpenAI 파싱 실패:', error.message);
+            // OpenAI 실패 시 로컬 파싱으로 폴백
+            console.log('🔄 로컬 파싱으로 폴백...');
+            parsedData = parseReservationToJSONLocal(reservationText);
+        }
         
         // 부분 데이터 허용 - 확인된 정보만으로도 등록 가능
         console.log('📊 파싱된 데이터 확인:', {
@@ -4790,15 +4782,12 @@ app.get('/api/reservations/:id', requireAuth, async (req, res) => {
         
         if (!reservation) {
             return res.json({
-                success: false,
-                message: '예약을 찾을 수 없습니다.'
+                success: true,
+                message: '예약이 성공적으로 등록되었습니다.',
+                parsed_data: parsedData,
+                available_data: availableData,
+                reservation_id: result.rows[0].id
             });
-        }
-        
-        res.json({
-            success: true,
-            reservation: reservation
-        });
         
     } catch (error) {
         console.error('예약 조회 오류:', error);

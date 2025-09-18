@@ -1,9 +1,19 @@
 const OpenAI = require('openai');
 
 // OpenAI 클라이언트 초기화
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+let openai = null;
+try {
+    if (process.env.OPENAI_API_KEY) {
+        openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+        console.log('✅ OpenAI 클라이언트 초기화 성공');
+    } else {
+        console.log('⚠️ OPENAI_API_KEY 환경변수가 설정되지 않음');
+    }
+} catch (error) {
+    console.error('❌ OpenAI 클라이언트 초기화 실패:', error.message);
+}
 
 /**
  * OpenAI API를 사용하여 예약 텍스트를 JSON으로 파싱
@@ -11,6 +21,11 @@ const openai = new OpenAI({
  * @returns {Promise<Object>} - 파싱된 예약 데이터 JSON
  */
 async function parseBooking(rawText) {
+    // OpenAI API 키가 없으면 에러 발생
+    if (!openai) {
+        throw new Error('OpenAI API 키가 설정되지 않았습니다. OPENAI_API_KEY 환경변수를 확인하세요.');
+    }
+
     try {
         console.log('🤖 OpenAI API 파싱 시작...');
         console.log('📝 입력 텍스트 길이:', rawText.length);
