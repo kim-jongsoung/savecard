@@ -4522,6 +4522,15 @@ app.post('/api/register-reservation', async (req, res) => {
                 parsedData.payment_status || '대기',
                 parsedData.code_issued || false,
                 parsedData.memo
+            ];
+            
+            const result = await pool.query(insertQuery, values);
+            
+            res.json({
+                success: true,
+                message: '예약이 성공적으로 등록되었습니다.',
+                reservation_id: result.rows[0].id,
+                parsed_data: parsedData
             });
         }
         
@@ -4782,12 +4791,15 @@ app.get('/api/reservations/:id', requireAuth, async (req, res) => {
         
         if (!reservation) {
             return res.json({
-                success: true,
-                message: '예약이 성공적으로 등록되었습니다.',
-                parsed_data: parsedData,
-                available_data: availableData,
-                reservation_id: result.rows[0].id
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
             });
+        }
+        
+        res.json({
+            success: true,
+            data: reservation
+        });
         
     } catch (error) {
         console.error('예약 조회 오류:', error);
