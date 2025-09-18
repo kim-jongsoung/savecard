@@ -272,7 +272,7 @@ app.post('/drafts/:id/commit', requireApiKey, async (req, res) => {
             });
         }
         
-        // 4. reservations 테이블에 삽입
+        // 4. reservations 테이블에 삽입 (중복 처리 포함)
         const insertQuery = `
             INSERT INTO reservations (
                 reservation_number, confirmation_number, channel, product_name,
@@ -289,7 +289,7 @@ app.post('/drafts/:id/commit', requireApiKey, async (req, res) => {
             ) RETURNING *
         `;
         
-        const values = [
+        let values = [
             finalData.reservation_number,
             finalData.confirmation_number,
             finalData.channel,
@@ -320,7 +320,30 @@ app.post('/drafts/:id/commit', requireApiKey, async (req, res) => {
             finalData.payment_status
         ];
         
-        const reservationResult = await client.query(insertQuery, values);
+        let reservationResult;
+        try {
+            reservationResult = await client.query(insertQuery, values);
+        } catch (dbError) {
+            if (dbError.code === '23505' && dbError.constraint === 'reservations_reservation_number_key') {
+                // 예약번호 중복 시 새로운 번호로 재시도
+                console.log('⚠️ 예약번호 중복 감지, 새 번호로 재시도...');
+                const newReservationNumber = `RETRY_${Date.now()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+                values[0] = newReservationNumber;
+                finalData.reservation_number = newReservationNumber;
+                
+                // 드래프트의 manual_json도 업데이트
+                const updatedManual = { ...manual, reservation_number: newReservationNumber };
+                await client.query(
+                    'UPDATE reservation_drafts SET manual_json = $1 WHERE draft_id = $2',
+                    [JSON.stringify(updatedManual), id]
+                );
+                
+                reservationResult = await client.query(insertQuery, values);
+                console.log('✅ 새 예약번호로 저장 완료:', newReservationNumber);
+            } else {
+                throw dbError;
+            }
+        }
         const reservation = reservationResult.rows[0];
         
         // 5. 드래프트 상태 업데이트

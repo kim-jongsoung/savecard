@@ -4869,12 +4869,42 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
                 });
                 
             } catch (dbError) {
-                console.error('데이터베이스 저장 오류:', dbError);
-                res.json({
-                    success: false,
-                    message: '데이터베이스 저장 중 오류가 발생했습니다: ' + dbError.message,
-                    parsed_data: reservationData
-                });
+                if (dbError.code === '23505' && dbError.constraint === 'reservations_reservation_number_key') {
+                    // 예약번호 중복 시 새로운 번호로 재시도
+                    console.log('⚠️ 예약번호 중복 감지, 새 번호로 재시도...');
+                    reservationData.reservation_number = `RETRY_${Date.now()}_${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+                    values[0] = reservationData.reservation_number;
+                    
+                    try {
+                        const retryResult = await pool.query(insertQuery, values);
+                        const reservationId = retryResult.rows[0].id;
+                        
+                        console.log(`✅ 예약 등록 성공 (ID: ${reservationId}, 새 예약번호: ${reservationData.reservation_number})`);
+                        
+                        res.json({
+                            success: true,
+                            message: `예약이 성공적으로 등록되었습니다. (예약번호 자동 변경, 확인된 정보: ${availableData.join(', ')})`,
+                            reservation_id: reservationId,
+                            parsed_data: reservationData,
+                            parsing_method: parsingMethod,
+                            available_data: availableData
+                        });
+                    } catch (retryError) {
+                        console.error('재시도 중 데이터베이스 저장 오류:', retryError);
+                        res.json({
+                            success: false,
+                            message: '데이터베이스 저장 중 오류가 발생했습니다: ' + retryError.message,
+                            parsed_data: reservationData
+                        });
+                    }
+                } else {
+                    console.error('데이터베이스 저장 오류:', dbError);
+                    res.json({
+                        success: false,
+                        message: '데이터베이스 저장 중 오류가 발생했습니다: ' + dbError.message,
+                        parsed_data: reservationData
+                    });
+                }
             }
         } else {
             res.json({
