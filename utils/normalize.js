@@ -264,5 +264,6 @@ function generateReservationNumber() {
 }
 
 module.exports = {
+    normalizeReservationData: normalizeParsed,
     normalizeParsed
 };
