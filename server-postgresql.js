@@ -3981,9 +3981,15 @@ app.get('/admin/issue-codes', requireAuth, async (req, res) => {
                 `);
                 codes = codesQuery.rows;
                 console.log('🎫 발급 코드 목록 쿼리 성공, 개수:', codes.length);
+                console.log('🔍 첫 번째 코드 데이터:', codes[0]);
             } catch (listError) {
                 console.error('⚠️ 발급 코드 목록 쿼리 오류:', listError.message);
             }
+            
+            console.log('📊 템플릿으로 전달되는 데이터:');
+            console.log('- stats:', stats);
+            console.log('- codes 개수:', codes.length);
+            console.log('- adminUsername:', req.session.adminUsername || 'admin');
             
             res.render('admin/issue-codes', {
                 title: '발급 코드 관리',
