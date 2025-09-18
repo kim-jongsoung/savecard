@@ -4041,6 +4041,8 @@ app.post('/admin/issue-codes/generate', requireAuth, async (req, res) => {
                         user_phone VARCHAR(20),
                         user_email VARCHAR(100),
                         qr_code_url TEXT,
+                        is_used BOOLEAN DEFAULT FALSE,
+                        used_at TIMESTAMP,
                         is_delivered BOOLEAN DEFAULT FALSE,
                         delivered_at TIMESTAMP,
                         notes TEXT,
