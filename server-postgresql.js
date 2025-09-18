@@ -4556,15 +4556,22 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         // OpenAI 지능형 텍스트 파싱
         console.log('🤖 OpenAI 파싱 시작...');
         let parsedData;
+        let parsingMethod = 'OpenAI';
+        
         try {
             parsedData = await parseReservationToJSON(reservationText);
             console.log('✅ OpenAI 파싱 성공');
+            parsingMethod = 'OpenAI';
         } catch (error) {
             console.error('❌ OpenAI 파싱 실패:', error.message);
             // OpenAI 실패 시 로컬 파싱으로 폴백
             console.log('🔄 로컬 파싱으로 폴백...');
             parsedData = parseReservationToJSONLocal(reservationText);
+            parsingMethod = '로컬';
         }
+        
+        // 파싱 방법 추가
+        parsedData.parsing_method = parsingMethod;
         
         // 부분 데이터 허용 - 확인된 정보만으로도 등록 가능
         console.log('📊 파싱된 데이터 확인:', {

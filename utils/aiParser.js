@@ -32,60 +32,71 @@ async function parseBooking(rawText) {
 
         const systemPrompt = `
 당신은 예약 정보를 정확하게 파싱하는 전문가입니다.
-주어진 예약 텍스트에서 다음 JSON 스키마에 맞는 정보를 추출해주세요.
+아래 예약 텍스트를 반드시 이 JSON 스키마에 맞게 변환해줘.
+출력은 JSON 오브젝트만 반환하고, 다른 텍스트는 포함하지 마.
+
+스키마 필드:
+id, reservation_number, confirmation_number, channel, product_name, total_amount,
+package_type, usage_date, usage_time, quantity,
+korean_name, english_first_name, english_last_name, email, phone, kakao_id,
+guest_count, memo, reservation_datetime,
+created_at, updated_at,
+issue_code_id, code_issued, code_issued_at, platform_name,
+people_adult, people_child, people_infant,
+adult_unit_price, child_unit_price, payment_status
 
 중요한 파싱 규칙:
-1. 예약번호는 숫자로만 구성된 것을 찾으세요 (예: 459447)
-2. 확인번호는 "PROD:" 등이 포함된 것을 찾으세요 (예: PROD:d7cb49)
-3. 채널은 "NOL 인터파크", "KLOOK", "VIATOR" 등을 찾으세요
-4. 금액에서 "$" 기호와 쉼표를 제거하고 숫자만 추출하세요
+1. 예약번호는 숫자로만 구성된 것을 찾으세요 (예: 460033)
+2. 확인번호는 "PROD:" 등이 포함된 것을 찾으세요 (예: PROD:9e052e)
+3. 채널은 "NOL", "KLOOK", "VIATOR" 등을 찾으세요
+4. 금액에서 "$" 기호와 쉼표를 제거하고 숫자(float)만 추출하세요
 5. 날짜는 YYYY-MM-DD 형식으로 변환하세요
-6. 전화번호에서 "+82 "를 제거하고 "010-"으로 시작하게 하세요
-7. 성인/소아 인원수는 "성인 2소아 1" 형태에서 추출하세요
-8. 단가는 총금액을 총인원수로 나누어 계산하세요
-9. 예약확정 상태면 payment_status를 "confirmed"로 설정하세요
-10. 바우처가 등록되었으면 code_issued를 true로 설정하세요
+6. 시간은 HH:MM 형식으로 변환하세요
+7. 전화번호에서 "+82 "를 제거하고 "010-"으로 시작하게 하세요
+8. 성인/소아 인원수는 "성인 3소아 0" 형태에서 추출하세요
+9. 단가는 총금액을 총인원수로 나누어 계산하세요 (float)
+10. 예약확정 상태면 payment_status를 "confirmed"로 설정하세요
+11. 바우처가 등록되었으면 code_issued를 true로 설정하세요
+12. 필드 누락 금지, 모르면 null
+13. 금액은 숫자(float), 인원은 정수
+14. created_at, updated_at은 "NOW()" 문자열로 채워라
+15. id는 null로 설정 (DB에서 자동생성)
+16. issue_code_id는 null로 설정
 
-JSON 스키마:
+JSON 스키마 예시:
 {
-  "reservation_number": "예약번호 (문자열)",
-  "confirmation_number": "확인번호 (문자열, 없으면 null)",
-  "channel": "예약채널 (NOL 인터파크, KLOOK 등)",
-  "product_name": "상품명 (문자열)",
-  "total_amount": "총 금액 (숫자, 달러 기준)",
-  "package_type": "패키지 타입 (개별이동 + 점심포함 등)",
-  "usage_date": "이용일 (YYYY-MM-DD 형식)",
-  "usage_time": "이용시간 (HH:MM 형식, 없으면 null)",
-  "quantity": "수량 (숫자)",
-  "korean_name": "한글 이름 (문자열)",
-  "english_first_name": "영문 이름 (문자열)",
-  "english_last_name": "영문 성 (문자열)",
-  "email": "이메일 (문자열)",
-  "phone": "전화번호 (010-0000-0000 형식)",
-  "kakao_id": "카카오톡 ID (문자열, 없으면 null)",
-  "guest_count": "총 인원수 (숫자)",
-  "memo": "메모 (문자열, 없으면 null)",
-  "reservation_datetime": "예약일시 (YYYY-MM-DDTHH:MM:SS 형식)",
-  "platform_name": "플랫폼명 (VASCO, NOL 등)",
-  "people_adult": "성인 인원수 (숫자)",
-  "people_child": "소아 인원수 (숫자, 기본값: 0)",
-  "people_infant": "유아 인원수 (숫자, 기본값: 0)",
-  "adult_unit_price": "성인 단가 (숫자, 총금액/총인원으로 계산)",
-  "child_unit_price": "소아 단가 (숫자, 성인과 동일하게 계산)",
-  "payment_status": "결제상태 (confirmed/pending/cancelled)",
-  "code_issued": "바우처 발급 여부 (true/false)",
-  "code_issued_at": "바우처 발급일시 (YYYY-MM-DDTHH:MM:SS 형식, 없으면 null)"
+  "id": null,
+  "reservation_number": "460033",
+  "confirmation_number": "PROD:9e052e",
+  "channel": "NOL",
+  "product_name": "괌 공항-호텔 왕복 편도 픽업 셔틀",
+  "total_amount": 45.00,
+  "package_type": "왕복 셔틀",
+  "usage_date": "2025-11-11",
+  "usage_time": "09:35",
+  "quantity": 3,
+  "korean_name": "홍연숙",
+  "english_first_name": "Yeonsook",
+  "english_last_name": "Hong",
+  "email": "yeonssuk@naver.com",
+  "phone": "010-3007-4644",
+  "kakao_id": "yeonssuk@naver.com",
+  "guest_count": 3,
+  "memo": "출국편 LJ0920 / 11월14일 00:20",
+  "reservation_datetime": "2025-09-18T00:45:26",
+  "created_at": "NOW()",
+  "updated_at": "NOW()",
+  "issue_code_id": null,
+  "code_issued": true,
+  "code_issued_at": "2025-09-18T10:11:09",
+  "platform_name": "VASCO",
+  "people_adult": 3,
+  "people_child": 0,
+  "people_infant": 0,
+  "adult_unit_price": 15.00,
+  "child_unit_price": null,
+  "payment_status": "confirmed"
 }
-
-중요 규칙:
-1. 정보가 없는 필드는 null 또는 기본값을 사용
-2. 날짜는 반드시 YYYY-MM-DD 형식으로 변환
-3. 시간은 24시간 형식 HH:MM으로 변환
-4. 금액은 달러 기준으로 변환 (원화인 경우 1300원=1달러로 환산)
-5. 플랫폼은 텍스트에서 자동 감지 (NOL, 인터파크, KLOOK, VIATOR 등)
-6. 총 인원수는 성인+소아+유아 합계
-7. 한글 이름과 영문 이름을 구분하여 추출
-8. 전화번호는 숫자와 기호만 포함
 `;
 
         const userPrompt = `

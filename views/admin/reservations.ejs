@@ -516,12 +516,18 @@
                     displayParsedData(data.parsed_data);
                     
                     // 파싱 방법 표시
-                    const methodBadge = data.parsing_method === 'OpenAI' ? 
+                    const methodBadge = data.parsed_data.parsing_method === 'OpenAI' ? 
                         '<span class="badge bg-success">OpenAI 파싱</span>' : 
                         '<span class="badge bg-warning">로컬 파싱</span>';
                     
-                    document.querySelector('.alert-info').innerHTML = 
-                        `<i class="fas fa-robot me-2"></i><strong>파싱 완료</strong> ${methodBadge}`;
+                    // 파싱 결과 헤더 업데이트
+                    setTimeout(() => {
+                        const alertElement = document.querySelector('.alert-info');
+                        if (alertElement) {
+                            alertElement.innerHTML = 
+                                `<i class="fas fa-robot me-2"></i><strong>파싱 완료</strong> ${methodBadge}`;
+                        }
+                    }, 100);
                 } else {
                     alert('파싱 실패: ' + data.message);
                     console.error('파싱 오류:', data);
