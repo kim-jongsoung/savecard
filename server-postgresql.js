@@ -2892,17 +2892,23 @@ function parseReservationToJSON(text) {
         memo: null
     };
     
-    // 플랫폼 자동 감지 (NOL 인터파크 특화)
+    // 플랫폼 자동 감지 (확장된 패턴)
     if (fullText.includes('nol') || fullText.includes('인터파크') || fullText.includes('interpark')) {
         data.platform_name = 'NOL';
-    } else if (fullText.includes('klook')) {
+    } else if (fullText.includes('klook') || fullText.includes('클룩')) {
         data.platform_name = 'KLOOK';
-    } else if (fullText.includes('viator')) {
+    } else if (fullText.includes('viator') || fullText.includes('비에이터')) {
         data.platform_name = 'VIATOR';
-    } else if (fullText.includes('getyourguide')) {
+    } else if (fullText.includes('getyourguide') || fullText.includes('겟유어가이드')) {
         data.platform_name = 'GETYOURGUIDE';
-    } else if (fullText.includes('expedia')) {
+    } else if (fullText.includes('expedia') || fullText.includes('익스피디아')) {
         data.platform_name = 'EXPEDIA';
+    } else if (fullText.includes('agoda') || fullText.includes('아고다')) {
+        data.platform_name = 'AGODA';
+    } else if (fullText.includes('booking.com') || fullText.includes('부킹닷컴')) {
+        data.platform_name = 'BOOKING';
+    } else if (fullText.includes('트립어드바이저') || fullText.includes('tripadvisor')) {
+        data.platform_name = 'TRIPADVISOR';
     }
 
     console.log(`🔍 감지된 플랫폼: ${data.platform_name}`);
@@ -2911,13 +2917,17 @@ function parseReservationToJSON(text) {
     if (data.platform_name === 'NOL') {
         console.log('🎯 NOL 인터파크 특화 파싱 모드 활성화');
 
-        // NOL 특화 예약번호 패턴
+        // NOL 특화 예약번호 패턴 (강화)
         const nolReservationPatterns = [
             /예약번호[\s:：]*([A-Z0-9\-]{8,})/i,
             /주문번호[\s:：]*([A-Z0-9\-]{8,})/i,
             /확인번호[\s:：]*([A-Z0-9\-]{8,})/i,
+            /바우처번호[\s:：]*([A-Z0-9\-]{8,})/i,
+            /티켓번호[\s:：]*([A-Z0-9\-]{8,})/i,
             /NOL[\s\-]?(\d{8,})/i,
-            /([A-Z]{2}\d{8,})/
+            /([A-Z]{2}\d{8,})/,
+            /IP[\-]?(\d{8,})/i,
+            /(\d{10,})/
         ];
 
         for (const pattern of nolReservationPatterns) {
@@ -2929,13 +2939,17 @@ function parseReservationToJSON(text) {
             }
         }
 
-        // NOL 특화 상품명 패턴
+        // NOL 특화 상품명 패턴 (강화)
         const nolProductPatterns = [
             /상품명[\s:：]*(.+?)(?:\n|$)/i,
             /투어명[\s:：]*(.+?)(?:\n|$)/i,
+            /액티비티명[\s:：]*(.+?)(?:\n|$)/i,
+            /체험명[\s:：]*(.+?)(?:\n|$)/i,
             /\[NOL\]\s*(.+?)(?:\n|$)/i,
-            /괌\s*(.+?투어)/i,
-            /(.+?(?:투어|tour|티켓|ticket|입장권).+)/i
+            /\[인터파크\]\s*(.+?)(?:\n|$)/i,
+            /괌\s*(.+?(?:투어|tour|체험|액티비티))/i,
+            /사이판\s*(.+?(?:투어|tour|체험|액티비티))/i,
+            /(.+?(?:투어|tour|티켓|ticket|입장권|체험|액티비티|패키지).+)/i
         ];
 
         for (const pattern of nolProductPatterns) {
@@ -2943,6 +2957,53 @@ function parseReservationToJSON(text) {
             if (match && !data.product_name) {
                 data.product_name = match[1].trim();
                 console.log(`✅ NOL 상품명 발견: ${data.product_name}`);
+                break;
+            }
+        }
+
+        // NOL 특화 시간 패턴 추가
+        const nolTimePatterns = [
+            /시간[\s:：]*(\d{1,2})[:\：](\d{2})/i,
+            /출발시간[\s:：]*(\d{1,2})[:\：](\d{2})/i,
+            /픽업시간[\s:：]*(\d{1,2})[:\：](\d{2})/i,
+            /체크인시간[\s:：]*(\d{1,2})[:\：](\d{2})/i,
+            /만날시간[\s:：]*(\d{1,2})[:\：](\d{2})/i,
+            /(\d{1,2})[:\：](\d{2})\s*(?:AM|PM|am|pm)/i,
+            /(\d{1,2})시\s*(\d{1,2})?분?/i
+        ];
+
+        for (const pattern of nolTimePatterns) {
+            const match = text.match(pattern);
+            if (match && !data.usage_time) {
+                let hour = parseInt(match[1]);
+                const minute = match[2] || '00';
+                
+                // AM/PM 처리
+                if (match[0].toLowerCase().includes('pm') && hour !== 12) {
+                    hour += 12;
+                } else if (match[0].toLowerCase().includes('am') && hour === 12) {
+                    hour = 0;
+                }
+                
+                data.usage_time = `${hour.toString().padStart(2, '0')}:${minute.padStart(2, '0')}`;
+                console.log(`✅ NOL 이용시간 발견: ${data.usage_time}`);
+                break;
+            }
+        }
+
+        // NOL 특화 카카오톡 ID 패턴
+        const nolKakaoPatterns = [
+            /카카오[\s:：]*([a-zA-Z0-9_-]+)/i,
+            /카톡[\s:：]*([a-zA-Z0-9_-]+)/i,
+            /kakao[\s:：]*([a-zA-Z0-9_-]+)/i,
+            /카카오톡ID[\s:：]*([a-zA-Z0-9_-]+)/i
+        ];
+
+        for (const pattern of nolKakaoPatterns) {
+            const match = text.match(pattern);
+            if (match && !data.kakao_id) {
+                data.kakao_id = match[1];
+                console.log(`✅ NOL 카카오톡 ID 발견: ${data.kakao_id}`);
                 break;
             }
         }
@@ -3207,19 +3268,45 @@ function parseReservationToJSON(text) {
         data.phone = data.phone.replace(/[^\d\+\-]/g, '');
     }
     
+    // 총 인원수 계산
+    data.guest_count = data.people_adult + data.people_child + data.people_infant;
+    
     // 단가 계산 (총 금액을 성인 수로 나눔)
     if (data.total_amount && data.people_adult > 0) {
         data.adult_unit_price = Math.round(data.total_amount / data.people_adult);
     }
     
-    console.log('✅ 파싱 완료:', {
+    // 파싱 품질 점수 계산
+    let qualityScore = 0;
+    const scoreWeights = {
+        reservation_number: 25,
+        korean_name: 20,
+        product_name: 15,
+        usage_date: 15,
+        phone: 10,
+        email: 10,
+        total_amount: 5
+    };
+    
+    for (const [field, weight] of Object.entries(scoreWeights)) {
+        if (data[field]) qualityScore += weight;
+    }
+    
+    data.parsing_quality = qualityScore;
+    data.parsing_confidence = qualityScore >= 70 ? 'high' : qualityScore >= 40 ? 'medium' : 'low';
+    
+    console.log('🎯 파싱 완료:', {
         reservation_number: data.reservation_number,
+        platform_name: data.platform_name,
+        product_name: data.product_name,
         korean_name: data.korean_name,
         english_name: `${data.english_first_name || ''} ${data.english_last_name || ''}`.trim(),
-        product_name: data.product_name,
+        guest_count: data.guest_count,
         usage_date: data.usage_date,
-        people_adult: data.people_adult,
-        total_amount: data.total_amount
+        usage_time: data.usage_time,
+        total_amount: data.total_amount,
+        parsing_quality: `${qualityScore}% (${data.parsing_confidence})`,
+        kakao_id: data.kakao_id
     });
     
     return data;
@@ -4515,9 +4602,13 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             });
         }
         
-        // 부족한 정보는 기본값으로 보완
+        // 부족한 정보는 기본값으로 보완 (파싱 품질에 따른 처리)
         if (!parsedData.reservation_number) {
-            parsedData.reservation_number = 'AUTO_' + Date.now();
+            if (parsedData.parsing_confidence === 'high') {
+                parsedData.reservation_number = 'HIGH_' + Date.now().toString().slice(-8);
+            } else {
+                parsedData.reservation_number = 'AUTO_' + Date.now().toString().slice(-8);
+            }
             console.log('⚠️ 예약번호 자동 생성:', parsedData.reservation_number);
         }
         
