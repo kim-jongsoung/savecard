@@ -3971,6 +3971,9 @@ app.get('/admin/issue-codes', requireAuth, async (req, res) => {
                         qr_code_url,
                         COALESCE(is_delivered, false) as is_delivered,
                         delivered_at,
+                        COALESCE(is_used, false) as is_used,
+                        used_at,
+                        notes,
                         created_at
                     FROM issue_codes 
                     ORDER BY created_at DESC 
