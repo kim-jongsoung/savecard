@@ -343,100 +343,49 @@
             </div>
         </div>
 
-        <!-- 드래프트 관리 섹션 -->
-        <% if (drafts && drafts.length > 0) { %>
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="fas fa-edit me-2"></i>검수 대기 드래프트</h5>
-                <p class="text-muted small mb-0">파싱된 예약 데이터를 검수하고 승인하세요</p>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>상태</th>
-                                <th>신뢰도</th>
-                                <th>예약자</th>
-                                <th>상품명</th>
-                                <th>금액</th>
-                                <th>생성일</th>
-                                <th>액션</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% drafts.forEach(draft => { %>
-                                <tr>
-                                    <td><%= draft.id %></td>
-                                    <td>
-                                        <% if (draft.status === 'pending') { %>
-                                            <span class="badge bg-warning">검수 대기</span>
-                                        <% } else if (draft.status === 'ready') { %>
-                                            <span class="badge bg-success">승인 대기</span>
-                                        <% } %>
-                                    </td>
-                                    <td>
-                                        <% if (draft.confidence >= 0.8) { %>
-                                            <span class="badge bg-success">높음</span>
-                                        <% } else if (draft.confidence >= 0.6) { %>
-                                            <span class="badge bg-warning">보통</span>
-                                        <% } else { %>
-                                            <span class="badge bg-danger">낮음</span>
-                                        <% } %>
-                                    </td>
-                                    <td><%= draft.display_data.korean_name || '-' %></td>
-                                    <td><%= draft.display_data.product_name || '-' %></td>
-                                    <td><%= draft.display_data.total_amount ? '$' + draft.display_data.total_amount : '-' %></td>
-                                    <td><%= new Date(draft.created_at).toLocaleDateString('ko-KR') %></td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-info" onclick="viewDraft(<%= draft.id %>)" title="상세보기">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <% if (draft.status === 'pending') { %>
-                                                <button class="btn btn-sm btn-warning" onclick="editDraft(<%= draft.id %>)" title="수정">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                            <% } %>
-                                            <% if (draft.status === 'ready') { %>
-                                                <button class="btn btn-sm btn-success" onclick="commitDraft(<%= draft.id %>)" title="승인">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                            <% } %>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <% } %>
+        <!-- 탭 네비게이션 -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="reservations-tab" data-bs-toggle="tab" data-bs-target="#reservations-pane" type="button" role="tab">
+                    <i class="fas fa-list me-2"></i>예약 목록 
+                    <span class="badge bg-primary ms-2"><%= stats.total_reservations || 0 %></span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="drafts-tab" data-bs-toggle="tab" data-bs-target="#drafts-pane" type="button" role="tab">
+                    <i class="fas fa-edit me-2"></i>드래프트 관리
+                    <span class="badge bg-warning ms-2"><%= (stats.drafts_pending || 0) + (stats.drafts_ready || 0) %></span>
+                </button>
+            </li>
+        </ul>
 
-        <!-- 예약 목록 -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5><i class="fas fa-list me-2"></i>예약 목록</h5>
-                <div class="d-flex gap-2">
-                    <!-- 검색 폼 -->
-                    <form method="GET" class="d-flex gap-2">
-                        <input type="text" name="search" class="form-control form-control-sm" 
-                               placeholder="예약번호, 이름, 상품명 검색..." 
-                               value="<%= search %>" style="width: 200px;">
-                        <select name="status" class="form-select form-select-sm" style="width: 120px;">
-                            <option value="">전체</option>
-                            <option value="issued" <%= status === 'issued' ? 'selected' : '' %>>발급완료</option>
-                            <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>발급대기</option>
-                        </select>
-                        <button type="submit" class="btn btn-sm btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <a href="/admin/reservations" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    </form>
+        <!-- 탭 컨텐츠 -->
+        <div class="tab-content" id="mainTabsContent">
+            <!-- 예약 목록 탭 -->
+            <div class="tab-pane fade show active" id="reservations-pane" role="tabpanel">
+                <!-- 예약 목록 -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-list me-2"></i>예약 목록</h5>
+                        <div class="d-flex gap-2">
+                            <!-- 검색 폼 -->
+                            <form method="GET" class="d-flex gap-2">
+                                <input type="text" name="search" class="form-control form-control-sm" 
+                                       placeholder="예약번호, 이름, 상품명 검색..." 
+                                       value="<%= search %>" style="width: 200px;">
+                                <select name="status" class="form-select form-select-sm" style="width: 120px;">
+                                    <option value="">전체</option>
+                                    <option value="issued" <%= status === 'issued' ? 'selected' : '' %>>발급완료</option>
+                                    <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>발급대기</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <a href="/admin/reservations" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </form>
+                        </div>
                 </div>
             </div>
             <div class="card-body">
@@ -594,6 +543,174 @@
                     </ul>
                     <div class="text-center text-muted small">
                         총 <%= pagination.totalCount || 0 %>개 중 <%= ((pagination.page - 1) * 20) + 1 %>-<%= Math.min(pagination.page * 20, pagination.totalCount || 0) %>개 표시
+                    </div>
+                </nav>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- 드래프트 관리 탭 -->
+    <div class="tab-pane fade" id="drafts" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>드래프트 목록
+                            <span class="badge bg-warning ms-2">검수 대기</span>
+                        </h5>
+                        <small class="text-muted">파싱된 예약 데이터를 검수하고 승인하세요</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <form method="GET" class="d-flex gap-2">
+                            <input type="hidden" name="tab" value="drafts">
+                            <input type="text" name="draft_search" class="form-control form-control-sm" 
+                                   placeholder="예약번호, 이름 검색..." 
+                                   value="<%= typeof draft_search !== 'undefined' ? draft_search : '' %>" style="width: 200px;">
+                            <select name="draft_status" class="form-select form-select-sm" style="width: 120px;">
+                                <option value="">전체 상태</option>
+                                <option value="pending" <%= typeof draft_status !== 'undefined' && draft_status === 'pending' ? 'selected' : '' %>>검수 대기</option>
+                                <option value="reviewed" <%= typeof draft_status !== 'undefined' && draft_status === 'reviewed' ? 'selected' : '' %>>검수 완료</option>
+                                <option value="rejected" <%= typeof draft_status !== 'undefined' && draft_status === 'rejected' ? 'selected' : '' %>>반려</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <a href="/admin/reservations?tab=drafts" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <% if (typeof drafts !== 'undefined' && drafts && drafts.length > 0) { %>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>상태</th>
+                                    <th>신뢰도</th>
+                                    <th>예약번호</th>
+                                    <th>예약자</th>
+                                    <th>상품명</th>
+                                    <th>금액</th>
+                                    <th>생성일</th>
+                                    <th>액션</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% drafts.forEach(draft => { %>
+                                    <tr>
+                                        <td>
+                                            <% if (draft.status === 'pending') { %>
+                                                <span class="badge bg-warning">검수 대기</span>
+                                            <% } else if (draft.status === 'reviewed') { %>
+                                                <span class="badge bg-success">검수 완료</span>
+                                            <% } else if (draft.status === 'rejected') { %>
+                                                <span class="badge bg-danger">반려</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% const confidence = parseFloat(draft.confidence || 0); %>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                    <div class="progress-bar <%= confidence >= 0.8 ? 'bg-success' : confidence >= 0.6 ? 'bg-warning' : 'bg-danger' %>" 
+                                                         style="width: <%= confidence * 100 %>%"></div>
+                                                </div>
+                                                <small class="text-muted"><%= Math.round(confidence * 100) %>%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong><%= draft.reservation_code || '미확인' %></strong>
+                                            <% if (draft.platform_name) { %>
+                                                <br><small class="text-muted"><%= draft.platform_name %></small>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <strong><%= draft.name_kr || '미확인' %></strong>
+                                            <% if (draft.name_en_first || draft.name_en_last) { %>
+                                                <br><small class="text-muted"><%= (draft.name_en_first || '') + ' ' + (draft.name_en_last || '') %></small>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <div class="text-truncate" style="max-width: 200px;" title="<%= draft.product_name || '미확인' %>">
+                                                <%= draft.product_name || '미확인' %>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <% if (draft.total_price) { %>
+                                                <strong>$<%= parseFloat(draft.total_price).toFixed(2) %></strong>
+                                            <% } else { %>
+                                                <span class="text-muted">미확인</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                <%= new Date(draft.created_at).toLocaleDateString('ko-KR') %>
+                                                <br><%= new Date(draft.created_at).toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'}) %>
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group-vertical btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                        onclick="viewDraft('<%= draft.id %>')" title="상세보기">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <% if (draft.status === 'pending') { %>
+                                                    <button type="button" class="btn btn-outline-warning btn-sm" 
+                                                            onclick="editDraft('<%= draft.id %>')" title="수정">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-success btn-sm" 
+                                                            onclick="approveDraft('<%= draft.id %>')" title="승인">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                                            onclick="rejectDraft('<%= draft.id %>')" title="반려">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">드래프트가 없습니다</h5>
+                        <p class="text-muted">예약 데이터를 파싱하면 여기에 드래프트가 표시됩니다.</p>
+                    </div>
+                <% } %>
+                
+                <!-- 드래프트 페이징 -->
+                <% if (typeof draft_pagination !== 'undefined' && draft_pagination && draft_pagination.totalPages > 1) { %>
+                <nav aria-label="드래프트 목록 페이징" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <% if (draft_pagination.hasPrev) { %>
+                            <li class="page-item">
+                                <a class="page-link" href="?tab=drafts&page=<%= draft_pagination.page - 1 %><%= typeof draft_search !== 'undefined' && draft_search ? '&draft_search=' + encodeURIComponent(draft_search) : '' %><%= typeof draft_status !== 'undefined' && draft_status ? '&draft_status=' + draft_status : '' %>">이전</a>
+                            </li>
+                        <% } %>
+                        
+                        <% for (let i = Math.max(1, draft_pagination.page - 2); i <= Math.min(draft_pagination.totalPages, draft_pagination.page + 2); i++) { %>
+                            <li class="page-item <%= i === draft_pagination.page ? 'active' : '' %>">
+                                <a class="page-link" href="?tab=drafts&page=<%= i %><%= typeof draft_search !== 'undefined' && draft_search ? '&draft_search=' + encodeURIComponent(draft_search) : '' %><%= typeof draft_status !== 'undefined' && draft_status ? '&draft_status=' + draft_status : '' %>"><%= i %></a>
+                            </li>
+                        <% } %>
+                        
+                        <% if (draft_pagination.hasNext) { %>
+                            <li class="page-item">
+                                <a class="page-link" href="?tab=drafts&page=<%= draft_pagination.page + 1 %><%= typeof draft_search !== 'undefined' && draft_search ? '&draft_search=' + encodeURIComponent(draft_search) : '' %><%= typeof draft_status !== 'undefined' && draft_status ? '&draft_status=' + draft_status : '' %>">다음</a>
+                            </li>
+                        <% } %>
+                    </ul>
+                    <div class="text-center text-muted small">
+                        총 <%= draft_pagination.totalCount || 0 %>개 중 <%= ((draft_pagination.page - 1) * 20) + 1 %>-<%= Math.min(draft_pagination.page * 20, draft_pagination.totalCount || 0) %>개 표시
                     </div>
                 </nav>
                 <% } %>
@@ -1359,5 +1476,306 @@
             </div>
         </div>
     </div>
+
+    <!-- 드래프트 상세보기 모달 -->
+    <div class="modal fade" id="draftDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-alt me-2"></i>드래프트 상세보기
+                        <span id="draftStatusBadge" class="badge ms-2"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>파싱된 예약 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="text-primary mb-3">기본 정보</h6>
+                                            <div class="mb-2">
+                                                <strong>예약번호:</strong> <span id="draftReservationCode"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>플랫폼:</strong> <span id="draftPlatform"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>상품명:</strong> <span id="draftProductName"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>총 금액:</strong> <span id="draftTotalPrice"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="text-success mb-3">예약자 정보</h6>
+                                            <div class="mb-2">
+                                                <strong>한글명:</strong> <span id="draftNameKr"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>영문명:</strong> <span id="draftNameEn"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>이메일:</strong> <span id="draftEmail"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>전화번호:</strong> <span id="draftPhone"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <h6 class="text-warning mb-3">이용 정보</h6>
+                                            <div class="mb-2">
+                                                <strong>이용일:</strong> <span id="draftUsageDate"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>이용시간:</strong> <span id="draftUsageTime"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="text-info mb-3">인원 정보</h6>
+                                            <div class="mb-2">
+                                                <strong>성인:</strong> <span id="draftPeopleAdult"></span>명
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>소아:</strong> <span id="draftPeopleChild"></span>명
+                                            </div>
+                                            <div class="mb-2">
+                                                <strong>유아:</strong> <span id="draftPeopleInfant"></span>명
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>파싱 분석</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">신뢰도</label>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-2">
+                                                <div id="draftConfidenceBar" class="progress-bar" style="width: 0%"></div>
+                                            </div>
+                                            <span id="draftConfidenceText" class="text-muted">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">특이사항</label>
+                                        <div id="draftExtractedNotes" class="border rounded p-2 bg-light" style="min-height: 80px;"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">원본 텍스트</label>
+                                        <div id="draftRawText" class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto; font-size: 12px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <div id="draftActions" class="d-none">
+                        <button type="button" class="btn btn-warning me-2" onclick="editDraftFromModal()">
+                            <i class="fas fa-edit me-2"></i>수정
+                        </button>
+                        <button type="button" class="btn btn-success me-2" onclick="approveDraftFromModal()">
+                            <i class="fas fa-check me-2"></i>승인
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="rejectDraftFromModal()">
+                            <i class="fas fa-times me-2"></i>반려
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDraftId = null;
+
+        // 드래프트 상세보기
+        function viewDraft(draftId) {
+            fetch(`/api/drafts/${draftId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const draft = data.draft;
+                        currentDraftId = draftId;
+                        
+                        // 상태 배지 설정
+                        const statusBadge = document.getElementById('draftStatusBadge');
+                        if (draft.status === 'pending') {
+                            statusBadge.className = 'badge ms-2 bg-warning';
+                            statusBadge.textContent = '검수 대기';
+                            document.getElementById('draftActions').classList.remove('d-none');
+                        } else if (draft.status === 'reviewed') {
+                            statusBadge.className = 'badge ms-2 bg-success';
+                            statusBadge.textContent = '검수 완료';
+                            document.getElementById('draftActions').classList.add('d-none');
+                        } else if (draft.status === 'rejected') {
+                            statusBadge.className = 'badge ms-2 bg-danger';
+                            statusBadge.textContent = '반려';
+                            document.getElementById('draftActions').classList.add('d-none');
+                        }
+                        
+                        // 기본 정보
+                        document.getElementById('draftReservationCode').textContent = draft.reservation_code || '미확인';
+                        document.getElementById('draftPlatform').textContent = draft.platform_name || '미확인';
+                        document.getElementById('draftProductName').textContent = draft.product_name || '미확인';
+                        document.getElementById('draftTotalPrice').textContent = draft.total_price ? `$${parseFloat(draft.total_price).toFixed(2)}` : '미확인';
+                        
+                        // 예약자 정보
+                        document.getElementById('draftNameKr').textContent = draft.name_kr || '미확인';
+                        document.getElementById('draftNameEn').textContent = 
+                            (draft.name_en_first || '') + ' ' + (draft.name_en_last || '') || '미확인';
+                        document.getElementById('draftEmail').textContent = draft.email || '미확인';
+                        document.getElementById('draftPhone').textContent = draft.phone || '미확인';
+                        
+                        // 이용 정보
+                        document.getElementById('draftUsageDate').textContent = draft.usage_date || '미확인';
+                        document.getElementById('draftUsageTime').textContent = draft.usage_time || '미확인';
+                        
+                        // 인원 정보
+                        document.getElementById('draftPeopleAdult').textContent = draft.people_adult || '0';
+                        document.getElementById('draftPeopleChild').textContent = draft.people_child || '0';
+                        document.getElementById('draftPeopleInfant').textContent = draft.people_infant || '0';
+                        
+                        // 파싱 분석
+                        const confidence = parseFloat(draft.confidence || 0);
+                        const confidencePercent = Math.round(confidence * 100);
+                        const confidenceBar = document.getElementById('draftConfidenceBar');
+                        
+                        confidenceBar.style.width = confidencePercent + '%';
+                        if (confidence >= 0.8) {
+                            confidenceBar.className = 'progress-bar bg-success';
+                        } else if (confidence >= 0.6) {
+                            confidenceBar.className = 'progress-bar bg-warning';
+                        } else {
+                            confidenceBar.className = 'progress-bar bg-danger';
+                        }
+                        document.getElementById('draftConfidenceText').textContent = confidencePercent + '%';
+                        
+                        document.getElementById('draftExtractedNotes').textContent = draft.extracted_notes || '특이사항 없음';
+                        document.getElementById('draftRawText').textContent = draft.raw_text || '원본 텍스트 없음';
+                        
+                        // 모달 표시
+                        new bootstrap.Modal(document.getElementById('draftDetailModal')).show();
+                    } else {
+                        alert('드래프트 정보를 불러올 수 없습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('드래프트 정보를 불러오는 중 오류가 발생했습니다.');
+                });
+        }
+
+        // 드래프트 수정
+        function editDraft(draftId) {
+            // TODO: 드래프트 수정 모달 구현
+            alert('드래프트 수정 기능은 곧 구현될 예정입니다.');
+        }
+
+        function editDraftFromModal() {
+            if (currentDraftId) {
+                editDraft(currentDraftId);
+            }
+        }
+
+        // 드래프트 승인
+        function approveDraft(draftId) {
+            if (confirm('이 드래프트를 승인하여 최종 예약으로 등록하시겠습니까?')) {
+                fetch(`/api/drafts/${draftId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('드래프트가 승인되어 예약으로 등록되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('승인 처리 중 오류가 발생했습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('승인 처리 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        function approveDraftFromModal() {
+            if (currentDraftId) {
+                approveDraft(currentDraftId);
+            }
+        }
+
+        // 드래프트 반려
+        function rejectDraft(draftId) {
+            const reason = prompt('반려 사유를 입력해주세요:');
+            if (reason !== null && reason.trim() !== '') {
+                fetch(`/api/drafts/${draftId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('드래프트가 반려되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('반려 처리 중 오류가 발생했습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('반려 처리 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        function rejectDraftFromModal() {
+            if (currentDraftId) {
+                rejectDraft(currentDraftId);
+            }
+        }
+
+        // 탭 활성화 처리
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const activeTab = urlParams.get('tab');
+            
+            if (activeTab === 'drafts') {
+                const draftsTab = document.getElementById('drafts-tab');
+                const draftsPane = document.getElementById('drafts');
+                const reservationsTab = document.getElementById('reservations-tab');
+                const reservationsPane = document.getElementById('reservations');
+                
+                // 예약 탭 비활성화
+                reservationsTab.classList.remove('active');
+                reservationsPane.classList.remove('show', 'active');
+                
+                // 드래프트 탭 활성화
+                draftsTab.classList.add('active');
+                draftsPane.classList.add('show', 'active');
+            }
+        });
+    </script>
 </body>
 </html>

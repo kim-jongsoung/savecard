@@ -4470,42 +4470,150 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                 console.error('⚠️ 예약 목록 쿼리 오류:', listError.message);
             }
             
-            // 드래프트 목록 조회 (최근 10개)
+            // 드래프트 목록 조회 (탭별 처리)
             let drafts = [];
-            try {
-                if (existingTables.includes('reservation_drafts')) {
-                    const draftsQuery = await pool.query(`
-                        SELECT 
-                            id,
-                            raw_text,
-                            status,
-                            confidence,
-                            flags,
-                            created_at,
-                            updated_at,
-                            CASE 
-                                WHEN manual_json IS NOT NULL THEN manual_json
-                                WHEN normalized_json IS NOT NULL THEN normalized_json
-                                ELSE parsed_json
-                            END as display_data
-                        FROM reservation_drafts 
-                        WHERE status IN ('pending', 'ready')
-                        ORDER BY created_at DESC 
-                        LIMIT 10
-                    `);
-                    drafts = draftsQuery.rows.map(draft => {
-                        try {
-                            draft.display_data = typeof draft.display_data === 'string' ? 
-                                JSON.parse(draft.display_data) : draft.display_data;
-                        } catch (e) {
-                            draft.display_data = {};
+            let draft_pagination = null;
+            const activeTab = req.query.tab || 'reservations';
+            
+            if (activeTab === 'drafts') {
+                // 드래프트 탭이 활성화된 경우 전체 드래프트 목록 조회
+                const draft_page = parseInt(req.query.page) || 1;
+                const draft_search = req.query.draft_search || '';
+                const draft_status = req.query.draft_status || '';
+                
+                try {
+                    if (existingTables.includes('reservation_drafts')) {
+                        let draftWhereClause = 'WHERE 1=1';
+                        let draftQueryParams = [];
+                        let draftParamIndex = 1;
+                        
+                        // 드래프트 상태 필터
+                        if (draft_status) {
+                            draftWhereClause += ` AND status = $${draftParamIndex}`;
+                            draftQueryParams.push(draft_status);
+                            draftParamIndex++;
                         }
-                        return draft;
-                    });
-                    console.log('📋 드래프트 목록 쿼리 성공, 개수:', drafts.length);
+                        
+                        // 드래프트 검색 조건
+                        if (draft_search) {
+                            draftWhereClause += ` AND (
+                                raw_text ILIKE $${draftParamIndex} OR 
+                                extracted_notes ILIKE $${draftParamIndex} OR
+                                (normalized_json->>'reservation_number') ILIKE $${draftParamIndex} OR
+                                (normalized_json->>'korean_name') ILIKE $${draftParamIndex}
+                            )`;
+                            draftQueryParams.push(`%${draft_search}%`);
+                            draftParamIndex++;
+                        }
+                        
+                        // 드래프트 총 개수 조회
+                        const draftCountQuery = `SELECT COUNT(*) as total FROM reservation_drafts ${draftWhereClause}`;
+                        const draftCountResult = await pool.query(draftCountQuery, draftQueryParams);
+                        const draftTotalCount = parseInt(draftCountResult.rows[0].total);
+                        
+                        // 드래프트 목록 조회
+                        const draftsQuery = await pool.query(`
+                            SELECT 
+                                draft_id as id,
+                                raw_text,
+                                parsed_json,
+                                normalized_json,
+                                manual_json,
+                                confidence,
+                                extracted_notes,
+                                status,
+                                created_at,
+                                updated_at,
+                                reviewed_by,
+                                reviewed_at,
+                                committed_reservation_id
+                            FROM reservation_drafts 
+                            ${draftWhereClause}
+                            ORDER BY created_at DESC 
+                            LIMIT $${draftParamIndex} OFFSET $${draftParamIndex + 1}
+                        `, [...draftQueryParams, limit, (draft_page - 1) * limit]);
+                        
+                        drafts = draftsQuery.rows.map(draft => {
+                            try {
+                                // JSON 필드 파싱
+                                if (draft.parsed_json && typeof draft.parsed_json === 'string') {
+                                    draft.parsed_json = JSON.parse(draft.parsed_json);
+                                }
+                                if (draft.normalized_json && typeof draft.normalized_json === 'string') {
+                                    draft.normalized_json = JSON.parse(draft.normalized_json);
+                                }
+                                if (draft.manual_json && typeof draft.manual_json === 'string') {
+                                    draft.manual_json = JSON.parse(draft.manual_json);
+                                }
+                                
+                                // 최종 데이터 (manual_json > normalized_json > parsed_json 순서)
+                                const finalData = draft.manual_json || draft.normalized_json || draft.parsed_json || {};
+                                
+                                // UI에서 사용할 수 있도록 필드명 매핑
+                                draft.reservation_code = finalData.reservation_number || finalData.reservation_code;
+                                draft.platform_name = finalData.platform;
+                                draft.product_name = finalData.product_name;
+                                draft.total_price = finalData.total_price;
+                                draft.name_kr = finalData.korean_name;
+                                draft.name_en_first = finalData.english_first_name;
+                                draft.name_en_last = finalData.english_last_name;
+                                draft.email = finalData.email;
+                                draft.phone = finalData.phone;
+                                
+                            } catch (parseError) {
+                                console.warn('드래프트 JSON 파싱 오류:', parseError);
+                            }
+                            return draft;
+                        });
+                        
+                        // 드래프트 페이징 정보
+                        const draftTotalPages = Math.ceil(draftTotalCount / limit);
+                        draft_pagination = {
+                            page: draft_page,
+                            totalPages: draftTotalPages,
+                            hasNext: draft_page < draftTotalPages,
+                            hasPrev: draft_page > 1,
+                            totalCount: draftTotalCount
+                        };
+                        
+                        console.log('📋 드래프트 목록 쿼리 성공, 개수:', drafts.length);
+                    }
+                } catch (draftError) {
+                    console.error('⚠️ 드래프트 목록 쿼리 오류:', draftError.message);
                 }
-            } catch (draftError) {
-                console.error('⚠️ 드래프트 목록 쿼리 오류:', draftError.message);
+            } else {
+                // 예약 탭이 활성화된 경우 최근 드래프트 몇 개만 표시
+                try {
+                    if (existingTables.includes('reservation_drafts')) {
+                        const recentDraftsQuery = await pool.query(`
+                            SELECT 
+                                draft_id as id,
+                                status,
+                                confidence,
+                                created_at,
+                                CASE 
+                                    WHEN manual_json IS NOT NULL THEN manual_json
+                                    WHEN normalized_json IS NOT NULL THEN normalized_json
+                                    ELSE parsed_json
+                                END as display_data
+                            FROM reservation_drafts 
+                            WHERE status IN ('pending', 'ready')
+                            ORDER BY created_at DESC 
+                            LIMIT 5
+                        `);
+                        drafts = recentDraftsQuery.rows.map(draft => {
+                            try {
+                                draft.display_data = typeof draft.display_data === 'string' ? 
+                                    JSON.parse(draft.display_data) : draft.display_data;
+                            } catch (e) {
+                                draft.display_data = {};
+                            }
+                            return draft;
+                        });
+                    }
+                } catch (draftError) {
+                    console.error('⚠️ 최근 드래프트 쿼리 오류:', draftError.message);
+                }
             }
             
             // 페이징 정보
@@ -4525,8 +4633,12 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                 reservations: reservations,
                 drafts: drafts,
                 pagination: pagination,
+                draft_pagination: draft_pagination,
                 search: search,
-                status: status
+                status: status,
+                draft_search: req.query.draft_search || '',
+                draft_status: req.query.draft_status || '',
+                activeTab: activeTab
             });
         } else {
             console.log('📁 JSON 모드로 실행 중');
@@ -4808,6 +4920,383 @@ app.post('/api/reservations/direct', requireAuth, async (req, res) => {
         res.json({ 
             success: false, 
             message: '예약 저장 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 드래프트 목록 조회 API
+app.get('/api/drafts', requireAuth, async (req, res) => {
+    try {
+        if (dbMode !== 'postgresql') {
+            return res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+        }
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        const status = req.query.status || '';
+        const search = req.query.search || '';
+
+        let whereClause = 'WHERE 1=1';
+        let queryParams = [];
+        let paramIndex = 1;
+
+        // 상태 필터
+        if (status) {
+            whereClause += ` AND status = $${paramIndex}`;
+            queryParams.push(status);
+            paramIndex++;
+        }
+
+        // 검색 조건
+        if (search) {
+            whereClause += ` AND (
+                raw_text ILIKE $${paramIndex} OR 
+                extracted_notes ILIKE $${paramIndex} OR
+                (normalized_json->>'reservation_number') ILIKE $${paramIndex} OR
+                (normalized_json->>'korean_name') ILIKE $${paramIndex}
+            )`;
+            queryParams.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        // 총 개수 조회
+        const countQuery = `SELECT COUNT(*) as total FROM reservation_drafts ${whereClause}`;
+        const countResult = await pool.query(countQuery, queryParams);
+        const totalCount = parseInt(countResult.rows[0].total);
+
+        // 드래프트 목록 조회
+        const draftsQuery = await pool.query(`
+            SELECT 
+                draft_id,
+                raw_text,
+                parsed_json,
+                normalized_json,
+                manual_json,
+                confidence,
+                extracted_notes,
+                status,
+                created_at,
+                updated_at,
+                reviewed_by,
+                reviewed_at,
+                committed_reservation_id
+            FROM reservation_drafts 
+            ${whereClause}
+            ORDER BY created_at DESC 
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `, [...queryParams, limit, offset]);
+
+        const drafts = draftsQuery.rows.map(draft => {
+            // JSON 필드 파싱
+            try {
+                if (draft.parsed_json && typeof draft.parsed_json === 'string') {
+                    draft.parsed_json = JSON.parse(draft.parsed_json);
+                }
+                if (draft.normalized_json && typeof draft.normalized_json === 'string') {
+                    draft.normalized_json = JSON.parse(draft.normalized_json);
+                }
+                if (draft.manual_json && typeof draft.manual_json === 'string') {
+                    draft.manual_json = JSON.parse(draft.manual_json);
+                }
+            } catch (parseError) {
+                console.warn('JSON 파싱 오류:', parseError);
+            }
+            return draft;
+        });
+
+        const totalPages = Math.ceil(totalCount / limit);
+
+        res.json({
+            success: true,
+            drafts: drafts,
+            pagination: {
+                page: page,
+                totalPages: totalPages,
+                totalCount: totalCount,
+                hasNext: page < totalPages,
+                hasPrev: page > 1
+            }
+        });
+
+    } catch (error) {
+        console.error('드래프트 목록 조회 오류:', error);
+        res.json({
+            success: false,
+            message: '드래프트 목록 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 드래프트 상세 조회 API
+app.get('/api/drafts/:id', requireAuth, async (req, res) => {
+    try {
+        if (dbMode !== 'postgresql') {
+            return res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+        }
+
+        const draftId = req.params.id;
+        
+        const query = `
+            SELECT 
+                draft_id as id,
+                raw_text,
+                parsed_json,
+                normalized_json,
+                manual_json,
+                confidence,
+                extracted_notes,
+                status,
+                created_at,
+                updated_at,
+                reviewed_by,
+                reviewed_at,
+                committed_reservation_id
+            FROM reservation_drafts 
+            WHERE draft_id = $1
+        `;
+        
+        const result = await pool.query(query, [draftId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '드래프트를 찾을 수 없습니다.'
+            });
+        }
+        
+        const draft = result.rows[0];
+        
+        // JSON 필드 파싱 및 정규화된 데이터 추출
+        try {
+            if (draft.parsed_json && typeof draft.parsed_json === 'string') {
+                draft.parsed_json = JSON.parse(draft.parsed_json);
+            }
+            if (draft.normalized_json && typeof draft.normalized_json === 'string') {
+                draft.normalized_json = JSON.parse(draft.normalized_json);
+            }
+            if (draft.manual_json && typeof draft.manual_json === 'string') {
+                draft.manual_json = JSON.parse(draft.manual_json);
+            }
+            
+            // 최종 데이터 (manual_json > normalized_json > parsed_json 순서)
+            const finalData = draft.manual_json || draft.normalized_json || draft.parsed_json || {};
+            
+            // UI에서 사용할 수 있도록 필드명 매핑
+            draft.reservation_code = finalData.reservation_number || finalData.reservation_code;
+            draft.platform_name = finalData.platform;
+            draft.product_name = finalData.product_name;
+            draft.total_price = finalData.total_price;
+            draft.name_kr = finalData.korean_name;
+            draft.name_en_first = finalData.english_first_name;
+            draft.name_en_last = finalData.english_last_name;
+            draft.email = finalData.email;
+            draft.phone = finalData.phone;
+            draft.usage_date = finalData.usage_date;
+            draft.usage_time = finalData.usage_time;
+            draft.people_adult = finalData.adult_count;
+            draft.people_child = finalData.child_count;
+            draft.people_infant = finalData.infant_count;
+            
+        } catch (parseError) {
+            console.warn('JSON 파싱 오류:', parseError);
+        }
+        
+        res.json({
+            success: true,
+            draft: draft
+        });
+        
+    } catch (error) {
+        console.error('드래프트 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '드래프트 정보를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 드래프트 승인 API (최종 예약으로 등록)
+app.post('/api/drafts/:id/approve', requireAuth, async (req, res) => {
+    const client = await pool.connect();
+    
+    try {
+        if (dbMode !== 'postgresql') {
+            return res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+        }
+
+        await client.query('BEGIN');
+        
+        const draftId = req.params.id;
+        
+        // 드래프트 조회
+        const draftQuery = `
+            SELECT 
+                draft_id,
+                raw_text,
+                parsed_json,
+                normalized_json,
+                manual_json,
+                confidence,
+                extracted_notes,
+                status
+            FROM reservation_drafts 
+            WHERE draft_id = $1 AND status = 'pending'
+        `;
+        const draftResult = await client.query(draftQuery, [draftId]);
+        
+        if (draftResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                message: '승인 가능한 드래프트를 찾을 수 없습니다.'
+            });
+        }
+        
+        const draft = draftResult.rows[0];
+        
+        // JSON 데이터 파싱
+        let finalData = {};
+        try {
+            const parsedJson = typeof draft.parsed_json === 'string' ? JSON.parse(draft.parsed_json) : draft.parsed_json;
+            const normalizedJson = typeof draft.normalized_json === 'string' ? JSON.parse(draft.normalized_json) : draft.normalized_json;
+            const manualJson = typeof draft.manual_json === 'string' ? JSON.parse(draft.manual_json) : draft.manual_json;
+            
+            finalData = manualJson || normalizedJson || parsedJson || {};
+        } catch (parseError) {
+            console.warn('JSON 파싱 오류:', parseError);
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                message: '드래프트 데이터 파싱 중 오류가 발생했습니다.'
+            });
+        }
+        
+        // 예약번호 중복 확인
+        const reservationCode = finalData.reservation_number || finalData.reservation_code;
+        if (reservationCode) {
+            const duplicateQuery = 'SELECT id FROM reservations WHERE reservation_code = $1';
+            const duplicateResult = await client.query(duplicateQuery, [reservationCode]);
+            
+            if (duplicateResult.rows.length > 0) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    success: false,
+                    message: '이미 존재하는 예약번호입니다. 드래프트를 수정해주세요.'
+                });
+            }
+        }
+        
+        // 최종 예약으로 등록
+        const insertQuery = `
+            INSERT INTO reservations (
+                reservation_code, platform_name, product_name, total_price,
+                name_kr, name_en_first, name_en_last, email, phone,
+                usage_date, usage_time, people_adult, people_child, people_infant,
+                memo, payment_status, card_status, created_at, updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
+                COALESCE($16, 'pending'), 'pending', NOW(), NOW()
+            ) RETURNING id
+        `;
+        
+        const insertResult = await client.query(insertQuery, [
+            reservationCode,
+            finalData.platform,
+            finalData.product_name,
+            finalData.total_price,
+            finalData.korean_name,
+            finalData.english_first_name,
+            finalData.english_last_name,
+            finalData.email,
+            finalData.phone,
+            finalData.usage_date,
+            finalData.usage_time,
+            finalData.adult_count,
+            finalData.child_count,
+            finalData.infant_count,
+            finalData.memo,
+            finalData.payment_status
+        ]);
+        
+        // 드래프트 상태를 'reviewed'로 업데이트
+        const updateQuery = `
+            UPDATE reservation_drafts 
+            SET status = 'reviewed', 
+                reviewed_at = NOW(),
+                reviewed_by = 'admin',
+                committed_reservation_id = $1
+            WHERE draft_id = $2
+        `;
+        await client.query(updateQuery, [insertResult.rows[0].id, draftId]);
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            message: '드래프트가 승인되어 예약으로 등록되었습니다.',
+            reservation_id: insertResult.rows[0].id
+        });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('드래프트 승인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '드래프트 승인 중 오류가 발생했습니다.'
+        });
+    } finally {
+        client.release();
+    }
+});
+
+// 드래프트 반려 API
+app.post('/api/drafts/:id/reject', requireAuth, async (req, res) => {
+    try {
+        if (dbMode !== 'postgresql') {
+            return res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+        }
+
+        const draftId = req.params.id;
+        const { reason } = req.body;
+        
+        if (!reason || reason.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: '반려 사유를 입력해주세요.'
+            });
+        }
+        
+        // 드래프트 상태를 'rejected'로 업데이트
+        const updateQuery = `
+            UPDATE reservation_drafts 
+            SET status = 'rejected', 
+                extracted_notes = COALESCE(extracted_notes, '') || E'\n[반려 사유] ' || $1,
+                reviewed_at = NOW(),
+                reviewed_by = 'admin'
+            WHERE draft_id = $2 AND status = 'pending'
+            RETURNING draft_id
+        `;
+        
+        const result = await pool.query(updateQuery, [reason, draftId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '반려 가능한 드래프트를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '드래프트가 반려되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('드래프트 반려 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '드래프트 반려 중 오류가 발생했습니다.'
         });
     }
 });
