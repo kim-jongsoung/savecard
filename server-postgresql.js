@@ -268,6 +268,52 @@ app.get('/api/test', (req, res) => {
     });
 });
 
+// 기존 데이터베이스를 사용한 간단한 예약 목록 API
+app.get('/api/reservations', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM reservations ORDER BY created_at DESC LIMIT 10';
+        const result = await pool.query(query);
+        res.json({
+            success: true,
+            count: result.rows.length,
+            data: result.rows
+        });
+    } catch (error) {
+        console.error('예약 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 목록 조회 실패',
+            error: error.message
+        });
+    }
+});
+
+// 간단한 통계 API
+app.get('/api/stats', async (req, res) => {
+    try {
+        const totalQuery = 'SELECT COUNT(*) as total FROM reservations';
+        const totalResult = await pool.query(totalQuery);
+        
+        res.json({
+            success: true,
+            stats: {
+                total_reservations: totalResult.rows[0].total,
+                timestamp: new Date()
+            }
+        });
+    } catch (error) {
+        console.error('통계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '통계 조회 실패',
+            error: error.message
+        });
+    }
+});
+
+// 새로운 API 라우트들을 위한 데이터베이스 연결 설정
+app.locals.pool = pool; // 중요: 새로운 라우트들이 사용할 수 있도록 pool 설정
+
 // 새로운 예약 관리 API 라우트들
 try {
     const bookingsListRouter = require('./routes/bookings.list');
