@@ -51,8 +51,28 @@ app.use('/qrcodes', express.static(path.join(__dirname, 'qrcodes')));
 const indexRouter = require('./routes/index');
 const adminRouter = require('./routes/admin');
 
+// 새로운 예약 관리 API 라우트들
+const bookingsListRouter = require('./routes/bookings.list');
+const bookingsDetailRouter = require('./routes/bookings.detail');
+const bookingsPatchRouter = require('./routes/bookings.patch');
+const bookingsCreateRouter = require('./routes/bookings.create');
+const bookingsDeleteRouter = require('./routes/bookings.delete');
+const bookingsBulkRouter = require('./routes/bookings.bulk');
+const fieldDefsRouter = require('./routes/fieldDefs');
+const auditsRouter = require('./routes/audits');
+
 app.use('/', indexRouter);
 app.use('/admin', adminRouter);
+
+// API 라우트 연결
+app.use('/api', bookingsListRouter);
+app.use('/api', bookingsDetailRouter);
+app.use('/api', bookingsPatchRouter);
+app.use('/api', bookingsCreateRouter);
+app.use('/api', bookingsDeleteRouter);
+app.use('/api', bookingsBulkRouter);
+app.use('/api', fieldDefsRouter);
+app.use('/api', auditsRouter);
 
 // 임시 마이그레이션 엔드포인트 (배포 후 삭제 예정)
 app.get('/run-migrations', async (req, res) => {
