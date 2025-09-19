@@ -4513,11 +4513,11 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                         SELECT 
                             id,
                             reservation_number,
-                            company as platform_name,
+                            platform_name,
                             product_name,
                             korean_name,
                             usage_date,
-                            amount as total_price,
+                            total_amount as total_price,
                             code_issued,
                             email,
                             created_at,
