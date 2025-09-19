@@ -412,13 +412,13 @@
                                                 <%= reservation.platform_name || 'NOL' %>
                                             </span>
                                         </td>
-                                        <td><%= reservation.reservation_code || '-' %></td>
+                                        <td><%= reservation.reservation_number || '-' %></td>
                                         <td><%= reservation.product_name || '-' %></td>
-                                        <td><%= reservation.name_kr || '-' %></td>
+                                        <td><%= reservation.korean_name || '-' %></td>
                                         <td><%= reservation.usage_date ? new Date(reservation.usage_date).toLocaleDateString('ko-KR') : '-' %></td>
                                         <td><%= reservation.total_price ? '$' + parseFloat(reservation.total_price).toFixed(2) : '-' %></td>
                                         <td>
-                                            <% if (reservation.card_status === 'issued') { %>
+                                            <% if (reservation.code_issued) { %>
                                                 <span class="badge bg-success">발급 완료</span>
                                             <% } else { %>
                                                 <span class="badge bg-warning">발급 대기</span>
@@ -435,7 +435,7 @@
                                                 <button class="btn btn-sm btn-danger" onclick="deleteReservation(<%= reservation.id %>); event.stopPropagation();" title="삭제">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                                <% if (reservation.card_status !== 'issued') { %>
+                                                <% if (!reservation.code_issued) { %>
                                                     <button class="btn btn-sm btn-success" onclick="generateCode(<%= reservation.id %>); event.stopPropagation();" title="코드 생성">
                                                         <i class="fas fa-plus"></i>
                                                     </button>

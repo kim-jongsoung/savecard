@@ -4406,8 +4406,8 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                     // 검색 조건
                     if (search) {
                         whereClause += ` AND (
-                            COALESCE(reservation_code, reservation_number) ILIKE $${paramIndex} OR 
-                            COALESCE(name_kr, korean_name) ILIKE $${paramIndex} OR 
+                            reservation_number ILIKE $${paramIndex} OR 
+                            korean_name ILIKE $${paramIndex} OR 
                             product_name ILIKE $${paramIndex} OR
                             email ILIKE $${paramIndex}
                         )`;
@@ -4417,9 +4417,9 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                     
                     // 상태 필터
                     if (status === 'issued') {
-                        whereClause += ` AND card_status = 'issued'`;
+                        whereClause += ` AND code_issued = true`;
                     } else if (status === 'pending') {
-                        whereClause += ` AND (card_status = 'pending' OR card_status IS NULL)`;
+                        whereClause += ` AND (code_issued = false OR code_issued IS NULL)`;
                     }
                     
                     // 총 개수 조회
@@ -4431,23 +4431,14 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                     const reservationsQuery = await pool.query(`
                         SELECT 
                             id,
-                            COALESCE(reservation_code, reservation_number) as reservation_code,
-                            COALESCE(platform_name, 'NOL') as platform_name,
+                            reservation_number,
+                            company as platform_name,
                             product_name,
-                            COALESCE(name_kr, korean_name) as name_kr,
-                            name_en_first,
-                            name_en_last,
-                            phone,
-                            email,
+                            korean_name,
                             usage_date,
-                            usage_time,
-                            COALESCE(people_adult, 1) as people_adult,
-                            COALESCE(people_child, 0) as people_child,
-                            COALESCE(people_infant, 0) as people_infant,
-                            COALESCE(total_price, total_amount) as total_price,
-                            COALESCE(payment_status, 'pending') as payment_status,
-                            COALESCE(card_status, 'pending') as card_status,
-                            memo,
+                            amount as total_price,
+                            code_issued,
+                            email,
                             created_at,
                             updated_at
                         FROM reservations 
@@ -5345,7 +5336,7 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
         const reservation = reservationResult.rows[0];
         
         // 이미 코드가 발급된 경우
-        if (reservation.card_status === 'issued') {
+        if (reservation.code_issued) {
             return res.status(400).json({
                 success: false,
                 message: '이미 코드가 발급된 예약입니다.'
@@ -5357,8 +5348,8 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
         
         // 예약 상태 업데이트
         const updateResult = await pool.query(
-            'UPDATE reservations SET card_status = $1, save_card_code = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
-            ['issued', saveCardCode, id]
+            'UPDATE reservations SET code_issued = true, code_issued_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+            [id]
         );
         
         res.json({
