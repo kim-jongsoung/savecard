@@ -41,21 +41,21 @@ CREATE TRIGGER trigger_field_defs_updated_at
     EXECUTE FUNCTION update_field_defs_updated_at();
 
 -- Insert default field definitions
-INSERT INTO field_defs (key, label, type, category, sort_order, help_text) VALUES
-('pickup_location', 'Pickup Location', 'string', 'logistics', 10, 'Hotel or location for pickup'),
-('pickup_time', 'Pickup Time', 'time', 'logistics', 20, 'Scheduled pickup time'),
-('drop_off_location', 'Drop-off Location', 'string', 'logistics', 30, 'Drop-off location'),
-('special_requests', 'Special Requests', 'textarea', 'preferences', 10, 'Any special requests or notes'),
+INSERT INTO field_defs (key, label, type, category, sort_order, help_text, options) VALUES
+('pickup_location', 'Pickup Location', 'string', 'logistics', 10, 'Hotel or location for pickup', NULL),
+('pickup_time', 'Pickup Time', 'time', 'logistics', 20, 'Scheduled pickup time', NULL),
+('drop_off_location', 'Drop-off Location', 'string', 'logistics', 30, 'Drop-off location', NULL),
+('special_requests', 'Special Requests', 'textarea', 'preferences', 10, 'Any special requests or notes', NULL),
 ('dietary_restrictions', 'Dietary Restrictions', 'multiselect', 'preferences', 20, 'Dietary restrictions', 
  '{"options": ["vegetarian", "vegan", "gluten_free", "halal", "kosher", "no_seafood", "no_nuts"]}'),
-('mobility_assistance', 'Mobility Assistance', 'boolean', 'accessibility', 10, 'Requires mobility assistance'),
+('mobility_assistance', 'Mobility Assistance', 'boolean', 'accessibility', 10, 'Requires mobility assistance', NULL),
 ('language_preference', 'Language Preference', 'select', 'preferences', 30, 'Preferred guide language',
  '{"options": ["korean", "english", "japanese", "chinese", "spanish"]}'),
-('emergency_contact', 'Emergency Contact', 'string', 'contact', 10, 'Emergency contact information'),
-('group_size', 'Group Size', 'number', 'booking', 10, 'Total group size'),
-('voucher_number', 'Voucher Number', 'string', 'booking', 20, 'Voucher or confirmation number'),
-('insurance_required', 'Insurance Required', 'boolean', 'booking', 30, 'Travel insurance required'),
-('weather_dependent', 'Weather Dependent', 'boolean', 'booking', 40, 'Activity depends on weather conditions')
+('emergency_contact', 'Emergency Contact', 'string', 'contact', 10, 'Emergency contact information', NULL),
+('group_size', 'Group Size', 'number', 'booking', 10, 'Total group size', NULL),
+('voucher_number', 'Voucher Number', 'string', 'booking', 20, 'Voucher or confirmation number', NULL),
+('insurance_required', 'Insurance Required', 'boolean', 'booking', 30, 'Travel insurance required', NULL),
+('weather_dependent', 'Weather Dependent', 'boolean', 'booking', 40, 'Activity depends on weather conditions', NULL)
 ON CONFLICT (key) DO NOTHING;
 
 COMMENT ON TABLE field_defs IS 'Dynamic field definitions for reservation extras';
