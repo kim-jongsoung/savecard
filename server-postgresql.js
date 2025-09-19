@@ -4813,57 +4813,16 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         // 정규화 처리
         const normalizedData = normalizeReservationData(parsedData);
         
-        // 드래프트로 저장 (검수형 워크플로우)
-        if (dbMode === 'postgresql') {
-            try {
-                const insertQuery = `
-                    INSERT INTO reservation_drafts (
-                        raw_text, parsed_json, normalized_json, 
-                        confidence, extracted_notes, status, created_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
-                    RETURNING draft_id
-                `;
-                
-                const values = [
-                    reservationText,
-                    JSON.stringify(parsedData),
-                    JSON.stringify(normalizedData),
-                    confidence,
-                    extractedNotes,
-                    'pending_review'
-                ];
-                
-                const result = await pool.query(insertQuery, values);
-                const draftId = result.rows[0].draft_id;
-                
-                console.log(`✅ 드래프트 생성 성공 (ID: ${draftId})`);
-                
-                res.json({
-                    success: true,
-                    message: '파싱이 완료되었습니다.',
-                    draft_id: draftId,
-                    parsed_data: normalizedData,
-                    parsing_method: parsingMethod,
-                    confidence: confidence,
-                    extracted_notes: extractedNotes,
-                    workflow: 'parsing_completed'
-                });
-                
-            } catch (dbError) {
-                console.error('드래프트 저장 오류:', dbError);
-                res.json({
-                    success: false,
-                    message: '드래프트 저장 중 오류가 발생했습니다: ' + dbError.message,
-                    parsed_data: normalizedData
-                });
-            }
-        } else {
-            res.json({
-                success: false,
-                message: 'PostgreSQL 모드가 아닙니다.',
-                parsed_data: normalizedData
-            });
-        }
+        // 파싱 결과만 반환 (저장은 별도 단계)
+        res.json({
+            success: true,
+            message: '파싱이 완료되었습니다.',
+            parsed_data: normalizedData,
+            parsing_method: parsingMethod,
+            confidence: confidence,
+            extracted_notes: extractedNotes,
+            workflow: 'parsing_only'
+        });
         
     } catch (error) {
         console.error('예약 파싱 및 저장 오류:', error);
@@ -4874,72 +4833,94 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     }
 });
 
-// 드래프트 저장 전용 API
-app.post('/admin/reservations/save-draft', requireAuth, async (req, res) => {
+// 예약 직접 저장 API
+app.post('/admin/reservations/save', requireAuth, async (req, res) => {
     try {
-        const { reservationText, parsedData } = req.body;
+        const { parsedData } = req.body;
         
-        if (!reservationText || !reservationText.trim()) {
-            return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
+        if (!parsedData) {
+            return res.json({ success: false, message: '예약 데이터가 없습니다.' });
         }
         
         // 정규화 처리
-        const normalizedData = normalizeReservationData(parsedData || {});
+        const normalizedData = normalizeReservationData(parsedData);
         
-        // 드래프트로 저장 (검수형 워크플로우)
+        // 예약 테이블에 직접 저장
         if (dbMode === 'postgresql') {
             try {
                 const insertQuery = `
-                    INSERT INTO reservation_drafts (
-                        raw_text, parsed_json, normalized_json, 
-                        confidence, extracted_notes, status, created_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
-                    RETURNING draft_id
+                    INSERT INTO reservations (
+                        reservation_number, confirmation_number, channel, platform_name,
+                        product_name, package_type, total_amount, quantity, guest_count,
+                        korean_name, english_first_name, english_last_name, email, phone, kakao_id,
+                        people_adult, people_child, people_infant, adult_unit_price, child_unit_price,
+                        usage_date, usage_time, reservation_datetime, payment_status,
+                        memo, created_at, updated_at
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()
+                    ) RETURNING id
                 `;
                 
                 const values = [
-                    reservationText,
-                    JSON.stringify(parsedData || {}),
-                    JSON.stringify(normalizedData),
-                    0.8, // 기본 신뢰도
-                    '수동 저장됨 - 검수 필요',
-                    'pending'
+                    normalizedData.reservation_number || null,
+                    normalizedData.confirmation_number || null,
+                    normalizedData.channel || '웹',
+                    normalizedData.platform_name || 'NOL',
+                    normalizedData.product_name || null,
+                    normalizedData.package_type || null,
+                    normalizedData.total_amount || null,
+                    normalizedData.quantity || null,
+                    normalizedData.guest_count || null,
+                    normalizedData.korean_name || null,
+                    normalizedData.english_first_name || null,
+                    normalizedData.english_last_name || null,
+                    normalizedData.email || null,
+                    normalizedData.phone || null,
+                    normalizedData.kakao_id || null,
+                    normalizedData.people_adult || null,
+                    normalizedData.people_child || null,
+                    normalizedData.people_infant || null,
+                    normalizedData.adult_unit_price || null,
+                    normalizedData.child_unit_price || null,
+                    normalizedData.usage_date || null,
+                    normalizedData.usage_time || null,
+                    normalizedData.reservation_datetime || null,
+                    normalizedData.payment_status || 'confirmed',
+                    normalizedData.memo || null
                 ];
                 
                 const result = await pool.query(insertQuery, values);
-                const draftId = result.rows[0].draft_id;
+                const reservationId = result.rows[0].id;
                 
-                console.log(`✅ 드래프트 생성 성공 (ID: ${draftId})`);
+                console.log(`✅ 예약 저장 성공 (ID: ${reservationId})`);
                 
                 res.json({
                     success: true,
-                    message: '드래프트가 생성되었습니다. 검수 후 승인해주세요.',
-                    draft_id: draftId,
-                    parsed_data: normalizedData,
-                    workflow: 'draft_created'
+                    message: '예약이 성공적으로 저장되었습니다.',
+                    reservation_id: reservationId,
+                    workflow: 'reservation_saved'
                 });
                 
             } catch (dbError) {
-                console.error('드래프트 저장 오류:', dbError);
+                console.error('예약 저장 오류:', dbError);
                 res.json({
                     success: false,
-                    message: '드래프트 저장 중 오류가 발생했습니다: ' + dbError.message,
-                    parsed_data: normalizedData
+                    message: '예약 저장 중 오류가 발생했습니다: ' + dbError.message
                 });
             }
         } else {
             res.json({
                 success: false,
-                message: 'PostgreSQL 모드가 아닙니다.',
-                parsed_data: normalizedData
+                message: 'PostgreSQL 모드가 아닙니다.'
             });
         }
         
     } catch (error) {
-        console.error('드래프트 저장 오류:', error);
+        console.error('예약 저장 오류:', error);
         res.json({ 
             success: false, 
-            message: '드래프트 처리 중 오류가 발생했습니다: ' + error.message 
+            message: '예약 처리 중 오류가 발생했습니다: ' + error.message 
         });
     }
 });
