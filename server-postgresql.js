@@ -1548,7 +1548,6 @@ app.get('/stores', async (req, res) => {
     }
 });
 
-// 제휴 신청 페이지
 app.get('/partner-apply', (req, res) => {
     try {
         res.render('partner-apply', {
@@ -1556,7 +1555,7 @@ app.get('/partner-apply', (req, res) => {
         });
     } catch (error) {
         console.error('제휴 신청 페이지 오류:', error);
-        res.status(500).render('error', {
+        res.status(500).render('error', { 
             title: '서버 오류',
             message: '페이지를 불러오는 중 오류가 발생했습니다.',
             error: { status: 500 }
@@ -4400,15 +4399,15 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
             let totalCount = 0;
             try {
                 if (existingTables.includes('reservations')) {
-                    let whereClause = "WHERE payment_status != 'cancelled'";
+                    let whereClause = "WHERE 1=1";
                     let queryParams = [];
                     let paramIndex = 1;
                     
                     // 검색 조건
                     if (search) {
                         whereClause += ` AND (
-                            reservation_number ILIKE $${paramIndex} OR 
-                            korean_name ILIKE $${paramIndex} OR 
+                            COALESCE(reservation_code, reservation_number) ILIKE $${paramIndex} OR 
+                            COALESCE(name_kr, korean_name) ILIKE $${paramIndex} OR 
                             product_name ILIKE $${paramIndex} OR
                             email ILIKE $${paramIndex}
                         )`;
@@ -4418,9 +4417,9 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                     
                     // 상태 필터
                     if (status === 'issued') {
-                        whereClause += ` AND code_issued = true`;
+                        whereClause += ` AND card_status = 'issued'`;
                     } else if (status === 'pending') {
-                        whereClause += ` AND (code_issued = false OR code_issued IS NULL)`;
+                        whereClause += ` AND (card_status = 'pending' OR card_status IS NULL)`;
                     }
                     
                     // 총 개수 조회
@@ -4428,32 +4427,26 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                     const countResult = await pool.query(countQuery, queryParams);
                     totalCount = parseInt(countResult.rows[0].total);
                     
-                    // 예약 목록 조회
+                    // 예약 목록 조회 (실제 테이블 구조에 맞춤)
                     const reservationsQuery = await pool.query(`
                         SELECT 
                             id,
-                            reservation_number,
-                            COALESCE(channel, '웹') as channel,
+                            COALESCE(reservation_code, reservation_number) as reservation_code,
                             COALESCE(platform_name, 'NOL') as platform_name,
                             product_name,
-                            korean_name,
-                            COALESCE(COALESCE(english_first_name, '') || ' ' || COALESCE(english_last_name, ''), '') as english_name,
+                            COALESCE(name_kr, korean_name) as name_kr,
+                            name_en_first,
+                            name_en_last,
                             phone,
                             email,
-                            kakao_id,
                             usage_date,
                             usage_time,
-                            COALESCE(guest_count, 1) as guest_count,
                             COALESCE(people_adult, 1) as people_adult,
                             COALESCE(people_child, 0) as people_child,
                             COALESCE(people_infant, 0) as people_infant,
-                            package_type,
-                            total_amount,
-                            COALESCE(adult_unit_price, 0) as adult_unit_price,
-                            COALESCE(child_unit_price, 0) as child_unit_price,
-                            COALESCE(payment_status, '대기') as payment_status,
-                            COALESCE(code_issued, false) as code_issued,
-                            code_issued_at,
+                            COALESCE(total_price, total_amount) as total_price,
+                            COALESCE(payment_status, 'pending') as payment_status,
+                            COALESCE(card_status, 'pending') as card_status,
                             memo,
                             created_at,
                             updated_at
@@ -5297,6 +5290,89 @@ app.post('/api/drafts/:id/reject', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '드래프트 반려 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 예약 삭제 API
+app.delete('/api/reservations/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await pool.query(
+            'DELETE FROM reservations WHERE id = $1 RETURNING *',
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '예약이 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('❌ 예약 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 예약 코드 생성 API
+app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // 예약 정보 조회
+        const reservationResult = await pool.query(
+            'SELECT * FROM reservations WHERE id = $1',
+            [id]
+        );
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = reservationResult.rows[0];
+        
+        // 이미 코드가 발급된 경우
+        if (reservation.card_status === 'issued') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 코드가 발급된 예약입니다.'
+            });
+        }
+        
+        // 세이브카드 코드 생성 (간단한 형태로 구현)
+        const saveCardCode = `SC${Date.now()}${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+        
+        // 예약 상태 업데이트
+        const updateResult = await pool.query(
+            'UPDATE reservations SET card_status = $1, save_card_code = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+            ['issued', saveCardCode, id]
+        );
+        
+        res.json({
+            success: true,
+            message: '세이브카드 코드가 생성되었습니다.',
+            data: {
+                saveCardCode: saveCardCode
+            }
+        });
+    } catch (error) {
+        console.error('❌ 코드 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '코드 생성 중 오류가 발생했습니다.'
         });
     }
 });

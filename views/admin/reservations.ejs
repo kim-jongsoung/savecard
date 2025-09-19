@@ -412,13 +412,13 @@
                                                 <%= reservation.platform_name || 'NOL' %>
                                             </span>
                                         </td>
-                                        <td><%= reservation.reservation_number || '-' %></td>
+                                        <td><%= reservation.reservation_code || '-' %></td>
                                         <td><%= reservation.product_name || '-' %></td>
-                                        <td><%= reservation.korean_name || '-' %></td>
+                                        <td><%= reservation.name_kr || '-' %></td>
                                         <td><%= reservation.usage_date ? new Date(reservation.usage_date).toLocaleDateString('ko-KR') : '-' %></td>
-                                        <td><%= reservation.total_amount ? '$' + reservation.total_amount.toLocaleString() : '-' %></td>
+                                        <td><%= reservation.total_price ? '$' + parseFloat(reservation.total_price).toFixed(2) : '-' %></td>
                                         <td>
-                                            <% if (reservation.code_issued) { %>
+                                            <% if (reservation.card_status === 'issued') { %>
                                                 <span class="badge bg-success">발급 완료</span>
                                             <% } else { %>
                                                 <span class="badge bg-warning">발급 대기</span>
@@ -435,7 +435,7 @@
                                                 <button class="btn btn-sm btn-danger" onclick="deleteReservation(<%= reservation.id %>); event.stopPropagation();" title="삭제">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                                <% if (!reservation.code_issued) { %>
+                                                <% if (reservation.card_status !== 'issued') { %>
                                                     <button class="btn btn-sm btn-success" onclick="generateCode(<%= reservation.id %>); event.stopPropagation();" title="코드 생성">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
@@ -1754,6 +1754,84 @@
             if (currentDraftId) {
                 rejectDraft(currentDraftId);
             }
+        }
+
+        // 예약 관리 함수들
+        function viewReservation(id) {
+            fetch(`/api/reservations/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('예약 상세보기 기능은 곧 구현될 예정입니다.');
+                    } else {
+                        alert('예약 정보를 불러올 수 없습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('예약 정보를 불러오는 중 오류가 발생했습니다.');
+                });
+        }
+
+        function editReservation(id) {
+            alert('예약 수정 기능은 곧 구현될 예정입니다.');
+        }
+
+        function deleteReservation(id) {
+            if (confirm('정말로 이 예약을 삭제하시겠습니까?')) {
+                fetch(`/api/reservations/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('예약이 삭제되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('예약 삭제 중 오류가 발생했습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('예약 삭제 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        function generateCode(id) {
+            if (confirm('이 예약에 대한 세이브카드 코드를 생성하시겠습니까?')) {
+                fetch(`/api/reservations/${id}/generate-code`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('세이브카드 코드가 생성되었습니다.');
+                        location.reload();
+                    } else {
+                        alert('코드 생성 중 오류가 발생했습니다: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('코드 생성 중 오류가 발생했습니다.');
+                });
+            }
+        }
+
+        function viewCode(id) {
+            alert('코드 보기 기능은 곧 구현될 예정입니다.');
+        }
+
+        function toggleDetails(index) {
+            // 예약 상세 정보 토글 기능 (향후 구현)
+            console.log('Toggle details for reservation index:', index);
         }
 
         // 탭 활성화 처리
