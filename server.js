@@ -64,15 +64,24 @@ const auditsRouter = require('./routes/audits');
 app.use('/', indexRouter);
 app.use('/admin', adminRouter);
 
-// API 라우트 연결
-app.use('/api', bookingsListRouter);
-app.use('/api', bookingsDetailRouter);
-app.use('/api', bookingsPatchRouter);
-app.use('/api', bookingsCreateRouter);
-app.use('/api', bookingsDeleteRouter);
-app.use('/api', bookingsBulkRouter);
-app.use('/api', fieldDefsRouter);
-app.use('/api', auditsRouter);
+// 임시 테스트 API
+app.get('/api/test', (req, res) => {
+    res.json({ message: 'API 연결 성공!', timestamp: new Date() });
+});
+
+// API 라우트 연결 (오류 발생 시 주석 처리)
+try {
+    app.use('/api', bookingsListRouter);
+    app.use('/api', bookingsDetailRouter);
+    app.use('/api', bookingsPatchRouter);
+    app.use('/api', bookingsCreateRouter);
+    app.use('/api', bookingsDeleteRouter);
+    app.use('/api', bookingsBulkRouter);
+    app.use('/api', fieldDefsRouter);
+    app.use('/api', auditsRouter);
+} catch (error) {
+    console.error('API 라우트 연결 오류:', error);
+}
 
 // 임시 마이그레이션 엔드포인트 (배포 후 삭제 예정)
 app.get('/run-migrations', async (req, res) => {

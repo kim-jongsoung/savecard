@@ -259,6 +259,41 @@ app.use(checkDatabase);
 const adminRoutes = require('./routes/admin');
 app.use('/admin', adminRoutes);
 
+// 새로운 예약 관리 API 라우트들
+try {
+    const bookingsListRouter = require('./routes/bookings.list');
+    const bookingsDetailRouter = require('./routes/bookings.detail');
+    const bookingsPatchRouter = require('./routes/bookings.patch');
+    const bookingsCreateRouter = require('./routes/bookings.create');
+    const bookingsDeleteRouter = require('./routes/bookings.delete');
+    const bookingsBulkRouter = require('./routes/bookings.bulk');
+    const fieldDefsRouter = require('./routes/fieldDefs');
+    const auditsRouter = require('./routes/audits');
+
+    // API 라우트 연결
+    app.use('/api', bookingsListRouter);
+    app.use('/api', bookingsDetailRouter);
+    app.use('/api', bookingsPatchRouter);
+    app.use('/api', bookingsCreateRouter);
+    app.use('/api', bookingsDeleteRouter);
+    app.use('/api', bookingsBulkRouter);
+    app.use('/api', fieldDefsRouter);
+    app.use('/api', auditsRouter);
+    
+    console.log('✅ 새로운 예약 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('❌ API 라우트 연결 오류:', error.message);
+}
+
+// 임시 테스트 API
+app.get('/api/test', (req, res) => {
+    res.json({ 
+        message: 'API 연결 성공!', 
+        timestamp: new Date(),
+        database: dbMode 
+    });
+});
+
 // 서버 시작 시 PostgreSQL 스키마 보정: 테이블 생성 → 컬럼 보정
 (async () => {
     if (dbMode !== 'postgresql') return;
