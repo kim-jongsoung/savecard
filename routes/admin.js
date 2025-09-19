@@ -90,4 +90,80 @@ router.get('/logout', (req, res) => {
     res.redirect('/admin/login');
 });
 
+// 마이그레이션 실행 (관리자만 접근 가능)
+router.get('/run-migrations', requireAuth, async (req, res) => {
+    try {
+        const { Pool } = require('pg');
+        const fs = require('fs');
+        const path = require('path');
+        
+        const pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+
+        // 마이그레이션 추적 테이블 생성
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                version VARCHAR(255) PRIMARY KEY,
+                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        const migrationsDir = path.join(__dirname, '..', 'migrations');
+        const migrationFiles = fs.readdirSync(migrationsDir)
+            .filter(file => file.endsWith('.sql'))
+            .sort();
+
+        let results = [];
+        
+        for (const file of migrationFiles) {
+            const version = file.replace('.sql', '');
+            
+            // 이미 적용된 마이그레이션인지 확인
+            const { rows } = await pool.query(
+                'SELECT version FROM schema_migrations WHERE version = $1',
+                [version]
+            );
+            
+            if (rows.length > 0) {
+                results.push(`✅ ${file} - 이미 적용됨`);
+                continue;
+            }
+            
+            // 마이그레이션 실행
+            const migrationSQL = fs.readFileSync(path.join(migrationsDir, file), { encoding: 'utf8' });
+            
+            await pool.query('BEGIN');
+            try {
+                await pool.query(migrationSQL);
+                await pool.query(
+                    'INSERT INTO schema_migrations (version) VALUES ($1)',
+                    [version]
+                );
+                await pool.query('COMMIT');
+                results.push(`✅ ${file} - 성공적으로 적용됨`);
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                results.push(`❌ ${file} - 실패: ${error.message}`);
+            }
+        }
+        
+        await pool.end();
+        
+        res.json({
+            success: true,
+            message: '마이그레이션 완료',
+            results: results
+        });
+        
+    } catch (error) {
+        console.error('마이그레이션 실행 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
