@@ -4840,13 +4840,13 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
                 
                 res.json({
                     success: true,
-                    message: '파싱이 완료되었습니다. 검수 후 승인해주세요.',
+                    message: '파싱이 완료되었습니다.',
                     draft_id: draftId,
                     parsed_data: normalizedData,
                     parsing_method: parsingMethod,
                     confidence: confidence,
                     extracted_notes: extractedNotes,
-                    workflow: 'draft_created'
+                    workflow: 'parsing_completed'
                 });
                 
             } catch (dbError) {
@@ -4870,6 +4870,76 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         res.json({ 
             success: false, 
             message: '예약 처리 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 드래프트 저장 전용 API
+app.post('/admin/reservations/save-draft', requireAuth, async (req, res) => {
+    try {
+        const { reservationText, parsedData } = req.body;
+        
+        if (!reservationText || !reservationText.trim()) {
+            return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
+        }
+        
+        // 정규화 처리
+        const normalizedData = normalizeReservationData(parsedData || {});
+        
+        // 드래프트로 저장 (검수형 워크플로우)
+        if (dbMode === 'postgresql') {
+            try {
+                const insertQuery = `
+                    INSERT INTO reservation_drafts (
+                        raw_text, parsed_json, normalized_json, 
+                        confidence, extracted_notes, status, created_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, NOW()) 
+                    RETURNING draft_id
+                `;
+                
+                const values = [
+                    reservationText,
+                    JSON.stringify(parsedData || {}),
+                    JSON.stringify(normalizedData),
+                    0.8, // 기본 신뢰도
+                    '수동 저장됨 - 검수 필요',
+                    'pending'
+                ];
+                
+                const result = await pool.query(insertQuery, values);
+                const draftId = result.rows[0].draft_id;
+                
+                console.log(`✅ 드래프트 생성 성공 (ID: ${draftId})`);
+                
+                res.json({
+                    success: true,
+                    message: '드래프트가 생성되었습니다. 검수 후 승인해주세요.',
+                    draft_id: draftId,
+                    parsed_data: normalizedData,
+                    workflow: 'draft_created'
+                });
+                
+            } catch (dbError) {
+                console.error('드래프트 저장 오류:', dbError);
+                res.json({
+                    success: false,
+                    message: '드래프트 저장 중 오류가 발생했습니다: ' + dbError.message,
+                    parsed_data: normalizedData
+                });
+            }
+        } else {
+            res.json({
+                success: false,
+                message: 'PostgreSQL 모드가 아닙니다.',
+                parsed_data: normalizedData
+            });
+        }
+        
+    } catch (error) {
+        console.error('드래프트 저장 오류:', error);
+        res.json({ 
+            success: false, 
+            message: '드래프트 처리 중 오류가 발생했습니다: ' + error.message 
         });
     }
 });
