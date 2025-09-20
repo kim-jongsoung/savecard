@@ -74,28 +74,20 @@
                                 <input type="text" class="form-control" id="reservation_number" name="reservation_number">
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">채널</label>
-                                <input type="text" class="form-control" id="channel" name="channel">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">플랫폼</label>
+                                <label class="form-label">업체명</label>
                                 <input type="text" class="form-control" id="platform_name" name="platform_name">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">상품명</label>
-                                <input type="text" class="form-control" id="product_name" name="product_name">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">총 금액</label>
-                                <input type="number" class="form-control" id="total_amount" name="total_amount" step="0.01">
-                            </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">결제 상태</label>
                                 <select class="form-control" id="payment_status" name="payment_status">
                                     <option value="pending">대기중</option>
                                     <option value="confirmed">확인됨</option>
                                     <option value="cancelled">취소됨</option>
                                 </select>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">상품명</label>
+                                <input type="text" class="form-control" id="product_name" name="product_name">
                             </div>
                         </div>
 
@@ -149,26 +141,46 @@
                             </div>
                         </div>
 
-                        <!-- 인원 정보 섹션 -->
+                        <!-- 인원 및 금액 정보 섹션 -->
                         <div class="row mb-4">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-users me-2"></i>인원 정보</h6>
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-users me-2"></i>인원 및 금액 정보</h6>
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">성인</label>
-                                <input type="number" class="form-control" id="adult_count" name="adult_count" min="0">
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">성인 수</label>
+                                <input type="number" class="form-control" id="adult_count" name="adult_count" min="0" onchange="calculateTotal()">
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">아동</label>
-                                <input type="number" class="form-control" id="child_count" name="child_count" min="0">
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">성인 단가</label>
+                                <input type="number" class="form-control" id="adult_price" name="adult_price" min="0" step="0.01" onchange="calculateTotal()">
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">유아</label>
-                                <input type="number" class="form-control" id="infant_count" name="infant_count" min="0">
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">아동 수</label>
+                                <input type="number" class="form-control" id="child_count" name="child_count" min="0" onchange="calculateTotal()">
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">아동 단가</label>
+                                <input type="number" class="form-control" id="child_price" name="child_price" min="0" step="0.01" onchange="calculateTotal()">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">유아 수</label>
+                                <input type="number" class="form-control" id="infant_count" name="infant_count" min="0" onchange="calculateTotal()">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">유아 단가</label>
+                                <input type="number" class="form-control" id="infant_price" name="infant_price" min="0" step="0.01" onchange="calculateTotal()">
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">총 인원</label>
-                                <input type="number" class="form-control" id="total_guests" name="total_guests" min="0" readonly>
+                                <input type="number" class="form-control" id="total_guests" name="total_guests" min="0" readonly style="background-color: #f8f9fa;">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">총 금액</label>
+                                <input type="number" class="form-control" id="total_amount" name="total_amount" step="0.01" readonly style="background-color: #f8f9fa;">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">계산식</label>
+                                <input type="text" class="form-control" id="calculation_formula" readonly style="background-color: #f8f9fa; font-size: 0.9em;">
                             </div>
                         </div>
 
@@ -261,27 +273,91 @@
 
         // 미리보기 폼에 데이터 채우기
         function fillPreviewForm(data) {
+            console.log('📋 파싱된 데이터:', data);
+            
+            // 바스코/럭스파인드 회사명 제외 함수
+            function filterCompanyName(name) {
+                if (!name) return '';
+                const excludeCompanies = ['바스코', 'vasco', 'VASCO', '럭스파인드', 'luxfind', 'LUXFIND'];
+                const lowerName = name.toLowerCase();
+                
+                for (let company of excludeCompanies) {
+                    if (lowerName.includes(company.toLowerCase())) {
+                        return '';
+                    }
+                }
+                return name;
+            }
+            
+            // 날짜 형식 변환 함수
+            function formatDate(dateStr) {
+                if (!dateStr) return '';
+                try {
+                    // 다양한 날짜 형식 처리
+                    let date = new Date(dateStr);
+                    if (isNaN(date.getTime())) {
+                        // 한국어 날짜 형식 처리 (예: 2025-09-13)
+                        const match = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+                        if (match) {
+                            date = new Date(match[1], match[2] - 1, match[3]);
+                        }
+                    }
+                    return date.toISOString().split('T')[0];
+                } catch (e) {
+                    return '';
+                }
+            }
+            
+            // 시간 형식 변환 함수
+            function formatTime(timeStr) {
+                if (!timeStr) return '';
+                try {
+                    const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+                    if (match) {
+                        return `${match[1].padStart(2, '0')}:${match[2]}`;
+                    }
+                } catch (e) {
+                    return '';
+                }
+                return '';
+            }
+            
+            // 날짜시간 형식 변환 함수
+            function formatDateTime(dateTimeStr) {
+                if (!dateTimeStr) return '';
+                try {
+                    const date = new Date(dateTimeStr);
+                    if (!isNaN(date.getTime())) {
+                        return date.toISOString().slice(0, 16);
+                    }
+                } catch (e) {
+                    return '';
+                }
+                return '';
+            }
+
             // 모든 필드 매핑
             const fieldMappings = {
-                'reservation_number': data.reservation_number || data.booking_reference || '',
-                'channel': data.channel || data.source || '투어비스',
-                'platform_name': data.platform_name || data.company || '',
-                'product_name': data.product_name || data.tour_name || '',
-                'total_amount': data.total_amount || data.amount || '',
+                'reservation_number': data.reservation_number || data.booking_reference || data.order_number || '',
+                'platform_name': filterCompanyName(data.platform_name || data.company || data.channel || ''),
                 'payment_status': data.payment_status || 'confirmed',
-                'tour_date': data.tour_date || data.date || '',
-                'tour_time': data.tour_time || data.time || '',
-                'booking_date': data.booking_date || data.created_at || '',
-                'customer_name': data.customer_name || data.name || '',
-                'customer_lastname': data.customer_lastname || data.last_name || '',
-                'customer_firstname': data.customer_firstname || data.first_name || '',
-                'customer_phone': data.customer_phone || data.phone || '',
+                'product_name': data.product_name || data.tour_name || data.service_name || '',
+                'tour_date': formatDate(data.tour_date || data.date || data.service_date || ''),
+                'tour_time': formatTime(data.tour_time || data.time || data.service_time || ''),
+                'booking_date': formatDateTime(data.booking_date || data.created_at || data.reservation_date || ''),
+                'customer_name': data.customer_name || data.name || data.guest_name || '',
+                'customer_lastname': data.customer_lastname || data.last_name || data.surname || '',
+                'customer_firstname': data.customer_firstname || data.first_name || data.given_name || '',
+                'customer_phone': data.customer_phone || data.phone || data.mobile || data.contact || '',
                 'customer_email': data.customer_email || data.email || '',
-                'kakao_id': data.kakao_id || '',
-                'adult_count': data.adult_count || data.adults || 0,
-                'child_count': data.child_count || data.children || 0,
-                'infant_count': data.infant_count || data.infants || 0,
-                'special_requests': data.special_requests || data.notes || data.memo || ''
+                'kakao_id': data.kakao_id || data.kakao || '',
+                'adult_count': parseInt(data.adult_count || data.adults || data.adult || 0),
+                'child_count': parseInt(data.child_count || data.children || data.child || 0),
+                'infant_count': parseInt(data.infant_count || data.infants || data.infant || 0),
+                'adult_price': parseFloat(data.adult_price || data.adult_amount || 0),
+                'child_price': parseFloat(data.child_price || data.child_amount || 0),
+                'infant_price': parseFloat(data.infant_price || data.infant_amount || 0),
+                'special_requests': data.special_requests || data.notes || data.memo || data.remarks || ''
             };
 
             // 폼 필드에 값 설정
@@ -291,7 +367,7 @@
                     element.value = value || '';
                     
                     // 빈 값이거나 null인 경우 경고 스타일 적용
-                    if (!value || value === 'null' || value === '-') {
+                    if (!value || value === 'null' || value === '-' || value === 0) {
                         element.classList.add('border-warning');
                         element.style.backgroundColor = '#fff3cd';
                     } else {
@@ -301,25 +377,49 @@
                 }
             });
 
-            // 총 인원 계산
-            calculateTotalGuests();
+            // 총 인원 및 금액 계산
+            calculateTotal();
         }
 
-        // 총 인원 자동 계산
-        function calculateTotalGuests() {
-            const adult = parseInt(document.getElementById('adult_count').value) || 0;
-            const child = parseInt(document.getElementById('child_count').value) || 0;
-            const infant = parseInt(document.getElementById('infant_count').value) || 0;
+        // 총 인원 및 금액 계산
+        function calculateTotal() {
+            const adultCount = parseInt(document.getElementById('adult_count').value) || 0;
+            const childCount = parseInt(document.getElementById('child_count').value) || 0;
+            const infantCount = parseInt(document.getElementById('infant_count').value) || 0;
             
-            document.getElementById('total_guests').value = adult + child + infant;
+            const adultPrice = parseFloat(document.getElementById('adult_price').value) || 0;
+            const childPrice = parseFloat(document.getElementById('child_price').value) || 0;
+            const infantPrice = parseFloat(document.getElementById('infant_price').value) || 0;
+            
+            // 총 인원 계산
+            const totalGuests = adultCount + childCount + infantCount;
+            document.getElementById('total_guests').value = totalGuests;
+            
+            // 총 금액 계산
+            const adultTotal = adultCount * adultPrice;
+            const childTotal = childCount * childPrice;
+            const infantTotal = infantCount * infantPrice;
+            const totalAmount = adultTotal + childTotal + infantTotal;
+            
+            document.getElementById('total_amount').value = totalAmount.toFixed(2);
+            
+            // 계산식 표시
+            let formula = [];
+            if (adultCount > 0) formula.push(`성인 ${adultCount}명×$${adultPrice}`);
+            if (childCount > 0) formula.push(`아동 ${childCount}명×$${childPrice}`);
+            if (infantCount > 0) formula.push(`유아 ${infantCount}명×$${infantPrice}`);
+            
+            const formulaText = formula.length > 0 ? formula.join(' + ') + ` = $${totalAmount.toFixed(2)}` : '';
+            document.getElementById('calculation_formula').value = formulaText;
         }
 
-        // 인원 수 변경 시 총 인원 재계산
-        ['adult_count', 'child_count', 'infant_count'].forEach(id => {
-            document.addEventListener('DOMContentLoaded', function() {
+        // 인원 수 및 가격 변경 시 재계산 - 페이지 로드 후 이벤트 리스너 추가
+        document.addEventListener('DOMContentLoaded', function() {
+            ['adult_count', 'child_count', 'infant_count', 'adult_price', 'child_price', 'infant_price'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
-                    element.addEventListener('input', calculateTotalGuests);
+                    element.addEventListener('input', calculateTotal);
+                    element.addEventListener('change', calculateTotal);
                 }
             });
         });
