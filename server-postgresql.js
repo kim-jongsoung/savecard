@@ -321,12 +321,12 @@ try {
     const bookingsCreateRouter = require('./routes/bookings.create');
     const bookingsDeleteRouter = require('./routes/bookings.delete');
     const bookingsBulkRouter = require('./routes/bookings.bulk');
-    const fieldDefsRouter = require('./routes/fieldDefs');
+    // const fieldDefsRouter = require('./routes/fieldDefs'); // 임시 비활성화
     const auditsRouter = require('./routes/audits');
     const bookingsDetailRouter = require('./routes/bookings.detail'); // 마지막에 배치
 
     // API 라우트 연결 (구체적인 것부터 먼저)
-    app.use('/api', fieldDefsRouter);
+    // app.use('/api', fieldDefsRouter); // 임시 비활성화
     app.use('/api', auditsRouter);
     app.use('/api', bookingsListRouter);
     app.use('/api', bookingsPatchRouter);
@@ -5677,7 +5677,7 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
 
 // ==================== ERP API 라우트 ====================
 
-// API 상태 확인 엔드포인트
+// API 상태 확인 엔드포인트 (공개)
 app.get('/api/status', async (req, res) => {
     try {
         // 데이터베이스 연결 테스트
