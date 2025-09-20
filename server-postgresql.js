@@ -314,30 +314,31 @@ app.get('/api/stats', async (req, res) => {
 // 새로운 API 라우트들을 위한 데이터베이스 연결 설정
 app.locals.pool = pool; // 중요: 새로운 라우트들이 사용할 수 있도록 pool 설정
 
-// 새로운 예약 관리 API 라우트들
+// 새로운 예약 관리 API 라우트들 (임시 비활성화)
 try {
-    const bookingsListRouter = require('./routes/bookings.list');
-    const bookingsPatchRouter = require('./routes/bookings.patch');
-    const bookingsCreateRouter = require('./routes/bookings.create');
-    const bookingsDeleteRouter = require('./routes/bookings.delete');
-    const bookingsBulkRouter = require('./routes/bookings.bulk');
+    // const bookingsListRouter = require('./routes/bookings.list');
+    // const bookingsPatchRouter = require('./routes/bookings.patch');
+    // const bookingsCreateRouter = require('./routes/bookings.create');
+    // const bookingsDeleteRouter = require('./routes/bookings.delete');
+    // const bookingsBulkRouter = require('./routes/bookings.bulk');
     // const fieldDefsRouter = require('./routes/fieldDefs'); // 임시 비활성화
-    const auditsRouter = require('./routes/audits');
-    const bookingsDetailRouter = require('./routes/bookings.detail'); // 마지막에 배치
+    // const auditsRouter = require('./routes/audits'); // 임시 비활성화
+    // const bookingsDetailRouter = require('./routes/bookings.detail'); // 마지막에 배치
 
-    // API 라우트 연결 (구체적인 것부터 먼저)
+    // API 라우트 연결 (구체적인 것부터 먼저) - 임시 비활성화
     // app.use('/api', fieldDefsRouter); // 임시 비활성화
-    app.use('/api', auditsRouter);
-    app.use('/api', bookingsListRouter);
-    app.use('/api', bookingsPatchRouter);
-    app.use('/api', bookingsCreateRouter);
-    app.use('/api', bookingsDeleteRouter);
-    app.use('/api', bookingsBulkRouter);
-    app.use('/api', bookingsDetailRouter); // /:id 라우트는 맨 마지막
+    // app.use('/api', auditsRouter); // 임시 비활성화
+    // app.use('/api', bookingsListRouter);
+    // app.use('/api', bookingsPatchRouter);
+    // app.use('/api', bookingsCreateRouter);
+    // app.use('/api', bookingsDeleteRouter);
+    // app.use('/api', bookingsBulkRouter);
+    // app.use('/api', bookingsDetailRouter); // /:id 라우트는 맨 마지막
     
-    console.log('✅ 새로운 예약 관리 API 라우트 연결 완료');
+    console.log('⚠️ 기존 API 라우트들 임시 비활성화 - 새로운 라우트 사용');
 } catch (error) {
     console.error('❌ API 라우트 연결 오류:', error.message);
+    console.log('⚠️ 일부 API 라우트를 사용할 수 없습니다. 기본 기능은 정상 작동합니다.');
 }
 
 // 서버 시작 시 PostgreSQL 스키마 보정: 테이블 생성 → 컬럼 보정
@@ -6138,11 +6139,27 @@ async function startServer() {
                 const migrationCheck = await pool.query(
                     'SELECT * FROM migration_log WHERE version = $1',
                     ['002']
-                );
+                ).catch(() => ({ rows: [] }));
                 
                 if (migrationCheck.rows.length > 0) {
                     console.log('✅ ERP 마이그레이션 002는 이미 완료되었습니다.');
-                    return;
+                    
+                    // 테이블 존재 확인
+                    const tableCheck = await pool.query(`
+                        SELECT table_name 
+                        FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name IN ('field_defs', 'reservation_audits', 'assignments', 'settlements')
+                    `);
+                    
+                    if (tableCheck.rows.length < 4) {
+                        console.log('⚠️ 일부 테이블이 누락됨. 마이그레이션 재실행...');
+                        // 마이그레이션 로그 삭제하고 재실행
+                        await pool.query('DELETE FROM migration_log WHERE version = $1', ['002']);
+                    } else {
+                        console.log('📊 모든 ERP 테이블 확인됨:', tableCheck.rows.map(r => r.table_name));
+                        return;
+                    }
                 }
                 
                 console.log('🚀 ERP 마이그레이션 002 실행 중...');
