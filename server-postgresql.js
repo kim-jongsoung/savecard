@@ -5677,14 +5677,80 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
 
 // ==================== ERP API 라우트 ====================
 
+// API 상태 확인 엔드포인트
+app.get('/api/status', async (req, res) => {
+    try {
+        // 데이터베이스 연결 테스트
+        const dbTest = await pool.query('SELECT NOW() as current_time');
+        
+        // 테이블 존재 확인
+        const tables = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name IN ('reservations', 'field_defs', 'reservation_audits', 'assignments', 'settlements')
+            ORDER BY table_name
+        `);
+        
+        // 마이그레이션 상태 확인
+        const migrationStatus = await pool.query(`
+            SELECT version, description, executed_at 
+            FROM migration_log 
+            ORDER BY executed_at DESC 
+            LIMIT 5
+        `).catch(() => ({ rows: [] }));
+        
+        res.json({
+            success: true,
+            timestamp: dbTest.rows[0].current_time,
+            tables: tables.rows.map(r => r.table_name),
+            migrations: migrationStatus.rows,
+            message: 'API 서버가 정상 작동 중입니다.'
+        });
+        
+    } catch (error) {
+        console.error('API 상태 확인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: 'API 서버 오류: ' + error.message
+        });
+    }
+});
+
 // 예약 목록 API (새로운 /bookings용)
 app.get('/api/bookings', requireAuth, async (req, res) => {
     try {
+        console.log('📋 /api/bookings 요청 받음:', req.query);
+        
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const offset = (page - 1) * limit;
         const search = req.query.search || '';
         const status = req.query.status || '';
+        
+        // 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = 'reservations'
+        `);
+        
+        if (tableCheck.rows.length === 0) {
+            return res.status(500).json({
+                success: false,
+                message: 'reservations 테이블이 존재하지 않습니다.'
+            });
+        }
+        
+        // extras 컬럼 존재 확인
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'reservations' AND column_name = 'extras'
+        `);
+        
+        const hasExtras = columnCheck.rows.length > 0;
+        console.log('📊 extras 컬럼 존재:', hasExtras);
         
         let whereClause = 'WHERE 1=1';
         const params = [];
@@ -5702,9 +5768,11 @@ app.get('/api/bookings', requireAuth, async (req, res) => {
             params.push(status);
         }
         
+        const extrasSelect = hasExtras ? "COALESCE(r.extras, '{}') as extras," : "'{}' as extras,";
+        
         const query = `
             SELECT r.*, 
-                   COALESCE(r.extras, '{}') as extras,
+                   ${extrasSelect}
                    COUNT(*) OVER() as total_count
             FROM reservations r 
             ${whereClause}
@@ -5714,8 +5782,13 @@ app.get('/api/bookings', requireAuth, async (req, res) => {
         
         params.push(limit, offset);
         
+        console.log('🔍 실행할 쿼리:', query);
+        console.log('📝 파라미터:', params);
+        
         const result = await pool.query(query, params);
         const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+        
+        console.log('✅ 조회 결과:', result.rows.length, '개');
         
         res.json({
             success: true,
@@ -5729,10 +5802,10 @@ app.get('/api/bookings', requireAuth, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('예약 목록 조회 오류:', error);
+        console.error('❌ 예약 목록 조회 오류:', error);
         res.status(500).json({
             success: false,
-            message: '예약 목록을 불러오는 중 오류가 발생했습니다.'
+            message: '예약 목록을 불러오는 중 오류가 발생했습니다: ' + error.message
         });
     }
 });
