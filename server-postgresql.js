@@ -4404,6 +4404,31 @@ app.delete('/admin/issue-codes/:id', requireAuth, async (req, res) => {
     }
 });
 
+// 인박스 페이지 (파싱·검수·등록 통합)
+app.get('/admin/inbox', requireAuth, async (req, res) => {
+    try {
+        console.log('📥 인박스 페이지 접근');
+        
+        // 여행사 목록 조회
+        const agencies = await dbHelpers.getAgencies().catch(() => []);
+        
+        res.render('admin/inbox', {
+            title: '인박스',
+            adminUsername: req.session.adminUsername || 'admin',
+            agencies: agencies
+        });
+        
+    } catch (error) {
+        console.error('❌ 인박스 페이지 오류:', error);
+        res.status(500).render('admin/inbox', {
+            title: '인박스',
+            adminUsername: req.session.adminUsername || 'admin',
+            agencies: [],
+            error: '페이지 로드 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 예약 관리 페이지 (검수형 백엔드 통합)
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
@@ -5650,17 +5675,560 @@ app.post('/api/reservations/:id/generate-code', requireAuth, async (req, res) =>
     }
 });
 
+// ==================== ERP API 라우트 ====================
+
+// 예약 목록 API (새로운 /bookings용)
+app.get('/api/bookings', requireAuth, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const status = req.query.status || '';
+        
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+        let paramCount = 0;
+        
+        if (search) {
+            paramCount++;
+            whereClause += ` AND (customer_name ILIKE $${paramCount} OR customer_email ILIKE $${paramCount} OR customer_phone ILIKE $${paramCount})`;
+            params.push(`%${search}%`);
+        }
+        
+        if (status) {
+            paramCount++;
+            whereClause += ` AND status = $${paramCount}`;
+            params.push(status);
+        }
+        
+        const query = `
+            SELECT r.*, 
+                   COALESCE(r.extras, '{}') as extras,
+                   COUNT(*) OVER() as total_count
+            FROM reservations r 
+            ${whereClause}
+            ORDER BY r.created_at DESC 
+            LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+        `;
+        
+        params.push(limit, offset);
+        
+        const result = await pool.query(query, params);
+        const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+        
+        res.json({
+            success: true,
+            data: result.rows,
+            pagination: {
+                page,
+                limit,
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limit)
+            }
+        });
+        
+    } catch (error) {
+        console.error('예약 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 목록을 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 예약 상세 조회 API
+app.get('/api/bookings/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // 예약 기본 정보
+        const reservationQuery = `
+            SELECT r.*, 
+                   COALESCE(r.extras, '{}') as extras
+            FROM reservations r 
+            WHERE r.id = $1
+        `;
+        
+        const reservationResult = await pool.query(reservationQuery, [id]);
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = reservationResult.rows[0];
+        
+        // 감사 로그 조회
+        const auditQuery = `
+            SELECT * FROM reservation_audits 
+            WHERE reservation_id = $1 
+            ORDER BY changed_at DESC 
+            LIMIT 50
+        `;
+        
+        const auditResult = await pool.query(auditQuery, [id]).catch(() => ({ rows: [] }));
+        
+        // 수배 정보 조회
+        const assignmentQuery = `
+            SELECT * FROM assignments 
+            WHERE reservation_id = $1 
+            ORDER BY created_at DESC
+        `;
+        
+        const assignmentResult = await pool.query(assignmentQuery, [id]).catch(() => ({ rows: [] }));
+        
+        res.json({
+            success: true,
+            data: {
+                reservation,
+                audits: auditResult.rows,
+                assignments: assignmentResult.rows
+            }
+        });
+        
+    } catch (error) {
+        console.error('예약 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 정보를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 예약 수정 API (코어 + extras 동시 수정)
+app.patch('/api/bookings/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { coreData, extrasData } = req.body;
+        
+        const client = await pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+            
+            // 기존 데이터 조회 (감사 로그용)
+            const oldDataResult = await client.query(
+                'SELECT *, COALESCE(extras, \'{}\') as extras FROM reservations WHERE id = $1',
+                [id]
+            );
+            
+            if (oldDataResult.rows.length === 0) {
+                throw new Error('예약을 찾을 수 없습니다.');
+            }
+            
+            const oldData = oldDataResult.rows[0];
+            
+            // 코어 데이터 업데이트
+            if (coreData) {
+                const setClauses = [];
+                const values = [];
+                let paramCount = 0;
+                
+                Object.entries(coreData).forEach(([key, value]) => {
+                    if (key !== 'id' && key !== 'created_at') {
+                        paramCount++;
+                        setClauses.push(`${key} = $${paramCount}`);
+                        values.push(value);
+                    }
+                });
+                
+                if (setClauses.length > 0) {
+                    paramCount++;
+                    setClauses.push(`updated_at = NOW()`);
+                    values.push(id);
+                    
+                    const updateQuery = `
+                        UPDATE reservations 
+                        SET ${setClauses.join(', ')} 
+                        WHERE id = $${paramCount}
+                    `;
+                    
+                    await client.query(updateQuery, values);
+                }
+            }
+            
+            // extras 데이터 업데이트 (deep merge)
+            if (extrasData) {
+                const updateExtrasQuery = `
+                    UPDATE reservations 
+                    SET extras = COALESCE(extras, '{}') || $1::jsonb,
+                        updated_at = NOW()
+                    WHERE id = $2
+                `;
+                
+                await client.query(updateExtrasQuery, [JSON.stringify(extrasData), id]);
+            }
+            
+            // 업데이트된 데이터 조회
+            const newDataResult = await client.query(
+                'SELECT *, COALESCE(extras, \'{}\') as extras FROM reservations WHERE id = $1',
+                [id]
+            );
+            
+            const newData = newDataResult.rows[0];
+            
+            // 감사 로그 기록
+            const auditQuery = `
+                INSERT INTO reservation_audits (
+                    reservation_id, action, changed_by, old_values, new_values, 
+                    ip_address, user_agent
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `;
+            
+            await client.query(auditQuery, [
+                id,
+                'update',
+                req.session.adminUsername || 'admin',
+                JSON.stringify(oldData),
+                JSON.stringify(newData),
+                req.ip,
+                req.get('User-Agent')
+            ]).catch(err => console.log('감사 로그 기록 실패:', err));
+            
+            await client.query('COMMIT');
+            
+            res.json({
+                success: true,
+                message: '예약이 수정되었습니다.',
+                data: newData
+            });
+            
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+        
+    } catch (error) {
+        console.error('예약 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 수정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// field_defs 조회 API
+app.get('/api/field-defs', requireAuth, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM field_defs 
+            WHERE is_active = true 
+            ORDER BY field_group, sort_order, field_name
+        `);
+        
+        res.json({
+            success: true,
+            data: result.rows
+        });
+        
+    } catch (error) {
+        console.error('field_defs 조회 오류:', error);
+        res.json({
+            success: false,
+            message: 'field_defs를 불러올 수 없습니다.',
+            data: []
+        });
+    }
+});
+
+// 수배 관리 API
+app.get('/api/assignments', requireAuth, async (req, res) => {
+    try {
+        const status = req.query.status || '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+        
+        if (status) {
+            whereClause += ' AND a.status = $1';
+            params.push(status);
+        }
+        
+        const query = `
+            SELECT a.*, r.customer_name, r.tour_date, r.platform_name,
+                   COUNT(*) OVER() as total_count
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            ${whereClause}
+            ORDER BY a.created_at DESC
+            LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `;
+        
+        params.push(limit, offset);
+        
+        const result = await pool.query(query, params);
+        const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+        
+        res.json({
+            success: true,
+            data: result.rows,
+            pagination: {
+                page,
+                limit,
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limit)
+            }
+        });
+        
+    } catch (error) {
+        console.error('수배 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배 목록을 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배 상태 업데이트 API
+app.patch('/api/assignments/:id/status', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        
+        const validStatuses = ['requested', 'assigned', 'in_progress', 'completed', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: '유효하지 않은 상태입니다.'
+            });
+        }
+        
+        const updateQuery = `
+            UPDATE assignments 
+            SET status = $1, 
+                updated_at = NOW(),
+                ${status === 'completed' ? 'completed_at = NOW(),' : ''}
+                ${status === 'assigned' ? 'assigned_at = NOW(), assigned_by = $3,' : ''}
+            WHERE id = $2
+            RETURNING *
+        `;
+        
+        const params = [status, id];
+        if (status === 'assigned') {
+            params.push(req.session.adminUsername || 'admin');
+        }
+        
+        const result = await pool.query(updateQuery, params);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '수배 상태가 업데이트되었습니다.',
+            data: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('수배 상태 업데이트 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배 상태 업데이트 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // ==================== 서버 시작 ====================
 
-// 데이터베이스 초기화 후 서버 시작
 async function startServer() {
     try {
         await initializeDatabase();
         
-        const server = app.listen(PORT, () => {
-            console.log(`🚀 서버가 포트 ${PORT}에서 실행 중입니다.`);
-            console.log(`📊 관리자 페이지: http://localhost:${PORT}/admin`);
-            console.log(`💳 카드 페이지: http://localhost:${PORT}/card`);
+        // ERP 확장 마이그레이션 함수
+        async function runERPMigration() {
+            try {
+                console.log('🔍 ERP 마이그레이션 상태 확인...');
+                
+                // migration_log 테이블 생성 (없으면)
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS migration_log (
+                        id SERIAL PRIMARY KEY,
+                        version VARCHAR(10) UNIQUE NOT NULL,
+                        description TEXT,
+                        executed_at TIMESTAMP DEFAULT NOW()
+                    )
+                `);
+                
+                // 마이그레이션 002 실행 여부 확인
+                const migrationCheck = await pool.query(
+                    'SELECT * FROM migration_log WHERE version = $1',
+                    ['002']
+                );
+                
+                if (migrationCheck.rows.length > 0) {
+                    console.log('✅ ERP 마이그레이션 002는 이미 완료되었습니다.');
+                    return;
+                }
+                
+                console.log('🚀 ERP 마이그레이션 002 실행 중...');
+                
+                await pool.query('BEGIN');
+                
+                // 1. extras JSONB 컬럼 추가
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'extras'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN extras JSONB DEFAULT '{}';
+                            CREATE INDEX IF NOT EXISTS idx_reservations_extras_gin ON reservations USING GIN (extras);
+                        END IF;
+                    END $$;
+                `);
+                
+                // 2. field_defs 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS field_defs (
+                        id SERIAL PRIMARY KEY,
+                        field_key VARCHAR(100) NOT NULL UNIQUE,
+                        field_name VARCHAR(200) NOT NULL,
+                        field_type VARCHAR(50) NOT NULL DEFAULT 'text',
+                        field_group VARCHAR(100) DEFAULT 'general',
+                        validation_rules JSONB DEFAULT '{}',
+                        ui_config JSONB DEFAULT '{}',
+                        is_required BOOLEAN DEFAULT false,
+                        is_active BOOLEAN DEFAULT true,
+                        sort_order INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                `);
+                
+                // 3. reservation_audits 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS reservation_audits (
+                        id SERIAL PRIMARY KEY,
+                        reservation_id INTEGER NOT NULL,
+                        action VARCHAR(50) NOT NULL,
+                        changed_by VARCHAR(100) NOT NULL,
+                        changed_at TIMESTAMP DEFAULT NOW(),
+                        old_values JSONB,
+                        new_values JSONB,
+                        diff JSONB,
+                        ip_address INET,
+                        user_agent TEXT,
+                        notes TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_reservation_audits_reservation_id ON reservation_audits(reservation_id);
+                    CREATE INDEX IF NOT EXISTS idx_reservation_audits_changed_at ON reservation_audits(changed_at);
+                `);
+                
+                // 4. assignments 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS assignments (
+                        id SERIAL PRIMARY KEY,
+                        reservation_id INTEGER NOT NULL,
+                        vendor_name VARCHAR(200),
+                        vendor_contact JSONB,
+                        assignment_type VARCHAR(100) DEFAULT 'general',
+                        status VARCHAR(50) DEFAULT 'requested',
+                        cost_price DECIMAL(10,2),
+                        cost_currency VARCHAR(3) DEFAULT 'USD',
+                        voucher_number VARCHAR(100),
+                        voucher_url TEXT,
+                        voucher_issued_at TIMESTAMP,
+                        notes TEXT,
+                        assigned_by VARCHAR(100),
+                        assigned_at TIMESTAMP,
+                        completed_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_assignments_reservation_id ON assignments(reservation_id);
+                    CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
+                `);
+                
+                // 5. settlements 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS settlements (
+                        id SERIAL PRIMARY KEY,
+                        settlement_period VARCHAR(20) NOT NULL,
+                        reservation_id INTEGER,
+                        total_sales DECIMAL(12,2) DEFAULT 0.00,
+                        total_purchases DECIMAL(12,2) DEFAULT 0.00,
+                        gross_margin DECIMAL(12,2) DEFAULT 0.00,
+                        margin_rate DECIMAL(5,2) DEFAULT 0.00,
+                        currency VARCHAR(3) DEFAULT 'USD',
+                        status VARCHAR(50) DEFAULT 'draft',
+                        settlement_date DATE,
+                        payment_date DATE,
+                        notes TEXT,
+                        created_by VARCHAR(100),
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_settlements_settlement_period ON settlements(settlement_period);
+                `);
+                
+                // 6. 기본 field_defs 데이터 삽입
+                await pool.query(`
+                    INSERT INTO field_defs (field_key, field_name, field_type, field_group, validation_rules, ui_config, is_required, sort_order)
+                    VALUES 
+                        ('special_requests', '특별 요청사항', 'textarea', 'booking', '{"maxLength": 1000}', '{"placeholder": "특별한 요청사항이 있으시면 입력해주세요", "rows": 3}', false, 10),
+                        ('dietary_restrictions', '식이 제한사항', 'text', 'traveler', '{"maxLength": 200}', '{"placeholder": "알레르기, 채식주의 등"}', false, 20),
+                        ('emergency_contact', '비상 연락처', 'text', 'traveler', '{"pattern": "^[0-9+\\\\-\\\\s()]+$"}', '{"placeholder": "+82-10-1234-5678"}', false, 30),
+                        ('tour_guide_language', '가이드 언어', 'select', 'service', '{}', '{"options": ["한국어", "영어", "일본어", "중국어"]}', false, 40),
+                        ('pickup_location_detail', '픽업 위치 상세', 'text', 'service', '{"maxLength": 300}', '{"placeholder": "호텔 로비, 특정 위치 등"}', false, 50),
+                        ('internal_notes', '내부 메모', 'textarea', 'internal', '{"maxLength": 2000}', '{"placeholder": "내부 직원용 메모", "rows": 4}', false, 100)
+                    ON CONFLICT (field_key) DO NOTHING;
+                `);
+                
+                // 마이그레이션 로그 기록
+                await pool.query(
+                    'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
+                    ['002', 'ERP 확장: extras JSONB, field_defs, audits, assignments, settlements']
+                );
+                
+                await pool.query('COMMIT');
+                
+                console.log('✅ ERP 마이그레이션 002 완료!');
+                
+                // 생성된 테이블 확인
+                const tables = await pool.query(`
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name IN ('field_defs', 'reservation_audits', 'assignments', 'settlements')
+                    ORDER BY table_name
+                `);
+                
+                console.log('📊 ERP 테이블들:');
+                tables.rows.forEach(row => {
+                    console.log(`   ✓ ${row.table_name}`);
+                });
+                
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                console.error('❌ ERP 마이그레이션 실패:', error);
+                // 마이그레이션 실패해도 서버는 계속 실행
+            }
+        }
+
+        // 서버 시작
+        const PORT = process.env.PORT || 3000;
+        const server = app.listen(PORT, async () => {
+            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+            console.log(`관리자 페이지: http://localhost:${PORT}/admin`);
+            console.log(`카드 페이지: http://localhost:${PORT}/card`);
+            
+            // ERP 마이그레이션 실행
+            await runERPMigration();
+            
+            console.log('✅ 서버 준비 완료!');
         });
         
         return server;
