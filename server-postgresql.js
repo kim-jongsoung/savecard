@@ -4896,17 +4896,13 @@ app.post('/api/register-reservation', async (req, res) => {
 // 예약 등록 (텍스트 파싱) - 관리자용
 app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     try {
-        const { reservationText, selectedAgency } = req.body;
+        const { reservationText } = req.body;
         
         if (!reservationText || !reservationText.trim()) {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
         
-        if (!selectedAgency) {
-            return res.json({ success: false, message: '여행사를 선택해주세요.' });
-        }
-        
-        console.log('🏢 선택된 여행사:', selectedAgency);
+        console.log('📝 파싱 요청 받음 (여행사 선택 없음)');
         
         // OpenAI 지능형 텍스트 파싱 (검수형 워크플로우)
         console.log('🤖 OpenAI 파싱 시작...');
@@ -4934,15 +4930,7 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         // 정규화 처리
         const normalizedData = normalizeReservationData(parsedData);
         
-        // 선택된 여행사 정보를 파싱 결과에 적용
-        normalizedData.platform_name = selectedAgency.name;
-        normalizedData.agency_code = selectedAgency.code;
-        normalizedData.agency_id = selectedAgency.id;
-        
-        console.log('✅ 여행사 정보가 파싱 결과에 적용됨:', {
-            platform_name: normalizedData.platform_name,
-            agency_code: normalizedData.agency_code
-        });
+        console.log('✅ 파싱 완료 (여행사 정보는 파싱 결과에서 추출)');
         
         // 파싱 결과만 반환 (저장은 별도 단계)
         res.json({
@@ -4952,8 +4940,7 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             parsing_method: parsingMethod,
             confidence: confidence,
             extracted_notes: extractedNotes,
-            workflow: 'parsing_only',
-            selectedAgency: selectedAgency
+            workflow: 'parsing_only'
         });
         
     } catch (error) {
