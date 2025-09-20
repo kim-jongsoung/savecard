@@ -164,6 +164,41 @@
         .company-klook { background: #ff6b35; color: white; }
         .company-viator { background: #00a8cc; color: white; }
         .company-other { background: #6c757d; color: white; }
+        
+        /* 여행사 선택 버튼 스타일 */
+        .agency-selection-area {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .agency-btn {
+            height: 100px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .agency-btn:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+        
+        .agency-btn.selected {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .agency-btn.selected .text-muted {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
     </style>
 </head>
 <body>
@@ -293,6 +328,66 @@
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addReservationModal">
                         <i class="fas fa-keyboard me-2"></i>직접 입력
                     </button>
+                </div>
+
+                <!-- 여행사 선택 버튼 메뉴 -->
+                <div class="agency-selection-area mb-4">
+                    <h6><i class="fas fa-building me-2"></i>여행사 선택</h6>
+                    <p class="text-muted small mb-3">파싱할 예약 데이터의 여행사를 먼저 선택하세요. 선택된 여행사 정보가 자동으로 적용됩니다.</p>
+                    
+                    <div class="agency-buttons-container">
+                        <% if (agencies && agencies.length > 0) { %>
+                            <div class="row g-2">
+                                <% agencies.forEach((agency, index) => { %>
+                                    <div class="col-md-3 col-sm-4 col-6">
+                                        <button type="button" 
+                                                class="btn btn-outline-primary agency-btn w-100" 
+                                                data-agency-id="<%= agency.id %>"
+                                                data-agency-name="<%= agency.name %>"
+                                                data-agency-code="<%= agency.agency_code || agency.code %>"
+                                                onclick="selectAgency(this)">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <% if (agency.logo_url) { %>
+                                                    <img src="<%= agency.logo_url %>" alt="<%= agency.name %>" 
+                                                         style="max-width: 40px; max-height: 30px; object-fit: contain;" 
+                                                         class="mb-2">
+                                                <% } else { %>
+                                                    <i class="fas fa-building fa-2x mb-2"></i>
+                                                <% } %>
+                                                <div class="text-center">
+                                                    <div class="fw-bold small"><%= agency.name %></div>
+                                                    <div class="text-muted" style="font-size: 0.75rem;"><%= agency.agency_code || agency.code %></div>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                <% }); %>
+                            </div>
+                            
+                            <!-- 선택된 여행사 표시 -->
+                            <div id="selectedAgencyInfo" class="mt-3" style="display: none;">
+                                <div class="alert alert-info d-flex align-items-center">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <div>
+                                        <strong>선택된 여행사:</strong> 
+                                        <span id="selectedAgencyName"></span> 
+                                        (<code id="selectedAgencyCode"></code>)
+                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearAgencySelection()">
+                                            <i class="fas fa-times"></i> 선택 해제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        <% } else { %>
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-building fa-2x mb-2"></i>
+                                <p>등록된 여행사가 없습니다.</p>
+                                <a href="/admin/agencies" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i>여행사 추가하기
+                                </a>
+                            </div>
+                        <% } %>
+                    </div>
                 </div>
                 
                 <div class="parsing-area">
@@ -732,12 +827,23 @@
                 return;
             }
 
+            // 여행사 선택 확인
+            if (!selectedAgency) {
+                alert('먼저 여행사를 선택해주세요.');
+                return;
+            }
+
+            console.log('파싱 시작 - 선택된 여행사:', selectedAgency);
+
             fetch('/admin/reservations/parse', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ reservationText: text })
+                body: JSON.stringify({ 
+                    reservationText: text,
+                    selectedAgency: selectedAgency
+                })
             })
             .then(response => response.json())
             .then(data => {
@@ -2009,6 +2115,50 @@
         function toggleDetails(index) {
             // 예약 상세 정보 토글 기능 (향후 구현)
             console.log('Toggle details for reservation index:', index);
+        }
+
+        // 여행사 선택 관련 변수
+        let selectedAgency = null;
+
+        // 여행사 선택 함수
+        function selectAgency(button) {
+            // 모든 버튼에서 selected 클래스 제거
+            document.querySelectorAll('.agency-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 선택된 버튼에 selected 클래스 추가
+            button.classList.add('selected');
+            
+            // 선택된 여행사 정보 저장
+            selectedAgency = {
+                id: button.dataset.agencyId,
+                name: button.dataset.agencyName,
+                code: button.dataset.agencyCode
+            };
+            
+            // 선택된 여행사 정보 표시
+            document.getElementById('selectedAgencyName').textContent = selectedAgency.name;
+            document.getElementById('selectedAgencyCode').textContent = selectedAgency.code;
+            document.getElementById('selectedAgencyInfo').style.display = 'block';
+            
+            console.log('선택된 여행사:', selectedAgency);
+        }
+
+        // 여행사 선택 해제 함수
+        function clearAgencySelection() {
+            // 모든 버튼에서 selected 클래스 제거
+            document.querySelectorAll('.agency-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 선택된 여행사 정보 초기화
+            selectedAgency = null;
+            
+            // 선택된 여행사 정보 숨기기
+            document.getElementById('selectedAgencyInfo').style.display = 'none';
+            
+            console.log('여행사 선택이 해제되었습니다.');
         }
 
         // 탭 활성화 처리

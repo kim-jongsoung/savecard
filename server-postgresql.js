@@ -4691,6 +4691,9 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                 totalCount
             };
             
+            // 여행사 목록 조회
+            const agencies = await dbHelpers.getAgencies().catch(() => []);
+            
             res.render('admin/reservations', {
                 title: '예약 관리',
                 adminUsername: req.session.adminUsername || 'admin',
@@ -4703,17 +4706,22 @@ app.get('/admin/reservations', requireAuth, async (req, res) => {
                 status: status,
                 draft_search: req.query.draft_search || '',
                 draft_status: req.query.draft_status || '',
-                activeTab: activeTab
+                activeTab: activeTab,
+                agencies: agencies
             });
         } else {
             console.log('📁 JSON 모드로 실행 중');
+            // 여행사 목록 조회
+            const agencies = await dbHelpers.getAgencies().catch(() => []);
+            
             res.render('admin/reservations', {
                 title: '예약 관리',
                 adminUsername: req.session.adminUsername || 'admin',
                 stats: { total_reservations: 0, code_issued: 0, pending_codes: 0, companies: 0, drafts_pending: 0, drafts_ready: 0 },
                 reservations: [],
                 drafts: [],
-                pagination: { page: 1, totalPages: 1, hasNext: false, hasPrev: false }
+                pagination: { page: 1, totalPages: 1, hasNext: false, hasPrev: false },
+                agencies: agencies
             });
         }
     } catch (error) {
@@ -4862,11 +4870,17 @@ app.post('/api/register-reservation', async (req, res) => {
 // 예약 등록 (텍스트 파싱) - 관리자용
 app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     try {
-        const { reservationText } = req.body;
+        const { reservationText, selectedAgency } = req.body;
         
         if (!reservationText || !reservationText.trim()) {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
+        
+        if (!selectedAgency) {
+            return res.json({ success: false, message: '여행사를 선택해주세요.' });
+        }
+        
+        console.log('🏢 선택된 여행사:', selectedAgency);
         
         // OpenAI 지능형 텍스트 파싱 (검수형 워크플로우)
         console.log('🤖 OpenAI 파싱 시작...');
@@ -4894,6 +4908,16 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         // 정규화 처리
         const normalizedData = normalizeReservationData(parsedData);
         
+        // 선택된 여행사 정보를 파싱 결과에 적용
+        normalizedData.platform_name = selectedAgency.name;
+        normalizedData.agency_code = selectedAgency.code;
+        normalizedData.agency_id = selectedAgency.id;
+        
+        console.log('✅ 여행사 정보가 파싱 결과에 적용됨:', {
+            platform_name: normalizedData.platform_name,
+            agency_code: normalizedData.agency_code
+        });
+        
         // 파싱 결과만 반환 (저장은 별도 단계)
         res.json({
             success: true,
@@ -4902,7 +4926,8 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             parsing_method: parsingMethod,
             confidence: confidence,
             extracted_notes: extractedNotes,
-            workflow: 'parsing_only'
+            workflow: 'parsing_only',
+            selectedAgency: selectedAgency
         });
         
     } catch (error) {
