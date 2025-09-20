@@ -5989,23 +5989,77 @@ app.patch('/api/bookings/:id', requireAuth, async (req, res) => {
 // field_defs 조회 API
 app.get('/api/field-defs', requireAuth, async (req, res) => {
     try {
-        const result = await pool.query(`
-            SELECT * FROM field_defs 
-            WHERE is_active = true 
-            ORDER BY field_group, sort_order, field_name
+        console.log('📋 /api/field-defs 요청 받음');
+        
+        // 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = 'field_defs'
         `);
+        
+        if (tableCheck.rows.length === 0) {
+            console.log('❌ field_defs 테이블이 존재하지 않음');
+            return res.json({
+                success: false,
+                message: 'field_defs 테이블이 존재하지 않습니다.',
+                data: []
+            });
+        }
+        
+        // 컬럼 구조 확인
+        const columnCheck = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'field_defs'
+            ORDER BY ordinal_position
+        `);
+        
+        console.log('📊 field_defs 테이블 컬럼:', columnCheck.rows);
+        
+        // 데이터 조회 (컬럼명 확인 후)
+        const hasIsActive = columnCheck.rows.some(col => col.column_name === 'is_active');
+        const hasFieldGroup = columnCheck.rows.some(col => col.column_name === 'field_group');
+        const hasSortOrder = columnCheck.rows.some(col => col.column_name === 'sort_order');
+        const hasFieldName = columnCheck.rows.some(col => col.column_name === 'field_name');
+        
+        let query = 'SELECT * FROM field_defs';
+        let whereClause = '';
+        let orderClause = ' ORDER BY id';
+        
+        if (hasIsActive) {
+            whereClause = ' WHERE is_active = true';
+        }
+        
+        if (hasFieldGroup && hasSortOrder && hasFieldName) {
+            orderClause = ' ORDER BY field_group, sort_order, field_name';
+        } else if (hasFieldName) {
+            orderClause = ' ORDER BY field_name';
+        }
+        
+        const finalQuery = query + whereClause + orderClause;
+        console.log('🔍 실행할 쿼리:', finalQuery);
+        
+        const result = await pool.query(finalQuery);
+        
+        console.log('✅ field_defs 조회 결과:', result.rows.length, '개');
         
         res.json({
             success: true,
-            data: result.rows
+            data: result.rows,
+            meta: {
+                count: result.rows.length,
+                columns: columnCheck.rows.map(col => col.column_name)
+            }
         });
         
     } catch (error) {
-        console.error('field_defs 조회 오류:', error);
+        console.error('❌ field_defs 조회 오류:', error);
         res.json({
             success: false,
-            message: 'field_defs를 불러올 수 없습니다.',
-            data: []
+            message: 'field_defs를 불러올 수 없습니다: ' + error.message,
+            data: [],
+            error: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
