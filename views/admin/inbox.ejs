@@ -452,7 +452,7 @@
         async function saveReservation() {
             if (!parsedData) return;
 
-            // 폼에서 모든 값들 수집
+            // 폼에서 모든 값들 수집하고 필드명 매핑
             const formData = {};
             document.querySelectorAll('#previewArea input, #previewArea select, #previewArea textarea').forEach(element => {
                 if (element.name) {
@@ -460,20 +460,46 @@
                 }
             });
 
+            // 필드명을 DB 스키마에 맞게 매핑
+            const mappedData = {
+                reservation_number: formData.reservation_number,
+                platform_name: formData.platform_name,
+                payment_status: formData.payment_status || 'confirmed',
+                product_name: formData.product_name,
+                package_type: formData.package_type,
+                usage_date: formData.tour_date,
+                usage_time: formData.tour_time,
+                reservation_datetime: formData.booking_date ? formData.booking_date.replace('T', ' ') : null,
+                korean_name: formData.customer_name,
+                english_last_name: formData.customer_lastname,
+                english_first_name: formData.customer_firstname,
+                phone: formData.customer_phone,
+                email: formData.customer_email,
+                kakao_id: formData.kakao_id,
+                people_adult: parseInt(formData.adult_count) || 1,
+                people_child: parseInt(formData.child_count) || 0,
+                people_infant: parseInt(formData.infant_count) || 0,
+                adult_unit_price: parseFloat(formData.adult_price) || null,
+                child_unit_price: parseFloat(formData.child_price) || null,
+                memo: formData.special_requests,
+                channel: 'inbox',
+                guest_count: (parseInt(formData.adult_count) || 1) + (parseInt(formData.child_count) || 0) + (parseInt(formData.infant_count) || 0)
+            };
+
             try {
-                const response = await fetch('/admin/reservations/save', {
+                const response = await fetch('/api/reservations', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ parsedData: formData })
+                    body: JSON.stringify(mappedData)
                 });
 
                 const result = await response.json();
                 
-                if (result.success) {
+                if (result.success || response.ok) {
                     alert('예약이 저장되었습니다.');
                     clearForm();
                 } else {
-                    alert('저장 실패: ' + result.message);
+                    alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
                 }
             } catch (error) {
                 console.error('저장 오류:', error);

@@ -5041,6 +5041,96 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
     }
 });
 
+// 예약 생성 API (인박스에서 사용)
+app.post('/api/reservations', requireAuth, async (req, res) => {
+    try {
+        const reservationData = req.body;
+        
+        if (dbMode === 'postgresql') {
+            // 예약번호 중복 체크 및 자동 생성
+            if (reservationData.reservation_number) {
+                const checkQuery = 'SELECT id FROM reservations WHERE reservation_number = $1';
+                const existingReservation = await pool.query(checkQuery, [reservationData.reservation_number]);
+                
+                if (existingReservation.rows.length > 0) {
+                    // 중복된 예약번호가 있으면 새로운 번호 생성
+                    const timestamp = Date.now();
+                    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+                    reservationData.reservation_number = `${reservationData.reservation_number}_${random}`;
+                    console.log('🔄 중복 예약번호 감지, 새 번호 생성:', reservationData.reservation_number);
+                }
+            } else {
+                // 예약번호가 없으면 자동 생성
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+                reservationData.reservation_number = `AUTO_${timestamp}_${random}`;
+            }
+
+            const insertQuery = `
+                INSERT INTO reservations (
+                    reservation_number, confirmation_number, channel, platform_name,
+                    product_name, package_type, total_amount, quantity, guest_count,
+                    korean_name, english_first_name, english_last_name, email, phone, kakao_id,
+                    people_adult, people_child, people_infant, adult_unit_price, child_unit_price,
+                    usage_date, usage_time, reservation_datetime, payment_status,
+                    memo, created_at, updated_at
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()
+                ) RETURNING id, reservation_number
+            `;
+            
+            const values = [
+                reservationData.reservation_number,
+                reservationData.confirmation_number || null,
+                reservationData.channel || 'inbox',
+                reservationData.platform_name || null,
+                reservationData.product_name || null,
+                reservationData.package_type || null,
+                reservationData.total_amount || null,
+                reservationData.quantity || null,
+                reservationData.guest_count || null,
+                reservationData.korean_name || null,
+                reservationData.english_first_name || null,
+                reservationData.english_last_name || null,
+                reservationData.email || null,
+                reservationData.phone || null,
+                reservationData.kakao_id || null,
+                reservationData.people_adult || null,
+                reservationData.people_child || null,
+                reservationData.people_infant || null,
+                reservationData.adult_unit_price || null,
+                reservationData.child_unit_price || null,
+                reservationData.usage_date || null,
+                reservationData.usage_time || null,
+                reservationData.reservation_datetime || null,
+                reservationData.payment_status || 'confirmed',
+                reservationData.memo || null
+            ];
+
+            const result = await pool.query(insertQuery, values);
+            
+            res.json({
+                success: true,
+                message: '예약이 성공적으로 저장되었습니다.',
+                reservation: {
+                    id: result.rows[0].id,
+                    reservation_number: result.rows[0].reservation_number
+                }
+            });
+        } else {
+            res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
+        }
+        
+    } catch (error) {
+        console.error('예약 저장 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '예약 저장 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
 // 직접 예약 데이터 입력 API
 app.post('/api/reservations/direct', requireAuth, async (req, res) => {
     try {
