@@ -45,14 +45,26 @@ issue_code_id, code_issued, code_issued_at, platform_name,
 people_adult, people_child, people_infant,
 adult_unit_price, child_unit_price, payment_status
 
-📌 규칙:
+📌 중요 규칙:
 - 모든 필드는 반드시 포함 (값을 모르면 null)
 - 금액은 숫자(float), 인원은 정수
-- 날짜는 YYYY-MM-DD, 시간은 HH:MM
+- 날짜는 YYYY-MM-DD, 시간은 HH:MM:SS
 - created_at, updated_at은 "NOW()" 문자열로 채운다
 - 취소된 예약은 payment_status="cancelled"
 - id는 null (DB 자동생성)
 - issue_code_id는 null
+
+🔍 필수 파싱 필드 (절대 누락 금지):
+- platform_name: 업체명/여행사명 (VASCO, NOL, KLOOK 등)
+- usage_date: 이용일/출발일/여행일 (YYYY-MM-DD)
+- usage_time: 이용시간/출발시간 (HH:MM:SS)
+- reservation_datetime: 예약일시/접수일시 (YYYY-MM-DD HH:MM:SS)
+- korean_name: 한글명/예약자명/고객명
+- english_first_name: 영문이름/First Name
+- english_last_name: 영문성/Last Name/Family Name
+- people_adult: 성인수/어른수 (정수)
+- people_child: 아동수/어린이수/소아수 (정수)
+- people_infant: 유아수/영아수/베이비수 (정수)
 
 🔍 추가 필드 (검수용):
 - confidence: 파싱 신뢰도 (0.0~1.0, 소수점 2자리)
@@ -68,7 +80,7 @@ adult_unit_price, child_unit_price, payment_status
   "total_amount": 304.00,
   "package_type": "개별이동 + 점심포함",
   "usage_date": "2025-10-09",
-  "usage_time": null,
+  "usage_time": "14:30:00",
   "quantity": 3,
   "korean_name": "구병모",
   "english_first_name": "BYUNGMO",
@@ -78,12 +90,12 @@ adult_unit_price, child_unit_price, payment_status
   "kakao_id": "ddendde",
   "guest_count": 3,
   "memo": "호텔: 츠바키 타워. 항공편 정보: 출국 LJ0917 9월 20일 새벽 02:30, 귀국 LJ0918 9월 23일 새벽 03:40. 짐 정보: 골프백 2개, 유모차 1개, 캐리어 4개. 중요사항: 괌 출국편 새벽 3시 및 3시 이후 출발편은 전날 23:30-00:00 사이 픽업합니다. 동의 하시는 분만 구매 부탁드립니다. 기타 요청사항: 아이 알레르기 있음, 견과류 제외 요청.",
-  "reservation_datetime": "2025-09-17T02:27:14",
+  "reservation_datetime": "2025-09-17 02:27:14",
   "created_at": "NOW()",
   "updated_at": "NOW()",
   "issue_code_id": null,
   "code_issued": true,
-  "code_issued_at": "2025-09-17T11:22:47",
+  "code_issued_at": "2025-09-17 11:22:47",
   "platform_name": "VASCO",
   "people_adult": 2,
   "people_child": 1,
@@ -104,6 +116,16 @@ adult_unit_price, child_unit_price, payment_status
 - 중요 안내사항
 - 기타 모든 고객 메모나 요청사항
 - 원본 텍스트에서 찾을 수 있는 모든 부가 정보를 자연스러운 문장으로 정리
+
+🔍 파싱 가이드라인:
+- 업체명/여행사명이 없으면 platform_name을 "UNKNOWN"으로 설정
+- 이용일/출발일/여행일을 찾아서 usage_date에 YYYY-MM-DD 형식으로 저장
+- 이용시간/출발시간을 찾아서 usage_time에 HH:MM:SS 형식으로 저장
+- 예약일시/접수일시를 찾아서 reservation_datetime에 YYYY-MM-DD HH:MM:SS 형식으로 저장
+- 한글 이름을 korean_name에, 영문 이름을 분리해서 first/last name에 저장
+- 성인/어른/대인 수를 people_adult에, 아동/어린이/소아 수를 people_child에 저장
+- 유아/영아/베이비 수를 people_infant에 저장
+- 인원 정보가 없으면 기본값: people_adult=1, people_child=0, people_infant=0
 
 📊 confidence 평가 기준:
 - 0.9~1.0: 모든 핵심 정보 명확, 검수 불필요
