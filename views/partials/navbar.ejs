@@ -1,78 +1,85 @@
 <!-- 네비게이션 - 두 줄 구조 -->
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <!-- 첫 번째 줄: 브랜드 + 사용자 메뉴 -->
-        <div class="d-flex justify-content-between align-items-center w-100">
-            <a class="navbar-brand" href="/admin">
-                <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="navbar-nav">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user me-1"></i><%= adminUsername %>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
-                    </ul>
+        <!-- 첫 번째 줄: 로고 | 주메뉴 | 로그인메뉴 -->
+        <div class="row w-100 align-items-center">
+            <!-- 로고 영역 -->
+            <div class="col-3">
+                <a class="navbar-brand" href="/admin">
+                    <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
+                </a>
+            </div>
+            
+            <!-- 주메뉴 영역 -->
+            <div class="col-6">
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <!-- 괌세이브카드 메뉴 -->
+                    <div class="nav-row justify-content-center mb-2">
+                        <span class="nav-section-title">
+                            <i class="fas fa-credit-card me-1"></i>괌세이브카드
+                        </span>
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin">대시보드</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자 관리</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사 관리</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'stores' ? 'active' : '' %>" href="/admin/stores">가맹점 관리</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'usages' ? 'active' : '' %>" href="/admin/usages">사용 내역</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'issue-codes' ? 'active' : '' %>" href="/admin/issue-codes">발급 코드</a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 예약관리 ERP 메뉴 -->
+                    <div class="nav-row justify-content-center">
+                        <span class="nav-section-title">
+                            <i class="fas fa-calendar-alt me-1"></i>예약관리 ERP
+                        </span>
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'assignments' ? 'active' : '' %>" href="/admin/assignments">수배관리</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'settlements' ? 'active' : '' %>" href="/admin/settlements">정산관리</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">설정</a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- 두 번째 줄: 메뉴들 -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <div class="w-100">
-                <!-- 괌세이브카드 메뉴 -->
-                <div class="nav-row justify-content-center">
-                    <span class="nav-section-title">
-                        <i class="fas fa-credit-card me-1"></i>괌세이브카드
-                    </span>
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin">대시보드</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자 관리</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사 관리</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'stores' ? 'active' : '' %>" href="/admin/stores">가맹점 관리</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'usages' ? 'active' : '' %>" href="/admin/usages">사용 내역</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'issue-codes' ? 'active' : '' %>" href="/admin/issue-codes">발급 코드</a>
-                        </li>
-                    </ul>
-                </div>
-                
-                <!-- 예약관리 ERP 메뉴 -->
-                <div class="nav-row justify-content-center">
-                    <span class="nav-section-title">
-                        <i class="fas fa-calendar-alt me-1"></i>예약관리 ERP
-                    </span>
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'assignments' ? 'active' : '' %>" href="/admin/assignments">수배관리</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'settlements' ? 'active' : '' %>" href="/admin/settlements">정산관리</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">설정</a>
-                        </li>
-                    </ul>
+            
+            <!-- 로그인/로그아웃 영역 -->
+            <div class="col-3 text-end">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-nav d-inline-flex">
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user me-1"></i><%= adminUsername %>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
