@@ -85,9 +85,13 @@
                                     <option value="cancelled">취소됨</option>
                                 </select>
                             </div>
-                            <div class="col-12 mb-3">
+                            <div class="col-md-8 mb-3">
                                 <label class="form-label">상품명</label>
                                 <input type="text" class="form-control" id="product_name" name="product_name">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">패키지 타입</label>
+                                <input type="text" class="form-control" id="package_type" name="package_type" placeholder="예: 개별이동, 단체이동, 픽업포함 등">
                             </div>
                         </div>
 
@@ -275,18 +279,37 @@
         function fillPreviewForm(data) {
             console.log('📋 파싱된 데이터:', data);
             
-            // 바스코/럭스파인드 회사명 제외 함수
-            function filterCompanyName(name) {
-                if (!name) return '';
-                const excludeCompanies = ['바스코', 'vasco', 'VASCO', '럭스파인드', 'luxfind', 'LUXFIND'];
-                const lowerName = name.toLowerCase();
+            // 업체명 추출 함수 (판매채널/업체명/플랫폼 중 우선순위)
+            function extractCompanyName(data) {
+                // 우선순위: platform_name > channel > company
+                const candidates = [
+                    data.platform_name,
+                    data.channel, 
+                    data.company,
+                    data.vendor,
+                    data.agency
+                ];
                 
-                for (let company of excludeCompanies) {
-                    if (lowerName.includes(company.toLowerCase())) {
-                        return '';
+                for (let name of candidates) {
+                    if (name && name.trim() && name !== 'OTHER' && name !== 'UNKNOWN') {
+                        // 바스코/럭스파인드 제외
+                        const excludeCompanies = ['바스코', 'vasco', 'VASCO', '럭스파인드', 'luxfind', 'LUXFIND'];
+                        const lowerName = name.toLowerCase();
+                        
+                        let isExcluded = false;
+                        for (let company of excludeCompanies) {
+                            if (lowerName.includes(company.toLowerCase())) {
+                                isExcluded = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!isExcluded) {
+                            return name.trim();
+                        }
                     }
                 }
-                return name;
+                return '';
             }
             
             // 날짜 형식 변환 함수
@@ -339,9 +362,10 @@
             // 모든 필드 매핑 (AI 파서 필드명 → 폼 필드명)
             const fieldMappings = {
                 'reservation_number': data.reservation_number || data.booking_reference || data.order_number || '',
-                'platform_name': filterCompanyName(data.platform_name || data.company || data.channel || ''),
+                'platform_name': extractCompanyName(data),
                 'payment_status': data.payment_status || 'confirmed',
                 'product_name': data.product_name || data.tour_name || data.service_name || '',
+                'package_type': data.package_type || data.package || data.option || '',
                 'tour_date': formatDate(data.usage_date || data.tour_date || data.date || data.service_date || ''),
                 'tour_time': formatTime(data.usage_time || data.tour_time || data.time || data.service_time || ''),
                 'booking_date': formatDateTime(data.reservation_datetime || data.booking_date || data.created_at || data.reservation_date || ''),
@@ -350,7 +374,7 @@
                 'customer_firstname': data.english_first_name || data.customer_firstname || data.first_name || data.given_name || '',
                 'customer_phone': data.phone || data.customer_phone || data.mobile || data.contact || '',
                 'customer_email': data.email || data.customer_email || '',
-                'kakao_id': data.kakao_id || data.kakao || '',
+                'kakao_id': data.kakao_id || data.kakao || data.kakao_talk || data.kakaotalk || '',
                 'adult_count': parseInt(data.people_adult || data.adult_count || data.adults || data.adult || 0),
                 'child_count': parseInt(data.people_child || data.child_count || data.children || data.child || 0),
                 'infant_count': parseInt(data.people_infant || data.infant_count || data.infants || data.infant || 0),
