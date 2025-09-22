@@ -176,46 +176,120 @@
                 <div class="modal-body">
                     <form id="reservationForm">
                         <input type="hidden" id="reservationId">
-                        <div class="row g-3">
-                            <div class="col-md-6">
+                        
+                        <!-- 예약 정보 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-info-circle me-2"></i>예약 정보</h6>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">예약번호</label>
+                                <input type="text" class="form-control" id="reservation_number" name="reservation_number">
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">업체명</label>
-                                <input type="text" class="form-control" id="modalCompany">
+                                <input type="text" class="form-control" id="platform_name" name="platform_name">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">상품명</label>
-                                <input type="text" class="form-control" id="modalProduct">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">예약자명</label>
-                                <input type="text" class="form-control" id="modalCustomer">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">연락처</label>
-                                <input type="text" class="form-control" id="modalPhone">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">출발일</label>
-                                <input type="date" class="form-control" id="modalDepartureDate">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">예약일</label>
-                                <input type="date" class="form-control" id="modalBookingDate">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">상태</label>
-                                <select class="form-select" id="modalStatus">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">결제 상태</label>
+                                <select class="form-control" id="payment_status" name="payment_status">
                                     <option value="pending">대기중</option>
-                                    <option value="confirmed">확정</option>
-                                    <option value="cancelled">취소</option>
+                                    <option value="confirmed">확인됨</option>
+                                    <option value="cancelled">취소됨</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">금액</label>
-                                <input type="number" class="form-control" id="modalAmount">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">상품명</label>
+                                <input type="text" class="form-control" id="product_name" name="product_name">
                             </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">패키지 타입 (상품 옵션)</label>
+                                <input type="text" class="form-control" id="package_type" name="package_type">
+                            </div>
+                        </div>
+
+                        <!-- 일정 정보 섹션 -->
+                        <div class="row mb-4">
                             <div class="col-12">
-                                <label class="form-label">메모</label>
-                                <textarea class="form-control" id="modalMemo" rows="3"></textarea>
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-calendar me-2"></i>일정 정보</h6>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">이용일</label>
+                                <input type="date" class="form-control" id="tour_date" name="tour_date">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">이용시간</label>
+                                <input type="time" class="form-control" id="tour_time" name="tour_time">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">예약일시</label>
+                                <input type="datetime-local" class="form-control" id="booking_date" name="booking_date">
+                            </div>
+                        </div>
+
+                        <!-- 예약자 정보 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-user me-2"></i>예약자 정보</h6>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">한글명</label>
+                                <input type="text" class="form-control" id="customer_name" name="customer_name">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">영문 성</label>
+                                <input type="text" class="form-control" id="customer_lastname" name="customer_lastname">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">영문 이름</label>
+                                <input type="text" class="form-control" id="customer_firstname" name="customer_firstname">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">전화번호</label>
+                                <input type="tel" class="form-control" id="customer_phone" name="customer_phone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">이메일</label>
+                                <input type="email" class="form-control" id="customer_email" name="customer_email">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">카카오ID</label>
+                                <input type="text" class="form-control" id="kakao_id" name="kakao_id">
+                            </div>
+                        </div>
+
+                        <!-- 인원 및 금액 정보 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-users me-2"></i>인원 및 금액 정보</h6>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">성인수</label>
+                                <input type="number" class="form-control" id="adult_count" name="adult_count" min="0" value="1">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">아동수</label>
+                                <input type="number" class="form-control" id="child_count" name="child_count" min="0" value="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">유아수</label>
+                                <input type="number" class="form-control" id="infant_count" name="infant_count" min="0" value="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">성인 단가($)</label>
+                                <input type="number" class="form-control" id="adult_price" name="adult_price" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">아동 단가($)</label>
+                                <input type="number" class="form-control" id="child_price" name="child_price" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">유아 단가($)</label>
+                                <input type="number" class="form-control" id="infant_price" name="infant_price" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">특별 요청사항</label>
+                                <textarea class="form-control" id="special_requests" name="special_requests" rows="3"></textarea>
                             </div>
                         </div>
                     </form>
@@ -322,16 +396,35 @@
             const reservation = reservations.find(r => r.id === id);
             if (!reservation) return;
 
+            // 기본 정보
             document.getElementById('reservationId').value = reservation.id;
-            document.getElementById('modalCompany').value = reservation.platform_name || '';
-            document.getElementById('modalProduct').value = reservation.product_name || '';
-            document.getElementById('modalCustomer').value = reservation.customer_name || '';
-            document.getElementById('modalPhone').value = reservation.phone || '';
-            document.getElementById('modalDepartureDate').value = reservation.departure_date || '';
-            document.getElementById('modalBookingDate').value = reservation.booking_date || '';
-            document.getElementById('modalStatus').value = reservation.status || 'pending';
-            document.getElementById('modalAmount').value = reservation.total_amount || '';
-            document.getElementById('modalMemo').value = reservation.memo || '';
+            document.getElementById('reservation_number').value = reservation.reservation_number || '';
+            document.getElementById('platform_name').value = reservation.platform_name || '';
+            document.getElementById('payment_status').value = reservation.payment_status || 'pending';
+            document.getElementById('product_name').value = reservation.product_name || '';
+            document.getElementById('package_type').value = reservation.package_type || '';
+            
+            // 일정 정보
+            document.getElementById('tour_date').value = reservation.usage_date || '';
+            document.getElementById('tour_time').value = reservation.usage_time || '';
+            document.getElementById('booking_date').value = reservation.reservation_datetime ? reservation.reservation_datetime.replace(' ', 'T').substring(0, 16) : '';
+            
+            // 예약자 정보
+            document.getElementById('customer_name').value = reservation.korean_name || '';
+            document.getElementById('customer_lastname').value = reservation.english_last_name || '';
+            document.getElementById('customer_firstname').value = reservation.english_first_name || '';
+            document.getElementById('customer_phone').value = reservation.phone || '';
+            document.getElementById('customer_email').value = reservation.email || '';
+            document.getElementById('kakao_id').value = reservation.kakao_id || '';
+            
+            // 인원 및 금액 정보
+            document.getElementById('adult_count').value = reservation.people_adult || 1;
+            document.getElementById('child_count').value = reservation.people_child || 0;
+            document.getElementById('infant_count').value = reservation.people_infant || 0;
+            document.getElementById('adult_price').value = reservation.adult_unit_price || '';
+            document.getElementById('child_price').value = reservation.child_unit_price || '';
+            document.getElementById('infant_price').value = reservation.infant_unit_price || 0;
+            document.getElementById('special_requests').value = reservation.memo || '';
 
             new bootstrap.Modal(document.getElementById('reservationModal')).show();
         }
@@ -340,15 +433,27 @@
         async function saveReservation() {
             const id = document.getElementById('reservationId').value;
             const data = {
-                platform_name: document.getElementById('modalCompany').value,
-                product_name: document.getElementById('modalProduct').value,
-                customer_name: document.getElementById('modalCustomer').value,
-                phone: document.getElementById('modalPhone').value,
-                departure_date: document.getElementById('modalDepartureDate').value,
-                booking_date: document.getElementById('modalBookingDate').value,
-                status: document.getElementById('modalStatus').value,
-                total_amount: document.getElementById('modalAmount').value,
-                memo: document.getElementById('modalMemo').value
+                reservation_number: document.getElementById('reservation_number').value,
+                platform_name: document.getElementById('platform_name').value,
+                payment_status: document.getElementById('payment_status').value,
+                product_name: document.getElementById('product_name').value,
+                package_type: document.getElementById('package_type').value,
+                usage_date: document.getElementById('tour_date').value,
+                usage_time: document.getElementById('tour_time').value,
+                reservation_datetime: document.getElementById('booking_date').value.replace('T', ' '),
+                korean_name: document.getElementById('customer_name').value,
+                english_last_name: document.getElementById('customer_lastname').value,
+                english_first_name: document.getElementById('customer_firstname').value,
+                phone: document.getElementById('customer_phone').value,
+                email: document.getElementById('customer_email').value,
+                kakao_id: document.getElementById('kakao_id').value,
+                people_adult: parseInt(document.getElementById('adult_count').value) || 1,
+                people_child: parseInt(document.getElementById('child_count').value) || 0,
+                people_infant: parseInt(document.getElementById('infant_count').value) || 0,
+                adult_unit_price: parseFloat(document.getElementById('adult_price').value) || null,
+                child_unit_price: parseFloat(document.getElementById('child_price').value) || null,
+                infant_unit_price: parseFloat(document.getElementById('infant_price').value) || 0,
+                memo: document.getElementById('special_requests').value
             };
 
             try {

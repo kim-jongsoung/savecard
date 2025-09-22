@@ -4947,6 +4947,20 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
         // 정규화 처리
         const normalizedData = normalizeReservationData(parsedData);
         
+        // 예약번호 중복 체크 및 자동 생성
+        if (normalizedData.reservation_number) {
+            const checkQuery = 'SELECT id FROM reservations WHERE reservation_number = $1';
+            const existingReservation = await pool.query(checkQuery, [normalizedData.reservation_number]);
+            
+            if (existingReservation.rows.length > 0) {
+                // 중복된 예약번호가 있으면 새로운 번호 생성
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+                normalizedData.reservation_number = `${normalizedData.reservation_number}_${random}`;
+                console.log('🔄 중복 예약번호 감지, 새 번호 생성:', normalizedData.reservation_number);
+            }
+        }
+        
         // 예약 테이블에 직접 저장
         if (dbMode === 'postgresql') {
             try {
