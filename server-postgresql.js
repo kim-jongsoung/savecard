@@ -271,12 +271,12 @@ app.get('/api/test', (req, res) => {
 // 기존 데이터베이스를 사용한 간단한 예약 목록 API
 app.get('/api/reservations', async (req, res) => {
     try {
-        const query = 'SELECT * FROM reservations ORDER BY created_at DESC LIMIT 10';
+        const query = 'SELECT * FROM reservations ORDER BY created_at DESC LIMIT 100';
         const result = await pool.query(query);
         res.json({
             success: true,
             count: result.rows.length,
-            data: result.rows
+            reservations: result.rows
         });
     } catch (error) {
         console.error('예약 목록 조회 오류:', error);

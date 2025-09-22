@@ -345,13 +345,13 @@
 
             tbody.innerHTML = filteredReservations.map(reservation => `
                 <tr onclick="openReservationModal(${reservation.id})">
-                    <td>${reservation.id}</td>
+                    <td>${reservation.reservation_number || reservation.id}</td>
                     <td>${reservation.platform_name || '-'}</td>
                     <td>${reservation.product_name || '-'}</td>
-                    <td>${reservation.customer_name || '-'}</td>
-                    <td>${formatDate(reservation.departure_date)}</td>
-                    <td>${formatDate(reservation.booking_date)}</td>
-                    <td><span class="status-badge status-${reservation.status || 'pending'}">${getStatusText(reservation.status)}</span></td>
+                    <td>${reservation.korean_name || '-'}</td>
+                    <td>${formatDate(reservation.usage_date)}</td>
+                    <td>${formatDate(reservation.reservation_datetime)}</td>
+                    <td><span class="status-badge status-${reservation.payment_status || 'pending'}">${getStatusText(reservation.payment_status)}</span></td>
                     <td>${formatCurrency(reservation.total_amount)}</td>
                 </tr>
             `).join('');
@@ -369,10 +369,10 @@
             filteredReservations = reservations.filter(reservation => {
                 return (!company || (reservation.platform_name || '').toLowerCase().includes(company)) &&
                        (!product || (reservation.product_name || '').toLowerCase().includes(product)) &&
-                       (!customer || (reservation.customer_name || '').toLowerCase().includes(customer)) &&
-                       (!departureDate || reservation.departure_date === departureDate) &&
-                       (!bookingDate || reservation.booking_date === bookingDate) &&
-                       (!status || reservation.status === status);
+                       (!customer || (reservation.korean_name || '').toLowerCase().includes(customer)) &&
+                       (!departureDate || reservation.usage_date === departureDate) &&
+                       (!bookingDate || (reservation.reservation_datetime || '').startsWith(bookingDate)) &&
+                       (!status || reservation.payment_status === status);
             });
 
             renderReservations();
