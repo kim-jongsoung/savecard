@@ -78,11 +78,12 @@
                                 <input type="text" class="form-control" id="platform_name" name="platform_name">
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">결제 상태</label>
+                                <label class="form-label">예약 상태</label>
                                 <select class="form-control" id="payment_status" name="payment_status">
-                                    <option value="pending">대기중</option>
-                                    <option value="confirmed">확인됨</option>
-                                    <option value="cancelled">취소됨</option>
+                                    <option value="pending">대기중 (신규예약)</option>
+                                    <option value="confirmed">확정 (수배완료)</option>
+                                    <option value="cancelled">예약취소</option>
+                                    <option value="refunded">환불완료</option>
                                 </select>
                             </div>
                             <div class="col-md-8 mb-3">
@@ -464,7 +465,7 @@
             const mappedData = {
                 reservation_number: formData.reservation_number,
                 platform_name: formData.platform_name,
-                payment_status: formData.payment_status || 'confirmed',
+                payment_status: formData.payment_status || 'pending',
                 product_name: formData.product_name,
                 package_type: formData.package_type,
                 usage_date: formData.tour_date,

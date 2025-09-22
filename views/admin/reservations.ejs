@@ -62,9 +62,22 @@
             font-weight: 500;
         }
         
-        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-pending { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            font-weight: 600;
+            border: 2px solid #ffc107;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        }
         .status-confirmed { background-color: #d1ecf1; color: #0c5460; }
         .status-cancelled { background-color: #f8d7da; color: #721c24; }
+        .status-refunded { background-color: #d4edda; color: #155724; }
         
         .btn-primary {
             background: linear-gradient(45deg, #667eea, #764ba2);
@@ -90,7 +103,11 @@
         <!-- 검색 필터 -->
         <div class="search-filters">
             <h5 class="mb-3"><i class="fas fa-search me-2"></i>예약 검색</h5>
-            <div class="row g-3">
+            <div class="row mb-3">
+                <div class="col-md-2">
+                    <label class="form-label">예약번호</label>
+                    <input type="text" class="form-control" id="searchReservationNumber" placeholder="예약번호 검색">
+                </div>
                 <div class="col-md-2">
                     <label class="form-label">업체명</label>
                     <input type="text" class="form-control" id="searchCompany" placeholder="업체명 검색">
@@ -108,17 +125,20 @@
                     <input type="date" class="form-control" id="searchDepartureDate">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">예약일</label>
-                    <input type="date" class="form-control" id="searchBookingDate">
-                </div>
-                <div class="col-md-2">
                     <label class="form-label">상태</label>
                     <select class="form-select" id="searchStatus">
                         <option value="">전체</option>
-                        <option value="pending">대기중</option>
-                        <option value="confirmed">확정</option>
-                        <option value="cancelled">취소</option>
+                        <option value="pending">대기중 (신규예약)</option>
+                        <option value="confirmed">확정 (수배완료)</option>
+                        <option value="cancelled">예약취소</option>
+                        <option value="refunded">환불완료</option>
                     </select>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-2">
+                    <label class="form-label">예약일</label>
+                    <input type="date" class="form-control" id="searchBookingDate">
                 </div>
             </div>
             <div class="row mt-3">
@@ -191,11 +211,12 @@
                                 <input type="text" class="form-control" id="platform_name" name="platform_name">
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">결제 상태</label>
+                                <label class="form-label">예약 상태</label>
                                 <select class="form-control" id="payment_status" name="payment_status">
-                                    <option value="pending">대기중</option>
-                                    <option value="confirmed">확인됨</option>
-                                    <option value="cancelled">취소됨</option>
+                                    <option value="pending">대기중 (신규예약)</option>
+                                    <option value="confirmed">확정 (수배완료)</option>
+                                    <option value="cancelled">예약취소</option>
+                                    <option value="refunded">환불완료</option>
                                 </select>
                             </div>
                             <div class="col-md-8 mb-3">
@@ -343,7 +364,29 @@
                 return;
             }
 
-            tbody.innerHTML = filteredReservations.map(reservation => `
+            // 상태별 우선순위로 정렬 (대기중이 최상단)
+            const sortedReservations = [...filteredReservations].sort((a, b) => {
+                const statusPriority = {
+                    'pending': 1,    // 대기중 (최우선)
+                    'confirmed': 2,  // 확정
+                    'cancelled': 3,  // 취소
+                    'refunded': 4    // 환불완료
+                };
+                
+                const aPriority = statusPriority[a.payment_status] || 5;
+                const bPriority = statusPriority[b.payment_status] || 5;
+                
+                if (aPriority !== bPriority) {
+                    return aPriority - bPriority;
+                }
+                
+                // 같은 상태 내에서는 최신순 (created_at 역순)
+                const aDate = new Date(a.created_at || a.reservation_datetime || 0);
+                const bDate = new Date(b.created_at || b.reservation_datetime || 0);
+                return bDate - aDate;
+            });
+
+            tbody.innerHTML = sortedReservations.map(reservation => `
                 <tr onclick="openReservationModal(${reservation.id})">
                     <td>${reservation.reservation_number || reservation.id}</td>
                     <td>${reservation.platform_name || '-'}</td>
@@ -359,6 +402,7 @@
 
         // 예약 검색
         function searchReservations() {
+            const reservationNumber = document.getElementById('searchReservationNumber').value.toLowerCase();
             const company = document.getElementById('searchCompany').value.toLowerCase();
             const product = document.getElementById('searchProduct').value.toLowerCase();
             const customer = document.getElementById('searchCustomer').value.toLowerCase();
@@ -367,7 +411,8 @@
             const status = document.getElementById('searchStatus').value;
 
             filteredReservations = reservations.filter(reservation => {
-                return (!company || (reservation.platform_name || '').toLowerCase().includes(company)) &&
+                return (!reservationNumber || (reservation.reservation_number || '').toLowerCase().includes(reservationNumber)) &&
+                       (!company || (reservation.platform_name || '').toLowerCase().includes(company)) &&
                        (!product || (reservation.product_name || '').toLowerCase().includes(product)) &&
                        (!customer || (reservation.korean_name || '').toLowerCase().includes(customer)) &&
                        (!departureDate || reservation.usage_date === departureDate) &&
@@ -380,6 +425,7 @@
 
         // 검색 초기화
         function clearSearch() {
+            document.getElementById('searchReservationNumber').value = '';
             document.getElementById('searchCompany').value = '';
             document.getElementById('searchProduct').value = '';
             document.getElementById('searchCustomer').value = '';
@@ -513,14 +559,16 @@
 
         function getStatusText(status) {
             const statusMap = {
-                'pending': '대기중',
-                'confirmed': '확정',
-                'cancelled': '취소'
+                'pending': '대기중 (신규예약)',
+                'confirmed': '확정 (수배완료)',
+                'cancelled': '예약취소',
+                'refunded': '환불완료'
             };
-            return statusMap[status] || '대기중';
+            return statusMap[status] || '대기중 (신규예약)';
         }
 
         // 실시간 검색 (입력시마다 검색)
+        document.getElementById('searchReservationNumber').addEventListener('input', searchReservations);
         document.getElementById('searchCompany').addEventListener('input', searchReservations);
         document.getElementById('searchProduct').addEventListener('input', searchReservations);
         document.getElementById('searchCustomer').addEventListener('input', searchReservations);
