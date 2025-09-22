@@ -1225,25 +1225,6 @@ app.get('/admin/agencies', requireAuth, async (req, res) => {
     }
 });
 
-// 관리자 제휴업체
-app.get('/admin/stores', requireAuth, async (req, res) => {
-    try {
-        const stores = await dbHelpers.getStores();
-        res.render('admin/stores', {
-            title: '제휴업체 관리',
-            stores,
-            success: req.query.success,
-            error: req.query.error
-        });
-    } catch (error) {
-        console.error('제휴업체 관리 페이지 오류:', error);
-        res.render('admin/stores', {
-            title: '제휴업체 관리',
-            stores: [],
-            error: 'load_error'
-        });
-    }
-});
 
 // 관리자 고객 관리 페이지
 app.get('/admin/customers', requireAuth, async (req, res) => {
@@ -2634,6 +2615,7 @@ app.get('/admin/stores', requireAuth, async (req, res) => {
         res.render('admin/stores', {
             title: '제휴업체 관리',
             adminUsername: req.session.adminUsername || 'admin',
+            currentPage: 'stores',
             stores,
             success: null,
             error: null
@@ -2643,6 +2625,7 @@ app.get('/admin/stores', requireAuth, async (req, res) => {
         res.render('admin/stores', {
             title: '제휴업체 관리',
             adminUsername: req.session.adminUsername || 'admin',
+            currentPage: 'stores',
             stores: [],
             success: null,
             error: '제휴업체 목록을 불러오지 못했습니다.'
