@@ -78,7 +78,7 @@ adult_unit_price, child_unit_price, payment_status
   "channel": "NOL 인터파크",
   "product_name": "괌 정글리버크루즈 원주민문화체험 맹글로브숲 수공예품만들기 물소타기",
   "total_amount": 304.00,
-  "package_type": "개별이동 + 점심포함",
+  "package_type": "1차 (선셋 & 별빛투어)",
   "usage_date": "2025-10-09",
   "usage_time": "14:30:00",
   "quantity": 3,
@@ -126,6 +126,7 @@ adult_unit_price, child_unit_price, payment_status
 - 성인/어른/대인 수를 people_adult에, 아동/어린이/소아 수를 people_child에 저장
 - 유아/영아/베이비 수를 people_infant에 저장
 - 인원 정보가 없으면 기본값: people_adult=1, people_child=0, people_infant=0
+- package_type은 상품의 세부 옵션/하위 카테고리 (예: "1차 (선셋 & 별빛투어)", "오전 투어", "픽업 포함" 등)
 
 📊 confidence 평가 기준:
 - 0.9~1.0: 모든 핵심 정보 명확, 검수 불필요
