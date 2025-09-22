@@ -336,28 +336,28 @@
                 return '';
             }
 
-            // 모든 필드 매핑
+            // 모든 필드 매핑 (AI 파서 필드명 → 폼 필드명)
             const fieldMappings = {
                 'reservation_number': data.reservation_number || data.booking_reference || data.order_number || '',
                 'platform_name': filterCompanyName(data.platform_name || data.company || data.channel || ''),
                 'payment_status': data.payment_status || 'confirmed',
                 'product_name': data.product_name || data.tour_name || data.service_name || '',
-                'tour_date': formatDate(data.tour_date || data.date || data.service_date || ''),
-                'tour_time': formatTime(data.tour_time || data.time || data.service_time || ''),
-                'booking_date': formatDateTime(data.booking_date || data.created_at || data.reservation_date || ''),
-                'customer_name': data.customer_name || data.name || data.guest_name || '',
-                'customer_lastname': data.customer_lastname || data.last_name || data.surname || '',
-                'customer_firstname': data.customer_firstname || data.first_name || data.given_name || '',
-                'customer_phone': data.customer_phone || data.phone || data.mobile || data.contact || '',
-                'customer_email': data.customer_email || data.email || '',
+                'tour_date': formatDate(data.usage_date || data.tour_date || data.date || data.service_date || ''),
+                'tour_time': formatTime(data.usage_time || data.tour_time || data.time || data.service_time || ''),
+                'booking_date': formatDateTime(data.reservation_datetime || data.booking_date || data.created_at || data.reservation_date || ''),
+                'customer_name': data.korean_name || data.customer_name || data.name || data.guest_name || '',
+                'customer_lastname': data.english_last_name || data.customer_lastname || data.last_name || data.surname || '',
+                'customer_firstname': data.english_first_name || data.customer_firstname || data.first_name || data.given_name || '',
+                'customer_phone': data.phone || data.customer_phone || data.mobile || data.contact || '',
+                'customer_email': data.email || data.customer_email || '',
                 'kakao_id': data.kakao_id || data.kakao || '',
-                'adult_count': parseInt(data.adult_count || data.adults || data.adult || 0),
-                'child_count': parseInt(data.child_count || data.children || data.child || 0),
-                'infant_count': parseInt(data.infant_count || data.infants || data.infant || 0),
-                'adult_price': parseFloat(data.adult_price || data.adult_amount || 0),
-                'child_price': parseFloat(data.child_price || data.child_amount || 0),
+                'adult_count': parseInt(data.people_adult || data.adult_count || data.adults || data.adult || 0),
+                'child_count': parseInt(data.people_child || data.child_count || data.children || data.child || 0),
+                'infant_count': parseInt(data.people_infant || data.infant_count || data.infants || data.infant || 0),
+                'adult_price': parseFloat(data.adult_unit_price || data.adult_price || data.adult_amount || 0),
+                'child_price': parseFloat(data.child_unit_price || data.child_price || data.child_amount || 0),
                 'infant_price': parseFloat(data.infant_price || data.infant_amount || 0),
-                'special_requests': data.special_requests || data.notes || data.memo || data.remarks || ''
+                'special_requests': data.memo || data.special_requests || data.notes || data.remarks || ''
             };
 
             // 폼 필드에 값 설정
