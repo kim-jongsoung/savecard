@@ -17,11 +17,8 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="fas fa-inbox me-2"></i>인박스 - 예약 파싱 및 관리</h2>
                     <div>
-                        <button class="btn btn-outline-info me-2" onclick="openRulesModal()">
-                            <i class="fas fa-cog me-1"></i>자동 설정 규칙
-                        </button>
-                        <button class="btn btn-outline-primary me-2" onclick="clearAll()">
-                            <i class="fas fa-broom me-1"></i>전체 초기화
+                        <button class="btn btn-primary" onclick="openRulesModal()">
+                            <i class="fas fa-cog me-1"></i>자동 설정 규칙 관리
                         </button>
                     </div>
                 </div>
@@ -291,20 +288,100 @@
                     
                     <hr>
                     
+                    <!-- 파싱 보정 규칙 관리 -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-edit me-2"></i>파싱 보정 규칙 관리</h6>
+                        
+                        <!-- 새 규칙 추가 폼 -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-plus me-2"></i>새 규칙 추가</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <label class="form-label">조건 유형</label>
+                                        <select class="form-select" id="newConditionType">
+                                            <option value="product">상품명 포함</option>
+                                            <option value="platform">업체명 포함</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">키워드</label>
+                                        <input type="text" class="form-control" id="newKeyword" placeholder="예: 돌핀투어">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">변경 필드</label>
+                                        <select class="form-select" id="newFieldType">
+                                            <option value="status">예약 상태</option>
+                                            <option value="adult_count">성인수</option>
+                                            <option value="child_count">아동수</option>
+                                            <option value="total_amount">총 금액</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">설정값</label>
+                                        <input type="text" class="form-control" id="newValue" placeholder="예: confirmed">
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">설명</label>
+                                        <input type="text" class="form-control" id="newDescription" placeholder="예: 돌핀투어는 바로 확정">
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <button class="btn btn-success" onclick="addParsingRule()">
+                                            <i class="fas fa-plus me-1"></i>규칙 추가
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 기존 규칙 목록 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>현재 파싱 보정 규칙</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm" id="parsingRulesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>조건</th>
+                                                <th>키워드</th>
+                                                <th>변경 필드</th>
+                                                <th>설정값</th>
+                                                <th>설명</th>
+                                                <th>작업</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="parsingRulesBody">
+                                            <!-- 기본 규칙들 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>자동 설정 규칙 작동 방식</h6>
+                        <h6><i class="fas fa-info-circle me-2"></i>파싱 보정 규칙 작동 방식</h6>
                         <ul class="mb-0">
-                            <li><strong>상품명 키워드 매칭</strong>: 상품명에 키워드가 포함되면 자동으로 상태 변경</li>
-                            <li><strong>업체별 특별 처리</strong>: 특정 업체의 예약은 특별한 로직 적용</li>
-                            <li><strong>우선순위</strong>: 특별 규칙 > 기본 "대기중" 상태</li>
-                            <li><strong>알림</strong>: 자동 설정이 적용되면 파란색 알림으로 표시</li>
+                            <li><strong>조건 매칭</strong>: 상품명/업체명에 키워드가 포함되면 자동 적용</li>
+                            <li><strong>필드 변경</strong>: 파싱 후 지정된 필드값을 자동으로 변경</li>
+                            <li><strong>우선순위</strong>: 위에서부터 순서대로 적용</li>
+                            <li><strong>실시간 적용</strong>: 파싱 즉시 규칙이 적용됨</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-                    <button type="button" class="btn btn-primary" onclick="addCustomRule()">
-                        <i class="fas fa-plus me-1"></i>새 규칙 추가
+                    <button type="button" class="btn btn-info" onclick="exportRules()">
+                        <i class="fas fa-download me-1"></i>규칙 내보내기
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="clearAllRules()">
+                        <i class="fas fa-trash me-1"></i>모든 규칙 삭제
                     </button>
                 </div>
             </div>
@@ -498,6 +575,9 @@
             // 특별 설정 규칙 적용
             applySpecialRules(fieldMappings);
 
+            // 사용자 정의 파싱 보정 규칙 적용
+            applyCustomParsingRules(fieldMappings);
+
             // 기본적으로는 "대기중 (신규예약)" 상태 (특별 규칙이 없는 경우)
             const paymentStatusElement = document.getElementById('payment_status');
             if (paymentStatusElement && paymentStatusElement.value === 'pending') {
@@ -614,13 +694,189 @@
 
         // 자동 설정 규칙 모달 열기
         function openRulesModal() {
+            updateParsingRulesTable(); // 기존 규칙들 표시
             const modal = new bootstrap.Modal(document.getElementById('rulesModal'));
             modal.show();
         }
 
-        // 새 규칙 추가 (향후 확장 가능)
+        // 파싱 보정 규칙 저장소 (로컬스토리지 사용)
+        let customParsingRules = JSON.parse(localStorage.getItem('customParsingRules') || '[]');
+
+        // 파싱 보정 규칙 추가
+        function addParsingRule() {
+            const conditionType = document.getElementById('newConditionType').value;
+            const keyword = document.getElementById('newKeyword').value.trim();
+            const fieldType = document.getElementById('newFieldType').value;
+            const value = document.getElementById('newValue').value.trim();
+            const description = document.getElementById('newDescription').value.trim();
+
+            if (!keyword || !value) {
+                alert('키워드와 설정값을 모두 입력해주세요.');
+                return;
+            }
+
+            const newRule = {
+                id: Date.now(),
+                conditionType,
+                keyword,
+                fieldType,
+                value,
+                description: description || `${keyword} → ${fieldType} = ${value}`
+            };
+
+            customParsingRules.push(newRule);
+            localStorage.setItem('customParsingRules', JSON.stringify(customParsingRules));
+            
+            // 폼 초기화
+            document.getElementById('newKeyword').value = '';
+            document.getElementById('newValue').value = '';
+            document.getElementById('newDescription').value = '';
+            
+            // 테이블 업데이트
+            updateParsingRulesTable();
+            
+            showRuleNotification(`✅ 새 규칙 추가됨: ${newRule.description}`);
+        }
+
+        // 파싱 보정 규칙 삭제
+        function deleteParsingRule(ruleId) {
+            if (confirm('이 규칙을 삭제하시겠습니까?')) {
+                customParsingRules = customParsingRules.filter(rule => rule.id !== ruleId);
+                localStorage.setItem('customParsingRules', JSON.stringify(customParsingRules));
+                updateParsingRulesTable();
+                showRuleNotification('🗑️ 규칙이 삭제되었습니다.');
+            }
+        }
+
+        // 파싱 보정 규칙 테이블 업데이트
+        function updateParsingRulesTable() {
+            const tbody = document.getElementById('parsingRulesBody');
+            tbody.innerHTML = customParsingRules.map(rule => `
+                <tr>
+                    <td><span class="badge bg-${rule.conditionType === 'product' ? 'primary' : 'info'}">${rule.conditionType === 'product' ? '상품명' : '업체명'}</span></td>
+                    <td><code>${rule.keyword}</code></td>
+                    <td>${getFieldDisplayName(rule.fieldType)}</td>
+                    <td><strong>${rule.value}</strong></td>
+                    <td>${rule.description}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteParsingRule(${rule.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 필드 표시명 변환
+        function getFieldDisplayName(fieldType) {
+            const fieldNames = {
+                'status': '예약 상태',
+                'adult_count': '성인수',
+                'child_count': '아동수',
+                'total_amount': '총 금액'
+            };
+            return fieldNames[fieldType] || fieldType;
+        }
+
+        // 사용자 정의 파싱 보정 규칙 적용
+        function applyCustomParsingRules(fieldMappings) {
+            const productName = fieldMappings.product_name || '';
+            const platformName = fieldMappings.platform_name || '';
+            
+            customParsingRules.forEach(rule => {
+                let shouldApply = false;
+                
+                if (rule.conditionType === 'product' && productName.toLowerCase().includes(rule.keyword.toLowerCase())) {
+                    shouldApply = true;
+                } else if (rule.conditionType === 'platform' && platformName.toLowerCase().includes(rule.keyword.toLowerCase())) {
+                    shouldApply = true;
+                }
+                
+                if (shouldApply) {
+                    const element = document.getElementById(rule.fieldType === 'status' ? 'payment_status' : rule.fieldType);
+                    if (element) {
+                        element.value = rule.value;
+                        element.style.backgroundColor = '#e7f3ff';
+                        element.style.border = '2px solid #007bff';
+                        
+                        showRuleNotification(`🎯 사용자 규칙 적용: ${rule.description}`);
+                    }
+                }
+            });
+        }
+
+        // 규칙 내보내기
+        function exportRules() {
+            const data = JSON.stringify(customParsingRules, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `parsing-rules-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showRuleNotification('📁 규칙이 JSON 파일로 내보내졌습니다.');
+        }
+
+        // 모든 규칙 삭제
+        function clearAllRules() {
+            if (confirm('모든 사용자 정의 규칙을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+                customParsingRules = [];
+                localStorage.removeItem('customParsingRules');
+                updateParsingRulesTable();
+                showRuleNotification('🗑️ 모든 사용자 정의 규칙이 삭제되었습니다.');
+            }
+        }
+
+        // 새 규칙 추가 (기존 함수 대체)
         function addCustomRule() {
-            alert('새 규칙 추가 기능은 향후 업데이트에서 제공됩니다.\n현재는 코드에서 직접 규칙을 추가할 수 있습니다.');
+            // 모달이 이미 열려있으므로 아무것도 하지 않음
+        }
+
+        // 전체 초기화
+        function clearAll() {
+            if (confirm('전체 초기화하시겠습니까?\n\n초기화 내용:\n- 파싱 입력 텍스트\n- 미리보기 영역\n- 알림 메시지\n- 파싱 데이터')) {
+                // 1. 파싱 입력 텍스트 초기화
+                document.getElementById('reservationText').value = '';
+                
+                // 2. 미리보기 영역 초기화
+                const previewArea = document.getElementById('previewArea');
+                previewArea.innerHTML = '<p class="text-muted">파싱된 데이터가 여기에 표시됩니다.</p>';
+                
+                // 3. 파싱 데이터 초기화
+                parsedData = null;
+                
+                // 4. 모든 알림 제거
+                const notifications = document.querySelectorAll('.rule-notification, .alert');
+                notifications.forEach(notification => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                });
+                
+                // 5. 성공 메시지
+                const successAlert = document.createElement('div');
+                successAlert.className = 'alert alert-success alert-dismissible fade show mt-2';
+                successAlert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>전체 초기화가 완료되었습니다.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                const container = document.querySelector('.container-fluid');
+                container.insertBefore(successAlert, container.firstChild.nextSibling);
+                
+                // 3초 후 성공 메시지 제거
+                setTimeout(() => {
+                    if (successAlert.parentNode) {
+                        successAlert.remove();
+                    }
+                }, 3000);
+                
+                console.log('🧹 전체 초기화 완료');
+            }
         }
 
         // 총 인원 및 금액 계산
