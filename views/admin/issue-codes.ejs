@@ -62,62 +62,7 @@
     </style>
 </head>
 <body>
-    <!-- 네비게이션 -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/admin">
-                <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin">대시보드</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/agencies">여행사 관리</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/users">고객 관리</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/stores">제휴업체 관리</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/usages">사용 이력</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/banners">광고 관리</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/partner-applications">제휴업체 신청</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/admin/issue-codes">
-                            <i class="fas fa-ticket-alt me-2"></i> 발급 코드 관리
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin/reservations">
-                            <i class="fas fa-calendar-check me-2"></i> 예약 관리
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i><%= adminUsername %>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <%- include('../partials/navbar', { currentPage: 'issue-codes', adminUsername: adminUsername }) %>
 
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
