@@ -5104,7 +5104,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                 reservationData.usage_date || null,
                 reservationData.usage_time || null,
                 reservationData.reservation_datetime || null,
-                reservationData.payment_status || 'confirmed',
+                'pending', // 파싱된 예약은 항상 대기중 상태로 시작
                 reservationData.memo || null
             ];
 

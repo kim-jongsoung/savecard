@@ -80,7 +80,7 @@
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">예약 상태</label>
                                 <select class="form-control" id="payment_status" name="payment_status">
-                                    <option value="pending">대기중 (신규예약)</option>
+                                    <option value="pending" selected>대기중 (신규예약)</option>
                                     <option value="confirmed">확정 (수배완료)</option>
                                     <option value="cancelled">예약취소</option>
                                     <option value="refunded">환불완료</option>
@@ -402,6 +402,14 @@
                 }
             });
 
+            // 예약 상태는 항상 "대기중 (신규예약)"으로 강제 설정
+            const paymentStatusElement = document.getElementById('payment_status');
+            if (paymentStatusElement) {
+                paymentStatusElement.value = 'pending';
+                paymentStatusElement.classList.remove('border-warning');
+                paymentStatusElement.style.backgroundColor = '#fff3cd'; // 대기중 색상으로 강조
+            }
+
             // 총 인원 및 금액 계산
             calculateTotal();
         }
@@ -465,7 +473,7 @@
             const mappedData = {
                 reservation_number: formData.reservation_number,
                 platform_name: formData.platform_name,
-                payment_status: formData.payment_status || 'pending',
+                payment_status: 'pending', // 파싱된 예약은 항상 대기중 상태로 시작
                 product_name: formData.product_name,
                 package_type: formData.package_type,
                 usage_date: formData.tour_date,
