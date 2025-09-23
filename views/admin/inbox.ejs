@@ -18,7 +18,7 @@
                     <h2><i class="fas fa-inbox me-2"></i>인박스 - 예약 파싱 및 관리</h2>
                     <div>
                         <button class="btn btn-primary" onclick="openRulesModal()">
-                            <i class="fas fa-cog me-1"></i>자동 설정 규칙 관리
+                            <i class="fas fa-cogs me-1"></i>파싱 규칙 설정
                         </button>
                     </div>
                 </div>
@@ -217,112 +217,23 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-magic me-2"></i>자동 설정 규칙 관리</h5>
+                    <h5 class="modal-title"><i class="fas fa-cogs me-2"></i>파싱 규칙 설정</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-box me-2"></i>상품별 자동 상태 설정</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>키워드</th>
-                                            <th>자동 상태</th>
-                                            <th>이유</th>
-                                            <th width="80">액션</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="productRulesTable">
-                                        <tr data-rule-id="1">
-                                            <td><code>롱혼스테이크</code></td>
-                                            <td><span class="badge bg-info">확정</span></td>
-                                            <td>수배 불필요</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(1, '롱혼스테이크')" title="삭제">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-rule-id="2">
-                                            <td><code>롱혼</code></td>
-                                            <td><span class="badge bg-info">확정</span></td>
-                                            <td>수배 불필요</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(2, '롱혼')" title="삭제">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-rule-id="3">
-                                            <td><code>레스토랑</code></td>
-                                            <td><span class="badge bg-info">확정</span></td>
-                                            <td>수배 불필요</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(3, '레스토랑')" title="삭제">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-rule-id="4">
-                                            <td><code>식당</code></td>
-                                            <td><span class="badge bg-info">확정</span></td>
-                                            <td>수배 불필요</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(4, '식당')" title="삭제">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr data-rule-id="5">
-                                            <td><code>카페</code></td>
-                                            <td><span class="badge bg-info">확정</span></td>
-                                            <td>수배 불필요</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(5, '카페')" title="삭제">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-building me-2"></i>업체별 자동 설정</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>업체명</th>
-                                            <th>자동 설정</th>
-                                            <th>설명</th>
-                                            <th width="80">액션</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="companyRulesTable">
-                                        <tr data-rule-id="1">
-                                            <td><code>투어비스</code></td>
-                                            <td><span class="badge bg-success">인원수 자동</span></td>
-                                            <td>예약 건수 = 성인 인원수</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCompanyRule(1, '투어비스')" title="삭제">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                    <!-- 기본 규칙 제거 - 사용자 정의 규칙만 사용 -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>규칙 설정 안내</strong><br>
+                        아래에서 직접 설정한 규칙만 파싱 시 적용됩니다. 
+                        상황에 맞게 필요한 규칙을 추가하여 사용하세요.
                     </div>
                     
                     <hr>
                     
-                    <!-- 파싱 보정 규칙 관리 -->
+                    <!-- 사용자 정의 규칙 관리 -->
                     <div class="mb-4">
-                        <h6><i class="fas fa-edit me-2"></i>파싱 보정 규칙 관리</h6>
+                        <h6><i class="fas fa-user-cog me-2"></i>사용자 정의 규칙</h6>
                         
                         <!-- 새 규칙 추가 폼 -->
                         <div class="card mb-3">
@@ -384,7 +295,7 @@
                         <!-- 기존 규칙 목록 -->
                         <div class="card">
                             <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>현재 파싱 보정 규칙</h6>
+                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>설정된 규칙 목록</h6>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -1176,39 +1087,7 @@
             location.reload();
         }
 
-        // 상품별 자동 상태 설정 삭제
-        function deleteProductRule(ruleId, keyword) {
-            if (confirm(`'${keyword}' 키워드에 대한 자동 상태 설정을 삭제하시겠습니까?`)) {
-                // 테이블에서 해당 행 제거
-                const row = document.querySelector(`#productRulesTable tr[data-rule-id="${ruleId}"]`);
-                if (row) {
-                    row.remove();
-                    
-                    // 성공 메시지 표시
-                    showNotification(`'${keyword}' 키워드 자동 설정이 삭제되었습니다.`, 'success');
-                    
-                    // 여기에 서버로 삭제 요청을 보내는 코드를 추가할 수 있습니다
-                    // await deleteProductRuleFromServer(ruleId);
-                }
-            }
-        }
-
-        // 업체별 자동 설정 삭제
-        function deleteCompanyRule(ruleId, companyName) {
-            if (confirm(`'${companyName}' 업체에 대한 자동 설정을 삭제하시겠습니까?`)) {
-                // 테이블에서 해당 행 제거
-                const row = document.querySelector(`#companyRulesTable tr[data-rule-id="${ruleId}"]`);
-                if (row) {
-                    row.remove();
-                    
-                    // 성공 메시지 표시
-                    showNotification(`'${companyName}' 업체 자동 설정이 삭제되었습니다.`, 'success');
-                    
-                    // 여기에 서버로 삭제 요청을 보내는 코드를 추가할 수 있습니다
-                    // await deleteCompanyRuleFromServer(ruleId);
-                }
-            }
-        }
+        // 기본 규칙 관련 함수들 제거됨 - 사용자 정의 규칙만 사용
 
         // 알림 메시지 표시 함수
         function showNotification(message, type = 'info') {
