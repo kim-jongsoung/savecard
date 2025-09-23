@@ -344,16 +344,27 @@
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">변경 필드</label>
-                                        <select class="form-select" id="newFieldType">
+                                        <select class="form-select" id="newFieldType" onchange="updateValueOptions()">
+                                            <option value="">-- 필드 선택 --</option>
                                             <option value="status">예약 상태</option>
                                             <option value="adult_count">성인수</option>
                                             <option value="child_count">아동수</option>
+                                            <option value="infant_count">유아수</option>
                                             <option value="total_amount">총 금액</option>
+                                            <option value="adult_price">성인 단가</option>
+                                            <option value="child_price">아동 단가</option>
+                                            <option value="infant_price">유아 단가</option>
+                                            <option value="platform_name">업체명</option>
+                                            <option value="product_name">상품명</option>
+                                            <option value="payment_status">결제 상태</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">설정값</label>
-                                        <input type="text" class="form-control" id="newValue" placeholder="예: confirmed">
+                                        <select class="form-select" id="newValue" onchange="handleValueChange()">
+                                            <option value="">-- 먼저 필드를 선택하세요 --</option>
+                                        </select>
+                                        <input type="text" class="form-control mt-2" id="customValue" placeholder="직접 입력..." style="display: none;">
                                     </div>
                                 </div>
                                 <div class="row mt-2">
@@ -411,9 +422,6 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
                     <button type="button" class="btn btn-info" onclick="exportRules()">
                         <i class="fas fa-download me-1"></i>규칙 내보내기
-                    </button>
-                    <button type="button" class="btn btn-warning" onclick="clearAllRules()">
-                        <i class="fas fa-trash me-1"></i>모든 규칙 삭제
                     </button>
                 </div>
             </div>
@@ -739,11 +747,20 @@
             const conditionType = document.getElementById('newConditionType').value;
             const keyword = document.getElementById('newKeyword').value.trim();
             const fieldType = document.getElementById('newFieldType').value;
-            const value = document.getElementById('newValue').value.trim();
+            const valueSelect = document.getElementById('newValue');
+            const customInput = document.getElementById('customValue');
             const description = document.getElementById('newDescription').value.trim();
 
-            if (!keyword || !value) {
-                alert('키워드와 설정값을 모두 입력해주세요.');
+            // 설정값 결정 (드롭다운 또는 직접 입력)
+            let value = '';
+            if (valueSelect.value === 'CUSTOM') {
+                value = customInput.value.trim();
+            } else {
+                value = valueSelect.value.trim();
+            }
+
+            if (!keyword || !fieldType || !value) {
+                alert('키워드, 변경 필드, 설정값을 모두 입력해주세요.');
                 return;
             }
 
@@ -760,8 +777,12 @@
             localStorage.setItem('customParsingRules', JSON.stringify(customParsingRules));
             
             // 폼 초기화
+            document.getElementById('newConditionType').value = 'product';
             document.getElementById('newKeyword').value = '';
-            document.getElementById('newValue').value = '';
+            document.getElementById('newFieldType').value = '';
+            document.getElementById('newValue').innerHTML = '<option value="">-- 먼저 필드를 선택하세요 --</option>';
+            document.getElementById('customValue').value = '';
+            document.getElementById('customValue').style.display = 'none';
             document.getElementById('newDescription').value = '';
             
             // 테이블 업데이트
@@ -853,13 +874,131 @@
             showRuleNotification('📁 규칙이 JSON 파일로 내보내졌습니다.');
         }
 
-        // 모든 규칙 삭제
-        function clearAllRules() {
-            if (confirm('모든 사용자 정의 규칙을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
-                customParsingRules = [];
-                localStorage.removeItem('customParsingRules');
-                updateParsingRulesTable();
-                showRuleNotification('🗑️ 모든 사용자 정의 규칙이 삭제되었습니다.');
+        // 필드 타입에 따른 설정값 옵션 업데이트
+        function updateValueOptions() {
+            const fieldType = document.getElementById('newFieldType').value;
+            const valueSelect = document.getElementById('newValue');
+            
+            // 기존 옵션 제거
+            valueSelect.innerHTML = '';
+            
+            // 필드 타입별 옵션 정의
+            const valueOptions = {
+                'status': [
+                    { value: 'pending', text: '대기중' },
+                    { value: 'confirmed', text: '확정' },
+                    { value: 'cancelled', text: '취소' },
+                    { value: 'needs_review', text: '검수 필요' }
+                ],
+                'payment_status': [
+                    { value: 'pending', text: '대기중' },
+                    { value: 'confirmed', text: '확인됨' },
+                    { value: 'cancelled', text: '취소됨' }
+                ],
+                'adult_count': [
+                    { value: '1', text: '1명' },
+                    { value: '2', text: '2명' },
+                    { value: '3', text: '3명' },
+                    { value: '4', text: '4명' },
+                    { value: '5', text: '5명' },
+                    { value: '6', text: '6명' },
+                    { value: '7', text: '7명' },
+                    { value: '8', text: '8명' }
+                ],
+                'child_count': [
+                    { value: '0', text: '0명' },
+                    { value: '1', text: '1명' },
+                    { value: '2', text: '2명' },
+                    { value: '3', text: '3명' },
+                    { value: '4', text: '4명' }
+                ],
+                'infant_count': [
+                    { value: '0', text: '0명' },
+                    { value: '1', text: '1명' },
+                    { value: '2', text: '2명' }
+                ],
+                'total_amount': [
+                    { value: '50', text: '$50' },
+                    { value: '80', text: '$80' },
+                    { value: '100', text: '$100' },
+                    { value: '120', text: '$120' },
+                    { value: '150', text: '$150' },
+                    { value: '200', text: '$200' }
+                ],
+                'adult_price': [
+                    { value: '50', text: '$50' },
+                    { value: '60', text: '$60' },
+                    { value: '70', text: '$70' },
+                    { value: '80', text: '$80' },
+                    { value: '90', text: '$90' },
+                    { value: '100', text: '$100' }
+                ],
+                'child_price': [
+                    { value: '30', text: '$30' },
+                    { value: '40', text: '$40' },
+                    { value: '50', text: '$50' },
+                    { value: '60', text: '$60' }
+                ],
+                'infant_price': [
+                    { value: '0', text: '$0 (무료)' },
+                    { value: '10', text: '$10' },
+                    { value: '20', text: '$20' }
+                ],
+                'platform_name': [
+                    { value: '투어비스', text: '투어비스' },
+                    { value: '하나투어', text: '하나투어' },
+                    { value: '모두투어', text: '모두투어' },
+                    { value: '온라인투어', text: '온라인투어' }
+                ],
+                'product_name': [
+                    { value: '돌핀투어', text: '돌핀투어' },
+                    { value: '스노클링', text: '스노클링' },
+                    { value: '선셋크루즈', text: '선셋크루즈' },
+                    { value: '시티투어', text: '시티투어' }
+                ]
+            };
+            
+            if (fieldType && valueOptions[fieldType]) {
+                // 기본 옵션 추가
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- 값 선택 --';
+                valueSelect.appendChild(defaultOption);
+                
+                // 해당 필드의 옵션들 추가
+                valueOptions[fieldType].forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.value;
+                    optionElement.textContent = option.text;
+                    valueSelect.appendChild(optionElement);
+                });
+                
+                // 직접 입력 옵션 추가
+                const customOption = document.createElement('option');
+                customOption.value = 'CUSTOM';
+                customOption.textContent = '🖊️ 직접 입력...';
+                valueSelect.appendChild(customOption);
+                
+            } else {
+                // 필드가 선택되지 않은 경우
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- 먼저 필드를 선택하세요 --';
+                valueSelect.appendChild(defaultOption);
+            }
+        }
+
+        // 설정값 변경 처리 (직접 입력 모드)
+        function handleValueChange() {
+            const valueSelect = document.getElementById('newValue');
+            const customInput = document.getElementById('customValue');
+            
+            if (valueSelect.value === 'CUSTOM') {
+                customInput.style.display = 'block';
+                customInput.focus();
+            } else {
+                customInput.style.display = 'none';
+                customInput.value = '';
             }
         }
 
