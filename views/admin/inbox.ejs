@@ -1048,7 +1048,7 @@
             const mappedData = {
                 reservation_number: formData.reservation_number,
                 platform_name: formData.platform_name,
-                payment_status: 'pending', // 파싱된 예약은 항상 대기중 상태로 시작
+                payment_status: formData.payment_status || 'pending', // 파싱 규칙에 따라 설정된 상태 유지
                 product_name: formData.product_name,
                 package_type: formData.package_type,
                 usage_date: formData.tour_date,
