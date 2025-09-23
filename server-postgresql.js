@@ -6263,14 +6263,14 @@ async function startServer() {
                     )
                 `);
                 
-                // 마이그레이션 002 실행 여부 확인
+                // 마이그레이션 003 실행 여부 확인 (버전 업데이트)
                 const migrationCheck = await pool.query(
                     'SELECT * FROM migration_log WHERE version = $1',
-                    ['002']
+                    ['003']
                 ).catch(() => ({ rows: [] }));
                 
                 if (migrationCheck.rows.length > 0) {
-                    console.log('✅ ERP 마이그레이션 002는 이미 완료되었습니다.');
+                    console.log('✅ ERP 마이그레이션 003은 이미 완료되었습니다.');
                     
                     // 테이블 존재 확인
                     const tableCheck = await pool.query(`
@@ -6283,14 +6283,14 @@ async function startServer() {
                     if (tableCheck.rows.length < 4) {
                         console.log('⚠️ 일부 테이블이 누락됨. 마이그레이션 재실행...');
                         // 마이그레이션 로그 삭제하고 재실행
-                        await pool.query('DELETE FROM migration_log WHERE version = $1', ['002']);
+                        await pool.query('DELETE FROM migration_log WHERE version = $1', ['003']);
                     } else {
                         console.log('📊 모든 ERP 테이블 확인됨:', tableCheck.rows.map(r => r.table_name));
                         return;
                     }
                 }
                 
-                console.log('🚀 ERP 마이그레이션 002 실행 중...');
+                console.log('🚀 ERP 마이그레이션 003 실행 중... (reservation_id 호환성 개선)');
                 
                 await pool.query('BEGIN');
                 
@@ -6341,8 +6341,22 @@ async function startServer() {
                         user_agent TEXT,
                         notes TEXT
                     );
-                    CREATE INDEX IF NOT EXISTS idx_reservation_audits_reservation_id ON reservation_audits(reservation_id);
-                    CREATE INDEX IF NOT EXISTS idx_reservation_audits_changed_at ON reservation_audits(changed_at);
+                `);
+                
+                // 인덱스는 별도로 생성 (테이블 존재 확인 후)
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        -- reservations 테이블의 기본 키 컬럼명 확인
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'id'
+                        ) THEN
+                            -- id 컬럼이 존재하면 인덱스 생성
+                            CREATE INDEX IF NOT EXISTS idx_reservation_audits_reservation_id ON reservation_audits(reservation_id);
+                            CREATE INDEX IF NOT EXISTS idx_reservation_audits_changed_at ON reservation_audits(changed_at);
+                        END IF;
+                    END $$;
                 `);
                 
                 // 4. assignments 테이블 생성
@@ -6366,8 +6380,20 @@ async function startServer() {
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW()
                     );
-                    CREATE INDEX IF NOT EXISTS idx_assignments_reservation_id ON assignments(reservation_id);
-                    CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
+                `);
+                
+                // assignments 인덱스 별도 생성
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'id'
+                        ) THEN
+                            CREATE INDEX IF NOT EXISTS idx_assignments_reservation_id ON assignments(reservation_id);
+                            CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
+                        END IF;
+                    END $$;
                 `);
                 
                 // 5. settlements 테이블 생성
@@ -6408,12 +6434,12 @@ async function startServer() {
                 // 마이그레이션 로그 기록
                 await pool.query(
                     'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
-                    ['002', 'ERP 확장: extras JSONB, field_defs, audits, assignments, settlements']
+                    ['003', 'ERP 확장 v2: reservation_id 호환성 개선, 안전한 인덱스 생성']
                 );
                 
                 await pool.query('COMMIT');
                 
-                console.log('✅ ERP 마이그레이션 002 완료!');
+                console.log('✅ ERP 마이그레이션 003 완료! (reservation_id 호환성 개선)');
                 
                 // 생성된 테이블 확인
                 const tables = await pool.query(`
