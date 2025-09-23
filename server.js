@@ -4,6 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { Pool } = require('pg');
 const { testConnection } = require('./config/database');
 
 const app = express();
@@ -44,6 +45,15 @@ app.use(session({
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// 데이터베이스 연결 풀 설정
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// 앱에 데이터베이스 풀 연결
+app.locals.pool = pool;
+
 // QR 코드 이미지 정적 파일 제공
 app.use('/qrcodes', express.static(path.join(__dirname, 'qrcodes')));
 
@@ -60,6 +70,9 @@ const bookingsDeleteRouter = require('./routes/bookings.delete');
 const bookingsBulkRouter = require('./routes/bookings.bulk');
 const fieldDefsRouter = require('./routes/fieldDefs');
 const auditsRouter = require('./routes/audits');
+
+// 수배업체 관리 API 라우트
+const vendorsRouter = require('./routes/vendors');
 
 app.use('/', indexRouter);
 app.use('/admin', adminRouter);
@@ -79,6 +92,7 @@ try {
     app.use('/api', bookingsBulkRouter);
     app.use('/api', fieldDefsRouter);
     app.use('/api', auditsRouter);
+    app.use('/api/vendors', vendorsRouter);
 } catch (error) {
     console.error('API 라우트 연결 오류:', error);
 }

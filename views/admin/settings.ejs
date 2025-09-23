@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .settings-nav {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        
+        .settings-nav .nav-link {
+            color: #6c757d;
+            border-radius: 8px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .settings-nav .nav-link.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .settings-nav .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        
+        .settings-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 30px;
+        }
+        
+        .vendor-card {
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        
+        .vendor-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .vendor-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .vendor-active {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .vendor-inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .product-tag {
+            background-color: #e7f3ff;
+            color: #0066cc;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .modal-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .alert-custom {
+            border-radius: 12px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'settings', adminUsername: adminUsername || 'admin' }) %>
+
+    <div class="container-fluid mt-4">
+        <!-- 설정 네비게이션 -->
+        <div class="settings-nav">
+            <ul class="nav nav-pills p-3" id="settingsTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="vendors-tab" data-bs-toggle="pill" data-bs-target="#vendors" type="button" role="tab">
+                        <i class="fas fa-building me-2"></i>수배업체 관리
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="notifications-tab" data-bs-toggle="pill" data-bs-target="#notifications" type="button" role="tab">
+                        <i class="fas fa-bell me-2"></i>알림 설정
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="system-tab" data-bs-toggle="pill" data-bs-target="#system" type="button" role="tab">
+                        <i class="fas fa-cog me-2"></i>시스템 설정
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 설정 내용 -->
+        <div class="tab-content" id="settingsTabContent">
+            <!-- 수배업체 관리 탭 -->
+            <div class="tab-pane fade show active" id="vendors" role="tabpanel">
+                <div class="settings-content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4><i class="fas fa-building me-2"></i>수배업체 관리</h4>
+                            <p class="text-muted mb-0">예약 수배를 담당할 업체들을 등록하고 관리합니다.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openVendorModal()">
+                            <i class="fas fa-plus me-2"></i>수배업체 등록
+                        </button>
+                    </div>
+
+                    <!-- 알림 영역 -->
+                    <div id="alertArea"></div>
+
+                    <!-- 수배업체 목록 -->
+                    <div id="vendorsList">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">로딩중...</span>
+                            </div>
+                            <p class="mt-3 text-muted">수배업체 목록을 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 알림 설정 탭 -->
+            <div class="tab-pane fade" id="notifications" role="tabpanel">
+                <div class="settings-content">
+                    <h4><i class="fas fa-bell me-2"></i>알림 설정</h4>
+                    <p class="text-muted">수배 알림 및 시스템 알림을 설정합니다.</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        알림 설정 기능은 곧 추가될 예정입니다.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 시스템 설정 탭 -->
+            <div class="tab-pane fade" id="system" role="tabpanel">
+                <div class="settings-content">
+                    <h4><i class="fas fa-cog me-2"></i>시스템 설정</h4>
+                    <p class="text-muted">시스템 전반의 설정을 관리합니다.</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        시스템 설정 기능은 곧 추가될 예정입니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수배업체 등록/수정 모달 -->
+    <div class="modal fade" id="vendorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="vendorModalTitle">수배업체 등록</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="vendorForm">
+                        <input type="hidden" id="vendorId">
+                        
+                        <!-- 기본 정보 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">업체명 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="vendor_name" name="vendor_name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">로그인 아이디 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="vendor_id" name="vendor_id" required>
+                                <div class="form-text">업체 전용 포털 로그인용 아이디</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">패스워드 <span class="text-danger">*</span></label>
+                                <input type="password" class="form-control" id="password" name="password">
+                                <div class="form-text" id="passwordHelp">수정 시에는 변경할 경우에만 입력</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">업종</label>
+                                <select class="form-select" id="business_type" name="business_type">
+                                    <option value="">선택하세요</option>
+                                    <option value="해양관광">해양관광</option>
+                                    <option value="자연관광">자연관광</option>
+                                    <option value="공연/엔터테인먼트">공연/엔터테인먼트</option>
+                                    <option value="골프/스포츠">골프/스포츠</option>
+                                    <option value="레스토랑">레스토랑</option>
+                                    <option value="쇼핑">쇼핑</option>
+                                    <option value="기타">기타</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 연락처 정보 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-phone me-2"></i>연락처 정보</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">이메일 <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">전화번호</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">담당자명</label>
+                                <input type="text" class="form-control" id="contact_person" name="contact_person">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">수배 알림 이메일</label>
+                                <input type="email" class="form-control" id="notification_email" name="notification_email">
+                                <div class="form-text">수배 알림을 받을 이메일 (기본 이메일과 다른 경우)</div>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">업체 설명</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 담당 상품 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-tags me-2"></i>담당 상품 키워드</h6>
+                                <p class="text-muted small">상품명에 포함된 키워드로 자동 매칭됩니다. 우선순위가 높을수록 먼저 선택됩니다.</p>
+                            </div>
+                            <div class="col-12">
+                                <div id="productKeywords">
+                                    <div class="row mb-2 product-keyword-row">
+                                        <div class="col-md-8">
+                                            <input type="text" class="form-control" placeholder="예: 돌핀, 크루즈, 골프" name="product_keyword">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-select" name="product_priority">
+                                                <option value="1">높음 (1)</option>
+                                                <option value="2">보통 (2)</option>
+                                                <option value="3">낮음 (3)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductKeyword(this)">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductKeyword()">
+                                    <i class="fas fa-plus me-1"></i>키워드 추가
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="saveVendor()">
+                        <i class="fas fa-save me-1"></i>저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let vendors = [];
+        let editingVendorId = null;
+
+        // 페이지 로드시 수배업체 목록 가져오기
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVendors();
+        });
+
+        // 수배업체 목록 로드
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/vendors');
+                const data = await response.json();
+                
+                if (data.success) {
+                    vendors = data.vendors;
+                    renderVendors();
+                } else {
+                    showAlert('danger', '수배업체 목록을 불러오는데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('수배업체 목록 로드 실패:', error);
+                showAlert('danger', '수배업체 목록을 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 수배업체 목록 렌더링
+        function renderVendors() {
+            const vendorsList = document.getElementById('vendorsList');
+            
+            if (vendors.length === 0) {
+                vendorsList.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">등록된 수배업체가 없습니다</h5>
+                        <p class="text-muted">첫 번째 수배업체를 등록해보세요.</p>
+                        <button class="btn btn-primary" onclick="openVendorModal()">
+                            <i class="fas fa-plus me-2"></i>수배업체 등록
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            vendorsList.innerHTML = vendors.map(vendor => `
+                <div class="vendor-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-3">${vendor.vendor_name}</h5>
+                                <span class="vendor-status ${vendor.is_active ? 'vendor-active' : 'vendor-inactive'}">
+                                    ${vendor.is_active ? '활성' : '비활성'}
+                                </span>
+                            </div>
+                            <div class="text-muted mb-2">
+                                <i class="fas fa-user me-1"></i>${vendor.contact_person || '담당자 미등록'}
+                                <i class="fas fa-envelope ms-3 me-1"></i>${vendor.email}
+                                ${vendor.phone ? `<i class="fas fa-phone ms-3 me-1"></i>${vendor.phone}` : ''}
+                            </div>
+                            <div class="text-muted mb-2">
+                                <i class="fas fa-briefcase me-1"></i>${vendor.business_type || '업종 미분류'}
+                                <i class="fas fa-chart-bar ms-3 me-1"></i>담당상품 ${vendor.product_count}개
+                                <i class="fas fa-tasks ms-3 me-1"></i>수배내역 ${vendor.assignment_count}건
+                            </div>
+                            ${vendor.description ? `<p class="text-muted small mb-0">${vendor.description}</p>` : ''}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-outline-primary btn-sm me-2" onclick="editVendor(${vendor.id})">
+                                <i class="fas fa-edit me-1"></i>수정
+                            </button>
+                            <button class="btn btn-outline-info btn-sm me-2" onclick="viewVendorDetails(${vendor.id})">
+                                <i class="fas fa-eye me-1"></i>상세
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteVendor(${vendor.id}, '${vendor.vendor_name}')">
+                                <i class="fas fa-trash me-1"></i>삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 수배업체 등록 모달 열기
+        function openVendorModal(vendorId = null) {
+            editingVendorId = vendorId;
+            const modal = new bootstrap.Modal(document.getElementById('vendorModal'));
+            const title = document.getElementById('vendorModalTitle');
+            const passwordHelp = document.getElementById('passwordHelp');
+            
+            if (vendorId) {
+                title.textContent = '수배업체 수정';
+                passwordHelp.style.display = 'block';
+                loadVendorForEdit(vendorId);
+            } else {
+                title.textContent = '수배업체 등록';
+                passwordHelp.style.display = 'none';
+                document.getElementById('vendorForm').reset();
+                document.getElementById('vendorId').value = '';
+                resetProductKeywords();
+            }
+            
+            modal.show();
+        }
+
+        // 수배업체 정보 로드 (수정용)
+        async function loadVendorForEdit(vendorId) {
+            try {
+                const response = await fetch(`/api/vendors/${vendorId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const vendor = data.vendor;
+                    
+                    // 기본 정보 채우기
+                    document.getElementById('vendorId').value = vendor.id;
+                    document.getElementById('vendor_name').value = vendor.vendor_name;
+                    document.getElementById('vendor_id').value = vendor.vendor_id;
+                    document.getElementById('email').value = vendor.email;
+                    document.getElementById('phone').value = vendor.phone || '';
+                    document.getElementById('contact_person').value = vendor.contact_person || '';
+                    document.getElementById('business_type').value = vendor.business_type || '';
+                    document.getElementById('description').value = vendor.description || '';
+                    document.getElementById('notification_email').value = vendor.notification_email || '';
+                    
+                    // 담당 상품 키워드 채우기
+                    resetProductKeywords();
+                    data.products.forEach((product, index) => {
+                        if (index > 0) addProductKeyword();
+                        const rows = document.querySelectorAll('.product-keyword-row');
+                        const row = rows[index];
+                        row.querySelector('input[name="product_keyword"]').value = product.product_keyword;
+                        row.querySelector('select[name="product_priority"]').value = product.priority;
+                    });
+                    
+                } else {
+                    showAlert('danger', '수배업체 정보를 불러오는데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('수배업체 정보 로드 실패:', error);
+                showAlert('danger', '수배업체 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 수배업체 저장
+        async function saveVendor() {
+            const form = document.getElementById('vendorForm');
+            const formData = new FormData(form);
+            
+            // 담당 상품 키워드 수집
+            const products = [];
+            const keywordInputs = document.querySelectorAll('input[name="product_keyword"]');
+            const prioritySelects = document.querySelectorAll('select[name="product_priority"]');
+            
+            keywordInputs.forEach((input, index) => {
+                if (input.value.trim()) {
+                    products.push({
+                        keyword: input.value.trim(),
+                        priority: parseInt(prioritySelects[index].value)
+                    });
+                }
+            });
+            
+            const vendorData = {
+                vendor_name: formData.get('vendor_name'),
+                vendor_id: formData.get('vendor_id'),
+                password: formData.get('password'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                contact_person: formData.get('contact_person'),
+                business_type: formData.get('business_type'),
+                description: formData.get('description'),
+                notification_email: formData.get('notification_email'),
+                products: products
+            };
+            
+            try {
+                const url = editingVendorId ? `/api/vendors/${editingVendorId}` : '/api/vendors';
+                const method = editingVendorId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(vendorData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('vendorModal')).hide();
+                    loadVendors();
+                } else {
+                    showAlert('danger', data.message);
+                }
+                
+            } catch (error) {
+                console.error('수배업체 저장 실패:', error);
+                showAlert('danger', '수배업체 저장에 실패했습니다.');
+            }
+        }
+
+        // 수배업체 수정
+        function editVendor(vendorId) {
+            openVendorModal(vendorId);
+        }
+
+        // 수배업체 삭제
+        async function deleteVendor(vendorId, vendorName) {
+            if (!confirm(`'${vendorName}' 업체를 정말 삭제하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/vendors/${vendorId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', data.message);
+                    loadVendors();
+                } else {
+                    showAlert('danger', data.message);
+                }
+                
+            } catch (error) {
+                console.error('수배업체 삭제 실패:', error);
+                showAlert('danger', '수배업체 삭제에 실패했습니다.');
+            }
+        }
+
+        // 수배업체 상세 보기
+        function viewVendorDetails(vendorId) {
+            // TODO: 상세 모달 구현
+            alert('상세 보기 기능은 곧 추가될 예정입니다.');
+        }
+
+        // 상품 키워드 추가
+        function addProductKeyword() {
+            const container = document.getElementById('productKeywords');
+            const newRow = document.createElement('div');
+            newRow.className = 'row mb-2 product-keyword-row';
+            newRow.innerHTML = `
+                <div class="col-md-8">
+                    <input type="text" class="form-control" placeholder="예: 돌핀, 크루즈, 골프" name="product_keyword">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="product_priority">
+                        <option value="1">높음 (1)</option>
+                        <option value="2">보통 (2)</option>
+                        <option value="3">낮음 (3)</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductKeyword(this)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(newRow);
+        }
+
+        // 상품 키워드 제거
+        function removeProductKeyword(button) {
+            const rows = document.querySelectorAll('.product-keyword-row');
+            if (rows.length > 1) {
+                button.closest('.product-keyword-row').remove();
+            }
+        }
+
+        // 상품 키워드 초기화
+        function resetProductKeywords() {
+            const container = document.getElementById('productKeywords');
+            container.innerHTML = `
+                <div class="row mb-2 product-keyword-row">
+                    <div class="col-md-8">
+                        <input type="text" class="form-control" placeholder="예: 돌핀, 크루즈, 골프" name="product_keyword">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="product_priority">
+                            <option value="1">높음 (1)</option>
+                            <option value="2">보통 (2)</option>
+                            <option value="3">낮음 (3)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeProductKeyword(this)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 알림 표시
+        function showAlert(type, message) {
+            const alertArea = document.getElementById('alertArea');
+            const alertId = 'alert-' + Date.now();
+            
+            alertArea.innerHTML = `
+                <div class="alert alert-${type} alert-custom alert-dismissible fade show" id="${alertId}" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                const alert = document.getElementById(alertId);
+                if (alert) {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

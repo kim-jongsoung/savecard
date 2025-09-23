@@ -166,4 +166,12 @@ router.get('/run-migrations', requireAuth, async (req, res) => {
     }
 });
 
+// 설정 페이지
+router.get('/settings', requireAuth, (req, res) => {
+    res.render('admin/settings', {
+        title: '설정',
+        adminUsername: req.session.adminUsername || 'admin'
+    });
+});
+
 module.exports = router;

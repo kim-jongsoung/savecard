@@ -1034,15 +1034,40 @@
 
         // 예약 저장
         async function saveReservation() {
-            if (!parsedData) return;
-
-            // 폼에서 모든 값들 수집하고 필드명 매핑
             const formData = {};
+            
+            // 폼 데이터 수집
             document.querySelectorAll('#previewArea input, #previewArea select, #previewArea textarea').forEach(element => {
                 if (element.name) {
                     formData[element.name] = element.value;
                 }
             });
+
+            // 수배업체 자동 매칭
+            let suggestedVendor = null;
+            if (formData.product_name) {
+                try {
+                    const matchResponse = await fetch('/api/vendors/match', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            product_name: formData.product_name
+                        })
+                    });
+                    
+                    if (matchResponse.ok) {
+                        const matchData = await matchResponse.json();
+                        if (matchData.success && matchData.matches.length > 0) {
+                            suggestedVendor = matchData.matches[0]; // 첫 번째 매칭 업체 선택
+                            console.log('수배업체 자동 매칭:', suggestedVendor);
+                        }
+                    }
+                } catch (error) {
+                    console.error('수배업체 매칭 실패:', error);
+                }
+            }
 
             // 필드명을 DB 스키마에 맞게 매핑
             const mappedData = {
@@ -1080,7 +1105,17 @@
                 const result = await response.json();
                 
                 if (result.success || response.ok) {
-                    alert('예약이 저장되었습니다.');
+                    let successMessage = '✅ 예약이 저장되었습니다.';
+                    
+                    // 🏢 수배업체 매칭 정보 표시
+                    if (suggestedVendor) {
+                        successMessage += `\n\n🎯 수배업체 자동 매칭:\n📍 ${suggestedVendor.vendor_name}\n📧 ${suggestedVendor.email}\n👤 ${suggestedVendor.contact_person || '담당자 미등록'}`;
+                        
+                        // 수배업체 매칭 알림 표시
+                        showRuleNotification(`🏢 수배업체 매칭: ${suggestedVendor.vendor_name} (키워드: ${suggestedVendor.matched_keyword})`);
+                    }
+                    
+                    alert(successMessage);
                     clearForm();
                 } else {
                     alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
