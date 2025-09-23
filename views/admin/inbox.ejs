@@ -231,33 +231,59 @@
                                             <th>키워드</th>
                                             <th>자동 상태</th>
                                             <th>이유</th>
+                                            <th width="80">액션</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        <tr>
+                                    <tbody id="productRulesTable">
+                                        <tr data-rule-id="1">
                                             <td><code>롱혼스테이크</code></td>
                                             <td><span class="badge bg-info">확정</span></td>
                                             <td>수배 불필요</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(1, '롱혼스테이크')" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-rule-id="2">
                                             <td><code>롱혼</code></td>
                                             <td><span class="badge bg-info">확정</span></td>
                                             <td>수배 불필요</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(2, '롱혼')" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-rule-id="3">
                                             <td><code>레스토랑</code></td>
                                             <td><span class="badge bg-info">확정</span></td>
                                             <td>수배 불필요</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(3, '레스토랑')" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-rule-id="4">
                                             <td><code>식당</code></td>
                                             <td><span class="badge bg-info">확정</span></td>
                                             <td>수배 불필요</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(4, '식당')" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
-                                        <tr>
+                                        <tr data-rule-id="5">
                                             <td><code>카페</code></td>
                                             <td><span class="badge bg-info">확정</span></td>
                                             <td>수배 불필요</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteProductRule(5, '카페')" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -272,13 +298,19 @@
                                             <th>업체명</th>
                                             <th>자동 설정</th>
                                             <th>설명</th>
+                                            <th width="80">액션</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        <tr>
+                                    <tbody id="companyRulesTable">
+                                        <tr data-rule-id="1">
                                             <td><code>투어비스</code></td>
                                             <td><span class="badge bg-success">인원수 자동</span></td>
                                             <td>예약 건수 = 성인 인원수</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCompanyRule(1, '투어비스')" title="삭제">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1003,6 +1035,68 @@
         // 새로고침
         function refreshInbox() {
             location.reload();
+        }
+
+        // 상품별 자동 상태 설정 삭제
+        function deleteProductRule(ruleId, keyword) {
+            if (confirm(`'${keyword}' 키워드에 대한 자동 상태 설정을 삭제하시겠습니까?`)) {
+                // 테이블에서 해당 행 제거
+                const row = document.querySelector(`#productRulesTable tr[data-rule-id="${ruleId}"]`);
+                if (row) {
+                    row.remove();
+                    
+                    // 성공 메시지 표시
+                    showNotification(`'${keyword}' 키워드 자동 설정이 삭제되었습니다.`, 'success');
+                    
+                    // 여기에 서버로 삭제 요청을 보내는 코드를 추가할 수 있습니다
+                    // await deleteProductRuleFromServer(ruleId);
+                }
+            }
+        }
+
+        // 업체별 자동 설정 삭제
+        function deleteCompanyRule(ruleId, companyName) {
+            if (confirm(`'${companyName}' 업체에 대한 자동 설정을 삭제하시겠습니까?`)) {
+                // 테이블에서 해당 행 제거
+                const row = document.querySelector(`#companyRulesTable tr[data-rule-id="${ruleId}"]`);
+                if (row) {
+                    row.remove();
+                    
+                    // 성공 메시지 표시
+                    showNotification(`'${companyName}' 업체 자동 설정이 삭제되었습니다.`, 'success');
+                    
+                    // 여기에 서버로 삭제 요청을 보내는 코드를 추가할 수 있습니다
+                    // await deleteCompanyRuleFromServer(ruleId);
+                }
+            }
+        }
+
+        // 알림 메시지 표시 함수
+        function showNotification(message, type = 'info') {
+            // 기존 알림 제거
+            const existingNotification = document.querySelector('.delete-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // 새 알림 생성
+            const notification = document.createElement('div');
+            notification.className = `delete-notification alert alert-${type} alert-dismissible fade show`;
+            notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // body에 추가
+            document.body.appendChild(notification);
+
+            // 3초 후 자동 제거
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 3000);
         }
     </script>
 </body>
