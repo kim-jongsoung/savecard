@@ -70,7 +70,7 @@ adult_unit_price, child_unit_price, payment_status
 - confidence: 파싱 신뢰도 (0.0~1.0, 소수점 2자리)
 - extracted_notes: 파싱 과정에서 발견한 특이사항이나 애매한 부분 설명
 
-✅ 출력 예시:
+✅ 출력 예시 1 (VASCO):
 {
   "id": null,
   "reservation_number": "459447",
@@ -107,6 +107,43 @@ adult_unit_price, child_unit_price, payment_status
   "extracted_notes": "모든 필수 정보가 명확하게 제공됨. 항공편과 호텔 정보 확실함."
 }
 
+✅ 출력 예시 2 (NOL 특화):
+{
+  "id": null,
+  "reservation_number": "463172",
+  "confirmation_number": "PROD:a5bd78",
+  "channel": "NOL 인터파크",
+  "product_name": "드레스덴 & 작센스위스 1일투어 프라하출발",
+  "total_amount": 284000.00,
+  "package_type": "드레스덴&작센스위스 1일투어",
+  "usage_date": "2025-10-21",
+  "usage_time": null,
+  "quantity": 4,
+  "korean_name": "함원동",
+  "english_first_name": "WONDONG",
+  "english_last_name": "HAM",
+  "email": "skyhamm@gmail.com",
+  "phone": "010-9924-8036",
+  "kakao_id": "skyhamm@gmail.com",
+  "guest_count": 4,
+  "memo": "캐리어 개수: 2개. 메모 등록 요청.",
+  "reservation_datetime": "2025-09-23 06:38:35",
+  "created_at": "NOW()",
+  "updated_at": "NOW()",
+  "issue_code_id": null,
+  "code_issued": false,
+  "code_issued_at": null,
+  "platform_name": "NOL",
+  "people_adult": 4,
+  "people_child": 0,
+  "people_infant": 0,
+  "adult_unit_price": 71000.00,
+  "child_unit_price": null,
+  "payment_status": "confirmed",
+  "confidence": 0.90,
+  "extracted_notes": "NOL 인터파크 예약. 드레스덴 투어 패키지 타입 명확히 식별됨."
+}
+
 📋 memo 필드 작성 규칙:
 - memo 필드에 고객이 요청한 모든 사항을 서술형으로 그대로 저장
 - 항공편 정보 (출국편/귀국편 코드, 날짜, 시간)
@@ -126,7 +163,8 @@ adult_unit_price, child_unit_price, payment_status
 - 성인/어른/대인 수를 people_adult에, 아동/어린이/소아 수를 people_child에 저장
 - 유아/영아/베이비 수를 people_infant에 저장
 - 인원 정보가 없으면 기본값: people_adult=1, people_child=0, people_infant=0
-- package_type은 상품의 세부 옵션/하위 카테고리 (예: "1차 (선셋 & 별빛투어)", "오전 투어", "픽업 포함" 등)
+- package_type은 상품의 세부 옵션/하위 카테고리 (예: "1차 (선셋 & 별빛투어)", "오전 투어", "픽업 포함", "드레스덴&작센스위스 1일투어" 등)
+- NOL 데이터에서 상품명 다음에 나오는 세부 투어명이나 옵션명을 package_type으로 추출
 
 📊 confidence 평가 기준:
 - 0.9~1.0: 모든 핵심 정보 명확, 검수 불필요
