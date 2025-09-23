@@ -54,6 +54,12 @@ adult_unit_price, child_unit_price, payment_status
 - id는 null (DB 자동생성)
 - issue_code_id는 null
 
+💰 금액 단위 자동 판별 규칙 (매우 중요!):
+- 999 이하 금액 → 달러($USD) - 예: 299 = $299
+- 1000 이상 금액 → 원화(₩KRW) - 예: 284000 = ₩284,000
+- 업체마다 결제 기준이 다르므로 이 규칙으로 통일
+- total_amount, adult_unit_price, child_unit_price 모두 적용
+
 🔍 필수 파싱 필드 (절대 누락 금지):
 - platform_name: 업체명/여행사명 (VASCO, NOL, KLOOK 등)
 - usage_date: 이용일/출발일/여행일 (YYYY-MM-DD)
@@ -259,6 +265,12 @@ function postProcessData(data) {
         processed.adult_unit_price = Math.round(processed.total_amount / processed.people_adult * 100) / 100;
     }
 
+    // 💰 금액 단위 자동 판별 및 표시 (999 이하=달러, 1000 이상=원화)
+    processed.currency_info = determineCurrency(processed.total_amount);
+    processed.total_amount_display = formatCurrencyDisplay(processed.total_amount);
+    processed.adult_unit_price_display = formatCurrencyDisplay(processed.adult_unit_price);
+    processed.child_unit_price_display = formatCurrencyDisplay(processed.child_unit_price);
+
     return processed;
 }
 
@@ -337,6 +349,42 @@ function cleanPhone(phone) {
     // 숫자, +, -, 공백만 남기고 제거
     const cleaned = phone.replace(/[^\d\+\-\s]/g, '');
     return cleaned.length > 0 ? cleaned : null;
+}
+
+/**
+ * 금액 단위 자동 판별 (999 이하=달러, 1000 이상=원화)
+ * @param {number} amount - 금액
+ * @returns {Object} - 통화 정보 { currency: 'USD'|'KRW', symbol: '$'|'₩' }
+ */
+function determineCurrency(amount) {
+    if (!amount || isNaN(amount)) {
+        return { currency: 'UNKNOWN', symbol: '' };
+    }
+    
+    if (amount <= 999) {
+        return { currency: 'USD', symbol: '$' };
+    } else {
+        return { currency: 'KRW', symbol: '₩' };
+    }
+}
+
+/**
+ * 금액을 통화 기호와 함께 표시
+ * @param {number} amount - 금액
+ * @returns {string} - 포맷된 금액 문자열
+ */
+function formatCurrencyDisplay(amount) {
+    if (!amount || isNaN(amount)) return null;
+    
+    const currencyInfo = determineCurrency(amount);
+    
+    if (currencyInfo.currency === 'USD') {
+        return `$${amount.toFixed(2)}`;
+    } else if (currencyInfo.currency === 'KRW') {
+        return `₩${amount.toLocaleString('ko-KR')}`;
+    }
+    
+    return amount.toString();
 }
 
 /**

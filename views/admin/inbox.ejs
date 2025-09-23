@@ -538,6 +538,9 @@
 
             // 총 인원 및 금액 계산
             calculateTotal();
+            
+            // 💰 통화 표시 업데이트
+            updateCurrencyDisplay();
         }
 
         // 특별 설정 규칙 적용
@@ -983,14 +986,39 @@
             
             document.getElementById('total_amount').value = totalAmount.toFixed(2);
             
-            // 계산식 표시
-            let formula = [];
-            if (adultCount > 0) formula.push(`성인 ${adultCount}명×$${adultPrice}`);
-            if (childCount > 0) formula.push(`아동 ${childCount}명×$${childPrice}`);
-            if (infantCount > 0) formula.push(`유아 ${infantCount}명×$${infantPrice}`);
+            // 💰 금액 단위 자동 판별 (999 이하=달러, 1000 이상=원화)
+            const currencyInfo = determineCurrency(totalAmount);
+            const adultCurrency = determineCurrency(adultPrice);
+            const childCurrency = determineCurrency(childPrice);
+            const infantCurrency = determineCurrency(infantPrice);
             
-            const formulaText = formula.length > 0 ? formula.join(' + ') + ` = $${totalAmount.toFixed(2)}` : '';
+            // 계산식 표시 (통화 기호 포함)
+            let formula = [];
+            if (adultCount > 0) {
+                const adultDisplay = adultCurrency.currency === 'USD' ? 
+                    `$${adultPrice.toFixed(2)}` : `₩${parseInt(adultPrice).toLocaleString('ko-KR')}`;
+                formula.push(`성인 ${adultCount}명×${adultDisplay}`);
+            }
+            if (childCount > 0) {
+                const childDisplay = childCurrency.currency === 'USD' ? 
+                    `$${childPrice.toFixed(2)}` : `₩${parseInt(childPrice).toLocaleString('ko-KR')}`;
+                formula.push(`아동 ${childCount}명×${childDisplay}`);
+            }
+            if (infantCount > 0) {
+                const infantDisplay = infantCurrency.currency === 'USD' ? 
+                    `$${infantPrice.toFixed(2)}` : `₩${parseInt(infantPrice).toLocaleString('ko-KR')}`;
+                formula.push(`유아 ${infantCount}명×${infantDisplay}`);
+            }
+            
+            // 총 금액 표시 (통화 기호 포함)
+            const totalDisplay = currencyInfo.currency === 'USD' ? 
+                `$${totalAmount.toFixed(2)}` : `₩${parseInt(totalAmount).toLocaleString('ko-KR')}`;
+            
+            const formulaText = formula.length > 0 ? formula.join(' + ') + ` = ${totalDisplay}` : '';
             document.getElementById('calculation_formula').value = formulaText;
+            
+            // 💰 통화 표시 업데이트
+            updateCurrencyDisplay();
         }
 
         // 인원 수 및 가격 변경 시 재계산 - 페이지 로드 후 이벤트 리스너 추가
@@ -1087,7 +1115,67 @@
             location.reload();
         }
 
-        // 기본 규칙 관련 함수들 제거됨 - 사용자 정의 규칙만 사용
+        // 💰 금액 단위 자동 판별 함수 (999 이하=달러, 1000 이상=원화)
+        function determineCurrency(amount) {
+            if (!amount || isNaN(amount)) {
+                return { currency: 'UNKNOWN', symbol: '' };
+            }
+            
+            if (amount <= 999) {
+                return { currency: 'USD', symbol: '$' };
+            } else {
+                return { currency: 'KRW', symbol: '₩' };
+            }
+        }
+
+        // 💰 금액을 통화 기호와 함께 표시
+        function formatCurrencyDisplay(amount) {
+            if (!amount || isNaN(amount)) return '';
+            
+            const currencyInfo = determineCurrency(amount);
+            
+            if (currencyInfo.currency === 'USD') {
+                return `$${parseFloat(amount).toFixed(2)}`;
+            } else if (currencyInfo.currency === 'KRW') {
+                return `₩${parseInt(amount).toLocaleString('ko-KR')}`;
+            }
+            
+            return amount.toString();
+        }
+
+        // 💰 금액 필드에 통화 표시 업데이트
+        function updateCurrencyDisplay() {
+            const totalAmount = document.getElementById('total_amount').value;
+            const adultPrice = document.getElementById('adult_price').value;
+            const childPrice = document.getElementById('child_price').value;
+            const infantPrice = document.getElementById('infant_price').value;
+
+            // 총 금액 표시 업데이트
+            if (totalAmount) {
+                const totalDisplay = formatCurrencyDisplay(totalAmount);
+                document.getElementById('total_amount').setAttribute('data-currency', totalDisplay);
+                document.getElementById('total_amount').title = totalDisplay;
+            }
+
+            // 단가 표시 업데이트
+            if (adultPrice) {
+                const adultDisplay = formatCurrencyDisplay(adultPrice);
+                document.getElementById('adult_price').setAttribute('data-currency', adultDisplay);
+                document.getElementById('adult_price').title = adultDisplay;
+            }
+
+            if (childPrice) {
+                const childDisplay = formatCurrencyDisplay(childPrice);
+                document.getElementById('child_price').setAttribute('data-currency', childDisplay);
+                document.getElementById('child_price').title = childDisplay;
+            }
+
+            if (infantPrice) {
+                const infantDisplay = formatCurrencyDisplay(infantPrice);
+                document.getElementById('infant_price').setAttribute('data-currency', infantDisplay);
+                document.getElementById('infant_price').title = infantDisplay;
+            }
+        }
 
         // 알림 메시지 표시 함수
         function showNotification(message, type = 'info') {
