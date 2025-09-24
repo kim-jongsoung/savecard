@@ -6343,17 +6343,24 @@ async function startServer() {
                     );
                 `);
                 
-                // 인덱스는 별도로 생성 (테이블 존재 확인 후)
+                // 인덱스는 별도로 생성 (reservation_audits 테이블과 컬럼 존재 확인 후)
                 await pool.query(`
                     DO $$ 
                     BEGIN
-                        -- reservations 테이블의 기본 키 컬럼명 확인
+                        -- reservation_audits 테이블과 reservation_id 컬럼 존재 확인
                         IF EXISTS (
                             SELECT 1 FROM information_schema.columns 
-                            WHERE table_name = 'reservations' AND column_name = 'id'
+                            WHERE table_name = 'reservation_audits' AND column_name = 'reservation_id'
                         ) THEN
-                            -- id 컬럼이 존재하면 인덱스 생성
+                            -- reservation_id 컬럼이 존재하면 인덱스 생성
                             CREATE INDEX IF NOT EXISTS idx_reservation_audits_reservation_id ON reservation_audits(reservation_id);
+                        END IF;
+                        
+                        -- changed_at 컬럼 존재 확인 후 인덱스 생성
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservation_audits' AND column_name = 'changed_at'
+                        ) THEN
                             CREATE INDEX IF NOT EXISTS idx_reservation_audits_changed_at ON reservation_audits(changed_at);
                         END IF;
                     END $$;
@@ -6386,11 +6393,19 @@ async function startServer() {
                 await pool.query(`
                     DO $$ 
                     BEGIN
+                        -- assignments 테이블과 reservation_id 컬럼 존재 확인
                         IF EXISTS (
                             SELECT 1 FROM information_schema.columns 
-                            WHERE table_name = 'reservations' AND column_name = 'id'
+                            WHERE table_name = 'assignments' AND column_name = 'reservation_id'
                         ) THEN
                             CREATE INDEX IF NOT EXISTS idx_assignments_reservation_id ON assignments(reservation_id);
+                        END IF;
+                        
+                        -- status 컬럼 존재 확인 후 인덱스 생성
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'assignments' AND column_name = 'status'
+                        ) THEN
                             CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
                         END IF;
                     END $$;

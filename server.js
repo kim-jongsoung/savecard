@@ -12,7 +12,20 @@ const PORT = process.env.PORT || 3000;
 
 // 보안 미들웨어
 app.use(helmet({
-    contentSecurityPolicy: false // QR 이미지 표시를 위해 비활성화
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            // Osano 및 기타 외부 추적 스크립트 차단
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"]
+        }
+    }
 }));
 
 // Rate limiting
@@ -24,6 +37,21 @@ app.use(limiter);
 
 // CORS 설정
 app.use(cors());
+
+// Osano 및 외부 추적 스크립트 차단 미들웨어
+app.use((req, res, next) => {
+    // Osano 관련 요청 차단
+    if (req.url.includes('osano') || req.url.includes('cmp')) {
+        return res.status(404).end();
+    }
+    
+    // 추가 보안 헤더 설정
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    
+    next();
+});
 
 // 미들웨어 설정
 app.use(express.json());
