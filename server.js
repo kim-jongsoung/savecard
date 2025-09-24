@@ -10,20 +10,19 @@ const { testConnection } = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 보안 미들웨어
+// 보안 미들웨어 (레일웨이 Osano 스크립트 허용)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://*.osano.com"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://*.osano.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'"],
-            // Osano 및 기타 외부 추적 스크립트 차단
+            connectSrc: ["'self'", "https://*.osano.com"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
-            frameSrc: ["'none'"]
+            frameSrc: ["'self'", "https://*.osano.com"]
         }
     }
 }));
@@ -38,15 +37,9 @@ app.use(limiter);
 // CORS 설정
 app.use(cors());
 
-// Osano 및 외부 추적 스크립트 차단 미들웨어
+// 기본 보안 헤더 설정 (Osano는 레일웨이 자동 삽입이므로 차단하지 않음)
 app.use((req, res, next) => {
-    // Osano 관련 요청 차단
-    if (req.url.includes('osano') || req.url.includes('cmp')) {
-        return res.status(404).end();
-    }
-    
-    // 추가 보안 헤더 설정
-    res.setHeader('X-Frame-Options', 'DENY');
+    // 기본 보안 헤더만 설정
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     

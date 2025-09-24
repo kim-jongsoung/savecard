@@ -6433,18 +6433,29 @@ async function startServer() {
                     CREATE INDEX IF NOT EXISTS idx_settlements_settlement_period ON settlements(settlement_period);
                 `);
                 
-                // 6. 기본 field_defs 데이터 삽입
-                await pool.query(`
-                    INSERT INTO field_defs (field_key, field_name, field_type, field_group, validation_rules, ui_config, is_required, sort_order)
-                    VALUES 
-                        ('special_requests', '특별 요청사항', 'textarea', 'booking', '{"maxLength": 1000}', '{"placeholder": "특별한 요청사항이 있으시면 입력해주세요", "rows": 3}', false, 10),
-                        ('dietary_restrictions', '식이 제한사항', 'text', 'traveler', '{"maxLength": 200}', '{"placeholder": "알레르기, 채식주의 등"}', false, 20),
-                        ('emergency_contact', '비상 연락처', 'text', 'traveler', '{"pattern": "^[0-9+\\\\-\\\\s()]+$"}', '{"placeholder": "+82-10-1234-5678"}', false, 30),
-                        ('tour_guide_language', '가이드 언어', 'select', 'service', '{}', '{"options": ["한국어", "영어", "일본어", "중국어"]}', false, 40),
-                        ('pickup_location_detail', '픽업 위치 상세', 'text', 'service', '{"maxLength": 300}', '{"placeholder": "호텔 로비, 특정 위치 등"}', false, 50),
-                        ('internal_notes', '내부 메모', 'textarea', 'internal', '{"maxLength": 2000}', '{"placeholder": "내부 직원용 메모", "rows": 4}', false, 100)
-                    ON CONFLICT (field_key) DO NOTHING;
+                // 6. 기본 field_defs 데이터 삽입 (테이블 존재 확인 후)
+                const fieldDefsCheck = await pool.query(`
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'field_defs' AND column_name = 'field_key'
                 `);
+                
+                if (fieldDefsCheck.rows.length > 0) {
+                    await pool.query(`
+                        INSERT INTO field_defs (field_key, field_name, field_type, field_group, validation_rules, ui_config, is_required, sort_order)
+                        VALUES 
+                            ('special_requests', '특별 요청사항', 'textarea', 'booking', '{"maxLength": 1000}', '{"placeholder": "특별한 요청사항이 있으시면 입력해주세요", "rows": 3}', false, 10),
+                            ('dietary_restrictions', '식이 제한사항', 'text', 'traveler', '{"maxLength": 200}', '{"placeholder": "알레르기, 채식주의 등"}', false, 20),
+                            ('emergency_contact', '비상 연락처', 'text', 'traveler', '{"pattern": "^[0-9+\\\\-\\\\s()]+$"}', '{"placeholder": "+82-10-1234-5678"}', false, 30),
+                            ('tour_guide_language', '가이드 언어', 'select', 'service', '{}', '{"options": ["한국어", "영어", "일본어", "중국어"]}', false, 40),
+                            ('pickup_location_detail', '픽업 위치 상세', 'text', 'service', '{"maxLength": 300}', '{"placeholder": "호텔 로비, 특정 위치 등"}', false, 50),
+                            ('internal_notes', '내부 메모', 'textarea', 'internal', '{"maxLength": 2000}', '{"placeholder": "내부 직원용 메모", "rows": 4}', false, 100)
+                        ON CONFLICT (field_key) DO NOTHING;
+                    `);
+                    console.log('✅ field_defs 기본 데이터 삽입 완료');
+                } else {
+                    console.log('⚠️ field_defs 테이블의 field_key 컬럼이 존재하지 않음 - 데이터 삽입 건너뜀');
+                }
                 
                 // 마이그레이션 로그 기록
                 await pool.query(
