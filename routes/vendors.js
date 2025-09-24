@@ -242,19 +242,24 @@ router.put('/:id', async (req, res) => {
                     business_type = $5,
                     description = $6,
                     notification_email = $7,
-                    is_active = $8,
                     updated_at = NOW()
             `;
             
             let params = [
                 vendor_name, email, phone, contact_person,
-                business_type, description, notification_email, is_active
+                business_type, description, notification_email
             ];
+            
+            // is_active가 명시적으로 전달된 경우에만 업데이트
+            if (is_active !== undefined) {
+                updateQuery = updateQuery.replace('updated_at = NOW()', 'is_active = $8, updated_at = NOW()');
+                params.push(is_active);
+            }
             
             // 패스워드 변경이 있는 경우
             if (password) {
                 const password_hash = await bcrypt.hash(password, 10);
-                updateQuery += ', password_hash = $9';
+                updateQuery += ', password_hash = $' + (params.length + 1);
                 params.push(password_hash);
             }
             
