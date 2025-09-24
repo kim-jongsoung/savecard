@@ -9,7 +9,15 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 // nodemailer 제거됨
 // 간단하고 확실한 환경변수 처리
-require('dotenv').config();
+// 로컬에서는 railsql.env 파일 사용, 배포환경에서는 기본 .env 사용
+const fs = require('fs');
+if (fs.existsSync('./railsql.env')) {
+    console.log('🔧 railsql.env 파일을 사용합니다 (로컬 Railway 연동)');
+    require('dotenv').config({ path: './railsql.env' });
+} else {
+    console.log('🔧 기본 .env 파일을 사용합니다');
+    require('dotenv').config();
+}
 
 // PostgreSQL 또는 JSON 데이터베이스 선택
 const { pool, dbMode, testConnection, createTables, ensureAllColumns, migrateFromJSON } = require('./database');
@@ -258,6 +266,18 @@ app.use(checkDatabase);
 // 관리자 라우트 연결 (로그인/로그아웃만)
 const adminRoutes = require('./routes/admin');
 app.use('/admin', adminRoutes);
+
+// app.locals에 pool 설정 (API 라우트에서 사용)
+app.locals.pool = pool;
+
+// 수배업체 API 라우트 연결
+try {
+    const vendorsRouter = require('./routes/vendors');
+    app.use('/api/vendors', vendorsRouter);
+    console.log('✅ 수배업체 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 수배업체 라우트 연결 실패:', error.message);
+}
 
 // 임시 테스트 API (구체적인 라우트를 먼저 배치)
 app.get('/api/test', (req, res) => {
@@ -6246,7 +6266,23 @@ app.patch('/api/assignments/:id/status', requireAuth, async (req, res) => {
 
 async function startServer() {
     try {
-        await initializeDatabase();
+        // 서버 먼저 시작
+        const httpServer = app.listen(PORT, () => {
+            console.log('✅ 서버 초기화 및 시작 완료');
+            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+            console.log(`관리자 페이지: http://localhost:${PORT}/admin`);
+            console.log(`카드 페이지: http://localhost:${PORT}/card`);
+        });
+        
+        // 서버 시작 후 데이터베이스 초기화 (비동기)
+        setTimeout(async () => {
+            try {
+                await initializeDatabase();
+                console.log('✅ 데이터베이스 초기화 완료');
+            } catch (error) {
+                console.error('⚠️ 데이터베이스 초기화 실패 (서버는 계속 실행):', error.message);
+            }
+        }, 2000);
         
         // ERP 확장 마이그레이션 함수
         async function runERPMigration() {
@@ -6371,6 +6407,7 @@ async function startServer() {
                     CREATE TABLE IF NOT EXISTS assignments (
                         id SERIAL PRIMARY KEY,
                         reservation_id INTEGER NOT NULL,
+                        vendor_id INTEGER,
                         vendor_name VARCHAR(200),
                         vendor_contact JSONB,
                         assignment_type VARCHAR(100) DEFAULT 'general',
@@ -6387,6 +6424,19 @@ async function startServer() {
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW()
                     );
+                `);
+                
+                // assignments 테이블에 vendor_id 컬럼 추가 (기존 테이블에 없는 경우)
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'assignments' AND column_name = 'vendor_id'
+                        ) THEN
+                            ALTER TABLE assignments ADD COLUMN vendor_id INTEGER;
+                        END IF;
+                    END $$;
                 `);
                 
                 // assignments 인덱스 별도 생성
@@ -6411,7 +6461,40 @@ async function startServer() {
                     END $$;
                 `);
                 
-                // 5. settlements 테이블 생성
+                // 5. vendors 테이블 생성 (수배업체 관리)
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS vendors (
+                        id SERIAL PRIMARY KEY,
+                        vendor_name VARCHAR(100) NOT NULL UNIQUE,
+                        vendor_id VARCHAR(50) NOT NULL UNIQUE,
+                        password_hash VARCHAR(255) NOT NULL,
+                        email VARCHAR(100) NOT NULL,
+                        phone VARCHAR(20),
+                        contact_person VARCHAR(50),
+                        business_type VARCHAR(50),
+                        description TEXT,
+                        notification_email VARCHAR(100),
+                        is_active BOOLEAN DEFAULT true,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                `);
+                
+                // 6. vendor_products 테이블 생성 (업체별 담당 상품 매핑)
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS vendor_products (
+                        id SERIAL PRIMARY KEY,
+                        vendor_id INTEGER REFERENCES vendors(id) ON DELETE CASCADE,
+                        product_keyword VARCHAR(100) NOT NULL,
+                        priority INTEGER DEFAULT 1,
+                        is_active BOOLEAN DEFAULT true,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW(),
+                        UNIQUE(vendor_id, product_keyword)
+                    );
+                `);
+                
+                // 7. settlements 테이블 생성
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS settlements (
                         id SERIAL PRIMARY KEY,
@@ -6488,20 +6571,17 @@ async function startServer() {
             }
         }
 
-        // 서버 시작
-        const PORT = process.env.PORT || 3000;
-        const server = app.listen(PORT, async () => {
-            console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-            console.log(`관리자 페이지: http://localhost:${PORT}/admin`);
-            console.log(`카드 페이지: http://localhost:${PORT}/card`);
-            
-            // ERP 마이그레이션 실행
-            await runERPMigration();
-            
-            console.log('✅ 서버 준비 완료!');
-        });
+        // ERP 마이그레이션도 비동기로 실행
+        setTimeout(async () => {
+            try {
+                await runERPMigration();
+                console.log('✅ ERP 마이그레이션 완료');
+            } catch (error) {
+                console.error('⚠️ ERP 마이그레이션 실패 (서버는 계속 실행):', error.message);
+            }
+        }, 5000);
         
-        return server;
+        return httpServer;
     } catch (error) {
         console.error('❌ 서버 시작 실패:', error);
         process.exit(1);

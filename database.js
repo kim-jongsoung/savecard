@@ -7,9 +7,21 @@ let dbMode = 'json';
 
 try {
   if (process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL) {
+    const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL;
+    
+    // Railway PostgreSQL은 항상 SSL 필요
+    const isRailway = connectionString.includes('railway') || connectionString.includes('metro.proxy.rlwy.net');
+    
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DB_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      connectionString: connectionString,
+      ssl: isRailway ? { rejectUnauthorized: false } : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
+      // Railway PostgreSQL 연결 최적화
+      max: isRailway ? 5 : 20, // Railway는 연결 수 제한
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      acquireTimeoutMillis: 60000,
+      // 연결 재시도 설정
+      retryDelayMs: 1000
     });
     dbMode = 'postgresql';
     console.log('✅ PostgreSQL 모드로 실행');
