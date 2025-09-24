@@ -1,0 +1,9 @@
+# Railway PostgreSQL 연결을 위한 환경변수 설정
+# 이 파일을 .env로 복사하고 실제 값으로 변경하세요
+
+DATABASE_URL=postgresql://postgres:password@localhost:5432/guamsavecard
+OPENAI_API_KEY=your_openai_api_key_here
+SESSION_SECRET=guam-savecard-secret-key
+
+# Railway에서 복사한 실제 DATABASE_URL을 사용하세요
+# 예시: DATABASE_URL=postgresql://postgres:password@containers-us-west-xxx.railway.app:5432/railway

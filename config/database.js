@@ -1,33 +1,20 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-// 데이터베이스 연결 설정
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'guam_savecard',
-    charset: 'utf8mb4',
-    timezone: '+09:00'
-    // MySQL2에서 지원하지 않는 옵션들 제거: acquireTimeout, timeout, reconnect
-};
-
-// 연결 풀 생성
-const pool = mysql.createPool({
-    ...dbConfig,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+// PostgreSQL 연결 풀 생성
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/guamsavecard',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // 데이터베이스 연결 테스트
 async function testConnection() {
     try {
-        const connection = await pool.getConnection();
-        console.log('✅ MySQL 데이터베이스 연결 성공');
-        connection.release();
+        const client = await pool.connect();
+        console.log('✅ PostgreSQL 데이터베이스 연결 성공');
+        client.release();
         return true;
     } catch (error) {
-        console.error('❌ MySQL 데이터베이스 연결 실패:', error.message);
+        console.error('❌ PostgreSQL 데이터베이스 연결 실패:', error.message);
         return false;
     }
 }
