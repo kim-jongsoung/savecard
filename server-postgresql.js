@@ -6469,6 +6469,93 @@ app.get('/admin/setup-assignments', requireAuth, async (req, res) => {
     }
 });
 
+// 수배 목록 조회 API
+app.get('/api/assignments', requireAuth, async (req, res) => {
+    try {
+        const { page = 1, status = '', search = '' } = req.query;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        
+        let whereClause = 'WHERE 1=1';
+        const queryParams = [];
+        let paramIndex = 0;
+        
+        // 상태 필터
+        if (status) {
+            paramIndex++;
+            whereClause += ` AND a.status = $${paramIndex}`;
+            queryParams.push(status);
+        }
+        
+        // 검색 필터 (예약번호, 상품명, 수배업체명)
+        if (search) {
+            paramIndex++;
+            whereClause += ` AND (
+                r.reservation_number ILIKE $${paramIndex} OR 
+                r.product_name ILIKE $${paramIndex} OR 
+                a.vendor_name ILIKE $${paramIndex}
+            )`;
+            queryParams.push(`%${search}%`);
+        }
+        
+        // 총 개수 조회
+        const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            ${whereClause}
+        `;
+        const countResult = await pool.query(countQuery, queryParams);
+        const totalCount = parseInt(countResult.rows[0].total);
+        
+        // 수배 목록 조회
+        const assignmentsQuery = `
+            SELECT 
+                a.*,
+                r.reservation_number,
+                r.product_name,
+                r.korean_name,
+                r.departure_date,
+                r.departure_time,
+                r.people_adult,
+                r.people_child,
+                r.people_infant,
+                r.total_amount,
+                COUNT(*) OVER() as total_count
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            ${whereClause}
+            ORDER BY a.assigned_at DESC
+            LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+        `;
+        
+        queryParams.push(limit, offset);
+        const result = await pool.query(assignmentsQuery, queryParams);
+        
+        const totalPages = Math.ceil(totalCount / limit);
+        
+        res.json({
+            success: true,
+            data: {
+                assignments: result.rows,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: totalPages,
+                    totalCount: totalCount,
+                    limit: limit
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배 목록을 불러오는데 실패했습니다: ' + error.message
+        });
+    }
+});
+
 // 수배서 생성 API
 app.post('/api/assignments', requireAuth, async (req, res) => {
     try {
