@@ -6487,18 +6487,21 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         const limit = 20;
         const offset = (page - 1) * limit;
         
-        let whereClause = `WHERE r.payment_status IN ('in_progress', 'confirmed')`;
+        // 수배관리 페이지: 수배중 + 확정 + 바우처전송완료 상태만 표시
+        let whereClause = `WHERE r.payment_status IN ('in_progress', 'confirmed', 'voucher_sent')`;
         const queryParams = [];
         let paramIndex = 0;
         
         console.log('🔍 수배관리 API 호출 - 필터:', { page, status, search });
         
-        // 예약 상태 필터 (수배 상태가 아닌 예약 상태 기준)
+        // 예약 상태 필터
         if (status) {
             if (status === 'in_progress') {
                 whereClause += ` AND r.payment_status = 'in_progress'`;
             } else if (status === 'confirmed') {
                 whereClause += ` AND r.payment_status = 'confirmed'`;
+            } else if (status === 'voucher_sent') {
+                whereClause += ` AND r.payment_status = 'voucher_sent'`;
             }
         }
         

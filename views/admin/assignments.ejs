@@ -229,8 +229,11 @@
                                         <button class="btn btn-sm btn-success" onclick="confirmReservation(${reservation.id})">
                                             <i class="fas fa-check"></i> 확정 처리
                                         </button>
+                                        <button class="btn btn-sm btn-warning" onclick="editAssignment(${reservation.id})">
+                                            <i class="fas fa-edit"></i> 수배서 수정
+                                        </button>
                                         ${reservation.assignment_id ? `
-                                            <button class="btn btn-sm btn-warning" onclick="resendAssignment(${reservation.assignment_id})">
+                                            <button class="btn btn-sm btn-secondary" onclick="resendAssignment(${reservation.assignment_id})">
                                                 <i class="fas fa-redo"></i> 수배서 재전송
                                             </button>
                                         ` : ''}
@@ -238,6 +241,17 @@
                                     ${reservation.payment_status === 'confirmed' ? `
                                         <button class="btn btn-sm btn-info" onclick="sendVoucher(${reservation.id})">
                                             <i class="fas fa-paper-plane"></i> 바우처 전송
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="editAssignment(${reservation.id})">
+                                            <i class="fas fa-edit"></i> 수배서 수정
+                                        </button>
+                                    ` : ''}
+                                    ${reservation.payment_status === 'voucher_sent' ? `
+                                        <button class="btn btn-sm btn-primary" onclick="moveToSettlement(${reservation.id})">
+                                            <i class="fas fa-calculator"></i> 정산 이관
+                                        </button>
+                                        <button class="btn btn-sm btn-secondary" onclick="resendVoucher(${reservation.id})">
+                                            <i class="fas fa-redo"></i> 바우처 재전송
                                         </button>
                                     ` : ''}
                                     ${reservation.assignment_token ? `
@@ -264,6 +278,7 @@
                 'pending': '대기중 (신규예약)',
                 'in_progress': '수배중 (현지수배)',
                 'confirmed': '확정 (수배완료)',
+                'voucher_sent': '바우처전송완료',
                 'cancelled': '예약취소',
                 'refunded': '환불완료'
             };
@@ -288,6 +303,7 @@
                 'pending': 'pending',
                 'in_progress': 'in-progress',
                 'confirmed': 'confirmed',
+                'voucher_sent': 'voucher-sent',
                 'cancelled': 'cancelled',
                 'refunded': 'refunded'
             };
@@ -448,9 +464,15 @@
             }
         }
 
+        // 수배서 수정
+        function editAssignment(reservationId) {
+            showAlert('수배서 수정 기능은 곧 추가됩니다.', 'info');
+            // TODO: 수배서 수정 모달 구현
+        }
+
         // 바우처 전송
         async function sendVoucher(reservationId) {
-            if (!confirm('바우처를 고객에게 전송하시겠습니까?')) return;
+            if (!confirm('바우처를 고객에게 전송하시겠습니까?\\n전송 후 상태가 "바우처전송완료"로 변경됩니다.')) return;
 
             try {
                 const response = await fetch(`/api/reservations/${reservationId}/voucher`, {
@@ -461,7 +483,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showAlert('바우처가 전송되었습니다.', 'success');
+                    showAlert('바우처가 전송되었습니다. 상태가 "바우처전송완료"로 변경되었습니다.', 'success');
                     loadAssignments(); // 목록 새로고침
                 } else {
                     showAlert(result.message || '바우처 전송에 실패했습니다.', 'danger');
@@ -469,6 +491,54 @@
             } catch (error) {
                 console.error('바우처 전송 실패:', error);
                 showAlert('바우처 전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 바우처 재전송
+        async function resendVoucher(reservationId) {
+            if (!confirm('바우처를 다시 전송하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/voucher/resend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 재전송되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '바우처 재전송에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('바우처 재전송 실패:', error);
+                showAlert('바우처 재전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 정산 이관
+        async function moveToSettlement(reservationId) {
+            if (!confirm('이 예약을 정산관리로 이관하시겠습니까?\\n이관 후에는 수배관리에서 제외됩니다.')) return;
+
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/settlement`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('정산관리로 이관되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '정산 이관에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('정산 이관 실패:', error);
+                showAlert('정산 이관 중 오류가 발생했습니다.', 'danger');
             }
         }
 
