@@ -11,11 +11,12 @@
             font-size: 0.8rem;
             padding: 0.25rem 0.5rem;
         }
-        .status-requested { background-color: #ffc107; color: #000; }
-        .status-sent { background-color: #17a2b8; color: #fff; }
-        .status-viewed { background-color: #6f42c1; color: #fff; }
+        .status-pending { background-color: #6c757d; color: #fff; }
+        .status-in-progress { background-color: #ffc107; color: #000; }
         .status-confirmed { background-color: #28a745; color: #fff; }
-        .status-rejected { background-color: #dc3545; color: #fff; }
+        .status-voucher-sent { background-color: #17a2b8; color: #fff; }
+        .status-cancelled { background-color: #dc3545; color: #fff; }
+        .status-refunded { background-color: #6f42c1; color: #fff; }
         .assignment-card {
             border-left: 4px solid #dee2e6;
             transition: all 0.3s ease;
@@ -23,11 +24,12 @@
         .assignment-card:hover {
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        .assignment-card.requested { border-left-color: #ffc107; }
-        .assignment-card.sent { border-left-color: #17a2b8; }
-        .assignment-card.viewed { border-left-color: #6f42c1; }
+        .assignment-card.pending { border-left-color: #6c757d; }
+        .assignment-card.in-progress { border-left-color: #ffc107; }
         .assignment-card.confirmed { border-left-color: #28a745; }
-        .assignment-card.rejected { border-left-color: #dc3545; }
+        .assignment-card.voucher-sent { border-left-color: #17a2b8; }
+        .assignment-card.cancelled { border-left-color: #dc3545; }
+        .assignment-card.refunded { border-left-color: #6f42c1; }
     </style>
 </head>
 <body>
@@ -38,9 +40,9 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="fas fa-tasks me-2"></i>수배관리</h2>
-                    <button class="btn btn-primary" onclick="createAssignment()">
-                        <i class="fas fa-plus me-1"></i>수배서 생성
-                    </button>
+                    <div class="text-muted">
+                        <small>현지 수배처와의 진행 상황을 관리합니다</small>
+                    </div>
                 </div>
 
                 <!-- 필터 및 검색 -->
@@ -50,11 +52,9 @@
                             <div class="col-md-3">
                                 <select class="form-select" id="statusFilter">
                                     <option value="">전체 상태</option>
-                                    <option value="requested">요청됨</option>
-                                    <option value="sent">전송됨</option>
-                                    <option value="viewed">열람됨</option>
-                                    <option value="confirmed">확정됨</option>
-                                    <option value="rejected">거절됨</option>
+                                    <option value="in_progress">수배중 (현지수배)</option>
+                                    <option value="confirmed">확정 (수배완료)</option>
+                                    <option value="voucher_sent">바우처전송완료</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -89,43 +89,6 @@
         </div>
     </div>
 
-    <!-- 수배서 생성 모달 -->
-    <div class="modal fade" id="createAssignmentModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">수배서 생성</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="createAssignmentForm">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">예약 선택</label>
-                                <select class="form-select" id="reservationSelect" required>
-                                    <option value="">예약을 선택하세요</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">수배업체</label>
-                                <select class="form-select" id="vendorSelect" required>
-                                    <option value="">수배업체를 선택하세요</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">특이사항</label>
-                                <textarea class="form-control" id="assignmentNotes" rows="3" placeholder="수배 시 전달할 특이사항을 입력하세요"></textarea>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-primary" onclick="submitAssignment()">수배서 생성</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -362,50 +325,7 @@
             loadAssignments(1);
         }
 
-        // 수배서 생성 관련 함수들
-        function createAssignment() {
-            const modal = new bootstrap.Modal(document.getElementById('createAssignmentModal'));
-            modal.show();
-        }
-
-        // 불필요한 함수들 제거됨 (수배관리는 예약 중심으로 변경)
-
-        async function submitAssignment() {
-            const form = document.getElementById('createAssignmentForm');
-            const formData = new FormData(form);
-            
-            const assignmentData = {
-                reservation_id: document.getElementById('reservationSelect').value,
-                vendor_id: document.getElementById('vendorSelect').value,
-                notes: document.getElementById('assignmentNotes').value
-            };
-
-            if (!assignmentData.reservation_id || !assignmentData.vendor_id) {
-                showAlert('예약과 수배업체를 모두 선택해주세요.', 'warning');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/assignments', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(assignmentData)
-                });
-
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('수배서가 생성되었습니다.', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('createAssignmentModal')).hide();
-                    loadAssignments();
-                } else {
-                    showAlert(result.message || '수배서 생성에 실패했습니다.', 'danger');
-                }
-            } catch (error) {
-                console.error('수배서 생성 실패:', error);
-                showAlert('수배서 생성 중 오류가 발생했습니다.', 'danger');
-            }
-        }
+        // 수배관리 전용 함수들 (수배서 생성은 예약관리에서만)
 
         // 예약 상세 보기
         function viewReservationDetail(reservationId) {

@@ -6722,6 +6722,235 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
     }
 });
 
+// 예약 확정 API (컨펌번호 입력)
+app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { confirmation_number } = req.body;
+
+        if (!confirmation_number) {
+            return res.status(400).json({
+                success: false,
+                message: '확정번호를 입력해주세요.'
+            });
+        }
+
+        console.log(`🎯 예약 확정 처리: ID ${id}, 확정번호: ${confirmation_number}`);
+
+        // 예약 상태를 '확정(수배완료)'로 변경
+        await pool.query(
+            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+            ['confirmed', id]
+        );
+
+        // assignments 테이블에 확정번호 저장
+        await pool.query(
+            `UPDATE assignments 
+             SET confirmation_number = $1, status = 'confirmed', response_at = NOW(), updated_at = NOW() 
+             WHERE reservation_id = $2`,
+            [confirmation_number, id]
+        );
+
+        console.log(`✅ 예약 확정 완료: ${confirmation_number}`);
+
+        res.json({
+            success: true,
+            message: '예약이 확정되었습니다.',
+            confirmation_number: confirmation_number
+        });
+
+    } catch (error) {
+        console.error('❌ 예약 확정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 확정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 바우처 전송 API
+app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`📧 바우처 전송 시작: 예약 ID ${id}`);
+
+        // 예약 정보 조회
+        const reservationResult = await pool.query(
+            'SELECT * FROM reservations WHERE id = $1',
+            [id]
+        );
+
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const reservation = reservationResult.rows[0];
+
+        // 바우처 토큰 생성
+        const voucher_token = 'VCH' + Date.now() + Math.random().toString(36).substr(2, 9);
+
+        // 예약 상태를 '바우처전송완료'로 변경
+        await pool.query(
+            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+            ['voucher_sent', id]
+        );
+
+        // assignments 테이블에 바우처 토큰 저장
+        await pool.query(
+            `UPDATE assignments 
+             SET voucher_token = $1, updated_at = NOW() 
+             WHERE reservation_id = $2`,
+            [voucher_token, id]
+        );
+
+        // TODO: 실제 바우처 이메일/SMS 전송 로직 추가
+        console.log(`📧 바우처 전송 완료: ${reservation.korean_name} (${reservation.phone})`);
+        console.log(`🎫 바우처 링크: ${req.protocol}://${req.get('host')}/voucher/${voucher_token}`);
+
+        res.json({
+            success: true,
+            message: '바우처가 전송되었습니다.',
+            voucher_token: voucher_token,
+            voucher_link: `/voucher/${voucher_token}`
+        });
+
+    } catch (error) {
+        console.error('❌ 바우처 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '바우처 전송 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 바우처 재전송 API
+app.post('/api/reservations/:id/voucher/resend', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`🔄 바우처 재전송: 예약 ID ${id}`);
+
+        // 예약 정보 및 바우처 토큰 조회
+        const result = await pool.query(`
+            SELECT r.*, a.voucher_token 
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE r.id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const reservation = result.rows[0];
+
+        if (!reservation.voucher_token) {
+            return res.status(400).json({
+                success: false,
+                message: '바우처가 아직 생성되지 않았습니다.'
+            });
+        }
+
+        // TODO: 실제 바우처 재전송 로직 추가
+        console.log(`📧 바우처 재전송 완료: ${reservation.korean_name}`);
+
+        res.json({
+            success: true,
+            message: '바우처가 재전송되었습니다.',
+            voucher_token: reservation.voucher_token
+        });
+
+    } catch (error) {
+        console.error('❌ 바우처 재전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '바우처 재전송 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 정산 이관 API
+app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`💰 정산 이관: 예약 ID ${id}`);
+
+        // 예약 상태를 '정산완료'로 변경 (수배관리에서 제외)
+        await pool.query(
+            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+            ['settlement_completed', id]
+        );
+
+        console.log(`✅ 정산 이관 완료: 예약 ID ${id}`);
+
+        res.json({
+            success: true,
+            message: '정산관리로 이관되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('❌ 정산 이관 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '정산 이관 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 수배서 재전송 API
+app.post('/api/assignments/:id/resend', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        console.log(`🔄 수배서 재전송: Assignment ID ${id}`);
+
+        // 수배서 정보 조회
+        const result = await pool.query(
+            'SELECT * FROM assignments WHERE id = $1',
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배서를 찾을 수 없습니다.'
+            });
+        }
+
+        const assignment = result.rows[0];
+
+        // 재전송 시간 업데이트
+        await pool.query(
+            'UPDATE assignments SET sent_at = NOW(), updated_at = NOW() WHERE id = $1',
+            [id]
+        );
+
+        // TODO: 실제 수배서 재전송 로직 추가
+        console.log(`📧 수배서 재전송 완료: ${assignment.vendor_name}`);
+
+        res.json({
+            success: true,
+            message: '수배서가 재전송되었습니다.',
+            assignment_link: `/assignment/${assignment.assignment_token}`
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 재전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 재전송 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 수배서 페이지 라우트
 app.get('/assignment/:token', async (req, res) => {
     try {
