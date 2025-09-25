@@ -6472,6 +6472,17 @@ app.get('/admin/setup-assignments', requireAuth, async (req, res) => {
 // 수배관리 목록 조회 API (수배중 + 확정 상태의 예약들)
 app.get('/api/assignments', requireAuth, async (req, res) => {
     try {
+        console.log('🔍 수배관리 API 호출 시작');
+        
+        // 먼저 테이블 존재 여부 확인
+        const tableCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name IN ('reservations', 'assignments')
+        `);
+        console.log('📋 존재하는 테이블:', tableCheck.rows.map(r => r.table_name));
+        
         const { page = 1, status = '', search = '' } = req.query;
         const limit = 20;
         const offset = (page - 1) * limit;
@@ -6491,52 +6502,80 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             }
         }
         
-        // 검색 필터 (예약번호, 상품명, 수배업체명, 고객명)
+        // 검색 필터 (예약번호, 상품명, 고객명)
         if (search) {
             paramIndex++;
             whereClause += ` AND (
                 r.reservation_number ILIKE $${paramIndex} OR 
                 r.product_name ILIKE $${paramIndex} OR 
-                COALESCE(a.vendor_name, '') ILIKE $${paramIndex} OR
                 r.korean_name ILIKE $${paramIndex}
             )`;
             queryParams.push(`%${search}%`);
         }
         
-        // 총 개수 조회
+        // 총 개수 조회 (assignments 테이블 없어도 안전)
         const countQuery = `
             SELECT COUNT(*) as total 
             FROM reservations r
-            LEFT JOIN assignments a ON r.id = a.reservation_id
             ${whereClause}
         `;
         const countResult = await pool.query(countQuery, queryParams);
         const totalCount = parseInt(countResult.rows[0].total);
         
-        // 수배관리 목록 조회 (예약 중심 + 수배 정보)
-        const assignmentsQuery = `
-            SELECT 
-                r.*,
-                a.id as assignment_id,
-                a.vendor_name,
-                a.vendor_contact,
-                a.assignment_token,
-                a.status as assignment_status,
-                a.notes as assignment_notes,
-                a.assigned_at,
-                a.sent_at,
-                a.viewed_at,
-                a.response_at,
-                a.confirmation_number,
-                a.voucher_token,
-                a.rejection_reason,
-                COUNT(*) OVER() as total_count
-            FROM reservations r
-            LEFT JOIN assignments a ON r.id = a.reservation_id
-            ${whereClause}
-            ORDER BY r.updated_at DESC, r.created_at DESC
-            LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
-        `;
+        // assignments 테이블 존재 여부에 따라 쿼리 분기
+        const hasAssignmentsTable = tableCheck.rows.some(r => r.table_name === 'assignments');
+        
+        let assignmentsQuery;
+        if (hasAssignmentsTable) {
+            // assignments 테이블이 있는 경우
+            assignmentsQuery = `
+                SELECT 
+                    r.*,
+                    a.id as assignment_id,
+                    a.vendor_name,
+                    a.vendor_contact,
+                    a.assignment_token,
+                    a.status as assignment_status,
+                    a.notes as assignment_notes,
+                    a.assigned_at,
+                    a.sent_at,
+                    a.viewed_at,
+                    a.response_at,
+                    a.confirmation_number,
+                    a.voucher_token,
+                    a.rejection_reason,
+                    COUNT(*) OVER() as total_count
+                FROM reservations r
+                LEFT JOIN assignments a ON r.id = a.reservation_id
+                ${whereClause}
+                ORDER BY r.updated_at DESC, r.created_at DESC
+                LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+            `;
+        } else {
+            // assignments 테이블이 없는 경우 (예약만 조회)
+            assignmentsQuery = `
+                SELECT 
+                    r.*,
+                    NULL as assignment_id,
+                    NULL as vendor_name,
+                    NULL as vendor_contact,
+                    NULL as assignment_token,
+                    NULL as assignment_status,
+                    NULL as assignment_notes,
+                    NULL as assigned_at,
+                    NULL as sent_at,
+                    NULL as viewed_at,
+                    NULL as response_at,
+                    NULL as confirmation_number,
+                    NULL as voucher_token,
+                    NULL as rejection_reason,
+                    COUNT(*) OVER() as total_count
+                FROM reservations r
+                ${whereClause}
+                ORDER BY r.updated_at DESC, r.created_at DESC
+                LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+            `;
+        }
         
         queryParams.push(limit, offset);
         const result = await pool.query(assignmentsQuery, queryParams);
