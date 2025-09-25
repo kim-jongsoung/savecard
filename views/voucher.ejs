@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>바우처 - <%= reservation.customer_name %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .container { max-width: none !important; }
+            body { background: white !important; }
+        }
+        .voucher-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 3rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .voucher-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+        .voucher-content {
+            position: relative;
+            z-index: 1;
+        }
+        .confirmation-badge {
+            font-size: 1.5rem;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .voucher-card {
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: -50px;
+            position: relative;
+            z-index: 2;
+        }
+        .voucher-body {
+            padding: 3rem;
+        }
+        .qr-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+        }
+        .info-row {
+            border-bottom: 1px solid #eee;
+            padding: 1rem 0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-value {
+            font-size: 1.1rem;
+            color: #333;
+            margin-top: 0.25rem;
+        }
+        .highlight-value {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8rem;
+            color: rgba(40, 167, 69, 0.05);
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .voucher-footer {
+            background: #f8f9fa;
+            padding: 2rem;
+            text-align: center;
+            border-top: 3px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <!-- 바우처 헤더 -->
+    <div class="voucher-header">
+        <div class="container voucher-content">
+            <div class="text-center">
+                <div class="mb-4">
+                    <i class="fas fa-ticket-alt fa-4x mb-3"></i>
+                    <h1 class="display-4 fw-bold mb-2">예약 바우처</h1>
+                    <p class="lead opacity-75">Reservation Voucher</p>
+                </div>
+                <div class="confirmation-badge">
+                    <i class="fas fa-check-circle me-2"></i>
+                    확정번호: <strong><%= assignment.confirmation_number %></strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 바우처 카드 -->
+        <div class="voucher-card">
+            <div class="watermark">CONFIRMED</div>
+            
+            <div class="voucher-body">
+                <div class="row">
+                    <!-- 예약자 정보 -->
+                    <div class="col-lg-8">
+                        <h3 class="text-success mb-4">
+                            <i class="fas fa-user me-2"></i>예약자 정보
+                        </h3>
+                        
+                        <div class="info-row">
+                            <div class="info-label">예약자명 / Guest Name</div>
+                            <div class="info-value highlight-value">
+                                <%= reservation.customer_name %>
+                                <% if (reservation.english_name) { %>
+                                    (<%= reservation.english_name %>)
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">예약번호 / Reservation Number</div>
+                            <div class="info-value">
+                                <code style="font-size: 1.1rem; background: #e9ecef; padding: 0.25rem 0.5rem; border-radius: 4px;">
+                                    <%= reservation.reservation_number %>
+                                </code>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">연락처 / Contact</div>
+                            <div class="info-value">
+                                <% if (reservation.phone_number) { %>
+                                    <i class="fas fa-phone me-2"></i><%= reservation.phone_number %>
+                                <% } %>
+                                <% if (reservation.email) { %>
+                                    <br><i class="fas fa-envelope me-2"></i><%= reservation.email %>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <!-- 상품 정보 -->
+                        <h3 class="text-success mb-4 mt-5">
+                            <i class="fas fa-map-marked-alt me-2"></i>투어 정보
+                        </h3>
+
+                        <div class="info-row">
+                            <div class="info-label">상품명 / Product Name</div>
+                            <div class="info-value highlight-value">
+                                <%= reservation.product_name %>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">이용일 / Tour Date</div>
+                            <div class="info-value">
+                                <i class="fas fa-calendar-alt me-2 text-success"></i>
+                                <%= new Date(reservation.tour_date).toLocaleDateString('ko-KR', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric',
+                                    weekday: 'long'
+                                }) %>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">이용시간 / Tour Time</div>
+                            <div class="info-value">
+                                <i class="fas fa-clock me-2 text-success"></i>
+                                <%= reservation.tour_time || '상품 안내에 따름' %>
+                            </div>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-label">인원 / Participants</div>
+                            <div class="info-value">
+                                <% if (reservation.adult_count > 0) { %>
+                                    <span class="badge bg-primary me-2">성인 <%= reservation.adult_count %>명</span>
+                                <% } %>
+                                <% if (reservation.child_count > 0) { %>
+                                    <span class="badge bg-info me-2">아동 <%= reservation.child_count %>명</span>
+                                <% } %>
+                                <% if (reservation.infant_count > 0) { %>
+                                    <span class="badge bg-secondary me-2">유아 <%= reservation.infant_count %>명</span>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <% if (reservation.pickup_location) { %>
+                        <div class="info-row">
+                            <div class="info-label">픽업 장소 / Pickup Location</div>
+                            <div class="info-value">
+                                <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                                <%= reservation.pickup_location %>
+                            </div>
+                        </div>
+                        <% } %>
+
+                        <% if (reservation.special_requests) { %>
+                        <div class="info-row">
+                            <div class="info-label">특별 요청사항 / Special Requests</div>
+                            <div class="info-value">
+                                <div class="alert alert-info mb-0">
+                                    <%= reservation.special_requests %>
+                                </div>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
+
+                    <!-- QR 코드 및 추가 정보 -->
+                    <div class="col-lg-4">
+                        <div class="qr-section">
+                            <h5 class="mb-3">
+                                <i class="fas fa-qrcode me-2"></i>QR 코드
+                            </h5>
+                            <div id="qrcode" class="mb-3"></div>
+                            <small class="text-muted">
+                                현장에서 이 QR 코드를 제시해주세요
+                            </small>
+                        </div>
+
+                        <div class="mt-4">
+                            <h6 class="text-success mb-3">
+                                <i class="fas fa-building me-2"></i>수배업체 정보
+                            </h6>
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title"><%= assignment.vendor_name %></h6>
+                                    <% if (assignment.vendor_contact) { %>
+                                        <% const contact = JSON.parse(assignment.vendor_contact); %>
+                                        <% if (contact.phone) { %>
+                                            <p class="card-text mb-1">
+                                                <i class="fas fa-phone me-2"></i><%= contact.phone %>
+                                            </p>
+                                        <% } %>
+                                        <% if (contact.email) { %>
+                                            <p class="card-text mb-1">
+                                                <i class="fas fa-envelope me-2"></i><%= contact.email %>
+                                            </p>
+                                        <% } %>
+                                        <% if (contact.contact_person) { %>
+                                            <p class="card-text mb-0">
+                                                <i class="fas fa-user me-2"></i><%= contact.contact_person %>
+                                            </p>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 no-print">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success" onclick="window.print()">
+                                    <i class="fas fa-print me-2"></i>바우처 인쇄
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="downloadVoucher()">
+                                    <i class="fas fa-download me-2"></i>PDF 다운로드
+                                </button>
+                                <button class="btn btn-outline-info" onclick="shareVoucher()">
+                                    <i class="fas fa-share me-2"></i>공유하기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 바우처 푸터 -->
+            <div class="voucher-footer">
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-md-start text-center">
+                        <h6 class="mb-1">괌세이브카드</h6>
+                        <small class="text-muted">Guam Save Card</small>
+                    </div>
+                    <div class="col-md-6 text-md-end text-center mt-3 mt-md-0">
+                        <small class="text-muted">
+                            발행일: <%= new Date().toLocaleDateString('ko-KR') %><br>
+                            바우처 ID: <%= assignment.voucher_token %>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 이용 안내 -->
+        <div class="card mt-4 no-print">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>이용 안내사항
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>📋 체크인 안내</h6>
+                        <ul class="list-unstyled">
+                            <li>• 투어 시작 30분 전까지 체크인 완료</li>
+                            <li>• 신분증 또는 여권 지참 필수</li>
+                            <li>• 바우처(인쇄본 또는 모바일) 제시</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>⚠️ 주의사항</h6>
+                        <ul class="list-unstyled">
+                            <li>• 날씨 등의 사유로 투어 일정 변경 가능</li>
+                            <li>• 취소/변경은 24시간 전까지</li>
+                            <li>• 문의사항은 수배업체로 연락</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        // QR 코드 생성
+        document.addEventListener('DOMContentLoaded', function() {
+            const voucherData = {
+                confirmation_number: '<%= assignment.confirmation_number %>',
+                reservation_number: '<%= reservation.reservation_number %>',
+                customer_name: '<%= reservation.customer_name %>',
+                tour_date: '<%= reservation.tour_date %>',
+                voucher_token: '<%= assignment.voucher_token %>'
+            };
+
+            QRCode.toCanvas(document.getElementById('qrcode'), JSON.stringify(voucherData), {
+                width: 200,
+                height: 200,
+                color: {
+                    dark: '#28a745',
+                    light: '#ffffff'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('QR 코드 생성 실패:', error);
+                    document.getElementById('qrcode').innerHTML = '<div class="text-muted">QR 코드 생성 실패</div>';
+                }
+            });
+        });
+
+        // PDF 다운로드 (추후 구현)
+        function downloadVoucher() {
+            alert('PDF 다운로드 기능은 추후 구현 예정입니다.');
+        }
+
+        // 공유하기
+        function shareVoucher() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '예약 바우처 - <%= reservation.customer_name %>',
+                    text: '확정번호: <%= assignment.confirmation_number %>',
+                    url: window.location.href
+                });
+            } else {
+                // 링크 복사
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('바우처 링크가 복사되었습니다.');
+                });
+            }
+        }
+
+        // 인쇄 스타일 최적화
+        window.addEventListener('beforeprint', function() {
+            document.body.style.background = 'white';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수배관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .status-requested { background-color: #ffc107; color: #000; }
+        .status-sent { background-color: #17a2b8; color: #fff; }
+        .status-viewed { background-color: #6f42c1; color: #fff; }
+        .status-confirmed { background-color: #28a745; color: #fff; }
+        .status-rejected { background-color: #dc3545; color: #fff; }
+        .assignment-card {
+            border-left: 4px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        .assignment-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .assignment-card.requested { border-left-color: #ffc107; }
+        .assignment-card.sent { border-left-color: #17a2b8; }
+        .assignment-card.viewed { border-left-color: #6f42c1; }
+        .assignment-card.confirmed { border-left-color: #28a745; }
+        .assignment-card.rejected { border-left-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'assignments' }) %>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-tasks me-2"></i>수배관리</h2>
+                    <button class="btn btn-primary" onclick="createAssignment()">
+                        <i class="fas fa-plus me-1"></i>수배서 생성
+                    </button>
+                </div>
+
+                <!-- 필터 및 검색 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">전체 상태</option>
+                                    <option value="requested">요청됨</option>
+                                    <option value="sent">전송됨</option>
+                                    <option value="viewed">열람됨</option>
+                                    <option value="confirmed">확정됨</option>
+                                    <option value="rejected">거절됨</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" id="searchInput" placeholder="예약번호, 고객명 검색...">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-primary w-100" onclick="searchAssignments()">
+                                    <i class="fas fa-search"></i> 검색
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                                    <i class="fas fa-undo"></i> 초기화
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 수배 목록 -->
+                <div id="assignmentsList">
+                    <!-- 동적으로 로드됨 -->
+                </div>
+
+                <!-- 페이징 -->
+                <nav aria-label="수배 목록 페이징">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- 동적으로 로드됨 -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수배서 생성 모달 -->
+    <div class="modal fade" id="createAssignmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">수배서 생성</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createAssignmentForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">예약 선택</label>
+                                <select class="form-select" id="reservationSelect" required>
+                                    <option value="">예약을 선택하세요</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">수배업체</label>
+                                <select class="form-select" id="vendorSelect" required>
+                                    <option value="">수배업체를 선택하세요</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">특이사항</label>
+                                <textarea class="form-control" id="assignmentNotes" rows="3" placeholder="수배 시 전달할 특이사항을 입력하세요"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAssignment()">수배서 생성</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentStatus = '';
+        let currentSearch = '';
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAssignments();
+            loadReservations();
+            loadVendors();
+        });
+
+        // 수배 목록 로드
+        async function loadAssignments(page = 1) {
+            try {
+                currentPage = page;
+                const params = new URLSearchParams({
+                    page: page,
+                    status: currentStatus,
+                    search: currentSearch
+                });
+
+                const response = await fetch(`/api/assignments?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderAssignments(data.data.assignments);
+                    renderPagination(data.data.pagination);
+                }
+            } catch (error) {
+                console.error('수배 목록 로드 실패:', error);
+                showAlert('수배 목록을 불러오는데 실패했습니다.', 'danger');
+            }
+        }
+
+        // 수배 목록 렌더링
+        function renderAssignments(assignments) {
+            const container = document.getElementById('assignmentsList');
+            
+            if (assignments.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">수배 건이 없습니다</h5>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = assignments.map(assignment => `
+                <div class="card assignment-card ${assignment.status} mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h6 class="mb-0 me-3">${assignment.customer_name || '고객명 없음'}</h6>
+                                    <span class="badge status-badge status-${assignment.status}">
+                                        ${getStatusText(assignment.status)}
+                                    </span>
+                                </div>
+                                <div class="text-muted small mb-1">
+                                    <i class="fas fa-calendar me-1"></i>${assignment.tour_date || '날짜 미정'}
+                                    <i class="fas fa-building ms-3 me-1"></i>${assignment.platform_name || '플랫폼 없음'}
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="fas fa-store me-1"></i>${assignment.vendor_name || '수배업체 미정'}
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewAssignment(${assignment.id})">
+                                        <i class="fas fa-eye"></i> 상세
+                                    </button>
+                                    ${assignment.status === 'requested' ? `
+                                        <button class="btn btn-sm btn-primary" onclick="sendAssignment(${assignment.id})">
+                                            <i class="fas fa-paper-plane"></i> 전송
+                                        </button>
+                                    ` : ''}
+                                    ${assignment.assignment_token ? `
+                                        <button class="btn btn-sm btn-info" onclick="copyAssignmentLink('${assignment.assignment_token}')">
+                                            <i class="fas fa-link"></i> 링크
+                                        </button>
+                                    ` : ''}
+                                </div>
+                                <div class="mt-2 small text-muted">
+                                    생성: ${formatDate(assignment.created_at)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // 상태 텍스트 변환
+        function getStatusText(status) {
+            const statusMap = {
+                'requested': '요청됨',
+                'sent': '전송됨', 
+                'viewed': '열람됨',
+                'confirmed': '확정됨',
+                'rejected': '거절됨'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 날짜 포맷팅
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+        }
+
+        // 페이징 렌더링
+        function renderPagination(pagination) {
+            const container = document.getElementById('pagination');
+            if (!pagination || pagination.totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            
+            // 이전 페이지
+            if (pagination.currentPage > 1) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="loadAssignments(${pagination.currentPage - 1})">이전</a></li>`;
+            }
+
+            // 페이지 번호들
+            for (let i = Math.max(1, pagination.currentPage - 2); i <= Math.min(pagination.totalPages, pagination.currentPage + 2); i++) {
+                html += `<li class="page-item ${i === pagination.currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadAssignments(${i})">${i}</a>
+                </li>`;
+            }
+
+            // 다음 페이지
+            if (pagination.currentPage < pagination.totalPages) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="loadAssignments(${pagination.currentPage + 1})">다음</a></li>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // 검색 및 필터링
+        function searchAssignments() {
+            currentStatus = document.getElementById('statusFilter').value;
+            currentSearch = document.getElementById('searchInput').value;
+            loadAssignments(1);
+        }
+
+        function resetFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            currentStatus = '';
+            currentSearch = '';
+            loadAssignments(1);
+        }
+
+        // 수배서 생성 관련 함수들
+        function createAssignment() {
+            const modal = new bootstrap.Modal(document.getElementById('createAssignmentModal'));
+            modal.show();
+        }
+
+        async function loadReservations() {
+            try {
+                const response = await fetch('/api/reservations?status=confirmed&limit=100');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('reservationSelect');
+                    select.innerHTML = '<option value="">예약을 선택하세요</option>';
+                    
+                    data.data.reservations.forEach(reservation => {
+                        select.innerHTML += `<option value="${reservation.id}">${reservation.customer_name} - ${reservation.tour_date} (${reservation.platform_name})</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('예약 목록 로드 실패:', error);
+            }
+        }
+
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/vendors');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('vendorSelect');
+                    select.innerHTML = '<option value="">수배업체를 선택하세요</option>';
+                    
+                    data.data.forEach(vendor => {
+                        select.innerHTML += `<option value="${vendor.id}">${vendor.vendor_name}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('수배업체 목록 로드 실패:', error);
+            }
+        }
+
+        async function submitAssignment() {
+            const form = document.getElementById('createAssignmentForm');
+            const formData = new FormData(form);
+            
+            const assignmentData = {
+                reservation_id: document.getElementById('reservationSelect').value,
+                vendor_id: document.getElementById('vendorSelect').value,
+                notes: document.getElementById('assignmentNotes').value
+            };
+
+            if (!assignmentData.reservation_id || !assignmentData.vendor_id) {
+                showAlert('예약과 수배업체를 모두 선택해주세요.', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/assignments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(assignmentData)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서가 생성되었습니다.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createAssignmentModal')).hide();
+                    loadAssignments();
+                } else {
+                    showAlert(result.message || '수배서 생성에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('수배서 생성 실패:', error);
+                showAlert('수배서 생성 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 기타 함수들
+        function viewAssignment(id) {
+            // 수배 상세 보기 (추후 구현)
+            console.log('수배 상세 보기:', id);
+        }
+
+        async function sendAssignment(id) {
+            if (!confirm('수배서를 전송하시겠습니까?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/${id}/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서가 전송되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '수배서 전송에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('수배서 전송 실패:', error);
+                showAlert('수배서 전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        function copyAssignmentLink(token) {
+            const link = `${window.location.origin}/assignment/${token}`;
+            navigator.clipboard.writeText(link).then(() => {
+                showAlert('수배서 링크가 복사되었습니다.', 'success');
+            });
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

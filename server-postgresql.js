@@ -1320,6 +1320,22 @@ app.get('/admin/usage-history', requireAuth, async (req, res) => {
     }
 });
 
+// 관리자 수배관리 페이지
+app.get('/admin/assignments', requireAuth, async (req, res) => {
+    try {
+        res.render('admin/assignments', {
+            title: '수배관리',
+            adminUsername: req.session.adminUsername || 'admin'
+        });
+    } catch (error) {
+        console.error('수배관리 페이지 오류:', error);
+        res.render('admin/assignments', {
+            title: '수배관리',
+            adminUsername: req.session.adminUsername || 'admin'
+        });
+    }
+});
+
 // 관리자 광고 배너 관리 페이지
 app.get('/admin/banners', requireAuth, async (req, res) => {
     try {
@@ -5129,15 +5145,44 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
             ];
 
             const result = await pool.query(insertQuery, values);
+            const newReservation = result.rows[0];
             
-            res.json({
+            // 자동 수배 생성 체크 (바로 확정 상품인 경우)
+            let autoAssignmentResult = null;
+            if (reservationData.product_name && isAutoConfirmProduct(reservationData.product_name)) {
+                console.log('🎯 바로 확정 상품 감지:', reservationData.product_name);
+                
+                // 예약 상태를 확정으로 업데이트
+                await pool.query(
+                    'UPDATE reservations SET payment_status = $1 WHERE id = $2',
+                    ['confirmed', newReservation.id]
+                );
+                
+                // 자동 수배서 생성
+                autoAssignmentResult = await createAutoAssignment(newReservation.id, reservationData.product_name);
+            }
+            
+            const response = {
                 success: true,
                 message: '예약이 성공적으로 저장되었습니다.',
                 reservation: {
-                    id: result.rows[0].id,
-                    reservation_number: result.rows[0].reservation_number
+                    id: newReservation.id,
+                    reservation_number: newReservation.reservation_number
                 }
-            });
+            };
+            
+            // 자동 수배 결과 추가
+            if (autoAssignmentResult) {
+                response.auto_assignment = {
+                    created: true,
+                    vendor: autoAssignmentResult.vendor.vendor_name,
+                    assignment_link: autoAssignmentResult.assignment_link,
+                    message: `자동으로 ${autoAssignmentResult.vendor.vendor_name}에 수배서가 생성되었습니다.`
+                };
+                console.log('✅ 자동 수배 완료:', autoAssignmentResult.vendor.vendor_name);
+            }
+            
+            res.json(response);
         } else {
             res.json({ success: false, message: 'PostgreSQL 모드가 아닙니다.' });
         }
@@ -6191,12 +6236,14 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         
         res.json({
             success: true,
-            data: result.rows,
-            pagination: {
-                page,
-                limit,
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limit)
+            data: {
+                assignments: result.rows,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalCount / limit),
+                    total: totalCount,
+                    limit
+                }
             }
         });
         
@@ -6205,6 +6252,520 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '수배 목록을 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 자동 수배 생성 함수
+async function createAutoAssignment(reservationId, productName) {
+    try {
+        // 상품명으로 수배업체 자동 매칭
+        const matchQuery = `
+            SELECT v.*, vp.product_keyword, vp.priority
+            FROM vendors v
+            JOIN vendor_products vp ON v.id = vp.vendor_id
+            WHERE v.is_active = true AND vp.is_active = true
+            AND LOWER($1) LIKE '%' || LOWER(vp.product_keyword) || '%'
+            ORDER BY vp.priority ASC, v.created_at ASC
+            LIMIT 1
+        `;
+        
+        const matchResult = await pool.query(matchQuery, [productName]);
+        
+        if (matchResult.rows.length === 0) {
+            console.log('자동 매칭되는 수배업체가 없습니다:', productName);
+            return null;
+        }
+        
+        const vendor = matchResult.rows[0];
+        
+        // 고유 토큰 생성
+        const crypto = require('crypto');
+        const assignment_token = crypto.randomBytes(16).toString('hex');
+        
+        // 자동 수배서 생성 (바로 확정 상태)
+        const insertQuery = `
+            INSERT INTO assignments (
+                reservation_id, vendor_id, vendor_name, vendor_contact,
+                assignment_token, status, notes, assigned_by, assigned_at, sent_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+            RETURNING *
+        `;
+        
+        const vendor_contact = {
+            email: vendor.email,
+            phone: vendor.phone,
+            contact_person: vendor.contact_person
+        };
+        
+        const insertParams = [
+            reservationId,
+            vendor.id,
+            vendor.vendor_name,
+            JSON.stringify(vendor_contact),
+            assignment_token,
+            'sent', // 바로 전송 상태로 설정
+            `자동 생성된 수배서 (${productName})`,
+            'system'
+        ];
+        
+        const result = await pool.query(insertQuery, insertParams);
+        
+        console.log('✅ 자동 수배서 생성 완료:', {
+            reservationId,
+            vendor: vendor.vendor_name,
+            keyword: vendor.product_keyword
+        });
+        
+        return {
+            assignment: result.rows[0],
+            vendor: vendor,
+            assignment_link: `/assignment/${assignment_token}`
+        };
+        
+    } catch (error) {
+        console.error('자동 수배서 생성 오류:', error);
+        return null;
+    }
+}
+
+// 바로 확정 상품 체크 함수
+function isAutoConfirmProduct(productName) {
+    if (!productName) return false;
+    
+    const autoConfirmKeywords = [
+        '롱혼스테이크', '롱혼', 'longhorn',
+        '레스토랑', '식당', '맛집', '카페',
+        '렌터카', '렌트카', 'rental',
+        '쇼핑', 'shopping', '면세점'
+    ];
+    
+    const lowerProductName = productName.toLowerCase();
+    return autoConfirmKeywords.some(keyword => 
+        lowerProductName.includes(keyword.toLowerCase())
+    );
+}
+
+// 수배서 생성 API
+app.post('/api/assignments', requireAuth, async (req, res) => {
+    try {
+        const { reservation_id, vendor_id, notes } = req.body;
+        
+        if (!reservation_id || !vendor_id) {
+            return res.status(400).json({
+                success: false,
+                message: '예약 ID와 수배업체 ID는 필수입니다.'
+            });
+        }
+        
+        // 예약 정보 확인
+        const reservationQuery = 'SELECT * FROM reservations WHERE id = $1';
+        const reservationResult = await pool.query(reservationQuery, [reservation_id]);
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 수배업체 정보 확인
+        const vendorQuery = 'SELECT * FROM vendors WHERE id = $1 AND is_active = true';
+        const vendorResult = await pool.query(vendorQuery, [vendor_id]);
+        
+        if (vendorResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배업체를 찾을 수 없습니다.'
+            });
+        }
+        
+        const vendor = vendorResult.rows[0];
+        
+        // 고유 토큰 생성
+        const crypto = require('crypto');
+        const assignment_token = crypto.randomBytes(16).toString('hex');
+        
+        // 수배서 생성
+        const insertQuery = `
+            INSERT INTO assignments (
+                reservation_id, vendor_id, vendor_name, vendor_contact,
+                assignment_token, status, notes, assigned_by, assigned_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            RETURNING *
+        `;
+        
+        const vendor_contact = {
+            email: vendor.email,
+            phone: vendor.phone,
+            contact_person: vendor.contact_person
+        };
+        
+        const insertParams = [
+            reservation_id,
+            vendor_id,
+            vendor.vendor_name,
+            JSON.stringify(vendor_contact),
+            assignment_token,
+            'requested',
+            notes || '',
+            req.session.adminUsername || 'admin'
+        ];
+        
+        const result = await pool.query(insertQuery, insertParams);
+        const assignment = result.rows[0];
+        
+        res.json({
+            success: true,
+            message: '수배서가 생성되었습니다.',
+            data: assignment,
+            assignment_link: `/assignment/${assignment_token}`
+        });
+        
+    } catch (error) {
+        console.error('수배서 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 페이지 라우트
+app.get('/assignment/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        // 수배서 정보 조회
+        const assignmentQuery = `
+            SELECT a.*, r.*
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.assignment_token = $1
+        `;
+        
+        const result = await pool.query(assignmentQuery, [token]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', {
+                title: '수배서를 찾을 수 없습니다',
+                message: '유효하지 않은 수배서 링크입니다.'
+            });
+        }
+        
+        const data = result.rows[0];
+        const assignment = {
+            id: data.id,
+            reservation_id: data.reservation_id,
+            vendor_id: data.vendor_id,
+            vendor_name: data.vendor_name,
+            vendor_contact: data.vendor_contact,
+            assignment_token: data.assignment_token,
+            status: data.status,
+            notes: data.notes,
+            confirmation_number: data.confirmation_number,
+            cost_price: data.cost_price,
+            cost_currency: data.cost_currency,
+            rejection_reason: data.rejection_reason,
+            created_at: data.created_at,
+            sent_at: data.sent_at,
+            viewed_at: data.viewed_at,
+            response_at: data.response_at
+        };
+        
+        const reservation = {
+            id: data.reservation_id,
+            customer_name: data.customer_name,
+            reservation_number: data.reservation_number,
+            product_name: data.product_name,
+            tour_date: data.tour_date,
+            tour_time: data.tour_time,
+            adult_count: data.adult_count,
+            child_count: data.child_count,
+            infant_count: data.infant_count,
+            special_requests: data.special_requests,
+            platform_name: data.platform_name
+        };
+        
+        res.render('assignment', {
+            title: `수배서 #${assignment.id}`,
+            assignment,
+            reservation
+        });
+        
+    } catch (error) {
+        console.error('수배서 페이지 오류:', error);
+        res.status(500).render('error', {
+            title: '서버 오류',
+            message: '수배서를 불러오는 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 열람 상태 업데이트 API
+app.post('/api/assignment/:token/view', async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        const updateQuery = `
+            UPDATE assignments 
+            SET viewed_at = COALESCE(viewed_at, NOW()),
+                status = CASE 
+                    WHEN status = 'sent' THEN 'viewed'
+                    ELSE status 
+                END,
+                updated_at = NOW()
+            WHERE assignment_token = $1
+            RETURNING *
+        `;
+        
+        const result = await pool.query(updateQuery, [token]);
+        
+        res.json({
+            success: true,
+            message: '열람 상태가 업데이트되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('열람 상태 업데이트 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '열람 상태 업데이트 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 확정 API
+app.post('/api/assignment/:token/confirm', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { confirmation_number, cost_price, cost_currency } = req.body;
+        
+        // 바우처 토큰 생성 (확정번호가 있는 경우)
+        let voucher_token = null;
+        if (confirmation_number) {
+            voucher_token = crypto.randomBytes(16).toString('hex');
+        }
+        
+        const updateQuery = `
+            UPDATE assignments 
+            SET status = 'confirmed',
+                confirmation_number = $2,
+                cost_price = $3,
+                cost_currency = $4,
+                voucher_token = $5,
+                response_at = NOW(),
+                updated_at = NOW()
+            WHERE assignment_token = $1
+            RETURNING *
+        `;
+        
+        const result = await pool.query(updateQuery, [
+            token, 
+            confirmation_number || null,
+            cost_price || null,
+            cost_currency || 'USD',
+            voucher_token
+        ]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배서를 찾을 수 없습니다.'
+            });
+        }
+        
+        const assignment = result.rows[0];
+        
+        // 예약 상태도 확정으로 업데이트
+        await pool.query(
+            'UPDATE reservations SET payment_status = $1 WHERE id = $2',
+            ['confirmed', assignment.reservation_id]
+        );
+        
+        res.json({
+            success: true,
+            message: '수배가 확정되었습니다.',
+            voucher_link: voucher_token ? `/voucher/${voucher_token}` : null
+        });
+        
+    } catch (error) {
+        console.error('수배 확정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배 확정 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 거절 API
+app.post('/api/assignment/:token/reject', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { rejection_reason } = req.body;
+        
+        if (!rejection_reason || !rejection_reason.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: '거절 사유는 필수입니다.'
+            });
+        }
+        
+        const updateQuery = `
+            UPDATE assignments 
+            SET status = 'rejected',
+                rejection_reason = $2,
+                response_at = NOW(),
+                updated_at = NOW()
+            WHERE assignment_token = $1
+            RETURNING *
+        `;
+        
+        const result = await pool.query(updateQuery, [token, rejection_reason]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배서를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '수배가 거절되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('수배 거절 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배 거절 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 전송 API
+app.post('/api/assignments/:id/send', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // 수배서 정보 조회
+        const assignmentQuery = 'SELECT * FROM assignments WHERE id = $1';
+        const result = await pool.query(assignmentQuery, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배서를 찾을 수 없습니다.'
+            });
+        }
+        
+        const assignment = result.rows[0];
+        
+        // 이미 전송된 수배서인지 확인
+        if (assignment.status !== 'requested') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 전송된 수배서입니다.'
+            });
+        }
+        
+        // 수배서 상태를 전송됨으로 업데이트
+        const updateQuery = `
+            UPDATE assignments 
+            SET status = 'sent', 
+                sent_at = NOW(),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+        `;
+        
+        const updateResult = await pool.query(updateQuery, [id]);
+        
+        // 실제로는 여기서 이메일이나 SMS 전송 로직이 들어갈 수 있습니다
+        // 현재는 상태만 업데이트하고 링크를 제공합니다
+        
+        const assignmentLink = `${req.protocol}://${req.get('host')}/assignment/${assignment.assignment_token}`;
+        
+        res.json({
+            success: true,
+            message: '수배서가 전송되었습니다.',
+            assignment_link: assignmentLink,
+            data: updateResult.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('수배서 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 전송 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 바우처 페이지 라우트
+app.get('/voucher/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        // 바우처 정보 조회
+        const voucherQuery = `
+            SELECT a.*, r.*
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.voucher_token = $1 AND a.status = 'confirmed'
+        `;
+        
+        const result = await pool.query(voucherQuery, [token]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', {
+                title: '바우처를 찾을 수 없습니다',
+                message: '유효하지 않은 바우처 링크이거나 아직 확정되지 않은 예약입니다.'
+            });
+        }
+        
+        const data = result.rows[0];
+        const assignment = {
+            id: data.id,
+            confirmation_number: data.confirmation_number,
+            voucher_token: data.voucher_token,
+            vendor_name: data.vendor_name,
+            vendor_contact: data.vendor_contact,
+            cost_price: data.cost_price,
+            cost_currency: data.cost_currency,
+            response_at: data.response_at
+        };
+        
+        const reservation = {
+            id: data.reservation_id,
+            customer_name: data.customer_name,
+            english_name: data.english_name,
+            reservation_number: data.reservation_number,
+            product_name: data.product_name,
+            tour_date: data.tour_date,
+            tour_time: data.tour_time,
+            adult_count: data.adult_count,
+            child_count: data.child_count,
+            infant_count: data.infant_count,
+            pickup_location: data.pickup_location,
+            special_requests: data.special_requests,
+            phone_number: data.phone_number,
+            email: data.email,
+            platform_name: data.platform_name
+        };
+        
+        res.render('voucher', {
+            title: `바우처 - ${reservation.customer_name}`,
+            assignment,
+            reservation
+        });
+        
+    } catch (error) {
+        console.error('바우처 페이지 오류:', error);
+        res.status(500).render('error', {
+            title: '서버 오류',
+            message: '바우처를 불러오는 중 오류가 발생했습니다.'
         });
     }
 });
