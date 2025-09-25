@@ -6951,6 +6951,148 @@ app.post('/api/assignments/:id/resend', requireAuth, async (req, res) => {
     }
 });
 
+// 정산관리 목록 조회 API
+app.get('/api/settlements', requireAuth, async (req, res) => {
+    try {
+        const { page = 1, status = '', search = '' } = req.query;
+        const limit = 20;
+        const offset = (page - 1) * limit;
+        
+        let whereClause = `WHERE r.payment_status IN ('settlement_completed', 'payment_completed')`;
+        const queryParams = [];
+        let paramIndex = 0;
+        
+        if (status) {
+            paramIndex++;
+            whereClause += ` AND r.payment_status = $${paramIndex}`;
+            queryParams.push(status);
+        }
+        
+        if (search) {
+            paramIndex++;
+            whereClause += ` AND (
+                r.reservation_number ILIKE $${paramIndex} OR 
+                r.product_name ILIKE $${paramIndex} OR 
+                r.korean_name ILIKE $${paramIndex}
+            )`;
+            queryParams.push(`%${search}%`);
+        }
+        
+        const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM reservations r
+            ${whereClause}
+        `;
+        const countResult = await pool.query(countQuery, queryParams);
+        const totalCount = parseInt(countResult.rows[0].total);
+        
+        const settlementsQuery = `
+            SELECT 
+                r.*,
+                a.id as assignment_id,
+                a.vendor_name,
+                a.confirmation_number,
+                a.voucher_token
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            ${whereClause}
+            ORDER BY r.updated_at DESC, r.created_at DESC
+            LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+        `;
+        
+        queryParams.push(limit, offset);
+        const result = await pool.query(settlementsQuery, queryParams);
+        
+        const totalPages = Math.ceil(totalCount / limit);
+        
+        res.json({
+            success: true,
+            data: {
+                settlements: result.rows,
+                pagination: {
+                    currentPage: parseInt(page),
+                    totalPages: totalPages,
+                    totalCount: totalCount,
+                    limit: limit
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ 정산관리 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '정산관리 목록을 불러오는데 실패했습니다: ' + error.message
+        });
+    }
+});
+
+// 정산 통계 API
+app.get('/api/settlements/statistics', requireAuth, async (req, res) => {
+    try {
+        const statsQuery = `
+            SELECT 
+                COUNT(*) as total,
+                COUNT(CASE WHEN payment_status = 'settlement_completed' THEN 1 END) as pending,
+                COUNT(CASE WHEN payment_status = 'payment_completed' THEN 1 END) as completed,
+                COALESCE(SUM(total_amount), 0) as total_amount
+            FROM reservations 
+            WHERE payment_status IN ('settlement_completed', 'payment_completed')
+        `;
+        
+        const result = await pool.query(statsQuery);
+        const stats = result.rows[0];
+        
+        res.json({
+            success: true,
+            data: {
+                total: parseInt(stats.total),
+                pending: parseInt(stats.pending),
+                completed: parseInt(stats.completed),
+                totalAmount: parseFloat(stats.total_amount)
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ 정산 통계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '정산 통계를 불러오는데 실패했습니다: ' + error.message
+        });
+    }
+});
+
+// 정산 완료 API
+app.post('/api/settlements/:id/complete', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        await pool.query(
+            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+            ['payment_completed', id]
+        );
+        
+        console.log(`✅ 정산 완료: 예약 ID ${id}`);
+        
+        res.json({
+            success: true,
+            message: '정산이 완료되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ 정산 완료 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '정산 완료 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 정산관리 페이지 라우트
+app.get('/admin/settlement', requireAuth, (req, res) => {
+    res.render('admin/settlement');
+});
+
 // 수배서 페이지 라우트
 app.get('/assignment/:token', async (req, res) => {
     try {

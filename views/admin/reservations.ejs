@@ -62,22 +62,20 @@
             font-weight: 500;
         }
         
-        .status-pending { 
-            background-color: #fff3cd; 
-            color: #856404; 
-            font-weight: 600;
-            border: 2px solid #ffc107;
-            animation: pulse 2s infinite;
-        }
-        
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
             70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
             100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
         }
-        .status-confirmed { background-color: #d1ecf1; color: #0c5460; }
-        .status-cancelled { background-color: #f8d7da; color: #721c24; }
-        .status-refunded { background-color: #d4edda; color: #155724; }
+        
+        .status-pending { background-color: #6c757d; color: #fff; }
+        .status-in-progress { background-color: #ffc107; color: #000; }
+        .status-confirmed { background-color: #28a745; color: #fff; }
+        .status-voucher-sent { background-color: #17a2b8; color: #fff; }
+        .status-settlement-completed { background-color: #6f42c1; color: #fff; }
+        .status-payment-completed { background-color: #20c997; color: #fff; }
+        .status-cancelled { background-color: #dc3545; color: #fff; }
+        .status-refunded { background-color: #fd7e14; color: #fff; }
         
         .btn-primary {
             background: linear-gradient(45deg, #667eea, #764ba2);
@@ -602,17 +600,18 @@
             return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
         }
 
-        function getStatusText(status) {
-            const statusMap = {
-                'pending': '대기중 (신규예약)',
-                'in_progress': '수배중 (현지수배)',
-                'confirmed': '확정 (수배완료)',
-                'voucher_sent': '바우처전송완료',
-                'settlement_completed': '정산완료',
-                'cancelled': '예약취소',
-                'refunded': '환불완료'
+        function getStatusClass(status) {
+            const classMap = {
+                'pending': 'pending',
+                'in_progress': 'in-progress',
+                'confirmed': 'confirmed',
+                'voucher_sent': 'voucher-sent',
+                'settlement_completed': 'settlement-completed',
+                'payment_completed': 'payment-completed',
+                'cancelled': 'cancelled',
+                'refunded': 'refunded'
             };
-            return statusMap[status] || '대기중 (신규예약)';
+            return classMap[status] || 'pending';
         }
 
         // 수배서 생성 버튼 클릭
