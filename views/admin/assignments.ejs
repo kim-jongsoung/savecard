@@ -153,9 +153,14 @@
                 const response = await fetch(`/api/assignments?${params}`);
                 const data = await response.json();
 
+                console.log('수배관리 API 응답:', data); // 디버깅용
+
                 if (data.success) {
                     renderAssignments(data.data.assignments);
                     renderPagination(data.data.pagination);
+                } else {
+                    console.error('API 오류:', data.message);
+                    showAlert('데이터를 불러오는데 실패했습니다: ' + data.message, 'danger');
                 }
             } catch (error) {
                 console.error('수배 목록 로드 실패:', error);
@@ -244,7 +249,7 @@
                                     ` : ''}
                                 </div>
                                 <div class="mt-2 small text-muted">
-                                    생성: ${formatDate(assignment.created_at)}
+                                    생성: ${formatDate(reservation.created_at)}
                                 </div>
                             </div>
                         </div>

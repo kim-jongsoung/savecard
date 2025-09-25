@@ -6480,6 +6480,8 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         const queryParams = [];
         let paramIndex = 0;
         
+        console.log('🔍 수배관리 API 호출 - 필터:', { page, status, search });
+        
         // 예약 상태 필터 (수배 상태가 아닌 예약 상태 기준)
         if (status) {
             paramIndex++;
@@ -6539,6 +6541,16 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         
         queryParams.push(limit, offset);
         const result = await pool.query(assignmentsQuery, queryParams);
+        
+        console.log(`📊 수배관리 쿼리 결과: ${result.rows.length}개 (총 ${totalCount}개)`);
+        if (result.rows.length > 0) {
+            console.log('📋 첫 번째 항목:', {
+                id: result.rows[0].id,
+                reservation_number: result.rows[0].reservation_number,
+                payment_status: result.rows[0].payment_status,
+                vendor_name: result.rows[0].vendor_name
+            });
+        }
         
         const totalPages = Math.ceil(totalCount / limit);
         
