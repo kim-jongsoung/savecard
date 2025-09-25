@@ -641,8 +641,8 @@
                 const vendorSelect = document.getElementById('vendorSelect');
                 vendorSelect.innerHTML = '<option value="">수배업체를 선택하세요</option>';
                 
-                if (data.success && data.data.vendors) {
-                    data.data.vendors.forEach(vendor => {
+                if (data.success && data.vendors) {
+                    data.vendors.forEach(vendor => {
                         const option = document.createElement('option');
                         option.value = vendor.id;
                         option.textContent = `${vendor.vendor_name} (${vendor.business_type || '일반'})`;
