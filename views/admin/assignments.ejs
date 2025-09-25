@@ -163,52 +163,83 @@
             }
         }
 
-        // 수배 목록 렌더링
+        // 수배관리 목록 렌더링 (예약 중심)
         function renderAssignments(assignments) {
             const container = document.getElementById('assignmentsList');
             
             if (assignments.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-5">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">수배 건이 없습니다</h5>
+                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">수배 중인 예약이 없습니다</h5>
+                        <p class="text-muted">예약관리에서 수배서를 생성하면 여기에 표시됩니다.</p>
                     </div>
                 `;
                 return;
             }
 
-            const html = assignments.map(assignment => `
-                <div class="card assignment-card ${assignment.status} mb-3">
+            const html = assignments.map(reservation => `
+                <div class="card assignment-card ${getStatusClass(reservation.payment_status)} mb-3">
                     <div class="card-body">
                         <div class="row align-items-center">
                             <div class="col-md-8">
                                 <div class="d-flex align-items-center mb-2">
-                                    <h6 class="mb-0 me-3">${assignment.customer_name || '고객명 없음'}</h6>
-                                    <span class="badge status-badge status-${assignment.status}">
-                                        ${getStatusText(assignment.status)}
+                                    <h6 class="mb-0 me-3">
+                                        <i class="fas fa-ticket-alt me-1"></i>${reservation.reservation_number || '예약번호 없음'}
+                                    </h6>
+                                    <span class="badge status-badge status-${getStatusClass(reservation.payment_status)}">
+                                        ${getReservationStatusText(reservation.payment_status)}
                                     </span>
+                                    ${reservation.assignment_status ? `
+                                        <span class="badge bg-secondary ms-1">
+                                            수배: ${getAssignmentStatusText(reservation.assignment_status)}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                <div class="mb-2">
+                                    <strong>${reservation.product_name || '상품명 없음'}</strong>
                                 </div>
                                 <div class="text-muted small mb-1">
-                                    <i class="fas fa-calendar me-1"></i>${assignment.tour_date || '날짜 미정'}
-                                    <i class="fas fa-building ms-3 me-1"></i>${assignment.platform_name || '플랫폼 없음'}
+                                    <i class="fas fa-user me-1"></i>${reservation.korean_name || '고객명 없음'}
+                                    <i class="fas fa-calendar ms-3 me-1"></i>${reservation.departure_date || '날짜 미정'}
+                                    ${reservation.departure_time ? `<i class="fas fa-clock ms-2 me-1"></i>${reservation.departure_time}` : ''}
+                                </div>
+                                <div class="text-muted small mb-1">
+                                    <i class="fas fa-building me-1"></i>${reservation.platform_name || '플랫폼 없음'}
+                                    <i class="fas fa-users ms-3 me-1"></i>성인 ${reservation.people_adult || 0}명
+                                    ${reservation.people_child > 0 ? `, 아동 ${reservation.people_child}명` : ''}
+                                    ${reservation.people_infant > 0 ? `, 유아 ${reservation.people_infant}명` : ''}
                                 </div>
                                 <div class="text-muted small">
-                                    <i class="fas fa-store me-1"></i>${assignment.vendor_name || '수배업체 미정'}
+                                    <i class="fas fa-store me-1"></i>${reservation.vendor_name || '수배업체 미배정'}
+                                    ${reservation.confirmation_number ? `
+                                        <i class="fas fa-check-circle ms-3 me-1 text-success"></i>확정번호: ${reservation.confirmation_number}
+                                    ` : ''}
                                 </div>
                             </div>
                             <div class="col-md-4 text-end">
-                                <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="viewAssignment(${assignment.id})">
-                                        <i class="fas fa-eye"></i> 상세
+                                <div class="btn-group-vertical d-grid gap-1" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewReservationDetail(${reservation.id})">
+                                        <i class="fas fa-eye"></i> 예약 상세
                                     </button>
-                                    ${assignment.status === 'requested' ? `
-                                        <button class="btn btn-sm btn-primary" onclick="sendAssignment(${assignment.id})">
-                                            <i class="fas fa-paper-plane"></i> 전송
+                                    ${reservation.payment_status === 'in_progress' ? `
+                                        <button class="btn btn-sm btn-success" onclick="confirmReservation(${reservation.id})">
+                                            <i class="fas fa-check"></i> 확정 처리
+                                        </button>
+                                        ${reservation.assignment_id ? `
+                                            <button class="btn btn-sm btn-warning" onclick="resendAssignment(${reservation.assignment_id})">
+                                                <i class="fas fa-redo"></i> 수배서 재전송
+                                            </button>
+                                        ` : ''}
+                                    ` : ''}
+                                    ${reservation.payment_status === 'confirmed' ? `
+                                        <button class="btn btn-sm btn-info" onclick="sendVoucher(${reservation.id})">
+                                            <i class="fas fa-paper-plane"></i> 바우처 전송
                                         </button>
                                     ` : ''}
-                                    ${assignment.assignment_token ? `
-                                        <button class="btn btn-sm btn-info" onclick="copyAssignmentLink('${assignment.assignment_token}')">
-                                            <i class="fas fa-link"></i> 링크
+                                    ${reservation.assignment_token ? `
+                                        <button class="btn btn-sm btn-secondary" onclick="copyAssignmentLink('${reservation.assignment_token}')">
+                                            <i class="fas fa-link"></i> 수배서 링크
                                         </button>
                                     ` : ''}
                                 </div>
@@ -224,16 +255,40 @@
             container.innerHTML = html;
         }
 
-        // 상태 텍스트 변환
-        function getStatusText(status) {
+        // 예약 상태 텍스트 변환
+        function getReservationStatusText(status) {
+            const statusMap = {
+                'pending': '대기중 (신규예약)',
+                'in_progress': '수배중 (현지수배)',
+                'confirmed': '확정 (수배완료)',
+                'cancelled': '예약취소',
+                'refunded': '환불완료'
+            };
+            return statusMap[status] || '대기중';
+        }
+
+        // 수배 상태 텍스트 변환
+        function getAssignmentStatusText(status) {
             const statusMap = {
                 'requested': '요청됨',
-                'sent': '전송됨', 
+                'sent': '전송됨',
                 'viewed': '열람됨',
                 'confirmed': '확정됨',
                 'rejected': '거절됨'
             };
-            return statusMap[status] || status;
+            return statusMap[status] || '알 수 없음';
+        }
+
+        // 상태 CSS 클래스 변환
+        function getStatusClass(status) {
+            const classMap = {
+                'pending': 'pending',
+                'in_progress': 'in-progress',
+                'confirmed': 'confirmed',
+                'cancelled': 'cancelled',
+                'refunded': 'refunded'
+            };
+            return classMap[status] || 'pending';
         }
 
         // 날짜 포맷팅
@@ -367,10 +422,85 @@
             }
         }
 
-        // 기타 함수들
-        function viewAssignment(id) {
-            // 수배 상세 보기 (추후 구현)
-            console.log('수배 상세 보기:', id);
+        // 예약 상세 보기
+        function viewReservationDetail(reservationId) {
+            // 예약 상세 모달 열기 (추후 구현)
+            console.log('예약 상세 보기:', reservationId);
+            showAlert('예약 상세 보기 기능은 곧 추가됩니다.', 'info');
+        }
+
+        // 예약 확정 처리
+        async function confirmReservation(reservationId) {
+            const confirmationNumber = prompt('확정번호를 입력하세요:');
+            if (!confirmationNumber) return;
+
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirmation_number: confirmationNumber })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('예약이 확정되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '예약 확정에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('예약 확정 실패:', error);
+                showAlert('예약 확정 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 수배서 재전송
+        async function resendAssignment(assignmentId) {
+            if (!confirm('수배서를 재전송하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/assignments/${assignmentId}/resend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서가 재전송되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '수배서 재전송에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('수배서 재전송 실패:', error);
+                showAlert('수배서 재전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 바우처 전송
+        async function sendVoucher(reservationId) {
+            if (!confirm('바우처를 고객에게 전송하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/voucher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 전송되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '바우처 전송에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('바우처 전송 실패:', error);
+                showAlert('바우처 전송 중 오류가 발생했습니다.', 'danger');
+            }
         }
 
         async function sendAssignment(id) {

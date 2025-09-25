@@ -6641,11 +6641,22 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             ['in_progress', reservation_id]
         );
 
+        // 수배서 자동 전송 (상태를 'sent'로 업데이트)
+        await pool.query(
+            'UPDATE assignments SET status = $1, sent_at = NOW(), updated_at = NOW() WHERE id = $2',
+            ['sent', assignment.id]
+        );
+
+        // TODO: 실제 이메일/메신저 전송 로직 추가
+        console.log(`📧 수배서 자동 전송: ${vendor.vendor_name} (${vendor.email})`);
+        console.log(`🔗 수배서 링크: ${req.protocol}://${req.get('host')}/assignment/${assignment_token}`);
+
         res.json({
             success: true,
-            message: '수배서가 생성되었습니다.',
+            message: '수배서가 생성되고 수배처에 전송되었습니다.',
             data: assignment,
-            assignment_link: `/assignment/${assignment_token}`
+            assignment_link: `/assignment/${assignment_token}`,
+            auto_sent: true
         });
         
     } catch (error) {

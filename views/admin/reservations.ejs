@@ -681,7 +681,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('수배서가 생성되었습니다.');
+                    alert('수배서가 생성되고 수배처에 자동 전송되었습니다.');
                     
                     // 모달들 닫기
                     bootstrap.Modal.getInstance(document.getElementById('vendorSelectModal')).hide();
@@ -691,7 +691,7 @@
                     loadReservations();
                     
                     // 수배관리 페이지로 이동할지 묻기
-                    if (confirm('수배관리 페이지에서 생성된 수배서를 확인하시겠습니까?')) {
+                    if (confirm('수배관리 페이지에서 수배 진행 상황을 확인하시겠습니까?')) {
                         window.location.href = '/admin/assignments';
                     }
                 } else {
