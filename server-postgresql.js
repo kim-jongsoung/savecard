@@ -291,7 +291,9 @@ app.get('/api/test', (req, res) => {
 // 기존 데이터베이스를 사용한 간단한 예약 목록 API
 app.get('/api/reservations', async (req, res) => {
     try {
-        const query = 'SELECT * FROM reservations ORDER BY created_at DESC LIMIT 100';
+        const query = `SELECT * FROM reservations 
+                       WHERE payment_status != 'in_assignment' OR payment_status IS NULL 
+                       ORDER BY created_at DESC LIMIT 100`;
         const result = await pool.query(query);
         res.json({
             success: true,
@@ -6414,7 +6416,13 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
         
         const result = await pool.query(insertQuery, insertParams);
         const assignment = result.rows[0];
-        
+
+        // 예약 상태를 "수배 진행중"으로 업데이트 (수배관리로 이동)
+        await pool.query(
+            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+            ['in_assignment', reservation_id]
+        );
+
         res.json({
             success: true,
             message: '수배서가 생성되었습니다.',
