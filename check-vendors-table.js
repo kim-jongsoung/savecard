@@ -1,8 +1,15 @@
 const { Pool } = require('pg');
+require('dotenv').config();
+
+// Railway 연결 설정 로드
+if (require('fs').existsSync('./railsql.env')) {
+    require('dotenv').config({ path: './railsql.env' });
+}
 
 async function checkVendorsTable() {
-    const pool = new Pool({ 
-        connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/guamsavecard' 
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
     });
 
     try {

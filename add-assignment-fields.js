@@ -1,9 +1,24 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+const fs = require('fs');
+
+// 환경변수 로드 (railsql.env 우선)
+if (fs.existsSync('./railsql.env')) {
+    console.log('🔧 railsql.env 파일을 사용합니다');
+    require('dotenv').config({ path: './railsql.env' });
+} else {
+    require('dotenv').config();
+}
+
+// Railway PostgreSQL 연결 설정
+const connectionString = process.env.DATABASE_URL;
+const isRailway = connectionString && (connectionString.includes('railway') || connectionString.includes('metro.proxy.rlwy.net'));
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    connectionString: connectionString,
+    ssl: isRailway ? { rejectUnauthorized: false } : false,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
 });
 
 async function addAssignmentFields() {
