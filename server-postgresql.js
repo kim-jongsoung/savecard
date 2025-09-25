@@ -6351,9 +6351,11 @@ function isAutoConfirmProduct(productName) {
 // 수배서 생성 API
 app.post('/api/assignments', requireAuth, async (req, res) => {
     try {
+        console.log('수배서 생성 요청:', req.body);
         const { reservation_id, vendor_id, notes } = req.body;
-        
+
         if (!reservation_id || !vendor_id) {
+            console.log('필수 필드 누락:', { reservation_id, vendor_id });
             return res.status(400).json({
                 success: false,
                 message: '예약 ID와 수배업체 ID는 필수입니다.'
@@ -6431,10 +6433,11 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('수배서 생성 오류:', error);
+        console.error('❌ 수배서 생성 오류:', error);
+        console.error('❌ 스택 트레이스:', error.stack);
         res.status(500).json({
             success: false,
-            message: '수배서 생성 중 오류가 발생했습니다.'
+            message: '수배서 생성 중 오류가 발생했습니다: ' + error.message
         });
     }
 });
