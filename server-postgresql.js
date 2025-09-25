@@ -6484,7 +6484,6 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         
         // 예약 상태 필터 (수배 상태가 아닌 예약 상태 기준)
         if (status) {
-            paramIndex++;
             if (status === 'in_progress') {
                 whereClause += ` AND r.payment_status = 'in_progress'`;
             } else if (status === 'confirmed') {

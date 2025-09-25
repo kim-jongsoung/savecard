@@ -136,8 +136,6 @@
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
             loadAssignments();
-            loadReservations();
-            loadVendors();
         });
 
         // 수배 목록 로드
@@ -354,41 +352,7 @@
             modal.show();
         }
 
-        async function loadReservations() {
-            try {
-                const response = await fetch('/api/reservations?status=confirmed&limit=100');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const select = document.getElementById('reservationSelect');
-                    select.innerHTML = '<option value="">예약을 선택하세요</option>';
-                    
-                    data.data.reservations.forEach(reservation => {
-                        select.innerHTML += `<option value="${reservation.id}">${reservation.customer_name} - ${reservation.tour_date} (${reservation.platform_name})</option>`;
-                    });
-                }
-            } catch (error) {
-                console.error('예약 목록 로드 실패:', error);
-            }
-        }
-
-        async function loadVendors() {
-            try {
-                const response = await fetch('/api/vendors');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const select = document.getElementById('vendorSelect');
-                    select.innerHTML = '<option value="">수배업체를 선택하세요</option>';
-                    
-                    data.data.forEach(vendor => {
-                        select.innerHTML += `<option value="${vendor.id}">${vendor.vendor_name}</option>`;
-                    });
-                }
-            } catch (error) {
-                console.error('수배업체 목록 로드 실패:', error);
-            }
-        }
+        // 불필요한 함수들 제거됨 (수배관리는 예약 중심으로 변경)
 
         async function submitAssignment() {
             const form = document.getElementById('createAssignmentForm');
