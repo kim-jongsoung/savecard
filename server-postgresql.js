@@ -6435,9 +6435,70 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
         const result = await pool.query(query, [reservationId]);
 
         if (result.rows.length === 0) {
-            return res.status(404).render('error', { 
-                message: '수배서를 찾을 수 없습니다.',
-                error: { status: 404 }
+            // 수배서가 없는 경우, 예약 정보만으로 임시 수배서 생성
+            const reservationQuery = `SELECT * FROM reservations WHERE id = $1`;
+            const reservationResult = await pool.query(reservationQuery, [reservationId]);
+            
+            if (reservationResult.rows.length === 0) {
+                return res.status(404).render('error', { 
+                    message: '예약을 찾을 수 없습니다.',
+                    error: { status: 404 }
+                });
+            }
+            
+            const reservation = reservationResult.rows[0];
+            
+            // 임시 수배서 데이터 생성
+            const tempAssignment = {
+                id: 'TEMP',
+                assignment_token: 'preview',
+                reservation_id: reservation.id,
+                vendor_id: null,
+                vendor_name: '미지정',
+                status: 'draft',
+                created_at: new Date(),
+                sent_at: null,
+                viewed_at: null,
+                response_at: null,
+                confirmation_number: null,
+                rejection_reason: null,
+                notes: '임시 수배서 (아직 생성되지 않음)',
+                
+                // 예약 정보 매핑
+                reservation_number: reservation.reservation_number,
+                customer_name: reservation.korean_name,
+                english_first_name: reservation.english_first_name,
+                english_last_name: reservation.english_last_name,
+                vendor_name: reservation.platform_name,
+                product_name: reservation.product_name,
+                departure_date: reservation.usage_date,
+                usage_date: reservation.usage_date,
+                usage_time: reservation.usage_time,
+                adult_count: reservation.people_adult,
+                child_count: reservation.people_child,
+                people_infant: reservation.people_infant,
+                total_amount: reservation.total_price,
+                phone_number: reservation.phone_number,
+                email: reservation.email,
+                package_type: reservation.package_type,
+                special_requests: reservation.memo,
+                assignment_vendor: '미지정',
+                vendor_email: null,
+                vendor_phone: null
+            };
+            
+            return res.render('assignment', {
+                assignment: tempAssignment,
+                title: `수배서 미리보기 - ${tempAssignment.reservation_number} (임시)`,
+                isPreview: true,
+                formatDate: (date) => {
+                    if (!date) return '-';
+                    return new Date(date).toLocaleDateString('ko-KR');
+                },
+                formatCurrency: (amount) => {
+                    if (!amount) return '-';
+                    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
+                }
             });
         }
 

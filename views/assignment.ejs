@@ -54,7 +54,11 @@
                         예약번호: <%= assignment.reservation_number || assignment.id %>
                     </p>
                     <p class="mb-0 opacity-75">
-                        수배서 전송일시: <%= assignment.sent_at ? formatDate(assignment.sent_at) : '미전송' %>
+                        <% if (assignment.status === 'draft') { %>
+                            상태: 임시 수배서 (아직 생성되지 않음)
+                        <% } else { %>
+                            수배서 전송일시: <%= assignment.sent_at ? formatDate(assignment.sent_at) : '미전송' %>
+                        <% } %>
                     </p>
                 </div>
                 <div class="col-md-4 text-end">
@@ -180,7 +184,7 @@
 
             <!-- 수배업체 응답 섹션 -->
             <div class="col-lg-4">
-                <% if (!isPreview && (assignment.status === 'requested' || assignment.status === 'sent')) { %>
+                <% if (!isPreview && assignment.status !== 'draft' && (assignment.status === 'requested' || assignment.status === 'sent')) { %>
                 <div class="response-section">
                     <h5 class="text-center mb-4">
                         <i class="bi bi-reply me-2"></i>수배 응답
@@ -257,6 +261,25 @@
                     <p class="text-muted mt-3">
                         거절일: <%= formatDate(assignment.response_at) %>
                     </p>
+                    <% } %>
+                </div>
+                <% } else if (assignment.status === 'draft') { %>
+                <div class="response-section text-center">
+                    <div class="text-info mb-3">
+                        <i class="bi bi-info-circle fa-3x"></i>
+                    </div>
+                    <h5 class="text-info">임시 수배서</h5>
+                    <p class="text-muted">
+                        아직 수배서가 생성되지 않았습니다.<br>
+                        예약관리에서 수배서를 생성해주세요.
+                    </p>
+                    <% if (isPreview) { %>
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            <i class="bi bi-lightbulb me-1"></i>
+                            이것은 수배서 생성 시 어떻게 보일지 미리보기입니다.
+                        </small>
+                    </div>
                     <% } %>
                 </div>
                 <% } %>
