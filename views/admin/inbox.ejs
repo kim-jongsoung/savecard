@@ -484,7 +484,7 @@
             const fieldMappings = {
                 'reservation_number': data.reservation_number || data.booking_reference || data.order_number || '',
                 'platform_name': extractCompanyName(data),
-                'payment_status': data.payment_status || 'confirmed',
+                'payment_status': 'pending', // 기본값: 대기중 (신규예약)
                 'product_name': data.product_name || data.tour_name || data.service_name || '',
                 'package_type': data.package_type || data.package || data.option || '',
                 'tour_date': formatDate(data.usage_date || data.tour_date || data.date || data.service_date || ''),
@@ -505,7 +505,7 @@
                 'special_requests': data.memo || data.special_requests || data.notes || data.remarks || ''
             };
 
-            // 폼 필드에 값 설정
+            // 1단계: 폼 필드에 기본값 설정
             Object.entries(fieldMappings).forEach(([fieldId, value]) => {
                 const element = document.getElementById(fieldId);
                 if (element) {
@@ -522,10 +522,10 @@
                 }
             });
 
-            // 특별 설정 규칙 적용
+            // 2단계: 특별 설정 규칙 적용
             applySpecialRules(fieldMappings);
 
-            // 사용자 정의 파싱 보정 규칙 적용
+            // 3단계: 사용자 정의 파싱 규칙 적용 (상품명/업체명 기반 상태 변경)
             applyCustomParsingRules(fieldMappings);
 
             // 기본적으로는 "대기중 (신규예약)" 상태 (특별 규칙이 없는 경우)
@@ -782,7 +782,8 @@
                             element.style.backgroundColor = statusColors[rule.value] || '#e7f3ff';
                         }
                         
-                        showRuleNotification(`🎯 사용자 규칙 적용: ${rule.description}`);
+                        console.log(`🎯 파싱 규칙 적용: ${rule.description} (${rule.fieldType}: ${rule.value})`);
+                        showRuleNotification(`🎯 파싱 규칙 적용: ${rule.description}`);
                     }
                 }
             });
