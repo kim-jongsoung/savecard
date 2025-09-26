@@ -7118,20 +7118,21 @@ app.get('/assignment/:token', async (req, res) => {
             `);
         }
         
-        // 수배서 정보 조회 (컬럼명 수정)
+        // 수배서 정보 조회 (올바른 컬럼명 사용)
         const assignmentQuery = `
             SELECT 
                 a.*,
                 r.korean_name as customer_name,
                 r.reservation_number,
                 r.product_name,
-                r.departure_date as tour_date,
-                r.departure_time as tour_time,
+                r.usage_date as tour_date,
+                r.usage_time as tour_time,
                 r.adult_count,
                 r.child_count,
                 r.infant_count,
                 r.special_requests,
-                r.platform_name
+                r.platform_name,
+                r.total_amount
             FROM assignments a
             LEFT JOIN reservations r ON a.reservation_id = r.id
             WHERE a.assignment_token = $1
