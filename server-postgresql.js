@@ -6635,6 +6635,193 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
     }
 });
 
+// 예약 상세 조회 API (수배관리 모달용)
+app.get('/api/reservations/:id', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        
+        console.log('🔍 예약 상세 조회 API 호출:', reservationId);
+        
+        // reservations 테이블에서 기본 정보만 조회
+        const query = `
+            SELECT 
+                r.*,
+                v.vendor_name,
+                a.assignment_token,
+                a.confirmation_number as assignment_confirmation_number,
+                a.voucher_token
+            FROM reservations r
+            LEFT JOIN vendors v ON r.vendor_id = v.id
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE r.id = $1
+        `;
+        
+        const result = await pool.query(query, [reservationId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = result.rows[0];
+        
+        console.log('📋 예약 상세 조회 성공:', {
+            id: reservation.id,
+            reservation_number: reservation.reservation_number,
+            payment_status: reservation.payment_status,
+            vendor_name: reservation.vendor_name
+        });
+        
+        res.json({
+            success: true,
+            reservation: reservation
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 예약 정보 수정 API (수배관리 모달용)
+app.put('/api/reservations/:id', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        const {
+            korean_name,
+            english_first_name,
+            english_last_name,
+            people_adult,
+            people_child,
+            people_infant,
+            usage_date
+        } = req.body;
+        
+        console.log('🔧 예약 정보 수정 API 호출:', reservationId, req.body);
+        
+        // 동적 쿼리 생성
+        const updateFields = [];
+        const values = [];
+        let paramIndex = 1;
+        
+        if (korean_name !== undefined) {
+            updateFields.push(`korean_name = $${paramIndex++}`);
+            values.push(korean_name);
+        }
+        if (english_first_name !== undefined) {
+            updateFields.push(`english_first_name = $${paramIndex++}`);
+            values.push(english_first_name);
+        }
+        if (english_last_name !== undefined) {
+            updateFields.push(`english_last_name = $${paramIndex++}`);
+            values.push(english_last_name);
+        }
+        if (people_adult !== undefined) {
+            updateFields.push(`people_adult = $${paramIndex++}`);
+            values.push(people_adult);
+        }
+        if (people_child !== undefined) {
+            updateFields.push(`people_child = $${paramIndex++}`);
+            values.push(people_child);
+        }
+        if (people_infant !== undefined) {
+            updateFields.push(`people_infant = $${paramIndex++}`);
+            values.push(people_infant);
+        }
+        if (usage_date !== undefined) {
+            updateFields.push(`usage_date = $${paramIndex++}`);
+            values.push(usage_date);
+        }
+        
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '수정할 필드가 없습니다.'
+            });
+        }
+        
+        // updated_at 추가
+        updateFields.push(`updated_at = NOW()`);
+        values.push(reservationId);
+        
+        const query = `
+            UPDATE reservations 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${paramIndex}
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log('✅ 예약 정보 수정 완료:', result.rows[0].reservation_number);
+        
+        res.json({
+            success: true,
+            message: '예약 정보가 수정되었습니다.',
+            reservation: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 정보 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 정보 수정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 예약 메모 저장 API
+app.post('/api/reservations/:id/memo', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        const { memo } = req.body;
+        
+        console.log('📝 예약 메모 저장 API 호출:', reservationId);
+        
+        const query = `
+            UPDATE reservations 
+            SET memo = $1, updated_at = NOW()
+            WHERE id = $2
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, [memo, reservationId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log('✅ 예약 메모 저장 완료');
+        
+        res.json({
+            success: true,
+            message: '메모가 저장되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 메모 저장 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '메모 저장 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 수배서 생성 API
 app.post('/api/assignments', requireAuth, async (req, res) => {
     try {
