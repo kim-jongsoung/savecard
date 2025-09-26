@@ -5054,7 +5054,7 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
                     normalizedData.usage_date || null,
                     normalizedData.usage_time || null,
                     normalizedData.reservation_datetime || null,
-                    normalizedData.payment_status || 'confirmed',
+                    normalizedData.payment_status || 'pending', // 기본값을 대기중으로 변경
                     normalizedData.memo || null
                 ];
                 
@@ -5156,7 +5156,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                 reservationData.usage_date || null,
                 reservationData.usage_time || null,
                 reservationData.reservation_datetime || null,
-                'pending', // 파싱된 예약은 항상 대기중 상태로 시작
+                reservationData.payment_status || 'pending', // 인박스에서 설정한 상태 유지, 기본값은 대기중
                 reservationData.memo || null
             ];
 
