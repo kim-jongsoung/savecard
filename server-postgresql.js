@@ -6225,11 +6225,10 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
         const { reservation_id, vendor_id, notes } = req.body;
         console.log('🔧 수배서 생성 요청:', { reservation_id, vendor_id, notes });
 
-        // 예약 정보 조회
+        // 예약 정보 조회 (vendor_id 컬럼이 없으므로 reservations 테이블만 조회)
         const reservationQuery = `
-            SELECT r.*, v.vendor_name, v.email as vendor_email, v.phone as vendor_phone
+            SELECT r.*
             FROM reservations r
-            LEFT JOIN vendors v ON r.vendor_id = v.id
             WHERE r.id = $1
         `;
         const reservationResult = await pool.query(reservationQuery, [reservation_id]);
@@ -6239,6 +6238,16 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
         }
 
         const reservation = reservationResult.rows[0];
+
+        // 수배업체 정보 조회 (vendor_id가 제공된 경우)
+        let vendor_info = null;
+        if (vendor_id) {
+            const vendorQuery = `SELECT * FROM vendors WHERE id = $1`;
+            const vendorResult = await pool.query(vendorQuery, [vendor_id]);
+            if (vendorResult.rows.length > 0) {
+                vendor_info = vendorResult.rows[0];
+            }
+        }
 
         // 고유 토큰 생성
         const crypto = require('crypto');
@@ -6253,15 +6262,16 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             RETURNING *
         `;
 
-        const vendor_contact = {
-            email: reservation.vendor_email,
-            phone: reservation.vendor_phone
-        };
+        const vendor_contact = vendor_info ? {
+            email: vendor_info.email,
+            phone: vendor_info.phone,
+            contact_person: vendor_info.contact_person
+        } : {};
 
         const assignmentResult = await pool.query(insertQuery, [
             reservation_id,
-            vendor_id || reservation.vendor_id,
-            reservation.vendor_name,
+            vendor_id || null,
+            vendor_info ? vendor_info.vendor_name : '미지정',
             JSON.stringify(vendor_contact),
             assignment_token,
             'sent',
@@ -6323,13 +6333,9 @@ app.get('/assignment/:token', async (req, res) => {
                 r.phone_number,
                 r.email,
                 r.package_type,
-                r.memo as special_requests,
-                v.vendor_name as assignment_vendor,
-                v.email as vendor_email,
-                v.phone as vendor_phone
+                r.memo as special_requests
             FROM assignments a
             JOIN reservations r ON a.reservation_id = r.id
-            LEFT JOIN vendors v ON a.vendor_id = v.id
             WHERE a.assignment_token = $1
         `;
 
@@ -6343,6 +6349,23 @@ app.get('/assignment/:token', async (req, res) => {
         }
 
         const assignment = result.rows[0];
+
+        // 수배업체 정보 추가 조회
+        if (assignment.vendor_id) {
+            const vendorQuery = `SELECT vendor_name, email, phone FROM vendors WHERE id = $1`;
+            const vendorResult = await pool.query(vendorQuery, [assignment.vendor_id]);
+            if (vendorResult.rows.length > 0) {
+                const vendor = vendorResult.rows[0];
+                assignment.assignment_vendor = vendor.vendor_name;
+                assignment.vendor_email = vendor.email;
+                assignment.vendor_phone = vendor.phone;
+            }
+        }
+
+        // 수배업체 정보가 없으면 기본값 설정
+        if (!assignment.assignment_vendor) {
+            assignment.assignment_vendor = assignment.vendor_name || '미지정';
+        }
 
         // 조회 시간 기록
         await pool.query(`
@@ -6401,13 +6424,9 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
                 r.phone_number,
                 r.email,
                 r.package_type,
-                r.memo as special_requests,
-                v.vendor_name as assignment_vendor,
-                v.email as vendor_email,
-                v.phone as vendor_phone
+                r.memo as special_requests
             FROM assignments a
             JOIN reservations r ON a.reservation_id = r.id
-            LEFT JOIN vendors v ON a.vendor_id = v.id
             WHERE r.id = $1
             ORDER BY a.created_at DESC
             LIMIT 1
@@ -6423,6 +6442,23 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
         }
 
         const assignment = result.rows[0];
+
+        // 수배업체 정보 추가 조회
+        if (assignment.vendor_id) {
+            const vendorQuery = `SELECT vendor_name, email, phone FROM vendors WHERE id = $1`;
+            const vendorResult = await pool.query(vendorQuery, [assignment.vendor_id]);
+            if (vendorResult.rows.length > 0) {
+                const vendor = vendorResult.rows[0];
+                assignment.assignment_vendor = vendor.vendor_name;
+                assignment.vendor_email = vendor.email;
+                assignment.vendor_phone = vendor.phone;
+            }
+        }
+
+        // 수배업체 정보가 없으면 기본값 설정
+        if (!assignment.assignment_vendor) {
+            assignment.assignment_vendor = assignment.vendor_name || '미지정';
+        }
 
         res.render('assignment', {
             assignment: assignment,
