@@ -704,6 +704,33 @@
             }
         }
 
+        // 상태 텍스트 변환 함수
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '대기중',
+                'in_progress': '수배중',
+                'confirmed': '확정',
+                'voucher_sent': '바우처전송완료',
+                'cancelled': '예약취소',
+                'refunded': '환불완료'
+            };
+            return statusMap[status] || '대기중';
+        }
+
+        // 날짜 포맷 함수
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+        }
+
+        // 통화 포맷 함수
+        function formatCurrency(amount) {
+            if (!amount) return '$0';
+            return '$' + parseFloat(amount).toLocaleString();
+        }
+
         // 실시간 검색 (입력시마다 검색)
         document.getElementById('searchReservationNumber').addEventListener('input', searchReservations);
         document.getElementById('searchCompany').addEventListener('input', searchReservations);

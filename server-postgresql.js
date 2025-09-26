@@ -7833,6 +7833,9 @@ async function startServer() {
                         await pool.query('DELETE FROM migration_log WHERE version = $1', ['003']);
                     } else {
                         console.log('📊 모든 ERP 테이블 확인됨:', tableCheck.rows.map(r => r.table_name));
+                        
+                        // 마이그레이션 004 (정산 필드) 확인 및 실행
+                        await runSettlementMigration();
                         return;
                     }
                 }
@@ -8075,10 +8078,149 @@ async function startServer() {
                     console.log(`   ✓ ${row.table_name}`);
                 });
                 
+                // 마이그레이션 003 완료 후 정산 마이그레이션 004 실행
+                await runSettlementMigration();
+                
             } catch (error) {
                 await pool.query('ROLLBACK');
                 console.error('❌ ERP 마이그레이션 실패:', error);
                 // 마이그레이션 실패해도 서버는 계속 실행
+            }
+        }
+
+        // 정산 필드 마이그레이션 함수 (마이그레이션 004)
+        async function runSettlementMigration() {
+            try {
+                console.log('🔍 정산 필드 마이그레이션 004 상태 확인...');
+                
+                // 마이그레이션 004 실행 여부 확인
+                const migration004Check = await pool.query(
+                    'SELECT * FROM migration_log WHERE version = $1',
+                    ['004']
+                ).catch(() => ({ rows: [] }));
+                
+                if (migration004Check.rows.length > 0) {
+                    console.log('✅ 정산 필드 마이그레이션 004는 이미 완료되었습니다.');
+                    return;
+                }
+                
+                console.log('🚀 정산 필드 마이그레이션 004 실행 중...');
+                
+                await pool.query('BEGIN');
+                
+                // 정산 관련 컬럼들 추가
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        -- 매출 금액 (고객이 지불한 금액)
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'sale_amount'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN sale_amount DECIMAL(10,2);
+                        END IF;
+                        
+                        -- 매입 금액 (수배업체에 지불할 금액)
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'cost_amount'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN cost_amount DECIMAL(10,2);
+                        END IF;
+                        
+                        -- 마진 (매출 - 매입)
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'profit_amount'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN profit_amount DECIMAL(10,2);
+                        END IF;
+                        
+                        -- 정산 상태 (pending, settled, overdue)
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'settlement_status'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN settlement_status VARCHAR(20) DEFAULT 'pending';
+                        END IF;
+                        
+                        -- 정산 메모
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'settlement_notes'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN settlement_notes TEXT;
+                        END IF;
+                        
+                        -- 정산 완료 일시
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'settled_at'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN settled_at TIMESTAMP;
+                        END IF;
+                        
+                        -- 정산 담당자
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name = 'reservations' AND column_name = 'settled_by'
+                        ) THEN
+                            ALTER TABLE reservations ADD COLUMN settled_by VARCHAR(100);
+                        END IF;
+                    END $$;
+                `);
+                
+                // 인덱스 추가 (성능 최적화)
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_reservations_settlement_status ON reservations(settlement_status);
+                    CREATE INDEX IF NOT EXISTS idx_reservations_settled_at ON reservations(settled_at);
+                    CREATE INDEX IF NOT EXISTS idx_reservations_payment_settlement ON reservations(payment_status, settlement_status);
+                `);
+                
+                // 기존 바우처 전송 완료 예약들의 정산 상태 초기화
+                const updateQuery = `
+                    UPDATE reservations 
+                    SET settlement_status = 'pending',
+                        sale_amount = COALESCE(total_amount, 0)
+                    WHERE payment_status = 'voucher_sent' 
+                    AND settlement_status IS NULL
+                `;
+                
+                const result = await pool.query(updateQuery);
+                console.log(`✅ 기존 예약 ${result.rowCount}건의 정산 상태 초기화 완료`);
+                
+                // 마이그레이션 로그 기록
+                await pool.query(
+                    'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
+                    ['004', '정산관리 필드 추가: sale_amount, cost_amount, profit_amount, settlement_status 등']
+                );
+                
+                await pool.query('COMMIT');
+                
+                console.log('✅ 정산 필드 마이그레이션 004 완료!');
+                
+                // 현재 정산 대상 예약 수 확인
+                const countQuery = `
+                    SELECT 
+                        COUNT(*) as total_voucher_sent,
+                        COUNT(CASE WHEN settlement_status = 'pending' THEN 1 END) as pending_settlement,
+                        COUNT(CASE WHEN settlement_status = 'settled' THEN 1 END) as settled
+                    FROM reservations 
+                    WHERE payment_status = 'voucher_sent'
+                `;
+                
+                const countResult = await pool.query(countQuery);
+                const stats = countResult.rows[0];
+                
+                console.log('📊 정산 현황:');
+                console.log(`   - 바우처 전송 완료: ${stats.total_voucher_sent}건`);
+                console.log(`   - 정산 대기: ${stats.pending_settlement}건`);
+                console.log(`   - 정산 완료: ${stats.settled}건`);
+                
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                console.error('❌ 정산 필드 마이그레이션 실패:', error);
+                throw error;
             }
         }
 
