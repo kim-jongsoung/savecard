@@ -452,8 +452,9 @@
                 const data = await response.json();
 
                 console.log('수배관리 API 응답:', data);
-
+                
                 if (data.success) {
+                    console.log('예약 데이터 샘플:', data.data.assignments[0]);
                     renderAssignments(data.data.assignments);
                 } else {
                     console.error('API 오류:', data.message);
@@ -484,14 +485,27 @@
             assignmentsList.style.display = 'block';
 
             const html = assignments.map(reservation => {
+                console.log('예약 상태 정보:', {
+                    id: reservation.id,
+                    payment_status: reservation.payment_status,
+                    reservation_number: reservation.reservation_number
+                });
+                
                 const statusClass = getStatusClass(reservation.payment_status);
                 const statusText = getReservationStatusText(reservation.payment_status);
+                const bootstrapClass = getBootstrapStatusClass(reservation.payment_status);
                 const amount = reservation.total_price ? parseInt(reservation.total_price).toLocaleString('ko-KR') + '원' : '-';
                 const pax = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
                 
+                console.log('상태 변환 결과:', {
+                    original: reservation.payment_status,
+                    statusText: statusText,
+                    bootstrapClass: bootstrapClass
+                });
+                
                 return `
                     <article class="row-card table-like">
-                        <span class="badge text-bg-${statusClass} status-badge">${statusText}</span>
+                        <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
                         <div class="row-main">
                             <span><strong>${reservation.platform_name || '-'}</strong><span class="dim">(${reservation.korean_name || '-'})</span></span>
                             <span class="chip">${reservation.product_name || '-'}</span>
@@ -650,6 +664,18 @@
                 'refunded': 'refunded'
             };
             return statusMap[status] || 'pending';
+        }
+
+        function getBootstrapStatusClass(status) {
+            const statusMap = {
+                'pending': 'secondary',           // 대기중 - 회색
+                'in_progress': 'warning',         // 수배중 - 노란색
+                'confirmed': 'success',           // 확정 - 초록색
+                'voucher_sent': 'primary',        // 바우처전송완료 - 파란색
+                'cancelled': 'danger',            // 예약취소 - 빨간색
+                'refunded': 'dark'                // 환불완료 - 검은색
+            };
+            return statusMap[status] || 'secondary';
         }
 
         function getReservationStatusText(status) {
