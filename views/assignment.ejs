@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수배서 - <%= assignment.id %></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title><%= title || '수배서' %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         @media print {
             .no-print { display: none !important; }
@@ -48,66 +48,84 @@
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h1 class="mb-2">
-                        <i class="fas fa-file-alt me-2"></i>수배서 #<%= assignment.id %>
+                        <i class="bi bi-file-text me-2"></i>수배서
                     </h1>
                     <p class="mb-0 opacity-75">
-                        발행일: <%= new Date(assignment.created_at).toLocaleDateString('ko-KR') %>
+                        예약번호: <%= assignment.reservation_number || assignment.id %>
+                    </p>
+                    <p class="mb-0 opacity-75">
+                        수배서 전송일시: <%= assignment.sent_at ? formatDate(assignment.sent_at) : '미전송' %>
                     </p>
                 </div>
                 <div class="col-md-4 text-end">
-                    <span class="badge status-badge bg-<%= getStatusColor(assignment.status) %>">
-                        <%= getStatusText(assignment.status) %>
-                    </span>
+                    <div class="text-end">
+                        <div class="badge bg-primary fs-6 mb-2">괌세이브카드</div>
+                        <div class="text-white-50">현지 수배서</div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="container my-4">
-        <!-- 예약 정보 -->
+        <!-- 기본 예약 정보 -->
         <div class="row">
             <div class="col-lg-8">
                 <div class="card info-card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>예약 정보</h5>
+                        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>예약 기본 정보</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
+                                <strong>예약번호 (ID):</strong><br>
+                                <code class="fs-5"><%= assignment.reservation_number || assignment.id %></code>
+                            </div>
+                            <div class="col-md-6">
                                 <strong>예약자명:</strong><br>
-                                <span class="fs-5"><%= reservation.customer_name || '정보 없음' %></span>
+                                <span class="fs-5"><%= assignment.customer_name || '정보 없음' %></span>
+                                <% if (assignment.english_first_name || assignment.english_last_name) { %>
+                                <br><small class="text-muted">영문: <%= (assignment.english_first_name || '') + ' ' + (assignment.english_last_name || '') %></small>
+                                <% } %>
                             </div>
                             <div class="col-md-6">
-                                <strong>예약번호:</strong><br>
-                                <code><%= reservation.reservation_number || '정보 없음' %></code>
+                                <strong>업체명:</strong><br>
+                                <span class="text-primary fw-bold"><%= assignment.vendor_name || '정보 없음' %></span>
                             </div>
                             <div class="col-md-6">
-                                <strong>이용일:</strong><br>
-                                <%= reservation.tour_date ? new Date(reservation.tour_date).toLocaleDateString('ko-KR') : '정보 없음' %>
-                            </div>
-                            <div class="col-md-6">
-                                <strong>이용시간:</strong><br>
-                                <%= reservation.tour_time || '정보 없음' %>
-                            </div>
-                            <div class="col-12">
                                 <strong>상품명:</strong><br>
-                                <span class="text-primary fw-bold"><%= reservation.product_name || '정보 없음' %></span>
+                                <span class="text-success fw-bold"><%= assignment.product_name || '정보 없음' %></span>
                             </div>
-                            <div class="col-md-4">
-                                <strong>성인:</strong> <%= reservation.adult_count || 0 %>명
+                            <div class="col-md-6">
+                                <strong>출발일 / 사용일자:</strong><br>
+                                <%= assignment.departure_date ? formatDate(assignment.departure_date) : '정보 없음' %>
+                                <% if (assignment.usage_time) { %>
+                                <br><small class="text-muted">시간: <%= assignment.usage_time %></small>
+                                <% } %>
                             </div>
-                            <div class="col-md-4">
-                                <strong>아동:</strong> <%= reservation.child_count || 0 %>명
+                            <div class="col-md-6">
+                                <strong>인원:</strong><br>
+                                성인 <span class="badge bg-primary"><%= assignment.adult_count || 0 %>명</span>
+                                아동 <span class="badge bg-info"><%= assignment.child_count || 0 %>명</span>
+                                <% if (assignment.people_infant > 0) { %>
+                                유아 <span class="badge bg-secondary"><%= assignment.people_infant %>명</span>
+                                <% } %>
                             </div>
-                            <div class="col-md-4">
-                                <strong>유아:</strong> <%= reservation.infant_count || 0 %>명
+                            <% if (assignment.total_amount) { %>
+                            <div class="col-md-6">
+                                <strong>총 금액:</strong><br>
+                                <span class="text-success fw-bold fs-5"><%= formatCurrency(assignment.total_amount) %></span>
                             </div>
-                            <% if (reservation.special_requests) { %>
-                            <div class="col-12">
-                                <strong>특별 요청사항:</strong><br>
-                                <div class="alert alert-info">
-                                    <%= reservation.special_requests %>
-                                </div>
+                            <% } %>
+                            <% if (assignment.phone_number || assignment.email) { %>
+                            <div class="col-md-6">
+                                <strong>연락처:</strong><br>
+                                <% if (assignment.phone_number) { %>
+                                <i class="bi bi-telephone me-1"></i><%= assignment.phone_number %><br>
+                                <% } %>
+                                <% if (assignment.email) { %>
+                                <i class="bi bi-envelope me-1"></i><%= assignment.email %>
+                                <% } %>
                             </div>
                             <% } %>
                         </div>
@@ -117,77 +135,81 @@
                 <!-- 수배 정보 -->
                 <div class="card info-card mb-4">
                     <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="fas fa-handshake me-2"></i>수배 정보</h5>
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>수배 정보</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <strong>수배업체:</strong><br>
-                                <span class="fs-5"><%= assignment.vendor_name %></span>
+                                <span class="fs-5 text-success"><%= assignment.assignment_vendor || assignment.vendor_name || '미지정' %></span>
                             </div>
                             <div class="col-md-6">
-                                <strong>담당자:</strong><br>
-                                <%= assignment.vendor_contact ? JSON.parse(assignment.vendor_contact).contact_person || '정보 없음' : '정보 없음' %>
+                                <strong>수배서 전송일시:</strong><br>
+                                <%= assignment.sent_at ? formatDate(assignment.sent_at) + ' ' + new Date(assignment.sent_at).toLocaleTimeString('ko-KR') : '미전송' %>
                             </div>
-                            <% if (assignment.notes) { %>
+                            <% if (assignment.vendor_email || assignment.vendor_phone) { %>
                             <div class="col-12">
-                                <strong>특이사항:</strong><br>
-                                <div class="alert alert-warning">
-                                    <%= assignment.notes %>
+                                <strong>수배업체 연락처:</strong><br>
+                                <% if (assignment.vendor_email) { %>
+                                <i class="bi bi-envelope me-1"></i><%= assignment.vendor_email %><br>
+                                <% } %>
+                                <% if (assignment.vendor_phone) { %>
+                                <i class="bi bi-telephone me-1"></i><%= assignment.vendor_phone %>
+                                <% } %>
+                            </div>
+                            <% } %>
+                            <% if (assignment.special_requests) { %>
+                            <div class="col-12">
+                                <strong>특별 요청사항:</strong><br>
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i><%= assignment.special_requests %>
                                 </div>
                             </div>
                             <% } %>
-                            <% if (assignment.cost_price) { %>
-                            <div class="col-md-6">
-                                <strong>수배 단가:</strong><br>
-                                <span class="text-success fw-bold">
-                                    <%= assignment.cost_currency || 'USD' %> <%= assignment.cost_price %>
-                                </span>
+                            <% if (assignment.notes) { %>
+                            <div class="col-12">
+                                <strong>수배 메모:</strong><br>
+                                <div class="alert alert-warning">
+                                    <i class="bi bi-sticky me-2"></i><%= assignment.notes %>
+                                </div>
                             </div>
-                            <% } %>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 응답 섹션 -->
+            <!-- 수배업체 응답 섹션 -->
             <div class="col-lg-4">
-                <% if (assignment.status === 'requested' || assignment.status === 'sent') { %>
+                <% if (!isPreview && (assignment.status === 'requested' || assignment.status === 'sent')) { %>
                 <div class="response-section">
                     <h5 class="text-center mb-4">
-                        <i class="fas fa-reply me-2"></i>수배 응답
+                        <i class="bi bi-reply me-2"></i>수배 응답
                     </h5>
                     
                     <div class="d-grid gap-2">
                         <button class="btn btn-success btn-lg btn-response" onclick="confirmAssignment()">
-                            <i class="fas fa-check me-2"></i>확정
+                            <i class="bi bi-check-lg me-2"></i>확정
                         </button>
                         <button class="btn btn-danger btn-lg btn-response" onclick="rejectAssignment()">
-                            <i class="fas fa-times me-2"></i>거절
+                            <i class="bi bi-x-lg me-2"></i>거절
                         </button>
                     </div>
 
                     <!-- 확정 시 추가 정보 입력 -->
                     <div id="confirmationDetails" class="mt-4" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">확정번호 (선택사항)</label>
+                            <label class="form-label fw-bold">확정번호</label>
                             <input type="text" class="form-control confirmation-input" id="confirmationNumber" 
-                                   placeholder="확정번호를 입력하세요">
-                            <small class="text-muted">확정번호가 있는 경우 입력해주세요</small>
+                                   placeholder="확정번호를 입력하세요" required>
+                            <small class="text-muted">수배업체에서 발급한 확정번호를 입력해주세요</small>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">수배 단가 (선택사항)</label>
-                            <div class="input-group">
-                                <select class="form-select" id="costCurrency" style="max-width: 100px;">
-                                    <option value="USD">USD</option>
-                                    <option value="KRW">KRW</option>
-                                </select>
-                                <input type="number" class="form-control" id="costPrice" 
-                                       placeholder="단가" step="0.01">
-                            </div>
+                            <label class="form-label fw-bold">메모 (선택사항)</label>
+                            <textarea class="form-control" id="confirmationNotes" rows="2" 
+                                      placeholder="추가 메모사항"></textarea>
                         </div>
                         <button class="btn btn-success w-100" onclick="submitConfirmation()">
-                            <i class="fas fa-paper-plane me-2"></i>확정 완료
+                            <i class="bi bi-send me-2"></i>확정 완료
                         </button>
                     </div>
 
@@ -199,14 +221,14 @@
                                       placeholder="거절 사유를 입력해주세요" required></textarea>
                         </div>
                         <button class="btn btn-danger w-100" onclick="submitRejection()">
-                            <i class="fas fa-paper-plane me-2"></i>거절 완료
+                            <i class="bi bi-send me-2"></i>거절 완료
                         </button>
                     </div>
                 </div>
                 <% } else if (assignment.status === 'confirmed') { %>
                 <div class="response-section text-center">
                     <div class="text-success mb-3">
-                        <i class="fas fa-check-circle fa-3x"></i>
+                        <i class="bi bi-check-circle fa-3x"></i>
                     </div>
                     <h5 class="text-success">수배 확정 완료</h5>
                     <% if (assignment.confirmation_number) { %>
@@ -215,14 +237,14 @@
                     <% } %>
                     <% if (assignment.response_at) { %>
                     <p class="text-muted mt-3">
-                        확정일: <%= new Date(assignment.response_at).toLocaleDateString('ko-KR') %>
+                        확정일: <%= formatDate(assignment.response_at) %>
                     </p>
                     <% } %>
                 </div>
                 <% } else if (assignment.status === 'rejected') { %>
                 <div class="response-section text-center">
                     <div class="text-danger mb-3">
-                        <i class="fas fa-times-circle fa-3x"></i>
+                        <i class="bi bi-x-circle fa-3x"></i>
                     </div>
                     <h5 class="text-danger">수배 거절됨</h5>
                     <% if (assignment.rejection_reason) { %>
@@ -233,78 +255,39 @@
                     <% } %>
                     <% if (assignment.response_at) { %>
                     <p class="text-muted mt-3">
-                        거절일: <%= new Date(assignment.response_at).toLocaleDateString('ko-KR') %>
+                        거절일: <%= formatDate(assignment.response_at) %>
                     </p>
                     <% } %>
                 </div>
                 <% } %>
 
+                <!-- 비상 연락처 -->
+                <div class="card mt-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="bi bi-telephone me-2"></i>비상 연락처</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2"><strong>괌세이브카드</strong></p>
+                        <p class="mb-1"><i class="bi bi-telephone me-1"></i>+1-671-XXX-XXXX</p>
+                        <p class="mb-1"><i class="bi bi-envelope me-1"></i>support@guamsavecard.com</p>
+                        <p class="mb-0"><small class="text-muted">24시간 응급상황 대응</small></p>
+                    </div>
+                </div>
+
                 <!-- 인쇄 버튼 -->
                 <div class="mt-4 no-print">
                     <button class="btn btn-outline-primary w-100" onclick="window.print()">
-                        <i class="fas fa-print me-2"></i>수배서 인쇄
+                        <i class="bi bi-printer me-2"></i>수배서 인쇄
                     </button>
                 </div>
             </div>
         </div>
-
-        <!-- 처리 이력 -->
-        <% if (assignment.viewed_at || assignment.response_at) { %>
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-history me-2"></i>처리 이력</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="timeline">
-                            <div class="timeline-item">
-                                <i class="fas fa-file-alt text-primary"></i>
-                                <span>수배서 생성: <%= new Date(assignment.created_at).toLocaleString('ko-KR') %></span>
-                            </div>
-                            <% if (assignment.sent_at) { %>
-                            <div class="timeline-item">
-                                <i class="fas fa-paper-plane text-info"></i>
-                                <span>수배서 전송: <%= new Date(assignment.sent_at).toLocaleString('ko-KR') %></span>
-                            </div>
-                            <% } %>
-                            <% if (assignment.viewed_at) { %>
-                            <div class="timeline-item">
-                                <i class="fas fa-eye text-warning"></i>
-                                <span>수배서 열람: <%= new Date(assignment.viewed_at).toLocaleString('ko-KR') %></span>
-                            </div>
-                            <% } %>
-                            <% if (assignment.response_at) { %>
-                            <div class="timeline-item">
-                                <i class="fas fa-<%= assignment.status === 'confirmed' ? 'check' : 'times' %> text-<%= assignment.status === 'confirmed' ? 'success' : 'danger' %>"></i>
-                                <span>수배 <%= assignment.status === 'confirmed' ? '확정' : '거절' %>: <%= new Date(assignment.response_at).toLocaleString('ko-KR') %></span>
-                            </div>
-                            <% } %>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <% } %>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 페이지 로드 시 열람 상태 업데이트
-        document.addEventListener('DOMContentLoaded', function() {
-            updateViewStatus();
-        });
-
-        // 열람 상태 업데이트
-        async function updateViewStatus() {
-            try {
-                await fetch(`/api/assignment/<%= assignment.assignment_token %>/view`, {
-                    method: 'POST'
-                });
-            } catch (error) {
-                console.error('열람 상태 업데이트 실패:', error);
-            }
-        }
+        const assignmentToken = '<%= assignment.assignment_token %>';
 
         // 확정 버튼 클릭
         function confirmAssignment() {
@@ -321,32 +304,33 @@
         // 확정 완료
         async function submitConfirmation() {
             const confirmationNumber = document.getElementById('confirmationNumber').value;
-            const costPrice = document.getElementById('costPrice').value;
-            const costCurrency = document.getElementById('costCurrency').value;
+            const notes = document.getElementById('confirmationNotes').value;
+
+            if (!confirmationNumber.trim()) {
+                alert('확정번호를 입력해주세요.');
+                return;
+            }
 
             try {
-                const response = await fetch(`/api/assignment/<%= assignment.assignment_token %>/confirm`, {
+                const response = await fetch(`/assignment/${assignmentToken}/confirm`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         confirmation_number: confirmationNumber,
-                        cost_price: costPrice ? parseFloat(costPrice) : null,
-                        cost_currency: costCurrency
+                        notes: notes
                     })
                 });
 
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('수배가 확정되었습니다.');
+                    alert('수배서가 확정되었습니다!');
                     location.reload();
                 } else {
-                    alert('확정 처리 중 오류가 발생했습니다: ' + result.message);
+                    alert('확정 처리에 실패했습니다: ' + result.message);
                 }
             } catch (error) {
-                console.error('확정 처리 실패:', error);
+                console.error('확정 처리 오류:', error);
                 alert('확정 처리 중 오류가 발생했습니다.');
             }
         }
@@ -361,11 +345,9 @@
             }
 
             try {
-                const response = await fetch(`/api/assignment/<%= assignment.assignment_token %>/reject`, {
+                const response = await fetch(`/assignment/${assignmentToken}/reject`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         rejection_reason: rejectionReason
                     })
@@ -374,65 +356,16 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('수배가 거절되었습니다.');
+                    alert('수배서가 거절되었습니다.');
                     location.reload();
                 } else {
-                    alert('거절 처리 중 오류가 발생했습니다: ' + result.message);
+                    alert('거절 처리에 실패했습니다: ' + result.message);
                 }
             } catch (error) {
-                console.error('거절 처리 실패:', error);
+                console.error('거절 처리 오류:', error);
                 alert('거절 처리 중 오류가 발생했습니다.');
             }
         }
     </script>
-
-    <style>
-        .timeline {
-            position: relative;
-            padding-left: 2rem;
-        }
-        .timeline-item {
-            position: relative;
-            padding: 0.5rem 0;
-            border-left: 2px solid #dee2e6;
-            padding-left: 2rem;
-            margin-bottom: 1rem;
-        }
-        .timeline-item i {
-            position: absolute;
-            left: -0.6rem;
-            background: white;
-            padding: 0.3rem;
-            border-radius: 50%;
-            border: 2px solid #dee2e6;
-        }
-        .timeline-item:last-child {
-            border-left: none;
-        }
-    </style>
 </body>
 </html>
-
-<%
-function getStatusText(status) {
-    const statusMap = {
-        'requested': '요청됨',
-        'sent': '전송됨',
-        'viewed': '열람됨', 
-        'confirmed': '확정됨',
-        'rejected': '거절됨'
-    };
-    return statusMap[status] || status;
-}
-
-function getStatusColor(status) {
-    const colorMap = {
-        'requested': 'warning',
-        'sent': 'info',
-        'viewed': 'primary',
-        'confirmed': 'success',
-        'rejected': 'danger'
-    };
-    return colorMap[status] || 'secondary';
-}
-%>

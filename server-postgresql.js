@@ -6219,6 +6219,357 @@ app.get('/api/field-defs', requireAuth, async (req, res) => {
     }
 });
 
+// 수배서 생성 API
+app.post('/api/assignments', requireAuth, async (req, res) => {
+    try {
+        const { reservation_id, vendor_id, notes } = req.body;
+        console.log('🔧 수배서 생성 요청:', { reservation_id, vendor_id, notes });
+
+        // 예약 정보 조회
+        const reservationQuery = `
+            SELECT r.*, v.vendor_name, v.email as vendor_email, v.phone as vendor_phone
+            FROM reservations r
+            LEFT JOIN vendors v ON r.vendor_id = v.id
+            WHERE r.id = $1
+        `;
+        const reservationResult = await pool.query(reservationQuery, [reservation_id]);
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: '예약을 찾을 수 없습니다.' });
+        }
+
+        const reservation = reservationResult.rows[0];
+
+        // 고유 토큰 생성
+        const crypto = require('crypto');
+        const assignment_token = crypto.randomBytes(16).toString('hex');
+
+        // 수배서 생성
+        const insertQuery = `
+            INSERT INTO assignments (
+                reservation_id, vendor_id, vendor_name, vendor_contact,
+                assignment_token, status, notes, assigned_by, assigned_at, sent_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+            RETURNING *
+        `;
+
+        const vendor_contact = {
+            email: reservation.vendor_email,
+            phone: reservation.vendor_phone
+        };
+
+        const assignmentResult = await pool.query(insertQuery, [
+            reservation_id,
+            vendor_id || reservation.vendor_id,
+            reservation.vendor_name,
+            JSON.stringify(vendor_contact),
+            assignment_token,
+            'sent',
+            notes || `수배서 생성 (${reservation.product_name})`,
+            req.session.adminUsername || 'admin'
+        ]);
+
+        // 예약 상태를 수배중으로 변경
+        await pool.query(`
+            UPDATE reservations 
+            SET payment_status = 'in_progress', updated_at = NOW()
+            WHERE id = $1
+        `, [reservation_id]);
+
+        const assignment = assignmentResult.rows[0];
+        const assignment_link = `/assignment/${assignment_token}`;
+
+        console.log('✅ 수배서 생성 완료:', assignment_link);
+
+        res.json({
+            success: true,
+            message: '수배서가 생성되었습니다.',
+            data: {
+                assignment: assignment,
+                assignment_link: assignment_link,
+                assignment_token: assignment_token
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 생성 오류:', error);
+        res.status(500).json({ success: false, message: '수배서 생성 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
+// 수배서 페이지 라우트
+app.get('/assignment/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('🔍 수배서 페이지 요청:', token);
+
+        // 수배서 정보 조회
+        const query = `
+            SELECT 
+                a.*,
+                r.reservation_number,
+                r.korean_name as customer_name,
+                r.english_first_name,
+                r.english_last_name,
+                r.platform_name as vendor_name,
+                r.product_name,
+                r.usage_date as departure_date,
+                r.usage_date,
+                r.usage_time,
+                r.people_adult as adult_count,
+                r.people_child as child_count,
+                r.people_infant,
+                r.total_price as total_amount,
+                r.phone_number,
+                r.email,
+                r.package_type,
+                r.memo as special_requests,
+                v.vendor_name as assignment_vendor,
+                v.email as vendor_email,
+                v.phone as vendor_phone
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            LEFT JOIN vendors v ON a.vendor_id = v.id
+            WHERE a.assignment_token = $1
+        `;
+
+        const result = await pool.query(query, [token]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', { 
+                message: '수배서를 찾을 수 없습니다.',
+                error: { status: 404 }
+            });
+        }
+
+        const assignment = result.rows[0];
+
+        // 조회 시간 기록
+        await pool.query(`
+            UPDATE assignments 
+            SET viewed_at = NOW() 
+            WHERE assignment_token = $1
+        `, [token]);
+
+        console.log('✅ 수배서 조회 완료:', assignment.reservation_number);
+
+        res.render('assignment', {
+            assignment: assignment,
+            title: `수배서 - ${assignment.reservation_number}`,
+            formatDate: (date) => {
+                if (!date) return '-';
+                return new Date(date).toLocaleDateString('ko-KR');
+            },
+            formatCurrency: (amount) => {
+                if (!amount) return '-';
+                return new Intl.NumberFormat('ko-KR').format(amount) + '원';
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 페이지 오류:', error);
+        res.status(500).render('error', { 
+            message: '수배서를 불러오는 중 오류가 발생했습니다.',
+            error: error
+        });
+    }
+});
+
+// 수배서 미리보기 (관리자용)
+app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('🔍 수배서 미리보기 요청:', reservationId);
+
+        // 해당 예약의 수배서 조회
+        const query = `
+            SELECT 
+                a.*,
+                r.reservation_number,
+                r.korean_name as customer_name,
+                r.english_first_name,
+                r.english_last_name,
+                r.platform_name as vendor_name,
+                r.product_name,
+                r.usage_date as departure_date,
+                r.usage_date,
+                r.usage_time,
+                r.people_adult as adult_count,
+                r.people_child as child_count,
+                r.people_infant,
+                r.total_price as total_amount,
+                r.phone_number,
+                r.email,
+                r.package_type,
+                r.memo as special_requests,
+                v.vendor_name as assignment_vendor,
+                v.email as vendor_email,
+                v.phone as vendor_phone
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            LEFT JOIN vendors v ON a.vendor_id = v.id
+            WHERE r.id = $1
+            ORDER BY a.created_at DESC
+            LIMIT 1
+        `;
+
+        const result = await pool.query(query, [reservationId]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).render('error', { 
+                message: '수배서를 찾을 수 없습니다.',
+                error: { status: 404 }
+            });
+        }
+
+        const assignment = result.rows[0];
+
+        res.render('assignment', {
+            assignment: assignment,
+            title: `수배서 미리보기 - ${assignment.reservation_number}`,
+            isPreview: true,
+            formatDate: (date) => {
+                if (!date) return '-';
+                return new Date(date).toLocaleDateString('ko-KR');
+            },
+            formatCurrency: (amount) => {
+                if (!amount) return '-';
+                return new Intl.NumberFormat('ko-KR').format(amount) + '원';
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 미리보기 오류:', error);
+        res.status(500).render('error', { 
+            message: '수배서 미리보기 중 오류가 발생했습니다.',
+            error: error
+        });
+    }
+});
+
+// 수배서 확정 처리 API
+app.post('/assignment/:token/confirm', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { confirmation_number, notes } = req.body;
+        
+        console.log('✅ 수배서 확정 요청:', { token, confirmation_number });
+
+        if (!confirmation_number) {
+            return res.status(400).json({ success: false, message: '확정번호를 입력해주세요.' });
+        }
+
+        // 수배서 정보 조회
+        const assignmentQuery = `
+            SELECT a.*, r.reservation_number 
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.assignment_token = $1
+        `;
+        const assignmentResult = await pool.query(assignmentQuery, [token]);
+
+        if (assignmentResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: '수배서를 찾을 수 없습니다.' });
+        }
+
+        const assignment = assignmentResult.rows[0];
+
+        // 수배서 확정 처리
+        await pool.query(`
+            UPDATE assignments 
+            SET 
+                status = 'confirmed',
+                confirmation_number = $1,
+                response_at = NOW(),
+                notes = COALESCE(notes, '') || $2
+            WHERE assignment_token = $3
+        `, [confirmation_number, notes ? '\n확정 메모: ' + notes : '', token]);
+
+        // 예약 상태를 확정으로 변경
+        await pool.query(`
+            UPDATE reservations 
+            SET payment_status = 'confirmed', updated_at = NOW()
+            WHERE id = $1
+        `, [assignment.reservation_id]);
+
+        console.log('✅ 수배서 확정 완료:', assignment.reservation_number, confirmation_number);
+
+        res.json({
+            success: true,
+            message: '수배서가 확정되었습니다.',
+            data: {
+                confirmation_number: confirmation_number,
+                reservation_number: assignment.reservation_number
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 확정 오류:', error);
+        res.status(500).json({ success: false, message: '수배서 확정 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
+// 수배서 거절 처리 API
+app.post('/assignment/:token/reject', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { rejection_reason } = req.body;
+        
+        console.log('❌ 수배서 거절 요청:', { token, rejection_reason });
+
+        if (!rejection_reason) {
+            return res.status(400).json({ success: false, message: '거절 사유를 입력해주세요.' });
+        }
+
+        // 수배서 정보 조회
+        const assignmentQuery = `
+            SELECT a.*, r.reservation_number 
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.assignment_token = $1
+        `;
+        const assignmentResult = await pool.query(assignmentQuery, [token]);
+
+        if (assignmentResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: '수배서를 찾을 수 없습니다.' });
+        }
+
+        const assignment = assignmentResult.rows[0];
+
+        // 수배서 거절 처리
+        await pool.query(`
+            UPDATE assignments 
+            SET 
+                status = 'rejected',
+                rejection_reason = $1,
+                response_at = NOW()
+            WHERE assignment_token = $2
+        `, [rejection_reason, token]);
+
+        // 예약 상태를 대기중으로 되돌림 (다른 업체에 재수배 가능)
+        await pool.query(`
+            UPDATE reservations 
+            SET payment_status = 'pending', updated_at = NOW()
+            WHERE id = $1
+        `, [assignment.reservation_id]);
+
+        console.log('❌ 수배서 거절 완료:', assignment.reservation_number);
+
+        res.json({
+            success: true,
+            message: '수배서가 거절되었습니다.',
+            data: {
+                rejection_reason: rejection_reason,
+                reservation_number: assignment.reservation_number
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 거절 오류:', error);
+        res.status(500).json({ success: false, message: '수배서 거절 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
 // 구버전 수배 관리 API (사용 안함 - 새로운 API로 대체됨)
 /*
 app.get('/api/assignments', requireAuth, async (req, res) => {
