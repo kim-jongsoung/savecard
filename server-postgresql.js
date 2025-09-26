@@ -7098,23 +7098,55 @@ app.get('/admin/settlement', requireAuth, (req, res) => {
 // 수배서 페이지 라우트
 app.get('/assignment/:token', async (req, res) => {
     try {
+        console.log('수배서 페이지 요청:', req.params.token);
         const { token } = req.params;
         
-        // 수배서 정보 조회
+        // 먼저 assignments 테이블 존재 여부 확인
+        const tableCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = 'assignments'
+        `);
+        
+        if (tableCheck.rows.length === 0) {
+            console.error('assignments 테이블이 존재하지 않음');
+            return res.status(500).send(`
+                <h1>수배서 시스템 오류</h1>
+                <p>수배서 테이블이 존재하지 않습니다.</p>
+                <p>관리자에게 문의해주세요.</p>
+                <a href="/admin">관리자 페이지로 돌아가기</a>
+            `);
+        }
+        
+        // 수배서 정보 조회 (컬럼명 수정)
         const assignmentQuery = `
-            SELECT a.*, r.*
+            SELECT 
+                a.*,
+                r.korean_name as customer_name,
+                r.reservation_number,
+                r.product_name,
+                r.departure_date as tour_date,
+                r.departure_time as tour_time,
+                r.adult_count,
+                r.child_count,
+                r.infant_count,
+                r.special_requests,
+                r.platform_name
             FROM assignments a
             LEFT JOIN reservations r ON a.reservation_id = r.id
             WHERE a.assignment_token = $1
         `;
         
         const result = await pool.query(assignmentQuery, [token]);
+        console.log('수배서 조회 결과:', result.rows.length);
         
         if (result.rows.length === 0) {
-            return res.status(404).render('error', {
-                title: '수배서를 찾을 수 없습니다',
-                message: '유효하지 않은 수배서 링크입니다.'
-            });
+            return res.status(404).send(`
+                <h1>수배서를 찾을 수 없습니다</h1>
+                <p>유효하지 않은 수배서 링크입니다.</p>
+                <p>토큰: ${token}</p>
+                <a href="/admin">관리자 페이지로 돌아가기</a>
+            `);
         }
         
         const data = result.rows[0];
@@ -7151,6 +7183,7 @@ app.get('/assignment/:token', async (req, res) => {
             platform_name: data.platform_name
         };
         
+        console.log('수배서 렌더링 시작');
         res.render('assignment', {
             title: `수배서 #${assignment.id}`,
             assignment,
@@ -7159,10 +7192,12 @@ app.get('/assignment/:token', async (req, res) => {
         
     } catch (error) {
         console.error('수배서 페이지 오류:', error);
-        res.status(500).render('error', {
-            title: '서버 오류',
-            message: '수배서를 불러오는 중 오류가 발생했습니다.'
-        });
+        res.status(500).send(`
+            <h1>수배서 페이지 오류</h1>
+            <p>수배서를 불러오는 중 오류가 발생했습니다.</p>
+            <p>오류: ${error.message}</p>
+            <a href="/admin">관리자 페이지로 돌아가기</a>
+        `);
     }
 });
 
