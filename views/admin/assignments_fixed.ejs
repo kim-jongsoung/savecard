@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수배관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .status-pending { background-color: #6c757d; color: #fff; }
+        .status-in-progress { background-color: #ffc107; color: #000; }
+        .status-confirmed { background-color: #28a745; color: #fff; }
+        .status-voucher-sent { background-color: #17a2b8; color: #fff; }
+        .status-cancelled { background-color: #dc3545; color: #fff; }
+        .status-refunded { background-color: #6f42c1; color: #fff; }
+        
+        .search-filters {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .btn-group-sm .btn {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'assignments' }) %>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-tasks me-2"></i>수배관리</h2>
+                    <div class="text-muted">
+                        <small>현지 수배처와의 진행 상황을 관리합니다</small>
+                    </div>
+                </div>
+
+                <!-- 검색 필터 -->
+                <div class="search-filters">
+                    <h5 class="mb-3"><i class="fas fa-search me-2"></i>수배 검색</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-2">
+                            <label class="form-label">업체명</label>
+                            <input type="text" class="form-control" id="searchCompany" placeholder="업체명 검색">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">상품명</label>
+                            <input type="text" class="form-control" id="searchProduct" placeholder="상품명 검색">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">예약자명</label>
+                            <input type="text" class="form-control" id="searchCustomer" placeholder="예약자명 검색">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">출발일</label>
+                            <input type="date" class="form-control" id="searchDepartureDate">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">예약상태</label>
+                            <select class="form-select" id="searchStatus">
+                                <option value="">전체</option>
+                                <option value="in_progress">수배중 (현지수배)</option>
+                                <option value="confirmed">확정 (수배완료)</option>
+                                <option value="voucher_sent">바우처전송완료</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">수배업체</label>
+                            <input type="text" class="form-control" id="searchVendor" placeholder="수배업체 검색">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button class="btn btn-primary me-2" onclick="searchAssignments()">
+                                <i class="fas fa-search me-1"></i>검색
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="clearSearch()">
+                                <i class="fas fa-times me-1"></i>초기화
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 수배 목록 -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>수배 목록</h5>
+                        <div>
+                            <span class="badge bg-primary" id="totalCount">총 0건</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>예약상태</th>
+                                        <th>업체명</th>
+                                        <th>상품명</th>
+                                        <th>예약자명</th>
+                                        <th>출발일</th>
+                                        <th>수배업체</th>
+                                        <th>금액</th>
+                                        <th>관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="assignmentsTable">
+                                    <!-- 데이터가 여기에 로드됩니다 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentStatus = '';
+        let currentSearch = '';
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAssignments();
+        });
+
+        // 수배 목록 로드
+        async function loadAssignments(page = 1) {
+            try {
+                currentPage = page;
+                const params = new URLSearchParams({
+                    page: page,
+                    status: currentStatus,
+                    search: currentSearch
+                });
+
+                const response = await fetch(`/api/assignments?${params}`);
+                const data = await response.json();
+
+                console.log('수배관리 API 응답:', data);
+
+                if (data.success) {
+                    renderAssignments(data.data.assignments);
+                } else {
+                    console.error('API 오류:', data.message);
+                    showAlert('데이터를 불러오는데 실패했습니다: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('수배 목록 로드 실패:', error);
+                showAlert('수배 목록을 불러오는데 실패했습니다.', 'danger');
+            }
+        }
+
+        // 수배관리 목록 렌더링 (테이블 형태)
+        function renderAssignments(assignments) {
+            const tableBody = document.getElementById('assignmentsTable');
+            const totalCount = document.getElementById('totalCount');
+            
+            totalCount.textContent = `총 ${assignments.length}건`;
+            
+            if (assignments.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">수배 중인 예약이 없습니다</h5>
+                            <p class="text-muted">예약관리에서 수배서를 생성하면 여기에 표시됩니다.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const html = assignments.map(reservation => `
+                <tr onclick="viewReservationDetail(${reservation.id})" style="cursor: pointer;">
+                    <td>
+                        <span class="badge status-badge status-${getStatusClass(reservation.payment_status)}">
+                            ${getReservationStatusText(reservation.payment_status)}
+                        </span>
+                    </td>
+                    <td>${reservation.platform_name || '-'}</td>
+                    <td>
+                        <div class="fw-bold">${reservation.product_name || '-'}</div>
+                        ${reservation.package_type ? `<small class="text-muted">${reservation.package_type}</small>` : ''}
+                    </td>
+                    <td>
+                        <div>${reservation.korean_name || '-'}</div>
+                        <small class="text-muted">${reservation.english_first_name || ''} ${reservation.english_last_name || ''}</small>
+                    </td>
+                    <td>
+                        <div>${formatDate(reservation.usage_date) || '-'}</div>
+                        ${reservation.usage_time ? `<small class="text-muted">${reservation.usage_time}</small>` : ''}
+                    </td>
+                    <td>
+                        <div class="fw-bold">${reservation.vendor_name || '미배정'}</div>
+                        ${reservation.confirmation_number ? `<small class="text-success">확정: ${reservation.confirmation_number}</small>` : ''}
+                    </td>
+                    <td>
+                        <div class="fw-bold">${formatCurrency(reservation.total_amount)}</div>
+                        <small class="text-muted">성인 ${reservation.people_adult || 0}명</small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm" role="group">
+                            ${reservation.payment_status === 'in_progress' ? `
+                                <button class="btn btn-success" onclick="event.stopPropagation(); confirmReservation(${reservation.id})">
+                                    <i class="fas fa-check"></i> 확정
+                                </button>
+                            ` : ''}
+                            ${reservation.payment_status === 'confirmed' ? `
+                                <button class="btn btn-info" onclick="event.stopPropagation(); sendVoucher(${reservation.id})">
+                                    <i class="fas fa-paper-plane"></i> 바우처
+                                </button>
+                            ` : ''}
+                            ${reservation.payment_status === 'voucher_sent' ? `
+                                <button class="btn btn-warning" onclick="event.stopPropagation(); moveToSettlement(${reservation.id})">
+                                    <i class="fas fa-calculator"></i> 정산
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            tableBody.innerHTML = html;
+        }
+
+        // 검색 함수
+        function searchAssignments() {
+            const company = document.getElementById('searchCompany').value;
+            const product = document.getElementById('searchProduct').value;
+            const customer = document.getElementById('searchCustomer').value;
+            const status = document.getElementById('searchStatus').value;
+            
+            currentStatus = status;
+            currentSearch = [company, product, customer].filter(s => s.trim()).join(' ');
+            
+            loadAssignments(1);
+        }
+
+        // 검색 초기화
+        function clearSearch() {
+            document.getElementById('searchCompany').value = '';
+            document.getElementById('searchProduct').value = '';
+            document.getElementById('searchCustomer').value = '';
+            document.getElementById('searchDepartureDate').value = '';
+            document.getElementById('searchStatus').value = '';
+            document.getElementById('searchVendor').value = '';
+            
+            currentStatus = '';
+            currentSearch = '';
+            
+            loadAssignments(1);
+        }
+
+        // 예약 상세 보기
+        function viewReservationDetail(reservationId) {
+            window.location.href = `/admin/reservations?id=${reservationId}`;
+        }
+
+        // 예약 확정 처리
+        async function confirmReservation(reservationId) {
+            const confirmationNumber = prompt('확정번호를 입력하세요:');
+            if (!confirmationNumber) return;
+            
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirmation_number: confirmationNumber })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('예약이 확정되었습니다.', 'success');
+                    loadAssignments(currentPage);
+                } else {
+                    showAlert('확정 처리에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('확정 처리 오류:', error);
+                showAlert('확정 처리 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 바우처 전송
+        async function sendVoucher(reservationId) {
+            if (!confirm('바우처를 전송하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/voucher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('바우처가 전송되었습니다.', 'success');
+                    loadAssignments(currentPage);
+                } else {
+                    showAlert('바우처 전송에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('바우처 전송 오류:', error);
+                showAlert('바우처 전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 정산 이관
+        async function moveToSettlement(reservationId) {
+            if (!confirm('정산관리로 이관하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/settlement`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('정산관리로 이관되었습니다.', 'success');
+                    loadAssignments(currentPage);
+                } else {
+                    showAlert('정산 이관에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('정산 이관 오류:', error);
+                showAlert('정산 이관 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 유틸리티 함수들
+        function getStatusClass(status) {
+            const statusMap = {
+                'pending': 'pending',
+                'in_progress': 'in-progress', 
+                'confirmed': 'confirmed',
+                'voucher_sent': 'voucher-sent',
+                'cancelled': 'cancelled',
+                'refunded': 'refunded'
+            };
+            return statusMap[status] || 'pending';
+        }
+
+        function getReservationStatusText(status) {
+            const statusMap = {
+                'pending': '대기중 (신규예약)',
+                'in_progress': '수배중 (현지수배)',
+                'confirmed': '확정 (수배완료)',
+                'voucher_sent': '바우처전송완료',
+                'cancelled': '예약취소',
+                'refunded': '환불완료'
+            };
+            return statusMap[status] || '대기중 (신규예약)';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleDateString('ko-KR');
+        }
+
+        function formatCurrency(amount) {
+            if (!amount) return '-';
+            return new Intl.NumberFormat('ko-KR', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
