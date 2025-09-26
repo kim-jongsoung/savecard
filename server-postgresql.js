@@ -8099,9 +8099,18 @@ async function startServer() {
                     ['004']
                 ).catch(() => ({ rows: [] }));
                 
-                if (migration004Check.rows.length > 0) {
+                // 환경변수로 마이그레이션 강제 실행 가능
+                const forceMigration = process.env.FORCE_MIGRATION === 'true';
+                
+                if (migration004Check.rows.length > 0 && !forceMigration) {
                     console.log('✅ 정산 필드 마이그레이션 004는 이미 완료되었습니다.');
                     return;
+                }
+                
+                if (forceMigration) {
+                    console.log('🔄 FORCE_MIGRATION=true 감지 - 마이그레이션 004 강제 재실행');
+                    // 기존 마이그레이션 로그 삭제
+                    await pool.query('DELETE FROM migration_log WHERE version = $1', ['004']);
                 }
                 
                 console.log('🚀 정산 필드 마이그레이션 004 실행 중...');
