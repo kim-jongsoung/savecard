@@ -245,13 +245,15 @@
                                     <div class="col-md-3">
                                         <label class="form-label">조건 유형</label>
                                         <select class="form-select" id="newConditionType">
-                                            <option value="product">상품명 포함</option>
-                                            <option value="platform">업체명 포함</option>
+                                            <option value="product_exact">상품명 정확히 일치</option>
+                                            <option value="product_contains">상품명 포함</option>
+                                            <option value="platform_exact">업체명 정확히 일치</option>
+                                            <option value="platform_contains">업체명 포함</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label">키워드</label>
-                                        <input type="text" class="form-control" id="newKeyword" placeholder="예: 돌핀투어">
+                                        <label class="form-label">상품명/업체명</label>
+                                        <input type="text" class="form-control" id="newKeyword" placeholder="예: 괌 돌핀투어 (스노클링 포함)">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">변경 필드</label>
@@ -280,7 +282,7 @@
                                 <div class="row mt-2">
                                     <div class="col-md-6">
                                         <label class="form-label">설명</label>
-                                        <input type="text" class="form-control" id="newDescription" placeholder="예: 돌핀투어는 바로 확정">
+                                        <input type="text" class="form-control" id="newDescription" placeholder="예: 괌 돌핀투어는 바로 확정 처리">
                                     </div>
                                     <div class="col-md-6 d-flex align-items-end">
                                         <button class="btn btn-success" onclick="addParsingRule()">
@@ -714,12 +716,25 @@
             }
         }
 
+        // 조건 유형 표시명 함수
+        function getConditionTypeText(conditionType) {
+            const typeMap = {
+                'product_exact': '상품명 정확히 일치',
+                'product_contains': '상품명 포함',
+                'platform_exact': '업체명 정확히 일치', 
+                'platform_contains': '업체명 포함',
+                'product': '상품명 포함', // 레거시
+                'platform': '업체명 포함' // 레거시
+            };
+            return typeMap[conditionType] || conditionType;
+        }
+
         // 파싱 보정 규칙 테이블 업데이트
         function updateParsingRulesTable() {
             const tbody = document.getElementById('parsingRulesBody');
             tbody.innerHTML = customParsingRules.map(rule => `
                 <tr>
-                    <td><span class="badge bg-${rule.conditionType === 'product' ? 'primary' : 'info'}">${rule.conditionType === 'product' ? '상품명' : '업체명'}</span></td>
+                    <td><span class="badge bg-${rule.conditionType.includes('product') ? 'primary' : 'info'}">${getConditionTypeText(rule.conditionType)}</span></td>
                     <td><code>${rule.keyword}</code></td>
                     <td>${getFieldDisplayName(rule.fieldType)}</td>
                     <td><strong>${rule.value}</strong></td>
@@ -752,16 +767,29 @@
 
         // 사용자 정의 파싱 보정 규칙 적용
         function applyCustomParsingRules(fieldMappings) {
-            const productName = fieldMappings.product_name || '';
-            const platformName = fieldMappings.platform_name || '';
+            const productName = (fieldMappings.product_name || '').trim();
+            const platformName = (fieldMappings.platform_name || '').trim();
             
             customParsingRules.forEach(rule => {
                 let shouldApply = false;
+                const keyword = rule.keyword.trim();
                 
-                if (rule.conditionType === 'product' && productName.toLowerCase().includes(rule.keyword.toLowerCase())) {
-                    shouldApply = true;
-                } else if (rule.conditionType === 'platform' && platformName.toLowerCase().includes(rule.keyword.toLowerCase())) {
-                    shouldApply = true;
+                // 정확한 매칭 vs 포함 매칭
+                if (rule.conditionType === 'product_exact') {
+                    shouldApply = productName.toLowerCase() === keyword.toLowerCase();
+                } else if (rule.conditionType === 'product_contains') {
+                    shouldApply = productName.toLowerCase().includes(keyword.toLowerCase());
+                } else if (rule.conditionType === 'platform_exact') {
+                    shouldApply = platformName.toLowerCase() === keyword.toLowerCase();
+                } else if (rule.conditionType === 'platform_contains') {
+                    shouldApply = platformName.toLowerCase().includes(keyword.toLowerCase());
+                }
+                
+                // 레거시 지원 (기존 규칙들)
+                else if (rule.conditionType === 'product') {
+                    shouldApply = productName.toLowerCase().includes(keyword.toLowerCase());
+                } else if (rule.conditionType === 'platform') {
+                    shouldApply = platformName.toLowerCase().includes(keyword.toLowerCase());
                 }
                 
                 if (shouldApply) {
