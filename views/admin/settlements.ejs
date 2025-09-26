@@ -217,35 +217,58 @@
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('정산관리 페이지 로드 시작');
             loadSettlements();
             loadStats();
             
-            // 금액 입력 시 자동 계산
-            document.getElementById('saleAmount').addEventListener('input', calculateProfit);
-            document.getElementById('costAmount').addEventListener('input', calculateProfit);
+            // 금액 입력 시 자동 계산 (요소가 존재할 때만)
+            const saleAmountEl = document.getElementById('saleAmount');
+            const costAmountEl = document.getElementById('costAmount');
+            
+            if (saleAmountEl && costAmountEl) {
+                saleAmountEl.addEventListener('input', calculateProfit);
+                costAmountEl.addEventListener('input', calculateProfit);
+            }
         });
 
         // 정산 통계 로드
         async function loadStats() {
             try {
+                console.log('정산 통계 로드 시작');
                 const response = await fetch('/api/settlements/stats');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('정산 통계 응답:', data);
                 
                 if (data.success) {
                     const stats = data.data;
-                    document.getElementById('totalRevenue').textContent = `$${stats.totalRevenue.toLocaleString()}`;
-                    document.getElementById('totalCost').textContent = `$${stats.totalCost.toLocaleString()}`;
-                    document.getElementById('totalProfit').textContent = `$${stats.totalProfit.toLocaleString()}`;
-                    document.getElementById('profitRate').textContent = `${stats.profitRate.toFixed(1)}%`;
+                    const totalRevenueEl = document.getElementById('totalRevenue');
+                    const totalCostEl = document.getElementById('totalCost');
+                    const totalProfitEl = document.getElementById('totalProfit');
+                    const profitRateEl = document.getElementById('profitRate');
+                    
+                    if (totalRevenueEl) totalRevenueEl.textContent = `$${stats.totalRevenue.toLocaleString()}`;
+                    if (totalCostEl) totalCostEl.textContent = `$${stats.totalCost.toLocaleString()}`;
+                    if (totalProfitEl) totalProfitEl.textContent = `$${stats.totalProfit.toLocaleString()}`;
+                    if (profitRateEl) profitRateEl.textContent = `${stats.profitRate.toFixed(1)}%`;
+                } else {
+                    console.error('통계 API 오류:', data.message);
+                    showAlert('통계를 불러오는데 실패했습니다: ' + data.message, 'danger');
                 }
             } catch (error) {
                 console.error('통계 로드 실패:', error);
+                showAlert('통계를 불러오는데 실패했습니다.', 'danger');
             }
         }
 
         // 정산 목록 로드
         async function loadSettlements(page = 1) {
             try {
+                console.log('정산 목록 로드 시작, 페이지:', page);
                 currentPage = page;
                 const params = new URLSearchParams({
                     page: page,
@@ -255,17 +278,25 @@
                 });
 
                 const response = await fetch(`/api/settlements?${params}`);
+                console.log('정산 목록 응답 상태:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('정산 목록 응답 데이터:', data);
 
                 if (data.success) {
-                    renderSettlements(data.data.settlements);
+                    renderSettlements(data.data.settlements || []);
                     renderPagination(data.data.pagination);
                 } else {
+                    console.error('정산 목록 API 오류:', data.message);
                     showAlert('데이터를 불러오는데 실패했습니다: ' + data.message, 'danger');
                 }
             } catch (error) {
                 console.error('정산 목록 로드 실패:', error);
-                showAlert('정산 목록을 불러오는데 실패했습니다.', 'danger');
+                showAlert('정산 목록을 불러오는데 실패했습니다: ' + error.message, 'danger');
             }
         }
 
