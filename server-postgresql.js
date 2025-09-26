@@ -7118,7 +7118,7 @@ app.get('/assignment/:token', async (req, res) => {
             `);
         }
         
-        // 수배서 정보 조회 (올바른 컬럼명 사용)
+        // 수배서 정보 조회 (괌세이브카드 실제 컬럼명 사용)
         const assignmentQuery = `
             SELECT 
                 a.*,
@@ -7127,12 +7127,14 @@ app.get('/assignment/:token', async (req, res) => {
                 r.product_name,
                 r.usage_date as tour_date,
                 r.usage_time as tour_time,
-                r.adult_count,
-                r.child_count,
-                r.infant_count,
-                r.special_requests,
+                r.adults as adult_count,
+                r.children as child_count,
+                r.infants as infant_count,
+                r.memo as special_requests,
                 r.platform_name,
-                r.total_amount
+                r.total_amount,
+                r.phone,
+                r.email
             FROM assignments a
             LEFT JOIN reservations r ON a.reservation_id = r.id
             WHERE a.assignment_token = $1
