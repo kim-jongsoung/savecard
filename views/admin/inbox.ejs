@@ -529,6 +529,9 @@
 
             // 3단계: 사용자 정의 파싱 규칙 적용 (상품명/업체명 기반 상태 변경)
             applyCustomParsingRules(fieldMappings);
+            
+            // 4단계: 수배업체 자동 매칭
+            matchVendorByProduct(fieldMappings.product_name);
 
             // 기본적으로는 "대기중 (신규예약)" 상태 (특별 규칙이 없는 경우)
             const paymentStatusElement = document.getElementById('payment_status');
@@ -1249,6 +1252,54 @@
                 const infantDisplay = formatCurrencyDisplay(infantPrice);
                 document.getElementById('infant_price').setAttribute('data-currency', infantDisplay);
                 document.getElementById('infant_price').title = infantDisplay;
+            }
+        }
+
+        // 수배업체 자동 매칭 함수
+        async function matchVendorByProduct(productName) {
+            if (!productName || productName.trim() === '') {
+                return;
+            }
+            
+            try {
+                console.log(`🔍 수배업체 매칭 시도: "${productName}"`);
+                
+                const response = await fetch('/api/vendors/match', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_name: productName.trim()
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.matched) {
+                    const vendor = result.vendor;
+                    const matchType = vendor.match_type === 'exact' ? '정확히 일치' : '키워드 포함';
+                    
+                    console.log(`✅ 수배업체 매칭 성공: ${vendor.vendor_name}`);
+                    
+                    // 매칭 결과 알림 표시
+                    showRuleNotification(
+                        `🎯 수배업체 자동 매칭: ${vendor.vendor_name} (${matchType}: "${vendor.matched_keyword}")`
+                    );
+                    
+                    // 대안 업체가 있는 경우 추가 정보 표시
+                    if (result.alternatives && result.alternatives.length > 0) {
+                        const altNames = result.alternatives.map(alt => alt.vendor_name).join(', ');
+                        console.log(`📋 대안 수배업체: ${altNames}`);
+                    }
+                    
+                } else if (result.success && !result.matched) {
+                    console.log(`❌ 매칭되는 수배업체 없음: "${productName}"`);
+                    showRuleNotification(`❓ "${productName}" 상품에 매칭되는 수배업체가 없습니다.`);
+                }
+                
+            } catch (error) {
+                console.error('수배업체 매칭 오류:', error);
             }
         }
 

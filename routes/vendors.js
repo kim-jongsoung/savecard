@@ -225,7 +225,8 @@ router.put('/:id', async (req, res) => {
             description,
             notification_email,
             is_active,
-            password
+            password,
+            products = []
         } = req.body;
         
         const client = await pool.connect();
@@ -274,6 +275,31 @@ router.put('/:id', async (req, res) => {
                     success: false,
                     message: '수배업체를 찾을 수 없습니다.'
                 });
+            }
+            
+            // 담당 상품 키워드 업데이트
+            if (products && products.length >= 0) {
+                // 기존 담당 상품 삭제
+                await client.query('DELETE FROM vendor_products WHERE vendor_id = $1', [vendorId]);
+                
+                // 새로운 담당 상품 추가
+                if (products.length > 0) {
+                    const productValues = products.map((product, index) => 
+                        `($1, $${index * 2 + 2}, $${index * 2 + 3})`
+                    ).join(', ');
+                    
+                    const productParams = [vendorId];
+                    products.forEach(product => {
+                        productParams.push(product.keyword, product.priority || 1);
+                    });
+                    
+                    const insertProductsQuery = `
+                        INSERT INTO vendor_products (vendor_id, product_keyword, priority)
+                        VALUES ${productValues}
+                    `;
+                    
+                    await client.query(insertProductsQuery, productParams);
+                }
             }
             
             await client.query('COMMIT');
@@ -424,6 +450,93 @@ router.post('/match', async (req, res) => {
                 contact_person: row.contact_person
             }))
         });
+        
+    } catch (error) {
+        console.error('수배업체 매칭 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배업체 매칭에 실패했습니다.'
+        });
+    }
+});
+
+// 상품명으로 수배업체 자동 매칭
+router.post('/match', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { product_name } = req.body;
+        
+        if (!product_name) {
+            return res.status(400).json({
+                success: false,
+                message: '상품명이 필요합니다.'
+            });
+        }
+        
+        console.log(`🔍 수배업체 매칭 시도: "${product_name}"`);
+        
+        // 상품명과 매칭되는 수배업체 찾기 (우선순위 순)
+        const matchQuery = `
+            SELECT 
+                v.id,
+                v.vendor_name,
+                v.email,
+                v.phone,
+                v.contact_person,
+                vp.product_keyword,
+                vp.priority,
+                CASE 
+                    WHEN LOWER($1) = LOWER(vp.product_keyword) THEN 1  -- 정확히 일치
+                    WHEN LOWER($1) LIKE '%' || LOWER(vp.product_keyword) || '%' THEN 2  -- 포함
+                    ELSE 3
+                END as match_type
+            FROM vendors v
+            INNER JOIN vendor_products vp ON v.id = vp.vendor_id
+            WHERE v.is_active = true 
+            AND vp.is_active = true
+            AND (
+                LOWER($1) = LOWER(vp.product_keyword) OR 
+                LOWER($1) LIKE '%' || LOWER(vp.product_keyword) || '%'
+            )
+            ORDER BY match_type ASC, vp.priority ASC, v.vendor_name ASC
+            LIMIT 5
+        `;
+        
+        const result = await pool.query(matchQuery, [product_name]);
+        
+        if (result.rows.length > 0) {
+            const bestMatch = result.rows[0];
+            console.log(`✅ 수배업체 매칭 성공: ${bestMatch.vendor_name} (키워드: ${bestMatch.product_keyword})`);
+            
+            res.json({
+                success: true,
+                matched: true,
+                vendor: {
+                    id: bestMatch.id,
+                    vendor_name: bestMatch.vendor_name,
+                    email: bestMatch.email,
+                    phone: bestMatch.phone,
+                    contact_person: bestMatch.contact_person,
+                    matched_keyword: bestMatch.product_keyword,
+                    match_type: bestMatch.match_type === 1 ? 'exact' : 'contains'
+                },
+                alternatives: result.rows.slice(1).map(row => ({
+                    id: row.id,
+                    vendor_name: row.vendor_name,
+                    matched_keyword: row.product_keyword,
+                    match_type: row.match_type === 1 ? 'exact' : 'contains'
+                }))
+            });
+        } else {
+            console.log(`❌ 매칭되는 수배업체 없음: "${product_name}"`);
+            
+            res.json({
+                success: true,
+                matched: false,
+                message: '매칭되는 수배업체가 없습니다.',
+                product_name: product_name
+            });
+        }
         
     } catch (error) {
         console.error('수배업체 매칭 실패:', error);
