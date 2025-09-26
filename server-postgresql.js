@@ -7118,23 +7118,29 @@ app.get('/assignment/:token', async (req, res) => {
             `);
         }
         
-        // 수배서 정보 조회 (괌세이브카드 실제 컬럼명 사용)
+        // 수배서 정보 조회 (인박스와 동일한 실제 컬럼명 사용)
         const assignmentQuery = `
             SELECT 
                 a.*,
                 r.korean_name as customer_name,
+                r.english_first_name,
+                r.english_last_name,
                 r.reservation_number,
                 r.product_name,
+                r.package_type,
                 r.usage_date as tour_date,
                 r.usage_time as tour_time,
-                r.adults as adult_count,
-                r.children as child_count,
-                r.infants as infant_count,
+                r.people_adult as adult_count,
+                r.people_child as child_count,
+                r.people_infant as infant_count,
                 r.memo as special_requests,
                 r.platform_name,
                 r.total_amount,
                 r.phone,
-                r.email
+                r.email,
+                r.kakao_id,
+                r.payment_status,
+                r.reservation_datetime
             FROM assignments a
             LEFT JOIN reservations r ON a.reservation_id = r.id
             WHERE a.assignment_token = $1
@@ -7701,12 +7707,14 @@ async function startServer() {
                 const countResult = await pool.query(countQuery, queryParams);
                 const totalCount = parseInt(countResult.rows[0].total);
                 
-                // 정산 목록 조회 (컬럼 존재 여부에 따라 다른 쿼리)
+                // 정산 목록 조회 (인박스와 동일한 실제 컬럼명 사용)
                 let listQuery;
                 if (hasSettlementStatus) {
                     listQuery = `
                         SELECT 
                             r.*,
+                            r.korean_name,
+                            r.usage_date as departure_date,
                             COALESCE(r.sale_amount, r.total_amount) as sale_amount,
                             COALESCE(r.cost_amount, 0) as cost_amount,
                             COALESCE(r.profit_amount, COALESCE(r.sale_amount, r.total_amount) - COALESCE(r.cost_amount, 0)) as profit_amount,
@@ -7723,6 +7731,8 @@ async function startServer() {
                     listQuery = `
                         SELECT 
                             r.*,
+                            r.korean_name,
+                            r.usage_date as departure_date,
                             r.total_amount as sale_amount,
                             0 as cost_amount,
                             r.total_amount as profit_amount,
