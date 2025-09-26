@@ -7513,10 +7513,23 @@ async function startServer() {
 
         // 정산관리 페이지 라우트
         app.get('/admin/settlements', requireAuth, (req, res) => {
-            res.render('admin/settlements', { 
-                title: '정산관리',
-                currentPage: 'settlements'
-            });
+            try {
+                console.log('정산관리 페이지 렌더링 시작');
+                res.render('admin/settlements', { 
+                    title: '정산관리',
+                    currentPage: 'settlements',
+                    adminUsername: req.session.adminUsername || 'Admin'
+                });
+                console.log('정산관리 페이지 렌더링 완료');
+            } catch (error) {
+                console.error('정산관리 페이지 렌더링 오류:', error);
+                res.status(500).send(`
+                    <h1>정산관리 페이지 오류</h1>
+                    <p>페이지를 불러오는 중 오류가 발생했습니다.</p>
+                    <p>오류: ${error.message}</p>
+                    <a href="/admin">관리자 대시보드로 돌아가기</a>
+                `);
+            }
         });
 
         // 정산 통계 API
