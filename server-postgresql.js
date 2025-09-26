@@ -7522,19 +7522,45 @@ async function startServer() {
         // 정산 통계 API
         app.get('/api/settlements/stats', requireAuth, async (req, res) => {
             try {
-                const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM 형식
+                console.log('🔍 정산 통계 API 호출 시작');
                 
-                const statsQuery = `
-                    SELECT 
-                        COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN sale_amount ELSE 0 END), 0) as total_revenue,
-                        COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN cost_amount ELSE 0 END), 0) as total_cost,
-                        COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN profit_amount ELSE 0 END), 0) as total_profit,
-                        COUNT(*) as total_count,
-                        COUNT(CASE WHEN settlement_status = 'settled' THEN 1 END) as settled_count
-                    FROM reservations 
-                    WHERE payment_status = 'voucher_sent' 
-                    AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
-                `;
+                // settlement_status 컬럼 존재 여부 확인
+                const columnCheck = await pool.query(`
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'settlement_status'
+                `);
+                
+                const hasSettlementStatus = columnCheck.rows.length > 0;
+                console.log('📋 settlement_status 컬럼 존재:', hasSettlementStatus);
+                
+                let statsQuery;
+                if (hasSettlementStatus) {
+                    statsQuery = `
+                        SELECT 
+                            COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN sale_amount ELSE 0 END), 0) as total_revenue,
+                            COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN cost_amount ELSE 0 END), 0) as total_cost,
+                            COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN profit_amount ELSE 0 END), 0) as total_profit,
+                            COUNT(*) as total_count,
+                            COUNT(CASE WHEN settlement_status = 'settled' THEN 1 END) as settled_count
+                        FROM reservations 
+                        WHERE payment_status = 'voucher_sent' 
+                        AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+                    `;
+                } else {
+                    // settlement_status 컬럼이 없을 때 기본 통계
+                    statsQuery = `
+                        SELECT 
+                            COALESCE(SUM(total_amount), 0) as total_revenue,
+                            0 as total_cost,
+                            COALESCE(SUM(total_amount), 0) as total_profit,
+                            COUNT(*) as total_count,
+                            0 as settled_count
+                        FROM reservations 
+                        WHERE payment_status = 'voucher_sent' 
+                        AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+                    `;
+                }
                 
                 const result = await pool.query(statsQuery);
                 const stats = result.rows[0];
@@ -7565,6 +7591,18 @@ async function startServer() {
         // 정산 목록 조회 API
         app.get('/api/settlements', requireAuth, async (req, res) => {
             try {
+                console.log('🔍 정산관리 API 호출 시작');
+                
+                // 먼저 settlement_status 컬럼 존재 여부 확인
+                const columnCheck = await pool.query(`
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'settlement_status'
+                `);
+                
+                const hasSettlementStatus = columnCheck.rows.length > 0;
+                console.log('📋 settlement_status 컬럼 존재:', hasSettlementStatus);
+                
                 const { page = 1, status = '', month = '', search = '' } = req.query;
                 const limit = 20;
                 const offset = (page - 1) * limit;
@@ -7573,8 +7611,8 @@ async function startServer() {
                 const queryParams = [];
                 let paramIndex = 0;
                 
-                // 정산 상태 필터
-                if (status) {
+                // 정산 상태 필터 (컬럼이 존재할 때만)
+                if (status && hasSettlementStatus) {
                     paramIndex++;
                     if (status === 'pending') {
                         whereClause += ` AND (r.settlement_status IS NULL OR r.settlement_status = 'pending')`;
@@ -7612,21 +7650,41 @@ async function startServer() {
                 const countResult = await pool.query(countQuery, queryParams);
                 const totalCount = parseInt(countResult.rows[0].total);
                 
-                // 정산 목록 조회
-                const listQuery = `
-                    SELECT 
-                        r.*,
-                        COALESCE(r.sale_amount, r.total_amount) as sale_amount,
-                        COALESCE(r.cost_amount, 0) as cost_amount,
-                        COALESCE(r.profit_amount, COALESCE(r.sale_amount, r.total_amount) - COALESCE(r.cost_amount, 0)) as profit_amount,
-                        COALESCE(r.settlement_status, 'pending') as settlement_status
-                    FROM reservations r
-                    ${whereClause}
-                    ORDER BY 
-                        CASE WHEN COALESCE(r.settlement_status, 'pending') = 'pending' THEN 0 ELSE 1 END,
-                        r.created_at DESC
-                    LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
-                `;
+                // 정산 목록 조회 (컬럼 존재 여부에 따라 다른 쿼리)
+                let listQuery;
+                if (hasSettlementStatus) {
+                    listQuery = `
+                        SELECT 
+                            r.*,
+                            COALESCE(r.sale_amount, r.total_amount) as sale_amount,
+                            COALESCE(r.cost_amount, 0) as cost_amount,
+                            COALESCE(r.profit_amount, COALESCE(r.sale_amount, r.total_amount) - COALESCE(r.cost_amount, 0)) as profit_amount,
+                            COALESCE(r.settlement_status, 'pending') as settlement_status
+                        FROM reservations r
+                        ${whereClause}
+                        ORDER BY 
+                            CASE WHEN COALESCE(r.settlement_status, 'pending') = 'pending' THEN 0 ELSE 1 END,
+                            r.created_at DESC
+                        LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+                    `;
+                } else {
+                    // settlement_status 컬럼이 없을 때 기본 쿼리
+                    listQuery = `
+                        SELECT 
+                            r.*,
+                            r.total_amount as sale_amount,
+                            0 as cost_amount,
+                            r.total_amount as profit_amount,
+                            'pending' as settlement_status,
+                            NULL as settlement_notes,
+                            NULL as settled_at,
+                            NULL as settled_by
+                        FROM reservations r
+                        ${whereClause}
+                        ORDER BY r.created_at DESC
+                        LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+                    `;
+                }
                 
                 queryParams.push(limit, offset);
                 const listResult = await pool.query(listQuery, queryParams);
