@@ -69,12 +69,12 @@
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">업체명</label>
-                                <input type="text" class="form-control" id="platform_name" name="platform_name">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">예약 상태</label>
                                 <select class="form-control" id="payment_status" name="payment_status">
                                     <option value="pending" selected>대기중 (신규예약)</option>
+                                    <option value="in_progress">수배중 (현지수배)</option>
                                     <option value="confirmed">확정 (수배완료)</option>
                                     <option value="cancelled">예약취소</option>
                                     <option value="refunded">환불완료</option>
@@ -257,7 +257,7 @@
                                         <label class="form-label">변경 필드</label>
                                         <select class="form-select" id="newFieldType" onchange="updateValueOptions()">
                                             <option value="">-- 필드 선택 --</option>
-                                            <option value="status">예약 상태</option>
+                                            <option value="payment_status">예약 상태</option>
                                             <option value="adult_count">성인수</option>
                                             <option value="child_count">아동수</option>
                                             <option value="infant_count">유아수</option>
@@ -267,7 +267,6 @@
                                             <option value="infant_price">유아 단가</option>
                                             <option value="platform_name">업체명</option>
                                             <option value="product_name">상품명</option>
-                                            <option value="payment_status">결제 상태</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -737,10 +736,16 @@
         // 필드 표시명 변환
         function getFieldDisplayName(fieldType) {
             const fieldNames = {
-                'status': '예약 상태',
+                'payment_status': '예약 상태',
                 'adult_count': '성인수',
                 'child_count': '아동수',
-                'total_amount': '총 금액'
+                'infant_count': '유아수',
+                'total_amount': '총 금액',
+                'adult_price': '성인 단가',
+                'child_price': '아동 단가',
+                'infant_price': '유아 단가',
+                'platform_name': '업체명',
+                'product_name': '상품명'
             };
             return fieldNames[fieldType] || fieldType;
         }
@@ -760,11 +765,22 @@
                 }
                 
                 if (shouldApply) {
-                    const element = document.getElementById(rule.fieldType === 'status' ? 'payment_status' : rule.fieldType);
+                    const element = document.getElementById(rule.fieldType);
                     if (element) {
                         element.value = rule.value;
                         element.style.backgroundColor = '#e7f3ff';
                         element.style.border = '2px solid #007bff';
+                        
+                        // 예약 상태 변경 시 시각적 피드백
+                        if (rule.fieldType === 'payment_status') {
+                            const statusColors = {
+                                'pending': '#fff3cd',
+                                'in_progress': '#cff4fc', 
+                                'confirmed': '#d1ecf1',
+                                'cancelled': '#f8d7da'
+                            };
+                            element.style.backgroundColor = statusColors[rule.value] || '#e7f3ff';
+                        }
                         
                         showRuleNotification(`🎯 사용자 규칙 적용: ${rule.description}`);
                     }
@@ -798,16 +814,11 @@
             
             // 필드 타입별 옵션 정의
             const valueOptions = {
-                'status': [
-                    { value: 'pending', text: '대기중' },
-                    { value: 'confirmed', text: '확정' },
-                    { value: 'cancelled', text: '취소' },
-                    { value: 'needs_review', text: '검수 필요' }
-                ],
                 'payment_status': [
-                    { value: 'pending', text: '대기중' },
-                    { value: 'confirmed', text: '확인됨' },
-                    { value: 'cancelled', text: '취소됨' }
+                    { value: 'pending', text: '대기중 (신규예약)' },
+                    { value: 'in_progress', text: '수배중 (현지수배)' },
+                    { value: 'confirmed', text: '확정 (수배완료)' },
+                    { value: 'cancelled', text: '예약취소' }
                 ],
                 'adult_count': [
                     { value: '1', text: '1명' },

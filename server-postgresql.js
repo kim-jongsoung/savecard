@@ -288,17 +288,31 @@ app.get('/api/test', (req, res) => {
     });
 });
 
-// 기존 데이터베이스를 사용한 간단한 예약 목록 API
+// 예약관리 페이지 전용 API - 대기중 상태만 표시
 app.get('/api/reservations', async (req, res) => {
     try {
-        const query = `SELECT * FROM reservations 
-                       WHERE (payment_status = 'pending' OR payment_status IS NULL)
-                       ORDER BY created_at DESC LIMIT 100`;
+        console.log('🔍 예약관리 API 호출 - 대기중 상태만 조회');
+        
+        // 대기중(pending) 상태만 조회 - 예약관리 페이지 전용
+        const query = `
+            SELECT * FROM reservations 
+            WHERE payment_status = 'pending' OR payment_status IS NULL
+            ORDER BY 
+                CASE WHEN payment_status = 'pending' THEN 0 ELSE 1 END,
+                created_at DESC 
+            LIMIT 100
+        `;
+        
         const result = await pool.query(query);
+        
+        console.log(`📋 예약관리 조회 결과: ${result.rows.length}건 (대기중 상태만)`);
+        
         res.json({
             success: true,
             count: result.rows.length,
-            reservations: result.rows
+            reservations: result.rows,
+            filter: 'pending_only',
+            message: '대기중 예약만 표시됩니다'
         });
     } catch (error) {
         console.error('예약 목록 조회 오류:', error);
@@ -6489,10 +6503,12 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         const limit = 20;
         const offset = (page - 1) * limit;
         
-        // 수배관리 페이지: 수배중 + 확정 + 바우처전송완료 상태만 표시
-        let whereClause = `WHERE r.payment_status IN ('in_progress', 'confirmed', 'voucher_sent')`;
+        // 수배관리 페이지: 수배중 + 확정 상태만 표시 (대기중 제외)
+        let whereClause = `WHERE r.payment_status IN ('in_progress', 'confirmed')`;
         const queryParams = [];
         let paramIndex = 0;
+        
+        console.log('🔍 수배관리 필터: 수배중(in_progress) + 확정(confirmed) 상태만 표시');
         
         console.log('🔍 수배관리 API 호출 - 필터:', { page, status, search });
         
@@ -6720,6 +6736,55 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '수배서 생성 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 예약을 수배중으로 전환하는 API (예약관리 → 수배관리)
+app.post('/api/reservations/:id/assign', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { vendor_name, notes } = req.body;
+        
+        console.log(`🔄 예약 수배 전환: ${id} → 수배중 상태로 변경`);
+        
+        // 예약 상태를 in_progress(수배중)로 변경
+        const updateQuery = `
+            UPDATE reservations 
+            SET payment_status = 'in_progress',
+                updated_at = NOW()
+            WHERE id = $1 AND payment_status = 'pending'
+            RETURNING *
+        `;
+        
+        const result = await pool.query(updateQuery, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '대기중 상태의 예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log(`✅ 예약 수배 전환 완료: ${id} (pending → in_progress)`);
+        
+        res.json({
+            success: true,
+            message: '예약이 수배중 상태로 전환되었습니다.',
+            reservation: result.rows[0],
+            workflow: {
+                from: 'pending',
+                to: 'in_progress',
+                page_transfer: '예약관리 → 수배관리'
+            }
+        });
+        
+    } catch (error) {
+        console.error('예약 수배 전환 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 수배 전환 실패',
+            error: error.message
         });
     }
 });

@@ -317,6 +317,9 @@
                     <button type="button" class="btn btn-danger" onclick="deleteReservation()">
                         <i class="fas fa-trash me-1"></i>삭제
                     </button>
+                    <button type="button" class="btn btn-warning" onclick="assignReservation()">
+                        <i class="fas fa-arrow-right me-1"></i>수배 전환
+                    </button>
                     <button type="button" class="btn btn-success" id="createAssignmentBtn" onclick="createAssignment()" style="display: none;">
                         <i class="fas fa-paper-plane me-1"></i>수배서 생성
                     </button>
@@ -707,10 +710,9 @@
         // 상태 텍스트 변환 함수
         function getStatusText(status) {
             const statusMap = {
-                'pending': '대기중',
-                'in_progress': '수배중',
-                'confirmed': '확정',
-                'voucher_sent': '바우처전송완료',
+                'pending': '대기중 (신규예약)',
+                'in_progress': '수배중 (현지수배)',
+                'confirmed': '확정 (수배완료)',
                 'cancelled': '예약취소',
                 'refunded': '환불완료'
             };
@@ -729,6 +731,40 @@
         function formatCurrency(amount) {
             if (!amount) return '$0';
             return '$' + parseFloat(amount).toLocaleString();
+        }
+
+        // 예약을 수배중으로 전환
+        async function assignReservation() {
+            if (!confirm('이 예약을 수배중 상태로 전환하시겠습니까?\n\n전환 후 수배관리 페이지에서 관리됩니다.')) return;
+            
+            const id = document.getElementById('reservationId').value;
+
+            try {
+                const response = await fetch(`/api/reservations/${id}/assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vendor_name: '',
+                        notes: '예약관리에서 수배 전환'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('예약이 수배중 상태로 전환되었습니다.\n수배관리 페이지로 이동합니다.');
+                    bootstrap.Modal.getInstance(document.getElementById('reservationModal')).hide();
+                    loadReservations(); // 예약관리 목록 새로고침 (해당 예약은 사라짐)
+                    
+                    // 수배관리 페이지로 이동
+                    window.location.href = '/admin/assignments';
+                } else {
+                    alert(result.message || '수배 전환에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('수배 전환 오류:', error);
+                alert('수배 전환 중 오류가 발생했습니다.');
+            }
         }
 
         // 실시간 검색 (입력시마다 검색)
