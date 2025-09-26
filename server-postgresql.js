@@ -6205,7 +6205,8 @@ app.get('/api/field-defs', requireAuth, async (req, res) => {
     }
 });
 
-// 수배 관리 API
+// 구버전 수배 관리 API (사용 안함 - 새로운 API로 대체됨)
+/*
 app.get('/api/assignments', requireAuth, async (req, res) => {
     try {
         const status = req.query.status || '';
@@ -6257,6 +6258,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         });
     }
 });
+*/
 
 // 자동 수배 생성 함수
 async function createAutoAssignment(reservationId, productName) {
@@ -7506,6 +7508,292 @@ async function startServer() {
                 console.error('⚠️ 데이터베이스 초기화 실패 (서버는 계속 실행):', error.message);
             }
         }, 2000);
+        
+        // ==================== 정산관리 API ====================
+
+        // 정산관리 페이지 라우트
+        app.get('/admin/settlements', requireAuth, (req, res) => {
+            res.render('admin/settlements', { 
+                title: '정산관리',
+                currentPage: 'settlements'
+            });
+        });
+
+        // 정산 통계 API
+        app.get('/api/settlements/stats', requireAuth, async (req, res) => {
+            try {
+                const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM 형식
+                
+                const statsQuery = `
+                    SELECT 
+                        COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN sale_amount ELSE 0 END), 0) as total_revenue,
+                        COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN cost_amount ELSE 0 END), 0) as total_cost,
+                        COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN profit_amount ELSE 0 END), 0) as total_profit,
+                        COUNT(*) as total_count,
+                        COUNT(CASE WHEN settlement_status = 'settled' THEN 1 END) as settled_count
+                    FROM reservations 
+                    WHERE payment_status = 'voucher_sent' 
+                    AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
+                `;
+                
+                const result = await pool.query(statsQuery);
+                const stats = result.rows[0];
+                
+                const profitRate = stats.total_revenue > 0 ? (stats.total_profit / stats.total_revenue * 100) : 0;
+                
+                res.json({
+                    success: true,
+                    data: {
+                        totalRevenue: parseFloat(stats.total_revenue) || 0,
+                        totalCost: parseFloat(stats.total_cost) || 0,
+                        totalProfit: parseFloat(stats.total_profit) || 0,
+                        profitRate: profitRate,
+                        totalCount: parseInt(stats.total_count) || 0,
+                        settledCount: parseInt(stats.settled_count) || 0
+                    }
+                });
+                
+            } catch (error) {
+                console.error('정산 통계 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 통계를 불러올 수 없습니다.'
+                });
+            }
+        });
+
+        // 정산 목록 조회 API
+        app.get('/api/settlements', requireAuth, async (req, res) => {
+            try {
+                const { page = 1, status = '', month = '', search = '' } = req.query;
+                const limit = 20;
+                const offset = (page - 1) * limit;
+                
+                let whereClause = `WHERE r.payment_status = 'voucher_sent'`;
+                const queryParams = [];
+                let paramIndex = 0;
+                
+                // 정산 상태 필터
+                if (status) {
+                    paramIndex++;
+                    if (status === 'pending') {
+                        whereClause += ` AND (r.settlement_status IS NULL OR r.settlement_status = 'pending')`;
+                    } else {
+                        whereClause += ` AND r.settlement_status = $${paramIndex}`;
+                        queryParams.push(status);
+                    }
+                }
+                
+                // 월별 필터
+                if (month) {
+                    paramIndex++;
+                    whereClause += ` AND DATE_TRUNC('month', r.created_at) = DATE_TRUNC('month', $${paramIndex}::date)`;
+                    queryParams.push(month + '-01');
+                }
+                
+                // 검색 필터
+                if (search) {
+                    paramIndex++;
+                    whereClause += ` AND (
+                        r.reservation_number ILIKE $${paramIndex} OR 
+                        r.product_name ILIKE $${paramIndex} OR 
+                        r.korean_name ILIKE $${paramIndex}
+                    )`;
+                    queryParams.push(`%${search}%`);
+                }
+                
+                // 총 개수 조회
+                const countQuery = `
+                    SELECT COUNT(*) as total
+                    FROM reservations r
+                    ${whereClause}
+                `;
+                
+                const countResult = await pool.query(countQuery, queryParams);
+                const totalCount = parseInt(countResult.rows[0].total);
+                
+                // 정산 목록 조회
+                const listQuery = `
+                    SELECT 
+                        r.*,
+                        COALESCE(r.sale_amount, r.total_amount) as sale_amount,
+                        COALESCE(r.cost_amount, 0) as cost_amount,
+                        COALESCE(r.profit_amount, COALESCE(r.sale_amount, r.total_amount) - COALESCE(r.cost_amount, 0)) as profit_amount,
+                        COALESCE(r.settlement_status, 'pending') as settlement_status
+                    FROM reservations r
+                    ${whereClause}
+                    ORDER BY 
+                        CASE WHEN COALESCE(r.settlement_status, 'pending') = 'pending' THEN 0 ELSE 1 END,
+                        r.created_at DESC
+                    LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
+                `;
+                
+                queryParams.push(limit, offset);
+                const listResult = await pool.query(listQuery, queryParams);
+                
+                res.json({
+                    success: true,
+                    data: {
+                        settlements: listResult.rows,
+                        pagination: {
+                            currentPage: parseInt(page),
+                            totalPages: Math.ceil(totalCount / limit),
+                            total: totalCount,
+                            limit: limit
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('정산 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 목록을 불러올 수 없습니다.'
+                });
+            }
+        });
+
+        // 정산 처리 API
+        app.post('/api/settlements/:id/process', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { sale_amount, cost_amount, settlement_notes } = req.body;
+                
+                if (!sale_amount || !cost_amount) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '매출 금액과 매입 금액을 입력해주세요.'
+                    });
+                }
+                
+                const profit_amount = sale_amount - cost_amount;
+                
+                const updateQuery = `
+                    UPDATE reservations 
+                    SET 
+                        sale_amount = $1,
+                        cost_amount = $2,
+                        profit_amount = $3,
+                        settlement_status = 'settled',
+                        settlement_notes = $4,
+                        settled_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = $5 AND payment_status = 'voucher_sent'
+                    RETURNING *
+                `;
+                
+                const result = await pool.query(updateQuery, [
+                    sale_amount, cost_amount, profit_amount, settlement_notes, id
+                ]);
+                
+                if (result.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '정산 가능한 예약을 찾을 수 없습니다.'
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    message: '정산이 완료되었습니다.',
+                    data: result.rows[0]
+                });
+                
+            } catch (error) {
+                console.error('정산 처리 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 처리 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
+        // 정산 내보내기 API
+        app.get('/api/settlements/export', requireAuth, async (req, res) => {
+            try {
+                const { status = '', month = '', search = '' } = req.query;
+                
+                let whereClause = `WHERE r.payment_status = 'voucher_sent'`;
+                const queryParams = [];
+                let paramIndex = 0;
+                
+                // 필터 적용 (위와 동일한 로직)
+                if (status) {
+                    paramIndex++;
+                    if (status === 'pending') {
+                        whereClause += ` AND (r.settlement_status IS NULL OR r.settlement_status = 'pending')`;
+                    } else {
+                        whereClause += ` AND r.settlement_status = $${paramIndex}`;
+                        queryParams.push(status);
+                    }
+                }
+                
+                if (month) {
+                    paramIndex++;
+                    whereClause += ` AND DATE_TRUNC('month', r.created_at) = DATE_TRUNC('month', $${paramIndex}::date)`;
+                    queryParams.push(month + '-01');
+                }
+                
+                if (search) {
+                    paramIndex++;
+                    whereClause += ` AND (
+                        r.reservation_number ILIKE $${paramIndex} OR 
+                        r.product_name ILIKE $${paramIndex} OR 
+                        r.korean_name ILIKE $${paramIndex}
+                    )`;
+                    queryParams.push(`%${search}%`);
+                }
+                
+                const exportQuery = `
+                    SELECT 
+                        r.reservation_number as "예약번호",
+                        r.product_name as "상품명",
+                        r.korean_name as "고객명",
+                        r.departure_date as "이용일",
+                        r.platform_name as "플랫폼",
+                        COALESCE(r.sale_amount, r.total_amount) as "매출금액",
+                        COALESCE(r.cost_amount, 0) as "매입금액",
+                        COALESCE(r.profit_amount, COALESCE(r.sale_amount, r.total_amount) - COALESCE(r.cost_amount, 0)) as "마진",
+                        COALESCE(r.settlement_status, 'pending') as "정산상태",
+                        r.settlement_notes as "정산메모",
+                        r.created_at as "생성일시",
+                        r.settled_at as "정산일시"
+                    FROM reservations r
+                    ${whereClause}
+                    ORDER BY r.created_at DESC
+                `;
+                
+                const result = await pool.query(exportQuery, queryParams);
+                
+                // CSV 헤더 생성
+                const headers = Object.keys(result.rows[0] || {});
+                let csv = headers.join(',') + '\n';
+                
+                // CSV 데이터 생성
+                result.rows.forEach(row => {
+                    const values = headers.map(header => {
+                        const value = row[header];
+                        if (value === null || value === undefined) return '';
+                        if (typeof value === 'string' && value.includes(',')) {
+                            return `"${value.replace(/"/g, '""')}"`;
+                        }
+                        return value;
+                    });
+                    csv += values.join(',') + '\n';
+                });
+                
+                res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+                res.setHeader('Content-Disposition', `attachment; filename="settlements_${new Date().toISOString().slice(0, 10)}.csv"`);
+                res.send('\uFEFF' + csv); // UTF-8 BOM 추가
+                
+            } catch (error) {
+                console.error('정산 내보내기 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 내보내기 중 오류가 발생했습니다.'
+                });
+            }
+        });
         
         // ERP 확장 마이그레이션 함수
         async function runERPMigration() {

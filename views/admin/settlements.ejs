@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정산관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .status-settled { background-color: #28a745; color: #fff; }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-overdue { background-color: #dc3545; color: #fff; }
+        
+        .settlement-card {
+            border-left: 4px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        .settlement-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .settlement-card.settled { border-left-color: #28a745; }
+        .settlement-card.pending { border-left-color: #ffc107; }
+        .settlement-card.overdue { border-left-color: #dc3545; }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        
+        .profit-positive { color: #28a745; font-weight: bold; }
+        .profit-negative { color: #dc3545; font-weight: bold; }
+        .profit-neutral { color: #6c757d; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'settlements' }) %>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-calculator me-2"></i>정산관리</h2>
+                    <div class="text-muted">
+                        <small>매출/매입/마진 관리 및 정산 처리</small>
+                    </div>
+                </div>
+
+                <!-- 정산 통계 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                                <h5 class="mb-1">총 매출</h5>
+                                <h3 id="totalRevenue">$0</h3>
+                                <small>이번 달</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                                <h5 class="mb-1">총 매입</h5>
+                                <h3 id="totalCost">$0</h3>
+                                <small>이번 달</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <h5 class="mb-1">총 마진</h5>
+                                <h3 id="totalProfit">$0</h3>
+                                <small>이번 달</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-percentage fa-2x mb-2"></i>
+                                <h5 class="mb-1">마진율</h5>
+                                <h3 id="profitRate">0%</h3>
+                                <small>이번 달</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 필터 및 검색 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <select class="form-select" id="statusFilter">
+                                    <option value="">전체 상태</option>
+                                    <option value="pending">정산 대기</option>
+                                    <option value="settled">정산 완료</option>
+                                    <option value="overdue">연체</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="monthFilter">
+                                    <option value="">전체 기간</option>
+                                    <option value="2025-09">2025년 9월</option>
+                                    <option value="2025-08">2025년 8월</option>
+                                    <option value="2025-07">2025년 7월</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" id="searchInput" placeholder="예약번호, 고객명 검색...">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-primary w-100" onclick="searchSettlements()">
+                                    <i class="fas fa-search"></i> 검색
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                                    <i class="fas fa-undo"></i> 초기화
+                                </button>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-success w-100" onclick="exportSettlements()">
+                                    <i class="fas fa-download"></i> 내보내기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 정산 목록 -->
+                <div id="settlementsList">
+                    <!-- 동적으로 로드됨 -->
+                </div>
+
+                <!-- 페이징 -->
+                <nav aria-label="정산 목록 페이징">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- 동적으로 로드됨 -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- 정산 처리 모달 -->
+    <div class="modal fade" id="settlementModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">정산 처리</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="settlementForm">
+                        <input type="hidden" id="reservationId">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">매출 금액</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="saleAmount" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">매입 금액</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="costAmount" step="0.01" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label">마진</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="profitAmount" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">마진율</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="profitRate" readonly>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label">정산 메모</label>
+                            <textarea class="form-control" id="settlementNotes" rows="3" placeholder="정산 관련 메모를 입력하세요..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-success" onclick="processSettlement()">정산 처리</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentStatus = '';
+        let currentMonth = '';
+        let currentSearch = '';
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettlements();
+            loadStats();
+            
+            // 금액 입력 시 자동 계산
+            document.getElementById('saleAmount').addEventListener('input', calculateProfit);
+            document.getElementById('costAmount').addEventListener('input', calculateProfit);
+        });
+
+        // 정산 통계 로드
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/settlements/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.data;
+                    document.getElementById('totalRevenue').textContent = `$${stats.totalRevenue.toLocaleString()}`;
+                    document.getElementById('totalCost').textContent = `$${stats.totalCost.toLocaleString()}`;
+                    document.getElementById('totalProfit').textContent = `$${stats.totalProfit.toLocaleString()}`;
+                    document.getElementById('profitRate').textContent = `${stats.profitRate.toFixed(1)}%`;
+                }
+            } catch (error) {
+                console.error('통계 로드 실패:', error);
+            }
+        }
+
+        // 정산 목록 로드
+        async function loadSettlements(page = 1) {
+            try {
+                currentPage = page;
+                const params = new URLSearchParams({
+                    page: page,
+                    status: currentStatus,
+                    month: currentMonth,
+                    search: currentSearch
+                });
+
+                const response = await fetch(`/api/settlements?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderSettlements(data.data.settlements);
+                    renderPagination(data.data.pagination);
+                } else {
+                    showAlert('데이터를 불러오는데 실패했습니다: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('정산 목록 로드 실패:', error);
+                showAlert('정산 목록을 불러오는데 실패했습니다.', 'danger');
+            }
+        }
+
+        // 정산 목록 렌더링
+        function renderSettlements(settlements) {
+            const container = document.getElementById('settlementsList');
+            
+            if (settlements.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-calculator fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">정산할 예약이 없습니다</h5>
+                        <p class="text-muted">바우처 전송이 완료된 예약이 여기에 표시됩니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = settlements.map(settlement => `
+                <div class="card settlement-card ${getSettlementStatusClass(settlement.settlement_status)} mb-3">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h6 class="mb-0 me-3">
+                                        <i class="fas fa-ticket-alt me-1"></i>${settlement.reservation_number || '예약번호 없음'}
+                                    </h6>
+                                    <span class="badge status-badge status-${getSettlementStatusClass(settlement.settlement_status)}">
+                                        ${getSettlementStatusText(settlement.settlement_status)}
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>${settlement.product_name || '상품명 없음'}</strong>
+                                </div>
+                                <div class="text-muted small mb-1">
+                                    <i class="fas fa-user me-1"></i>${settlement.korean_name || '고객명 없음'}
+                                    <i class="fas fa-calendar ms-3 me-1"></i>${settlement.departure_date || '날짜 미정'}
+                                    <i class="fas fa-building ms-3 me-1"></i>${settlement.platform_name || '플랫폼 없음'}
+                                </div>
+                                <div class="text-muted small mb-1">
+                                    <i class="fas fa-dollar-sign me-1"></i>매출: $${settlement.sale_amount || 0}
+                                    <i class="fas fa-shopping-cart ms-3 me-1"></i>매입: $${settlement.cost_amount || 0}
+                                    <span class="ms-3 ${getProfitClass(settlement.profit_amount)}">
+                                        <i class="fas fa-chart-line me-1"></i>마진: $${settlement.profit_amount || 0}
+                                    </span>
+                                </div>
+                                ${settlement.settlement_notes ? `
+                                    <div class="text-muted small">
+                                        <i class="fas fa-sticky-note me-1"></i>${settlement.settlement_notes}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="btn-group-vertical d-grid gap-1" role="group">
+                                    ${settlement.settlement_status === 'pending' ? `
+                                        <button class="btn btn-sm btn-success" onclick="openSettlementModal(${settlement.id})">
+                                            <i class="fas fa-calculator"></i> 정산 처리
+                                        </button>
+                                    ` : ''}
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSettlementDetail(${settlement.id})">
+                                        <i class="fas fa-eye"></i> 상세 보기
+                                    </button>
+                                    ${settlement.settlement_status === 'settled' ? `
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="printSettlement(${settlement.id})">
+                                            <i class="fas fa-print"></i> 정산서 출력
+                                        </button>
+                                    ` : ''}
+                                </div>
+                                <div class="mt-2 small text-muted">
+                                    ${settlement.settlement_status === 'settled' ? 
+                                        `정산: ${formatDate(settlement.settled_at)}` : 
+                                        `생성: ${formatDate(settlement.created_at)}`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // 정산 상태 텍스트 변환
+        function getSettlementStatusText(status) {
+            const statusMap = {
+                'pending': '정산 대기',
+                'settled': '정산 완료',
+                'overdue': '연체'
+            };
+            return statusMap[status] || '정산 대기';
+        }
+
+        // 정산 상태 CSS 클래스 변환
+        function getSettlementStatusClass(status) {
+            const classMap = {
+                'pending': 'pending',
+                'settled': 'settled',
+                'overdue': 'overdue'
+            };
+            return classMap[status] || 'pending';
+        }
+
+        // 마진 색상 클래스
+        function getProfitClass(profit) {
+            if (profit > 0) return 'profit-positive';
+            if (profit < 0) return 'profit-negative';
+            return 'profit-neutral';
+        }
+
+        // 마진 자동 계산
+        function calculateProfit() {
+            const saleAmount = parseFloat(document.getElementById('saleAmount').value) || 0;
+            const costAmount = parseFloat(document.getElementById('costAmount').value) || 0;
+            const profit = saleAmount - costAmount;
+            const profitRate = saleAmount > 0 ? (profit / saleAmount * 100) : 0;
+            
+            document.getElementById('profitAmount').value = profit.toFixed(2);
+            document.getElementById('profitRate').value = profitRate.toFixed(1);
+        }
+
+        // 정산 모달 열기
+        function openSettlementModal(reservationId) {
+            document.getElementById('reservationId').value = reservationId;
+            document.getElementById('settlementForm').reset();
+            
+            // 기존 예약 정보로 초기값 설정 (필요시)
+            
+            const modal = new bootstrap.Modal(document.getElementById('settlementModal'));
+            modal.show();
+        }
+
+        // 정산 처리
+        async function processSettlement() {
+            const reservationId = document.getElementById('reservationId').value;
+            const saleAmount = document.getElementById('saleAmount').value;
+            const costAmount = document.getElementById('costAmount').value;
+            const settlementNotes = document.getElementById('settlementNotes').value;
+            
+            if (!saleAmount || !costAmount) {
+                showAlert('매출 금액과 매입 금액을 입력해주세요.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/settlements/${reservationId}/process`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sale_amount: parseFloat(saleAmount),
+                        cost_amount: parseFloat(costAmount),
+                        settlement_notes: settlementNotes
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('정산이 완료되었습니다.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('settlementModal')).hide();
+                    loadSettlements();
+                    loadStats();
+                } else {
+                    showAlert(result.message || '정산 처리에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('정산 처리 실패:', error);
+                showAlert('정산 처리 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+
+        // 검색 및 필터링
+        function searchSettlements() {
+            currentStatus = document.getElementById('statusFilter').value;
+            currentMonth = document.getElementById('monthFilter').value;
+            currentSearch = document.getElementById('searchInput').value;
+            loadSettlements(1);
+        }
+
+        function resetFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('monthFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            currentStatus = '';
+            currentMonth = '';
+            currentSearch = '';
+            loadSettlements(1);
+        }
+
+        // 정산 내보내기
+        function exportSettlements() {
+            const params = new URLSearchParams({
+                status: currentStatus,
+                month: currentMonth,
+                search: currentSearch,
+                export: 'csv'
+            });
+            
+            window.open(`/api/settlements/export?${params}`, '_blank');
+        }
+
+        // 기타 함수들
+        function viewSettlementDetail(id) {
+            showAlert('정산 상세 보기 기능은 곧 추가됩니다.', 'info');
+        }
+
+        function printSettlement(id) {
+            showAlert('정산서 출력 기능은 곧 추가됩니다.', 'info');
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+        }
+
+        function renderPagination(pagination) {
+            const container = document.getElementById('pagination');
+            if (!pagination || pagination.totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            
+            if (pagination.currentPage > 1) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="loadSettlements(${pagination.currentPage - 1})">이전</a></li>`;
+            }
+
+            for (let i = Math.max(1, pagination.currentPage - 2); i <= Math.min(pagination.totalPages, pagination.currentPage + 2); i++) {
+                html += `<li class="page-item ${i === pagination.currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadSettlements(${i})">${i}</a>
+                </li>`;
+            }
+
+            if (pagination.currentPage < pagination.totalPages) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="loadSettlements(${pagination.currentPage + 1})">다음</a></li>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
