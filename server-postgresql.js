@@ -6907,7 +6907,92 @@ app.post('/api/assignments/:reservationId/resend', requireAuth, async (req, res)
     }
 });
 
-// 수배서 링크 전송 API
+// 수배서 링크 생성 API (토큰이 없으면 생성)
+app.post('/api/assignments/:reservationId/generate-link', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('🔗 수배서 링크 생성 요청:', reservationId);
+        
+        // 기존 수배서 토큰 조회
+        let assignment = await pool.query(`
+            SELECT assignment_token FROM assignments WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        let token;
+        
+        if (assignment.rows.length === 0) {
+            // 수배서가 없으면 새로 생성
+            token = crypto.randomBytes(32).toString('hex');
+            
+            // 예약 정보 조회
+            const reservation = await pool.query(`
+                SELECT * FROM reservations WHERE id = $1
+            `, [reservationId]);
+            
+            if (reservation.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: '예약 정보를 찾을 수 없습니다'
+                });
+            }
+            
+            const reservationData = reservation.rows[0];
+            
+            // 새 수배서 생성
+            await pool.query(`
+                INSERT INTO assignments (
+                    reservation_id, assignment_token, assignment_status, 
+                    created_at, updated_at
+                ) VALUES ($1, $2, 'created', NOW(), NOW())
+            `, [reservationId, token]);
+            
+            console.log('✅ 새 수배서 생성:', token);
+            
+        } else if (!assignment.rows[0].assignment_token) {
+            // 토큰이 없으면 새로 생성
+            token = crypto.randomBytes(32).toString('hex');
+            
+            await pool.query(`
+                UPDATE assignments 
+                SET assignment_token = $1, updated_at = NOW()
+                WHERE reservation_id = $2
+            `, [token, reservationId]);
+            
+            console.log('✅ 수배서 토큰 생성:', token);
+            
+        } else {
+            // 기존 토큰 사용
+            token = assignment.rows[0].assignment_token;
+            console.log('✅ 기존 토큰 사용:', token);
+        }
+        
+        const assignmentUrl = `https://www.guamsavecard.com/assignment/${token}`;
+        
+        // 로그 기록
+        await pool.query(`
+            INSERT INTO assignment_logs (reservation_id, action, details, created_at)
+            VALUES ($1, 'link_generated', $2, NOW())
+        `, [reservationId, JSON.stringify({ url: assignmentUrl })]);
+        
+        console.log('📎 수배서 링크 생성 완료:', assignmentUrl);
+        
+        res.json({
+            success: true,
+            message: '수배서 링크가 생성되었습니다',
+            link: assignmentUrl,
+            token: token
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 링크 생성 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '링크 생성 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 수배서 링크 전송 API (기존 유지)
 app.post('/api/assignments/:reservationId/send-link', requireAuth, async (req, res) => {
     try {
         const { reservationId } = req.params;
