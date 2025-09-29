@@ -6312,8 +6312,10 @@ app.get('/assignment/:token', async (req, res) => {
     try {
         const { token } = req.params;
         console.log('🔍 수배서 페이지 요청:', token);
+        console.log('🔍 pool 상태:', pool ? 'OK' : 'NULL');
 
         // 수배서 정보 조회
+        console.log('🔍 쿼리 실행 시작');
         const query = `
             SELECT 
                 a.*,
@@ -6339,7 +6341,10 @@ app.get('/assignment/:token', async (req, res) => {
             WHERE a.assignment_token = $1
         `;
 
+        console.log('🔍 쿼리:', query);
+        console.log('🔍 토큰 파라미터:', token);
         const result = await pool.query(query, [token]);
+        console.log('🔍 쿼리 결과 개수:', result.rows.length);
 
         if (result.rows.length === 0) {
             return res.status(404).render('error', { 
@@ -6375,6 +6380,8 @@ app.get('/assignment/:token', async (req, res) => {
         `, [token]);
 
         console.log('✅ 수배서 조회 완료:', assignment.reservation_number);
+        console.log('🔍 assignment 객체 키들:', Object.keys(assignment));
+        console.log('🔍 렌더링 시작');
 
         res.render('assignment', {
             assignment: assignment,
@@ -6388,6 +6395,8 @@ app.get('/assignment/:token', async (req, res) => {
                 return new Intl.NumberFormat('ko-KR').format(amount) + '원';
             }
         });
+        
+        console.log('✅ 렌더링 완료');
 
     } catch (error) {
         console.error('❌ 수배서 페이지 오류:', error);
@@ -6528,6 +6537,48 @@ app.get('/debug/simple-tokens', async (req, res) => {
         
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// 수배서 테스트 라우트 (간단한 HTML 반환)
+app.get('/assignment-test/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('🧪 수배서 테스트 요청:', token);
+        
+        const result = await pool.query(`
+            SELECT 
+                a.id, a.assignment_token, a.status,
+                r.reservation_number, r.korean_name, r.product_name
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.assignment_token = $1
+        `, [token]);
+        
+        if (result.rows.length === 0) {
+            return res.send(`<h1>수배서 없음</h1><p>토큰: ${token}</p>`);
+        }
+        
+        const data = result.rows[0];
+        res.send(`
+            <html>
+                <head><title>수배서 테스트</title></head>
+                <body>
+                    <h1>수배서 테스트 성공</h1>
+                    <p><strong>토큰:</strong> ${token}</p>
+                    <p><strong>예약번호:</strong> ${data.reservation_number}</p>
+                    <p><strong>예약자:</strong> ${data.korean_name}</p>
+                    <p><strong>상품:</strong> ${data.product_name}</p>
+                    <p><strong>상태:</strong> ${data.status}</p>
+                    <hr>
+                    <a href="/assignment/${token}">실제 수배서 페이지로 이동</a>
+                </body>
+            </html>
+        `);
+        
+    } catch (error) {
+        console.error('🧪 테스트 오류:', error);
+        res.status(500).send(`<h1>테스트 오류</h1><p>${error.message}</p>`);
     }
 });
 
