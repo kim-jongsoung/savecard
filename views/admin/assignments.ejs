@@ -665,6 +665,8 @@
 
         // 수배서 보기 (모달)
         function viewAssignment(reservationId) {
+            console.log('🔍 수배서 보기 요청:', reservationId);
+            
             // 수배서 모달 HTML 생성
             const modalHtml = `
                 <div class="modal fade" id="assignmentViewModal" tabindex="-1">
@@ -675,13 +677,18 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="text-center">
+                                <div class="text-center" id="loadingSpinner">
                                     <div class="spinner-border" role="status">
                                         <span class="visually-hidden">로딩 중...</span>
                                     </div>
                                     <p class="mt-2">수배서를 불러오는 중입니다...</p>
                                 </div>
                                 <iframe id="assignmentFrame" style="width:100%; height:500px; border:none; display:none;"></iframe>
+                                <div id="errorMessage" style="display:none;" class="alert alert-danger">
+                                    <h5>수배서 로드 오류</h5>
+                                    <p>수배서를 불러올 수 없습니다. 다시 시도해주세요.</p>
+                                    <button class="btn btn-primary" onclick="retryLoadAssignment(${reservationId})">다시 시도</button>
+                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
@@ -707,17 +714,88 @@
             const modal = new bootstrap.Modal(document.getElementById('assignmentViewModal'));
             modal.show();
             
-            // 수배서 로드
-            setTimeout(() => {
-                const iframe = document.getElementById('assignmentFrame');
-                const spinner = document.querySelector('#assignmentViewModal .spinner-border').parentElement;
+            // 수배서 토큰 조회 후 로드
+            loadAssignmentByReservationId(reservationId);
+        }
+
+        // 예약 ID로 수배서 토큰을 찾아서 로드
+        async function loadAssignmentByReservationId(reservationId) {
+            try {
+                console.log('🔍 수배서 토큰 조회:', reservationId);
                 
-                iframe.src = `/assignment/preview/${reservationId}`;
-                iframe.onload = () => {
-                    spinner.style.display = 'none';
-                    iframe.style.display = 'block';
-                };
-            }, 500);
+                // 수배서 토큰 조회
+                const response = await fetch(`/api/assignments/by-reservation/${reservationId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ 수배서 토큰 조회 성공:', data);
+                
+                if (data.assignment_token) {
+                    loadAssignmentFrame(data.assignment_token);
+                } else {
+                    throw new Error('수배서 토큰을 찾을 수 없습니다');
+                }
+                
+            } catch (error) {
+                console.error('❌ 수배서 토큰 조회 오류:', error);
+                showAssignmentError(error.message);
+            }
+        }
+
+        // 수배서 iframe 로드
+        function loadAssignmentFrame(token) {
+            const iframe = document.getElementById('assignmentFrame');
+            const spinner = document.getElementById('loadingSpinner');
+            const errorDiv = document.getElementById('errorMessage');
+            
+            console.log('🔍 수배서 iframe 로드:', token);
+            
+            iframe.src = `/assignment/${token}`;
+            
+            iframe.onload = () => {
+                console.log('✅ 수배서 iframe 로드 완료');
+                spinner.style.display = 'none';
+                iframe.style.display = 'block';
+                errorDiv.style.display = 'none';
+            };
+            
+            iframe.onerror = () => {
+                console.error('❌ 수배서 iframe 로드 실패');
+                showAssignmentError('수배서 페이지를 불러올 수 없습니다');
+            };
+            
+            // 5초 후에도 로드되지 않으면 오류 표시
+            setTimeout(() => {
+                if (iframe.style.display === 'none') {
+                    console.error('❌ 수배서 로드 타임아웃');
+                    showAssignmentError('수배서 로드 시간이 초과되었습니다');
+                }
+            }, 5000);
+        }
+
+        // 수배서 오류 표시
+        function showAssignmentError(message) {
+            const spinner = document.getElementById('loadingSpinner');
+            const errorDiv = document.getElementById('errorMessage');
+            const iframe = document.getElementById('assignmentFrame');
+            
+            spinner.style.display = 'none';
+            iframe.style.display = 'none';
+            errorDiv.style.display = 'block';
+            errorDiv.querySelector('p').textContent = message;
+        }
+
+        // 수배서 재시도
+        function retryLoadAssignment(reservationId) {
+            const spinner = document.getElementById('loadingSpinner');
+            const errorDiv = document.getElementById('errorMessage');
+            
+            spinner.style.display = 'block';
+            errorDiv.style.display = 'none';
+            
+            loadAssignmentByReservationId(reservationId);
         }
 
         // 바우처 보기 (모달)

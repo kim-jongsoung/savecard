@@ -6651,6 +6651,47 @@ app.get('/assignment-safe/:token', async (req, res) => {
     }
 });
 
+// 예약 ID로 수배서 토큰 조회 API
+app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('🔍 예약 ID로 수배서 토큰 조회:', reservationId);
+        
+        const result = await pool.query(`
+            SELECT assignment_token, id, status, created_at
+            FROM assignments 
+            WHERE reservation_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [reservationId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: '해당 예약의 수배서를 찾을 수 없습니다' 
+            });
+        }
+        
+        const assignment = result.rows[0];
+        console.log('✅ 수배서 토큰 조회 성공:', assignment.assignment_token);
+        
+        res.json({
+            success: true,
+            assignment_token: assignment.assignment_token,
+            assignment_id: assignment.id,
+            status: assignment.status,
+            created_at: assignment.created_at
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 토큰 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '수배서 토큰 조회 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
 // 수배서 미리보기 (관리자용)
 app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
     try {
