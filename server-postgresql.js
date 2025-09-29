@@ -6403,6 +6403,8 @@ app.get('/assignment/:token', async (req, res) => {
         console.error('❌ 수배서 페이지 오류:', error);
         console.error('❌ 오류 스택:', error.stack);
         console.error('❌ 요청 토큰:', req.params.token);
+        console.error('❌ 오류 이름:', error.name);
+        console.error('❌ 오류 코드:', error.code);
         
         // 간단한 HTML 오류 페이지 반환
         res.status(500).send(`
@@ -6410,9 +6412,14 @@ app.get('/assignment/:token', async (req, res) => {
                 <head><title>수배서 오류</title></head>
                 <body>
                     <h1>수배서 페이지 오류</h1>
-                    <p>오류 메시지: ${error.message}</p>
-                    <p>토큰: ${req.params.token}</p>
+                    <p><strong>오류 메시지:</strong> ${error.message}</p>
+                    <p><strong>토큰:</strong> ${req.params.token}</p>
+                    <p><strong>오류 타입:</strong> ${error.name}</p>
+                    ${error.code ? `<p><strong>오류 코드:</strong> ${error.code}</p>` : ''}
+                    <hr>
+                    <p><small>이 오류 정보를 개발자에게 전달해주세요.</small></p>
                     <button onclick="window.close()">닫기</button>
+                    <button onclick="window.location.reload()">새로고침</button>
                 </body>
             </html>
         `);
