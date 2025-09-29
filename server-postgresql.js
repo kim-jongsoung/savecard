@@ -6386,6 +6386,7 @@ app.get('/assignment/:token', async (req, res) => {
         res.render('assignment', {
             assignment: assignment,
             title: `수배서 - ${assignment.reservation_number}`,
+            isPreview: false, // 실제 수배서 페이지는 미리보기가 아님
             formatDate: (date) => {
                 if (!date) return '-';
                 return new Date(date).toLocaleDateString('ko-KR');
