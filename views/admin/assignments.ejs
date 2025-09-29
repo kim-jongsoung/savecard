@@ -514,7 +514,7 @@
                             <span class="money"><i class="bi bi-cash-coin me-1"></i>${amount}</span>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
-                            <button class="btn btn-outline-secondary" onclick="viewAssignment(${reservation.id})" title="수배서 보기">
+                            <button class="btn btn-sm ${getAssignmentIconClass(reservation)}" onclick="viewAssignment(${reservation.id})" title="${getAssignmentTooltip(reservation)}">
                                 <i class="bi bi-file-text"></i>
                             </button>
                             <button class="btn btn-outline-info" onclick="viewVoucher(${reservation.id})" title="바우처 보기">
@@ -663,38 +663,135 @@
             showAlert('수배서 다운로드 기능은 준비 중입니다.', 'info');
         }
 
+        // 수배서 아이콘 클래스 결정
+        function getAssignmentIconClass(reservation) {
+            // 수배서 상태에 따른 아이콘 색상
+            if (reservation.assignment_status === 'confirmed' || reservation.confirmation_number) {
+                return 'btn-primary'; // 파란색 - 확정 완료
+            } else if (reservation.assignment_status === 'sent' || reservation.assignment_token) {
+                return 'btn-warning'; // 노란색 - 전송 완료
+            } else {
+                return 'btn-outline-secondary'; // 투명 - 미생성/미전송
+            }
+        }
+
+        // 수배서 툴팁 텍스트 결정
+        function getAssignmentTooltip(reservation) {
+            if (reservation.assignment_status === 'confirmed' || reservation.confirmation_number) {
+                return '수배서 확정 완료 - 클릭하여 확정 정보 보기';
+            } else if (reservation.assignment_status === 'sent' || reservation.assignment_token) {
+                return '수배서 전송 완료 - 클릭하여 전송 로그 보기';
+            } else {
+                return '수배서 생성/전송 - 클릭하여 수배서 관리';
+            }
+        }
+
         // 수배서 보기 (모달)
         function viewAssignment(reservationId) {
             console.log('🔍 수배서 보기 요청:', reservationId);
             
+            // 예약 정보 조회
+            const reservation = reservations.find(r => r.id === reservationId);
+            if (!reservation) {
+                showAlert('예약 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // 상태별 모달 버튼 구성
+            let modalButtons = '';
+            if (reservation.assignment_status === 'confirmed' || reservation.confirmation_number) {
+                // 파란색 - 확정 완료 상태
+                modalButtons = `
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-primary" onclick="printAssignment()">
+                        <i class="bi bi-printer me-1"></i>인쇄
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="createVoucher(${reservationId})">
+                        <i class="bi bi-ticket-perforated me-1"></i>바우처 생성
+                    </button>
+                `;
+            } else if (reservation.assignment_status === 'sent' || reservation.assignment_token) {
+                // 노란색 - 전송 완료 상태
+                modalButtons = `
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="saveAssignmentFile(${reservationId})">
+                        <i class="bi bi-download me-1"></i>파일저장
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="printAssignment()">
+                        <i class="bi bi-printer me-1"></i>인쇄
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="resendAssignment(${reservationId})">
+                        <i class="bi bi-send me-1"></i>재전송
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="sendAssignmentLink(${reservationId})">
+                        <i class="bi bi-link-45deg me-1"></i>링크전송
+                    </button>
+                `;
+            } else {
+                // 투명 - 미생성/미전송 상태
+                modalButtons = `
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-success" onclick="saveAndSendAssignment(${reservationId})">
+                        <i class="bi bi-save me-1"></i>저장하기
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="sendAssignmentNow(${reservationId})">
+                        <i class="bi bi-send me-1"></i>전송하기
+                    </button>
+                `;
+            }
+            
             // 수배서 모달 HTML 생성
             const modalHtml = `
                 <div class="modal fade" id="assignmentViewModal" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
+                    <div class="modal-dialog modal-xl">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>수배서 보기</h5>
+                                <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>수배서 관리 - ${reservation.korean_name || reservation.platform_name}</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="text-center" id="loadingSpinner">
-                                    <div class="spinner-border" role="status">
-                                        <span class="visually-hidden">로딩 중...</span>
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="text-center" id="loadingSpinner">
+                                            <div class="spinner-border" role="status">
+                                                <span class="visually-hidden">로딩 중...</span>
+                                            </div>
+                                            <p class="mt-2">수배서를 불러오는 중입니다...</p>
+                                        </div>
+                                        <iframe id="assignmentFrame" style="width:100%; height:600px; border:none; display:none;"></iframe>
+                                        <div id="errorMessage" style="display:none;" class="alert alert-danger">
+                                            <h5>수배서 로드 오류</h5>
+                                            <p>수배서를 불러올 수 없습니다. 다시 시도해주세요.</p>
+                                            <button class="btn btn-primary" onclick="retryLoadAssignment(${reservationId})">다시 시도</button>
+                                        </div>
                                     </div>
-                                    <p class="mt-2">수배서를 불러오는 중입니다...</p>
-                                </div>
-                                <iframe id="assignmentFrame" style="width:100%; height:500px; border:none; display:none;"></iframe>
-                                <div id="errorMessage" style="display:none;" class="alert alert-danger">
-                                    <h5>수배서 로드 오류</h5>
-                                    <p>수배서를 불러올 수 없습니다. 다시 시도해주세요.</p>
-                                    <button class="btn btn-primary" onclick="retryLoadAssignment(${reservationId})">다시 시도</button>
+                                    <div class="col-md-4">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h6 class="mb-0"><i class="bi bi-info-circle me-1"></i>수배 정보</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="assignmentInfo">
+                                                    <p><strong>상품명:</strong> ${reservation.product_name || '-'}</p>
+                                                    <p><strong>패키지타입:</strong> <span class="text-primary">${reservation.package_type || '정보없음'}</span></p>
+                                                    <p><strong>수배업체:</strong> ${reservation.vendor_name || '미지정'}</p>
+                                                    <p><strong>상태:</strong> <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)}">${getStatusText(reservation.payment_status)}</span></p>
+                                                    ${reservation.confirmation_number ? `<p><strong>컨펌번호:</strong> <span class="text-success">${reservation.confirmation_number}</span></p>` : ''}
+                                                </div>
+                                                <hr>
+                                                <div id="assignmentLogs">
+                                                    <h6><i class="bi bi-clock-history me-1"></i>처리 로그</h6>
+                                                    <div id="logContainer" style="max-height: 200px; overflow-y: auto;">
+                                                        <small class="text-muted">로그를 불러오는 중...</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-                                <button type="button" class="btn btn-primary" onclick="printAssignment()">
-                                    <i class="bi bi-printer me-1"></i>인쇄
-                                </button>
+                                ${modalButtons}
                             </div>
                         </div>
                     </div>
@@ -716,6 +813,173 @@
             
             // 수배서 토큰 조회 후 로드
             loadAssignmentByReservationId(reservationId);
+            
+            // 수배 로그 로드
+            loadAssignmentLogs(reservationId);
+        }
+
+        // 수배 로그 로드
+        async function loadAssignmentLogs(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/logs/${reservationId}`);
+                const data = await response.json();
+                
+                const logContainer = document.getElementById('logContainer');
+                if (data.success && data.logs.length > 0) {
+                    logContainer.innerHTML = data.logs.map(log => `
+                        <div class="mb-2 p-2 border-start border-3 border-${log.type === 'success' ? 'success' : log.type === 'error' ? 'danger' : 'info'}">
+                            <small class="text-muted">${formatDateTime(log.created_at)}</small>
+                            <div class="fw-bold">${log.action}</div>
+                            ${log.details ? `<small class="text-muted">${log.details}</small>` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    logContainer.innerHTML = '<small class="text-muted">처리 로그가 없습니다.</small>';
+                }
+            } catch (error) {
+                console.error('로그 로드 실패:', error);
+                document.getElementById('logContainer').innerHTML = '<small class="text-danger">로그 로드 실패</small>';
+            }
+        }
+
+        // 수배서 저장하기
+        async function saveAndSendAssignment(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/${reservationId}/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서가 저장되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                    bootstrap.Modal.getInstance(document.getElementById('assignmentViewModal')).hide();
+                } else {
+                    showAlert(result.message || '수배서 저장에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('수배서 저장 실패:', error);
+                showAlert('수배서 저장 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 수배서 전송하기
+        async function sendAssignmentNow(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/${reservationId}/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서가 전송되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                    loadAssignmentLogs(reservationId); // 로그 새로고침
+                } else {
+                    showAlert(result.message || '수배서 전송에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('수배서 전송 실패:', error);
+                showAlert('수배서 전송 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 수배서 재전송
+        async function resendAssignment(reservationId) {
+            if (!confirm('수배서를 재전송하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/api/assignments/${reservationId}/resend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서가 재전송되었습니다.', 'success');
+                    loadAssignmentLogs(reservationId); // 로그 새로고침
+                } else {
+                    showAlert(result.message || '수배서 재전송에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('수배서 재전송 실패:', error);
+                showAlert('수배서 재전송 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 수배서 링크 전송
+        async function sendAssignmentLink(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/${reservationId}/send-link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배서 링크가 전송되었습니다.', 'success');
+                    loadAssignmentLogs(reservationId); // 로그 새로고침
+                } else {
+                    showAlert(result.message || '링크 전송에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('링크 전송 실패:', error);
+                showAlert('링크 전송 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 수배서 파일 저장
+        async function saveAssignmentFile(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/${reservationId}/download`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `수배서_${reservationId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showAlert('수배서 파일이 저장되었습니다.', 'success');
+                } else {
+                    showAlert('파일 저장에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('파일 저장 실패:', error);
+                showAlert('파일 저장 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 바우처 생성
+        async function createVoucher(reservationId) {
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}/voucher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 생성되었습니다.', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert(result.message || '바우처 생성에 실패했습니다.', 'error');
+                }
+            } catch (error) {
+                console.error('바우처 생성 실패:', error);
+                showAlert('바우처 생성 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 날짜시간 포맷팅
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR');
         }
 
         // 예약 ID로 수배서 토큰을 찾아서 로드

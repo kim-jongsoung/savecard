@@ -99,6 +99,9 @@
                             <div class="col-md-6">
                                 <strong>상품명:</strong><br>
                                 <span class="text-success fw-bold"><%= assignment.product_name || '정보 없음' %></span>
+                                <% if (assignment.package_type) { %>
+                                <br><small class="text-muted">패키지 타입: <span class="text-info fw-bold"><%= assignment.package_type %></span></small>
+                                <% } %>
                             </div>
                             <div class="col-md-6">
                                 <strong>출발일 / 사용일자:</strong><br>
