@@ -317,11 +317,8 @@
                     <button type="button" class="btn btn-danger" onclick="deleteReservation()">
                         <i class="fas fa-trash me-1"></i>삭제
                     </button>
-                    <button type="button" class="btn btn-warning" onclick="assignReservation()">
-                        <i class="fas fa-arrow-right me-1"></i>수배 전환
-                    </button>
                     <button type="button" class="btn btn-success" id="createAssignmentBtn" onclick="createAssignment()" style="display: none;">
-                        <i class="fas fa-paper-plane me-1"></i>수배서 생성
+                        <i class="fas fa-file-text me-1"></i>수배서 보기/전송
                     </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button type="button" class="btn btn-primary" onclick="saveReservation()">
@@ -359,7 +356,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button type="button" class="btn btn-success" onclick="confirmCreateAssignment()">
-                        <i class="fas fa-paper-plane me-1"></i>수배서 생성
+                        <i class="fas fa-paper-plane me-1"></i>수배서 전송
                     </button>
                 </div>
             </div>
@@ -510,7 +507,7 @@
             document.getElementById('infant_price').value = reservation.infant_unit_price || 0;
             document.getElementById('special_requests').value = reservation.memo || '';
 
-            // 수배서 생성 버튼 표시/숨김 (대기중 상태일 때만 표시)
+            // 수배서 보기/전송 버튼 표시/숨김 (대기중 상태일 때만 표시)
             const createAssignmentBtn = document.getElementById('createAssignmentBtn');
             if (reservation.payment_status === 'pending') {
                 createAssignmentBtn.style.display = 'inline-block';
@@ -617,7 +614,7 @@
             return classMap[status] || 'pending';
         }
 
-        // 수배서 생성 버튼 클릭
+        // 수배서 보기/전송 버튼 클릭
         async function createAssignment() {
             const reservationId = document.getElementById('reservationId').value;
             const productName = document.getElementById('product_name').value;
@@ -660,7 +657,7 @@
             }
         }
         
-        // 수배서 생성 확인
+        // 수배서 전송 확인
         async function confirmCreateAssignment() {
             const reservationId = document.getElementById('reservationId').value;
             const vendorId = document.getElementById('vendorSelect').value;
@@ -699,11 +696,11 @@
                         window.location.href = '/admin/assignments';
                     }
                 } else {
-                    alert(result.message || '수배서 생성에 실패했습니다.');
+                    alert(result.message || '수배서 전송에 실패했습니다.');
                 }
             } catch (error) {
-                console.error('수배서 생성 실패:', error);
-                alert('수배서 생성 중 오류가 발생했습니다.');
+                console.error('수배서 전송 실패:', error);
+                alert('수배서 전송 중 오류가 발생했습니다.');
             }
         }
 

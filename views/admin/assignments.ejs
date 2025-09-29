@@ -752,8 +752,7 @@
             
             console.log('🔍 수배서 iframe 로드:', token);
             
-            // 임시로 안전한 수배서 페이지 사용
-            iframe.src = `/assignment-safe/${token}`;
+            iframe.src = `/assignment/${token}`;
             
             iframe.onload = () => {
                 console.log('✅ 수배서 iframe 로드 완료');

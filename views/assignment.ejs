@@ -149,7 +149,11 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>수배서 전송일시:</strong><br>
-                                <%= assignment.sent_at ? formatDate(assignment.sent_at) + ' ' + new Date(assignment.sent_at).toLocaleTimeString('ko-KR') : '미전송' %>
+                                <% if (assignment.sent_at) { %>
+                                    <%= formatDate(assignment.sent_at) %> <%= new Date(assignment.sent_at).toLocaleTimeString('ko-KR') %>
+                                <% } else { %>
+                                    미전송
+                                <% } %>
                             </div>
                             <% if (assignment.vendor_email || assignment.vendor_phone) { %>
                             <div class="col-12">
