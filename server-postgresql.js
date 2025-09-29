@@ -6412,38 +6412,65 @@ app.get('/assignment/:token', async (req, res) => {
 // 수배서 시스템 테스트 라우트
 app.get('/test/assignments', requireAuth, async (req, res) => {
     try {
-        // 테이블 존재 확인
+        console.log('🔍 테스트 라우트 시작');
+        
+        // 단계별로 테스트
+        let result = { step: 1, message: 'DB 연결 테스트' };
+        
+        // 1단계: 기본 쿼리 테스트
+        await pool.query('SELECT 1');
+        result.step = 2;
+        result.message = 'assignments 테이블 확인';
+        
+        // 2단계: 테이블 존재 확인
         const tableCheck = await pool.query(`
             SELECT table_name 
             FROM information_schema.tables 
             WHERE table_schema = 'public' AND table_name = 'assignments'
         `);
+        result.step = 3;
+        result.assignments_table_exists = tableCheck.rows.length > 0;
+        result.message = 'reservations 테이블 확인';
         
-        // 예약 테이블 확인
-        const reservationCheck = await pool.query(`
-            SELECT COUNT(*) as count FROM reservations LIMIT 1
-        `);
+        // 3단계: 예약 테이블 확인
+        const reservationCheck = await pool.query(`SELECT COUNT(*) as count FROM reservations`);
+        result.step = 4;
+        result.reservations_count = reservationCheck.rows[0].count;
+        result.message = 'assignments 개수 확인';
         
-        // assignments 테이블 확인 (있다면)
-        let assignmentCount = 0;
+        // 4단계: assignments 개수 확인
         if (tableCheck.rows.length > 0) {
-            const assignmentCheck = await pool.query(`
-                SELECT COUNT(*) as count FROM assignments
-            `);
-            assignmentCount = assignmentCheck.rows[0].count;
+            const assignmentCheck = await pool.query(`SELECT COUNT(*) as count FROM assignments`);
+            result.assignments_count = assignmentCheck.rows[0].count;
+            result.step = 5;
+            result.message = '완료';
+        } else {
+            result.assignments_count = 0;
+            result.step = 5;
+            result.message = 'assignments 테이블 없음';
         }
-        
-        res.json({
-            assignments_table_exists: tableCheck.rows.length > 0,
-            reservations_count: reservationCheck.rows[0].count,
-            assignments_count: assignmentCount,
-            tables: tableCheck.rows
-        });
+
+        console.log('✅ 테스트 완료:', result);
+        res.json(result);
         
     } catch (error) {
-        console.error('테스트 오류:', error);
-        res.status(500).json({ error: error.message });
+        console.error('❌ 테스트 오류:', error);
+        console.error('❌ 오류 스택:', error.stack);
+        res.status(500).json({ 
+            error: error.message,
+            stack: error.stack,
+            step: 'error'
+        });
     }
+});
+
+// 간단한 디버그 라우트
+app.get('/debug/simple', (req, res) => {
+    res.json({ 
+        message: '서버 정상 작동',
+        timestamp: new Date().toISOString(),
+        pool_status: pool ? 'pool 존재' : 'pool 없음'
+    });
 });
 
 // 수배서 미리보기 (관리자용)
