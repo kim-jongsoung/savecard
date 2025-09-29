@@ -6473,6 +6473,64 @@ app.get('/debug/simple', (req, res) => {
     });
 });
 
+// 실제 수배서 토큰 조회
+app.get('/debug/tokens', requireAuth, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                a.id,
+                a.assignment_token,
+                a.status,
+                a.created_at,
+                r.id as reservation_id,
+                r.reservation_number,
+                r.korean_name,
+                r.product_name
+            FROM assignments a
+            LEFT JOIN reservations r ON a.reservation_id = r.id
+            ORDER BY a.created_at DESC
+            LIMIT 10
+        `);
+        
+        res.json({
+            message: '수배서 토큰 목록',
+            count: result.rows.length,
+            assignments: result.rows
+        });
+        
+    } catch (error) {
+        console.error('토큰 조회 오류:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 토큰만 간단히 조회
+app.get('/debug/simple-tokens', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT assignment_token, id, status 
+            FROM assignments 
+            ORDER BY created_at DESC 
+            LIMIT 5
+        `);
+        
+        const tokens = result.rows.map(row => ({
+            token: row.assignment_token,
+            id: row.id,
+            status: row.status,
+            url: `/assignment/${row.assignment_token}`
+        }));
+        
+        res.json({
+            message: '수배서 토큰 목록 (최근 5개)',
+            tokens: tokens
+        });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 수배서 미리보기 (관리자용)
 app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
     try {
