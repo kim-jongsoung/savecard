@@ -6750,6 +6750,223 @@ app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (re
     }
 });
 
+// 수배 로그 조회 API
+app.get('/api/assignments/logs/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('🔍 수배 로그 조회:', reservationId);
+        
+        const result = await pool.query(`
+            SELECT 
+                'assignment_created' as action,
+                '수배서 생성' as details,
+                'success' as type,
+                created_at
+            FROM assignments 
+            WHERE reservation_id = $1
+            UNION ALL
+            SELECT 
+                'assignment_sent' as action,
+                '수배서 전송' as details,
+                'success' as type,
+                sent_at as created_at
+            FROM assignments 
+            WHERE reservation_id = $1 AND sent_at IS NOT NULL
+            UNION ALL
+            SELECT 
+                'assignment_viewed' as action,
+                '수배서 열람' as details,
+                'info' as type,
+                viewed_at as created_at
+            FROM assignments 
+            WHERE reservation_id = $1 AND viewed_at IS NOT NULL
+            UNION ALL
+            SELECT 
+                'assignment_confirmed' as action,
+                '수배 확정' as details,
+                'success' as type,
+                response_at as created_at
+            FROM assignments 
+            WHERE reservation_id = $1 AND response_at IS NOT NULL
+            ORDER BY created_at DESC
+        `, [reservationId]);
+        
+        res.json({
+            success: true,
+            logs: result.rows
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배 로그 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '로그 조회 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 수배서 저장 API
+app.post('/api/assignments/:reservationId/save', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('💾 수배서 저장 요청:', reservationId);
+        
+        // 기존 수배서가 있는지 확인
+        let assignment = await pool.query(`
+            SELECT * FROM assignments WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        if (assignment.rows.length === 0) {
+            // 수배서가 없으면 자동 생성
+            const autoAssignment = await createAutoAssignment(reservationId, null);
+            if (!autoAssignment) {
+                return res.status(400).json({
+                    success: false,
+                    message: '수배서 생성에 실패했습니다'
+                });
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: '수배서가 저장되었습니다'
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 저장 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '수배서 저장 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 수배서 전송 API
+app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('📤 수배서 전송 요청:', reservationId);
+        
+        // 수배서 조회
+        const assignment = await pool.query(`
+            SELECT * FROM assignments WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        if (assignment.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배서를 찾을 수 없습니다'
+            });
+        }
+        
+        // 전송 시간 업데이트
+        await pool.query(`
+            UPDATE assignments 
+            SET sent_at = NOW(), status = 'sent'
+            WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        res.json({
+            success: true,
+            message: '수배서가 전송되었습니다'
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 전송 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '수배서 전송 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 수배서 재전송 API
+app.post('/api/assignments/:reservationId/resend', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('🔄 수배서 재전송 요청:', reservationId);
+        
+        // 재전송 시간 업데이트
+        await pool.query(`
+            UPDATE assignments 
+            SET sent_at = NOW()
+            WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        res.json({
+            success: true,
+            message: '수배서가 재전송되었습니다'
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 재전송 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '수배서 재전송 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 수배서 링크 전송 API
+app.post('/api/assignments/:reservationId/send-link', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('🔗 수배서 링크 전송 요청:', reservationId);
+        
+        // 수배서 토큰 조회
+        const assignment = await pool.query(`
+            SELECT assignment_token FROM assignments WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        if (assignment.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배서를 찾을 수 없습니다'
+            });
+        }
+        
+        const token = assignment.rows[0].assignment_token;
+        const assignmentUrl = `https://www.guamsavecard.com/assignment/${token}`;
+        
+        console.log('📎 수배서 링크:', assignmentUrl);
+        
+        res.json({
+            success: true,
+            message: '수배서 링크가 전송되었습니다',
+            url: assignmentUrl
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 링크 전송 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '링크 전송 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 수배서 파일 다운로드 API
+app.get('/api/assignments/:reservationId/download', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        console.log('📥 수배서 다운로드 요청:', reservationId);
+        
+        // 임시로 텍스트 파일 생성 (실제로는 PDF 생성 라이브러리 사용)
+        const content = `수배서 - 예약 ID: ${reservationId}\n생성일: ${new Date().toLocaleString('ko-KR')}`;
+        
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="assignment_${reservationId}.txt"`);
+        res.send(content);
+        
+    } catch (error) {
+        console.error('❌ 수배서 다운로드 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '다운로드 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
 // 수배서 미리보기 (관리자용)
 app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
     try {

@@ -455,6 +455,10 @@
                 
                 if (data.success) {
                     console.log('예약 데이터 샘플:', data.data.assignments[0]);
+                    
+                    // 전역 변수에 데이터 저장
+                    window.reservations = data.data.assignments;
+                    
                     renderAssignments(data.data.assignments);
                 } else {
                     console.error('API 오류:', data.message);
@@ -690,11 +694,32 @@
         function viewAssignment(reservationId) {
             console.log('🔍 수배서 보기 요청:', reservationId);
             
-            // 예약 정보 조회
-            const reservation = reservations.find(r => r.id === reservationId);
+            // 전역 reservations 배열에서 예약 정보 조회
+            let reservation = null;
+            if (window.reservations && Array.isArray(window.reservations)) {
+                reservation = window.reservations.find(r => r.id === reservationId);
+            }
+            
+            // 전역 배열에서 찾지 못했다면 현재 페이지의 데이터에서 찾기
+            if (!reservation && typeof reservations !== 'undefined') {
+                reservation = reservations.find(r => r.id === reservationId);
+            }
+            
+            // 그래도 없으면 기본값 설정
             if (!reservation) {
-                showAlert('예약 정보를 찾을 수 없습니다.', 'error');
-                return;
+                console.warn('예약 정보를 찾을 수 없어 기본값 사용:', reservationId);
+                reservation = {
+                    id: reservationId,
+                    korean_name: '정보없음',
+                    platform_name: '정보없음',
+                    product_name: '정보없음',
+                    package_type: '정보없음',
+                    vendor_name: '미지정',
+                    payment_status: 'pending',
+                    confirmation_number: null,
+                    assignment_status: null,
+                    assignment_token: null
+                };
             }
             
             // 상태별 모달 버튼 구성
@@ -980,6 +1005,42 @@
             if (!dateString) return '-';
             const date = new Date(dateString);
             return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR');
+        }
+
+        // 상태 텍스트 변환
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '대기중',
+                'in_progress': '수배중', 
+                'confirmed': '확정',
+                'voucher_sent': '바우처전송완료',
+                'cancelled': '취소',
+                'refunded': '환불'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Bootstrap 상태 클래스 변환
+        function getBootstrapStatusClass(status) {
+            const classMap = {
+                'pending': 'warning',
+                'in_progress': 'info',
+                'confirmed': 'success', 
+                'voucher_sent': 'primary',
+                'cancelled': 'danger',
+                'refunded': 'secondary'
+            };
+            return classMap[status] || 'secondary';
+        }
+
+        // 수배서 인쇄
+        function printAssignment() {
+            const iframe = document.getElementById('assignmentFrame');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.print();
+            } else {
+                showAlert('수배서를 먼저 로드해주세요.', 'warning');
+            }
         }
 
         // 예약 ID로 수배서 토큰을 찾아서 로드
