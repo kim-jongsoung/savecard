@@ -6329,8 +6329,8 @@ app.get('/assignment/:token', async (req, res) => {
                 r.people_adult as adult_count,
                 r.people_child as child_count,
                 r.people_infant,
-                r.total_price as total_amount,
-                r.phone_number,
+                r.total_amount as total_amount,
+                r.phone as phone_number,
                 r.email,
                 r.package_type,
                 r.memo as special_requests
@@ -6420,8 +6420,8 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
                 r.people_adult as adult_count,
                 r.people_child as child_count,
                 r.people_infant,
-                r.total_price as total_amount,
-                r.phone_number,
+                r.total_amount as total_amount,
+                r.phone as phone_number,
                 r.email,
                 r.package_type,
                 r.memo as special_requests
@@ -6477,8 +6477,8 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
                 adult_count: reservation.people_adult,
                 child_count: reservation.people_child,
                 people_infant: reservation.people_infant,
-                total_amount: reservation.total_price,
-                phone_number: reservation.phone_number,
+                total_amount: reservation.total_amount,
+                phone_number: reservation.phone,
                 email: reservation.email,
                 package_type: reservation.package_type,
                 special_requests: reservation.memo,
@@ -7798,115 +7798,12 @@ app.get('/admin/settlement', requireAuth, (req, res) => {
 // 수배서 페이지 라우트
 app.get('/assignment/:token', async (req, res) => {
     try {
-        console.log('수배서 페이지 요청:', req.params.token);
-        const { token } = req.params;
-        
-        // 먼저 assignments 테이블 존재 여부 확인
-        const tableCheck = await pool.query(`
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = 'public' AND table_name = 'assignments'
-        `);
-        
-        if (tableCheck.rows.length === 0) {
-            console.error('assignments 테이블이 존재하지 않음');
-            return res.status(500).send(`
-                <h1>수배서 시스템 오류</h1>
-                <p>수배서 테이블이 존재하지 않습니다.</p>
-                <p>관리자에게 문의해주세요.</p>
-                <a href="/admin">관리자 페이지로 돌아가기</a>
-            `);
-        }
-        
-        // 수배서 정보 조회 (인박스와 동일한 실제 컬럼명 사용)
-        const assignmentQuery = `
-            SELECT 
-                a.*,
-                r.korean_name as customer_name,
-                r.english_first_name,
-                r.english_last_name,
-                r.reservation_number,
-                r.product_name,
-                r.package_type,
-                r.usage_date as tour_date,
-                r.usage_time as tour_time,
-                r.people_adult as adult_count,
-                r.people_child as child_count,
-                r.people_infant as infant_count,
-                r.memo as special_requests,
-                r.platform_name,
-                r.total_amount,
-                r.phone,
-                r.email,
-                r.kakao_id,
-                r.payment_status,
-                r.reservation_datetime
-            FROM assignments a
-            LEFT JOIN reservations r ON a.reservation_id = r.id
-            WHERE a.assignment_token = $1
-        `;
-        
-        const result = await pool.query(assignmentQuery, [token]);
-        console.log('수배서 조회 결과:', result.rows.length);
-        
-        if (result.rows.length === 0) {
-            return res.status(404).send(`
-                <h1>수배서를 찾을 수 없습니다</h1>
-                <p>유효하지 않은 수배서 링크입니다.</p>
-                <p>토큰: ${token}</p>
-                <a href="/admin">관리자 페이지로 돌아가기</a>
-            `);
-        }
-        
-        const data = result.rows[0];
-        const assignment = {
-            id: data.id,
-            reservation_id: data.reservation_id,
-            vendor_id: data.vendor_id,
-            vendor_name: data.vendor_name,
-            vendor_contact: data.vendor_contact,
-            assignment_token: data.assignment_token,
-            status: data.status,
-            notes: data.notes,
-            confirmation_number: data.confirmation_number,
-            cost_price: data.cost_price,
-            cost_currency: data.cost_currency,
-            rejection_reason: data.rejection_reason,
-            created_at: data.created_at,
-            sent_at: data.sent_at,
-            viewed_at: data.viewed_at,
-            response_at: data.response_at
-        };
-        
-        const reservation = {
-            id: data.reservation_id,
-            customer_name: data.customer_name,
-            reservation_number: data.reservation_number,
-            product_name: data.product_name,
-            tour_date: data.tour_date,
-            tour_time: data.tour_time,
-            adult_count: data.adult_count,
-            child_count: data.child_count,
-            infant_count: data.infant_count,
-            special_requests: data.special_requests,
-            platform_name: data.platform_name
-        };
-        
-        console.log('수배서 렌더링 시작');
-        res.render('assignment', {
-            title: `수배서 #${assignment.id}`,
-            assignment,
-            reservation
-        });
-        
+        // This duplicate route block has been removed. The earlier definition handles rendering.
+        // Keeping this here intentionally empty to avoid duplicate handler execution.
+        return res.status(404).send('Not Found');
     } catch (error) {
-        console.error('수배서 페이지 오류:', error);
-        res.status(500).send(`
-            <h1>수배서 페이지 오류</h1>
-            <p>수배서를 불러오는 중 오류가 발생했습니다.</p>
-            <p>오류: ${error.message}</p>
-            <a href="/admin">관리자 페이지로 돌아가기</a>
-        `);
+        console.error('수배서 페이지 오류(dup):', error);
+        res.status(500).send('Internal Server Error');
     }
 });
 
