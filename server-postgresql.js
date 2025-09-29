@@ -4891,12 +4891,29 @@ app.post('/api/register-reservation', async (req, res) => {
             
             try {
                 const result = await pool.query(insertQuery, values);
+                const reservationId = result.rows[0].id;
+                
+                // 자동 수배서 생성 시도
+                console.log('🔄 자동 수배서 생성 시도:', {
+                    reservationId,
+                    productName: parsedData.product_name
+                });
+                
+                const autoAssignment = await createAutoAssignment(reservationId, parsedData.product_name);
                 
                 res.json({
                     success: true,
                     message: '예약이 성공적으로 등록되었습니다.',
-                    reservation_id: result.rows[0].id,
-                    parsed_data: parsedData
+                    reservation_id: reservationId,
+                    parsed_data: parsedData,
+                    auto_assignment: autoAssignment ? {
+                        created: true,
+                        vendor: autoAssignment.vendor_name,
+                        assignment_id: autoAssignment.assignment_id
+                    } : {
+                        created: false,
+                        reason: '매칭되는 수배업체가 없습니다'
+                    }
                 });
             } catch (dbError) {
                 if (dbError.code === '23505' && dbError.constraint === 'reservations_reservation_number_key') {
@@ -4906,11 +4923,29 @@ app.post('/api/register-reservation', async (req, res) => {
                     values[0] = parsedData.reservation_number;
                     
                     const retryResult = await pool.query(insertQuery, values);
+                    const reservationId = retryResult.rows[0].id;
+                    
+                    // 자동 수배서 생성 시도 (재시도 케이스)
+                    console.log('🔄 자동 수배서 생성 시도 (재시도):', {
+                        reservationId,
+                        productName: parsedData.product_name
+                    });
+                    
+                    const autoAssignment = await createAutoAssignment(reservationId, parsedData.product_name);
+                    
                     res.json({
                         success: true,
                         message: '예약이 성공적으로 등록되었습니다. (예약번호 자동 변경)',
-                        reservation_id: retryResult.rows[0].id,
-                        parsed_data: parsedData
+                        reservation_id: reservationId,
+                        parsed_data: parsedData,
+                        auto_assignment: autoAssignment ? {
+                            created: true,
+                            vendor: autoAssignment.vendor_name,
+                            assignment_id: autoAssignment.assignment_id
+                        } : {
+                            created: false,
+                            reason: '매칭되는 수배업체가 없습니다'
+                        }
                     });
                 } else {
                     throw dbError;
@@ -5063,10 +5098,26 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
                 
                 console.log(`✅ 예약 저장 성공 (ID: ${reservationId})`);
                 
+                // 자동 수배서 생성 시도 (관리자 저장)
+                console.log('🔄 자동 수배서 생성 시도 (관리자):', {
+                    reservationId,
+                    productName: normalizedData.product_name
+                });
+                
+                const autoAssignment = await createAutoAssignment(reservationId, normalizedData.product_name);
+                
                 res.json({
                     success: true,
                     message: '예약이 성공적으로 저장되었습니다.',
                     reservation_id: reservationId,
+                    auto_assignment: autoAssignment ? {
+                        created: true,
+                        vendor: autoAssignment.vendor_name,
+                        assignment_id: autoAssignment.assignment_id
+                    } : {
+                        created: false,
+                        reason: '매칭되는 수배업체가 없습니다'
+                    },
                     workflow: 'reservation_saved'
                 });
                 
