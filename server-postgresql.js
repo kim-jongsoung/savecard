@@ -6582,6 +6582,74 @@ app.get('/assignment-test/:token', async (req, res) => {
     }
 });
 
+// 안전한 수배서 페이지 (템플릿 오류 디버깅용)
+app.get('/assignment-safe/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('🛡️ 안전한 수배서 페이지 요청:', token);
+        
+        const query = `
+            SELECT 
+                a.*,
+                r.reservation_number,
+                r.korean_name as customer_name,
+                r.english_first_name,
+                r.english_last_name,
+                r.platform_name as vendor_name,
+                r.product_name,
+                r.usage_date as departure_date,
+                r.usage_date,
+                r.usage_time,
+                r.people_adult as adult_count,
+                r.people_child as child_count,
+                r.people_infant,
+                r.total_amount as total_amount,
+                r.phone as phone_number,
+                r.email,
+                r.package_type,
+                r.memo as special_requests
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.assignment_token = $1
+        `;
+
+        const result = await pool.query(query, [token]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).send('<h1>수배서를 찾을 수 없습니다</h1>');
+        }
+
+        const assignment = result.rows[0];
+        
+        // 수배업체 정보 추가 조회
+        if (assignment.vendor_id) {
+            const vendorQuery = `SELECT vendor_name, email, phone FROM vendors WHERE id = $1`;
+            const vendorResult = await pool.query(vendorQuery, [assignment.vendor_id]);
+            if (vendorResult.rows.length > 0) {
+                const vendor = vendorResult.rows[0];
+                assignment.assignment_vendor = vendor.vendor_name;
+                assignment.vendor_email = vendor.email;
+                assignment.vendor_phone = vendor.phone;
+            }
+        }
+
+        // 수배업체 정보가 없으면 기본값 설정
+        if (!assignment.assignment_vendor) {
+            assignment.assignment_vendor = assignment.vendor_name || '미지정';
+        }
+
+        console.log('🛡️ 안전한 템플릿으로 렌더링');
+        res.render('assignment-safe', {
+            assignment: assignment,
+            title: `수배서 (안전모드) - ${assignment.reservation_number}`
+        });
+        
+    } catch (error) {
+        console.error('🛡️ 안전한 수배서 오류:', error);
+        res.status(500).send(`<h1>오류</h1><p>${error.message}</p>`);
+    }
+});
+
 // 수배서 미리보기 (관리자용)
 app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
     try {
