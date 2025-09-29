@@ -6391,10 +6391,58 @@ app.get('/assignment/:token', async (req, res) => {
 
     } catch (error) {
         console.error('❌ 수배서 페이지 오류:', error);
-        res.status(500).render('error', { 
-            message: '수배서를 불러오는 중 오류가 발생했습니다.',
-            error: error
+        console.error('❌ 오류 스택:', error.stack);
+        console.error('❌ 요청 토큰:', req.params.token);
+        
+        // 간단한 HTML 오류 페이지 반환
+        res.status(500).send(`
+            <html>
+                <head><title>수배서 오류</title></head>
+                <body>
+                    <h1>수배서 페이지 오류</h1>
+                    <p>오류 메시지: ${error.message}</p>
+                    <p>토큰: ${req.params.token}</p>
+                    <button onclick="window.close()">닫기</button>
+                </body>
+            </html>
+        `);
+    }
+});
+
+// 수배서 시스템 테스트 라우트
+app.get('/test/assignments', requireAuth, async (req, res) => {
+    try {
+        // 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' AND table_name = 'assignments'
+        `);
+        
+        // 예약 테이블 확인
+        const reservationCheck = await pool.query(`
+            SELECT COUNT(*) as count FROM reservations LIMIT 1
+        `);
+        
+        // assignments 테이블 확인 (있다면)
+        let assignmentCount = 0;
+        if (tableCheck.rows.length > 0) {
+            const assignmentCheck = await pool.query(`
+                SELECT COUNT(*) as count FROM assignments
+            `);
+            assignmentCount = assignmentCheck.rows[0].count;
+        }
+        
+        res.json({
+            assignments_table_exists: tableCheck.rows.length > 0,
+            reservations_count: reservationCheck.rows[0].count,
+            assignments_count: assignmentCount,
+            tables: tableCheck.rows
         });
+        
+    } catch (error) {
+        console.error('테스트 오류:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -6537,10 +6585,21 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error('❌ 수배서 미리보기 오류:', error);
-        res.status(500).render('error', { 
-            message: '수배서 미리보기 중 오류가 발생했습니다.',
-            error: error
-        });
+        console.error('❌ 오류 스택:', error.stack);
+        console.error('❌ 요청 파라미터:', req.params);
+        
+        // 간단한 HTML 오류 페이지 반환 (error.ejs가 없을 수도 있음)
+        res.status(500).send(`
+            <html>
+                <head><title>수배서 오류</title></head>
+                <body>
+                    <h1>수배서 미리보기 오류</h1>
+                    <p>오류 메시지: ${error.message}</p>
+                    <p>예약 ID: ${req.params.reservationId}</p>
+                    <button onclick="window.close()">닫기</button>
+                </body>
+            </html>
+        `);
     }
 });
 
@@ -7795,17 +7854,6 @@ app.get('/admin/settlement', requireAuth, (req, res) => {
     res.render('admin/settlement');
 });
 
-// 수배서 페이지 라우트
-app.get('/assignment/:token', async (req, res) => {
-    try {
-        // This duplicate route block has been removed. The earlier definition handles rendering.
-        // Keeping this here intentionally empty to avoid duplicate handler execution.
-        return res.status(404).send('Not Found');
-    } catch (error) {
-        console.error('수배서 페이지 오류(dup):', error);
-        res.status(500).send('Internal Server Error');
-    }
-});
 
 // 수배서 열람 상태 업데이트 API
 app.post('/api/assignment/:token/view', async (req, res) => {
