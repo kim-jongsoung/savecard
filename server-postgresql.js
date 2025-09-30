@@ -6383,7 +6383,7 @@ app.get('/assignment/:token', async (req, res) => {
             `);
         }
 
-        // 수배서 정보 조회
+        // 수배서 정보 조회 (기본 컬럼만 사용)
         console.log('🔍 DB 쿼리 시작');
         const query = `
             SELECT 
@@ -6395,7 +6395,6 @@ app.get('/assignment/:token', async (req, res) => {
                 a.assigned_at,
                 a.sent_at,
                 a.viewed_at,
-                a.responded_at,
                 a.notes,
                 r.id as reservation_id,
                 r.reservation_number,
@@ -6633,6 +6632,39 @@ app.get('/assignment/:token', async (req, res) => {
             </body>
             </html>
         `);
+    }
+});
+
+// 테이블 구조 확인 라우트
+app.get('/debug/table-structure', requireAuth, async (req, res) => {
+    try {
+        const tables = ['assignments', 'reservations', 'vendors'];
+        const structure = {};
+        
+        for (const table of tables) {
+            try {
+                const result = await pool.query(`
+                    SELECT column_name, data_type, is_nullable, column_default
+                    FROM information_schema.columns 
+                    WHERE table_name = $1 
+                    ORDER BY ordinal_position
+                `, [table]);
+                structure[table] = result.rows;
+            } catch (e) {
+                structure[table] = { error: e.message };
+            }
+        }
+        
+        res.json({
+            timestamp: new Date().toISOString(),
+            database_structure: structure
+        });
+        
+    } catch (error) {
+        res.status(500).json({
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
 
