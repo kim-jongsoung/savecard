@@ -6494,11 +6494,11 @@ app.get('/assignment/:token', async (req, res) => {
         console.log('  - customer_name:', safeAssignment.customer_name);
         console.log('  - product_name:', safeAssignment.product_name);
 
-        // 조회 시간 기록
+        // 조회 시간 기록 (안전하게)
         try {
             await pool.query(`
                 UPDATE assignments 
-                SET viewed_at = NOW(), view_count = COALESCE(view_count, 0) + 1
+                SET viewed_at = NOW()
                 WHERE assignment_token = $1
             `, [token]);
             console.log('✅ 조회 시간 기록 완료');
@@ -6631,6 +6631,67 @@ app.get('/assignment/:token', async (req, res) => {
                 </div>
             </body>
             </html>
+        `);
+    }
+});
+
+// 간단한 수배서 테스트 라우트 (인증 불필요)
+app.get('/test-assignment/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('🧪 간단한 수배서 테스트:', token);
+        
+        // 1. 토큰 존재 확인
+        const tokenCheck = await pool.query('SELECT * FROM assignments WHERE assignment_token = $1', [token]);
+        
+        if (tokenCheck.rows.length === 0) {
+            return res.send(`
+                <h1>토큰 테스트 결과</h1>
+                <p><strong>토큰:</strong> ${token}</p>
+                <p><strong>결과:</strong> ❌ 토큰이 존재하지 않습니다</p>
+                <p><strong>시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+            `);
+        }
+        
+        const assignment = tokenCheck.rows[0];
+        
+        // 2. 예약 정보 조회
+        const reservationCheck = await pool.query('SELECT * FROM reservations WHERE id = $1', [assignment.reservation_id]);
+        
+        if (reservationCheck.rows.length === 0) {
+            return res.send(`
+                <h1>토큰 테스트 결과</h1>
+                <p><strong>토큰:</strong> ${token}</p>
+                <p><strong>결과:</strong> ⚠️ 토큰은 존재하지만 연결된 예약이 없습니다</p>
+                <p><strong>Assignment ID:</strong> ${assignment.id}</p>
+                <p><strong>Reservation ID:</strong> ${assignment.reservation_id}</p>
+                <p><strong>시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+            `);
+        }
+        
+        const reservation = reservationCheck.rows[0];
+        
+        // 3. 성공 결과
+        res.send(`
+            <h1>토큰 테스트 결과</h1>
+            <p><strong>토큰:</strong> ${token}</p>
+            <p><strong>결과:</strong> ✅ 정상</p>
+            <p><strong>예약번호:</strong> ${reservation.reservation_number}</p>
+            <p><strong>고객명:</strong> ${reservation.korean_name}</p>
+            <p><strong>상품명:</strong> ${reservation.product_name}</p>
+            <p><strong>수배 상태:</strong> ${assignment.status}</p>
+            <p><strong>시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+            <hr>
+            <p><a href="/assignment/${token}">실제 수배서 페이지로 이동</a></p>
+        `);
+        
+    } catch (error) {
+        console.error('테스트 라우트 오류:', error);
+        res.send(`
+            <h1>토큰 테스트 오류</h1>
+            <p><strong>토큰:</strong> ${req.params.token}</p>
+            <p><strong>오류:</strong> ${error.message}</p>
+            <p><strong>시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
         `);
     }
 });
