@@ -6809,12 +6809,15 @@ app.get('/assignment-safe/:token', async (req, res) => {
         
     } catch (error) {
         console.error('🛡️ 안전한 수배서 오류:', error);
+        res.status(500).render('error', {
+            title: '수배서 오류',
+            message: '수배서를 불러오는 중 오류가 발생했습니다.',
+            backUrl: '/'
         });
     }
 });
 
 // 수배 로그 조회 API
-{{ ... }}
 app.get('/api/assignments/logs/:reservationId', requireAuth, async (req, res) => {
     try {
         const { reservationId } = req.params;
