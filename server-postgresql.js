@@ -6358,15 +6358,112 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
     }
 });
 
-// 수배서 페이지 라우트
+// 수배업체 로그인 페이지
+app.get('/vendor/login/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('🔐 수배업체 로그인 페이지 요청:', token);
+        
+        // 수배서 정보 조회 (로그인 페이지에 표시할 정보)
+        const assignmentResult = await pool.query(`
+            SELECT r.reservation_number, r.product_name, r.usage_date
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            WHERE a.assignment_token = $1
+        `, [token]);
+        
+        const assignmentInfo = assignmentResult.rows.length > 0 ? assignmentResult.rows[0] : null;
+        
+        res.render('vendor-login', {
+            title: '수배업체 로그인',
+            token: token,
+            assignmentInfo: assignmentInfo,
+            error: null
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배업체 로그인 페이지 오류:', error);
+        res.status(500).render('error', {
+            title: '로그인 페이지 오류',
+            message: '로그인 페이지를 불러오는 중 오류가 발생했습니다.',
+            backUrl: '/'
+        });
+    }
+});
+
+// 수배업체 로그인 처리
+app.post('/vendor/login', async (req, res) => {
+    try {
+        const { vendor_id, password, token, redirect } = req.body;
+        console.log('🔐 수배업체 로그인 시도:', vendor_id, 'token:', token);
+        
+        // 수배업체 인증
+        const vendorResult = await pool.query(`
+            SELECT id, vendor_id, vendor_name, password_hash
+            FROM vendors 
+            WHERE vendor_id = $1 AND is_active = true
+        `, [vendor_id]);
+        
+        if (vendorResult.rows.length === 0) {
+            return res.render('vendor-login', {
+                title: '수배업체 로그인',
+                token: token,
+                assignmentInfo: null,
+                error: '존재하지 않는 수배업체 ID입니다.'
+            });
+        }
+        
+        const vendor = vendorResult.rows[0];
+        
+        // 패스워드 확인 (실제로는 bcrypt 사용해야 함)
+        const bcrypt = require('bcrypt');
+        const isValidPassword = await bcrypt.compare(password, vendor.password_hash);
+        
+        if (!isValidPassword) {
+            return res.render('vendor-login', {
+                title: '수배업체 로그인',
+                token: token,
+                assignmentInfo: null,
+                error: '패스워드가 올바르지 않습니다.'
+            });
+        }
+        
+        // 세션에 로그인 정보 저장
+        req.session.vendor_id = vendor.vendor_id;
+        req.session.vendor_name = vendor.vendor_name;
+        req.session.assignment_token = token;
+        
+        console.log('✅ 수배업체 로그인 성공:', vendor.vendor_name);
+        
+        // 수배서 페이지로 리다이렉트
+        res.redirect(redirect || `/assignment/${token}`);
+        
+    } catch (error) {
+        console.error('❌ 수배업체 로그인 처리 오류:', error);
+        res.render('vendor-login', {
+            title: '수배업체 로그인',
+            token: req.body.token,
+            assignmentInfo: null,
+            error: '로그인 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 페이지 라우트 (로그인 필요)
 app.get('/assignment/:token', async (req, res) => {
     try {
         const { token } = req.params;
         console.log('🔍 수배서 페이지 요청:', token);
-        console.log('🔍 pool 상태:', pool ? 'OK' : 'NULL');
+        
+        // 세션에서 수배업체 로그인 확인
+        if (!req.session.vendor_id || req.session.assignment_token !== token) {
+            console.log('🔐 로그인 필요 - 로그인 페이지로 리다이렉트');
+            return res.redirect(`/vendor/login/${token}`);
+        }
+        
+        console.log('✅ 수배업체 로그인 확인됨:', req.session.vendor_name);
 
         // 수배서 정보 조회
-        console.log('🔍 쿼리 실행 시작');
         const query = `
             SELECT 
                 a.*,
@@ -6392,10 +6489,7 @@ app.get('/assignment/:token', async (req, res) => {
             WHERE a.assignment_token = $1
         `;
 
-        console.log('🔍 쿼리:', query);
-        console.log('🔍 토큰 파라미터:', token);
         const result = await pool.query(query, [token]);
-        console.log('🔍 쿼리 결과 개수:', result.rows.length);
 
         if (result.rows.length === 0) {
             return res.status(404).render('error', { 
@@ -6599,6 +6693,16 @@ app.get('/debug/simple-tokens', async (req, res) => {
     }
 });
 
+// 수배업체 로그아웃
+app.get('/vendor/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('❌ 세션 삭제 오류:', err);
+        }
+        res.redirect('/');
+    });
+});
+
 // 수배서 테스트 라우트 (간단한 HTML 반환)
 app.get('/assignment-test/:token', async (req, res) => {
     try {
@@ -6705,52 +6809,12 @@ app.get('/assignment-safe/:token', async (req, res) => {
         
     } catch (error) {
         console.error('🛡️ 안전한 수배서 오류:', error);
-        res.status(500).send(`<h1>오류</h1><p>${error.message}</p>`);
-    }
-});
-
-// 예약 ID로 수배서 토큰 조회 API
-app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (req, res) => {
-    try {
-        const { reservationId } = req.params;
-        console.log('🔍 예약 ID로 수배서 토큰 조회:', reservationId);
-        
-        const result = await pool.query(`
-            SELECT assignment_token, id, status, created_at
-            FROM assignments 
-            WHERE reservation_id = $1
-            ORDER BY created_at DESC
-            LIMIT 1
-        `, [reservationId]);
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                message: '해당 예약의 수배서를 찾을 수 없습니다' 
-            });
-        }
-        
-        const assignment = result.rows[0];
-        console.log('✅ 수배서 토큰 조회 성공:', assignment.assignment_token);
-        
-        res.json({
-            success: true,
-            assignment_token: assignment.assignment_token,
-            assignment_id: assignment.id,
-            status: assignment.status,
-            created_at: assignment.created_at
-        });
-        
-    } catch (error) {
-        console.error('❌ 수배서 토큰 조회 오류:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: '수배서 토큰 조회 중 오류가 발생했습니다: ' + error.message 
         });
     }
 });
 
 // 수배 로그 조회 API
+{{ ... }}
 app.get('/api/assignments/logs/:reservationId', requireAuth, async (req, res) => {
     try {
         const { reservationId } = req.params;

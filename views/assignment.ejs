@@ -42,27 +42,38 @@
     </style>
 </head>
 <body>
-    <!-- 헤더 -->
     <div class="assignment-header">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8">
                     <h1 class="mb-2">
-                        <i class="bi bi-file-text me-2"></i>수배서
+                        <i class="bi bi-file-text me-3"></i>
+                        수배서
                     </h1>
-                    <p class="mb-0 opacity-75">
-                        예약번호: <%= assignment.reservation_number || assignment.id %>
-                    </p>
-                    <p class="mb-0 opacity-75">
-                        <% if (assignment.status === 'draft') { %>
-                            상태: 임시 수배서 (아직 생성되지 않음)
-                        <% } else { %>
-                            수배서 전송일시: <%= assignment.sent_at ? formatDate(assignment.sent_at) : '미전송' %>
+                    <p class="mb-0 opacity-75">예약번호: <%= assignment.reservation_number %></p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="mb-2">
+                        <% if (vendor) { %>
+                        <small class="text-white-50">
+                            <i class="bi bi-person me-1"></i>
+                            <%= vendor.vendor_id %> 로그인됨
+                        </small>
+                        <a href="/vendor/logout" class="btn btn-outline-light btn-sm ms-2">
+                            <i class="bi bi-box-arrow-right me-1"></i>로그아웃
+                        </a>
                         <% } %>
-                    </p>
+                    </div>
+                    <span class="status-badge badge bg-info">
+                        <i class="bi bi-clock me-1"></i>
+                        수배 대기중
+                    </span>
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="text-end">
+                        <p class="mb-0 opacity-75">
+                            수배서 전송일시: <%= assignment.sent_at ? formatDate(assignment.sent_at) : '미전송' %>
+                        </p>
                         <div class="badge bg-primary fs-6 mb-2">괌세이브카드</div>
                         <div class="text-white-50">현지 수배서</div>
                     </div>
