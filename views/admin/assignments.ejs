@@ -211,21 +211,108 @@
 
                         <!-- 수배서관리 -->
                         <div class="tab-pane fade" id="pane-order" role="tabpanel">
-                            <div class="mt-3 d-flex flex-wrap gap-2">
-                                <button class="btn btn-secondary" onclick="previewAssignment()"><i class="bi bi-eye me-1"></i>수배서 미리보기</button>
-                                <button class="btn btn-outline-secondary" onclick="editAssignment()"><i class="bi bi-pencil-square me-1"></i>수배서 수정</button>
-                                <div class="btn-group">
-                                    <button class="btn btn-primary" onclick="sendAssignment()"><i class="bi bi-send me-1"></i>수배서 전송</button>
-                                    <button class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"></button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" onclick="sendAssignmentEmail()">이메일로 전송</a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="sendAssignmentKakao()">카카오톡으로 전송</a></li>
-                                    </ul>
+                            <!-- 수배서 정보 표시 -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>수배서 정보</h6>
                                 </div>
-                                <button class="btn btn-outline-primary" onclick="downloadAssignment()"><i class="bi bi-download me-1"></i>수배서 저장 (PDF/이미지)</button>
+                                <div class="card-body">
+                                    <div class="row g-3" id="assignmentDetails">
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">예약번호</label>
+                                            <div class="fw-bold" id="detail-reservation-number">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">예약자명</label>
+                                            <div id="detail-customer-name">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">고객연락처</label>
+                                            <div id="detail-phone">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">업체명</label>
+                                            <div id="detail-platform">-</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted">상품명</label>
+                                            <div id="detail-product-name">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">패키지(옵션명)</label>
+                                            <div id="detail-package-type">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">사용일자</label>
+                                            <div id="detail-usage-date">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">인원</label>
+                                            <div id="detail-people">-</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label text-muted">수배업체</label>
+                                            <div id="detail-vendor-name">-</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted">메모</label>
+                                            <div id="detail-memo" class="text-muted">-</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="divider"></div>
-                            <div class="text-muted small">마지막 전송일시: <span id="order-sent-at">-</span></div>
+
+                            <!-- 수배서 관리 버튼들 -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-gear me-2"></i>수배서 관리</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-outline-primary" onclick="previewAssignment()">
+                                                    <i class="bi bi-eye me-1"></i>수배서 미리보기
+                                                </button>
+                                                <button class="btn btn-success" onclick="generateAssignmentLink()">
+                                                    <i class="bi bi-link-45deg me-1"></i>수배서 링크 생성
+                                                </button>
+                                                <div class="input-group" id="assignmentLinkGroup" style="display: none;">
+                                                    <input type="text" class="form-control" id="assignmentLinkUrl" readonly>
+                                                    <button class="btn btn-outline-secondary copy-btn" onclick="copyAssignmentLink()">
+                                                        <i class="bi bi-clipboard"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-primary" onclick="sendAssignmentEmail()">
+                                                    <i class="bi bi-envelope me-1"></i>수배업체로 메일 전송
+                                                </button>
+                                                <button class="btn btn-outline-info" onclick="downloadAssignmentWord()">
+                                                    <i class="bi bi-file-word me-1"></i>워드파일 다운로드
+                                                </button>
+                                                <button class="btn btn-outline-secondary" onclick="downloadAssignmentPdf()">
+                                                    <i class="bi bi-file-pdf me-1"></i>PDF 다운로드
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 수배 히스토리 -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>수배 업무 히스토리</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="assignmentHistory">
+                                        <!-- 히스토리가 여기에 로드됩니다 -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                             <div class="row">
                                 <div class="col-md-6">
@@ -1358,6 +1445,273 @@
                 style: 'currency',
                 currency: 'USD'
             }).format(amount);
+        }
+
+        // 수배서 아이콘 클릭 시 데이터 표시
+        function viewAssignment(reservationId) {
+            console.log('수배서 보기:', reservationId);
+            
+            // 현재 예약 데이터 찾기
+            const reservation = window.reservations?.find(r => r.id === reservationId);
+            if (!reservation) {
+                showAlert('예약 정보를 찾을 수 없습니다.', 'danger');
+                return;
+            }
+            
+            // 수배서 정보 표시
+            populateAssignmentDetails(reservation);
+            
+            // 수배서 관리 탭으로 이동하고 모달 열기
+            const modal = new bootstrap.Modal(document.getElementById('manageModal'));
+            modal.show();
+            
+            // 수배서 관리 탭 활성화
+            const orderTab = document.getElementById('tab-order');
+            orderTab.click();
+            
+            // 히스토리 로드
+            loadAssignmentHistory(reservationId);
+        }
+        
+        // 수배서 정보 채우기
+        function populateAssignmentDetails(reservation) {
+            document.getElementById('detail-reservation-number').textContent = reservation.reservation_number || '-';
+            document.getElementById('detail-customer-name').textContent = reservation.korean_name || '-';
+            document.getElementById('detail-phone').textContent = reservation.phone || '-';
+            document.getElementById('detail-platform').textContent = reservation.platform_name || '-';
+            document.getElementById('detail-product-name').textContent = reservation.product_name || '-';
+            document.getElementById('detail-package-type').textContent = reservation.package_type || '-';
+            document.getElementById('detail-usage-date').textContent = formatDate(reservation.usage_date) || '-';
+            
+            const people = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
+            document.getElementById('detail-people').textContent = people;
+            document.getElementById('detail-vendor-name').textContent = reservation.vendor_name || '미지정';
+            document.getElementById('detail-memo').textContent = reservation.memo || '-';
+            
+            // 현재 예약 ID 저장
+            window.currentReservationId = reservation.id;
+        }
+        
+        // 수배서 링크 생성
+        async function generateAssignmentLink() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reservation_id: window.currentReservationId,
+                        vendor_id: null,
+                        notes: '수배서 링크 생성'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const assignmentUrl = `${window.location.origin}/assignment/${result.assignment_token}`;
+                    document.getElementById('assignmentLinkUrl').value = assignmentUrl;
+                    document.getElementById('assignmentLinkGroup').style.display = 'flex';
+                    
+                    showAlert('수배서 링크가 생성되었습니다!', 'success');
+                    
+                    // 히스토리에 추가
+                    addToHistory('수배서 링크 생성', 'success');
+                } else {
+                    showAlert('수배서 링크 생성에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('수배서 링크 생성 오류:', error);
+                showAlert('수배서 링크 생성 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 수배서 링크 복사
+        function copyAssignmentLink() {
+            const linkInput = document.getElementById('assignmentLinkUrl');
+            if (linkInput.value) {
+                navigator.clipboard.writeText(linkInput.value).then(() => {
+                    showAlert('수배서 링크가 클립보드에 복사되었습니다!', 'success');
+                    addToHistory('수배서 링크 복사', 'info');
+                }).catch(err => {
+                    console.error('복사 실패:', err);
+                    showAlert('링크 복사에 실패했습니다.', 'danger');
+                });
+            }
+        }
+        
+        // 워드파일 다운로드
+        async function downloadAssignmentWord() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/${window.currentReservationId}/download/word`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `수배서_${window.currentReservationId}.docx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showAlert('워드파일 다운로드가 완료되었습니다!', 'success');
+                    addToHistory('워드파일 다운로드', 'success');
+                } else {
+                    showAlert('워드파일 다운로드에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('워드파일 다운로드 오류:', error);
+                showAlert('워드파일 다운로드 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // PDF 다운로드
+        async function downloadAssignmentPdf() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/${window.currentReservationId}/download/pdf`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `수배서_${window.currentReservationId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showAlert('PDF 다운로드가 완료되었습니다!', 'success');
+                    addToHistory('PDF 다운로드', 'success');
+                } else {
+                    showAlert('PDF 다운로드에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('PDF 다운로드 오류:', error);
+                showAlert('PDF 다운로드 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 수배업체로 메일 전송
+        async function sendAssignmentEmail() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            const linkUrl = document.getElementById('assignmentLinkUrl').value;
+            if (!linkUrl) {
+                showAlert('먼저 수배서 링크를 생성해주세요.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/${window.currentReservationId}/send-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assignment_url: linkUrl,
+                        message: '수배서를 확인해주세요.'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('수배업체로 메일이 전송되었습니다!', 'success');
+                    addToHistory('수배업체 메일 전송', 'success');
+                } else {
+                    showAlert('메일 전송에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('메일 전송 오류:', error);
+                showAlert('메일 전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 수배 히스토리 로드
+        async function loadAssignmentHistory(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/logs/${reservationId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderAssignmentHistory(result.logs);
+                } else {
+                    document.getElementById('assignmentHistory').innerHTML = '<p class="text-muted">히스토리를 불러올 수 없습니다.</p>';
+                }
+            } catch (error) {
+                console.error('히스토리 로드 오류:', error);
+                document.getElementById('assignmentHistory').innerHTML = '<p class="text-danger">히스토리 로드 중 오류가 발생했습니다.</p>';
+            }
+        }
+        
+        // 히스토리 렌더링
+        function renderAssignmentHistory(logs) {
+            const historyDiv = document.getElementById('assignmentHistory');
+            
+            if (!logs || logs.length === 0) {
+                historyDiv.innerHTML = '<p class="text-muted">아직 수배 히스토리가 없습니다.</p>';
+                return;
+            }
+            
+            const html = logs.map(log => {
+                const typeClass = log.type === 'success' ? 'text-success' : log.type === 'danger' ? 'text-danger' : 'text-info';
+                const icon = log.type === 'success' ? 'bi-check-circle' : log.type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
+                
+                return `
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi ${icon} ${typeClass} me-2"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-medium">${log.details}</div>
+                            <small class="text-muted">${formatDateTime(log.created_at)}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            historyDiv.innerHTML = html;
+        }
+        
+        // 히스토리에 항목 추가
+        function addToHistory(action, type = 'info') {
+            const historyDiv = document.getElementById('assignmentHistory');
+            const typeClass = type === 'success' ? 'text-success' : type === 'danger' ? 'text-danger' : 'text-info';
+            const icon = type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
+            
+            const newItem = `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi ${icon} ${typeClass} me-2"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-medium">${action}</div>
+                        <small class="text-muted">${new Date().toLocaleString('ko-KR')}</small>
+                    </div>
+                </div>
+            `;
+            
+            historyDiv.insertAdjacentHTML('afterbegin', newItem);
+        }
+        
+        // 날짜/시간 포맷팅
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleString('ko-KR');
         }
 
         function showAlert(message, type = 'info') {

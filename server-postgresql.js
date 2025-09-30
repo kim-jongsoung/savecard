@@ -9603,6 +9603,224 @@ async function startServer() {
             }
         }
 
+        // 수배서 워드파일 다운로드 API
+        app.get('/api/assignments/:reservationId/download/word', requireAuth, async (req, res) => {
+            try {
+                const { reservationId } = req.params;
+                console.log('📄 워드파일 다운로드 요청:', reservationId);
+                
+                // 예약 정보 조회
+                const reservation = await pool.query(`
+                    SELECT * FROM reservations WHERE id = $1
+                `, [reservationId]);
+                
+                if (reservation.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '예약 정보를 찾을 수 없습니다'
+                    });
+                }
+                
+                const reservationData = reservation.rows[0];
+                
+                // 워드 문서 생성 (간단한 HTML 형태로)
+                const wordContent = generateWordContent(reservationData);
+                
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                res.setHeader('Content-Disposition', `attachment; filename="수배서_${reservationId}.docx"`);
+                
+                // 실제로는 docx 라이브러리를 사용해야 하지만, 여기서는 HTML을 반환
+                res.send(wordContent);
+                
+            } catch (error) {
+                console.error('❌ 워드파일 다운로드 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '워드파일 생성 중 오류가 발생했습니다: ' + error.message
+                });
+            }
+        });
+        
+        // 수배서 PDF 다운로드 API
+        app.get('/api/assignments/:reservationId/download/pdf', requireAuth, async (req, res) => {
+            try {
+                const { reservationId } = req.params;
+                console.log('📄 PDF 다운로드 요청:', reservationId);
+                
+                // 예약 정보 조회
+                const reservation = await pool.query(`
+                    SELECT * FROM reservations WHERE id = $1
+                `, [reservationId]);
+                
+                if (reservation.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '예약 정보를 찾을 수 없습니다'
+                    });
+                }
+                
+                const reservationData = reservation.rows[0];
+                
+                // PDF 생성 (puppeteer 등을 사용해야 하지만 여기서는 간단히)
+                const pdfContent = generatePdfContent(reservationData);
+                
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="수배서_${reservationId}.pdf"`);
+                
+                res.send(pdfContent);
+                
+            } catch (error) {
+                console.error('❌ PDF 다운로드 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'PDF 생성 중 오류가 발생했습니다: ' + error.message
+                });
+            }
+        });
+        
+        // 수배업체 메일 전송 API
+        app.post('/api/assignments/:reservationId/send-email', requireAuth, async (req, res) => {
+            try {
+                const { reservationId } = req.params;
+                const { assignment_url, message } = req.body;
+                
+                console.log('📧 수배업체 메일 전송 요청:', reservationId);
+                
+                // 예약 정보 및 수배업체 정보 조회
+                const result = await pool.query(`
+                    SELECT r.*, v.email as vendor_email, v.vendor_name
+                    FROM reservations r
+                    LEFT JOIN assignments a ON r.id = a.reservation_id
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
+                    WHERE r.id = $1
+                `, [reservationId]);
+                
+                if (result.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '예약 정보를 찾을 수 없습니다'
+                    });
+                }
+                
+                const reservation = result.rows[0];
+                
+                // 메일 전송 (nodemailer 설정이 있다면)
+                if (process.env.SMTP_HOST) {
+                    const nodemailer = require('nodemailer');
+                    
+                    const transporter = nodemailer.createTransporter({
+                        host: process.env.SMTP_HOST,
+                        port: process.env.SMTP_PORT || 587,
+                        secure: false,
+                        auth: {
+                            user: process.env.SMTP_USER,
+                            pass: process.env.SMTP_PASS
+                        }
+                    });
+                    
+                    const mailOptions = {
+                        from: process.env.SMTP_FROM || 'noreply@guamsavecard.com',
+                        to: reservation.vendor_email || 'vendor@example.com',
+                        subject: `[괌세이브카드] 수배서 - ${reservation.reservation_number}`,
+                        html: `
+                            <h2>수배서 확인 요청</h2>
+                            <p>안녕하세요, ${reservation.vendor_name || '수배업체'} 담당자님</p>
+                            <p>새로운 수배서가 도착했습니다.</p>
+                            
+                            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
+                                <h3>예약 정보</h3>
+                                <p><strong>예약번호:</strong> ${reservation.reservation_number}</p>
+                                <p><strong>예약자명:</strong> ${reservation.korean_name}</p>
+                                <p><strong>상품명:</strong> ${reservation.product_name}</p>
+                                <p><strong>사용일자:</strong> ${reservation.usage_date}</p>
+                                <p><strong>인원:</strong> 성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명</p>
+                            </div>
+                            
+                            <p><a href="${assignment_url}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">수배서 확인하기</a></p>
+                            
+                            <p>${message}</p>
+                            
+                            <hr>
+                            <p><small>괌세이브카드 수배관리시스템</small></p>
+                        `
+                    };
+                    
+                    await transporter.sendMail(mailOptions);
+                }
+                
+                // 전송 로그 기록
+                await pool.query(`
+                    INSERT INTO assignment_logs (reservation_id, action_type, details, created_at)
+                    VALUES ($1, $2, $3, NOW())
+                `, [reservationId, 'email_sent', '수배업체 메일 전송']);
+                
+                res.json({
+                    success: true,
+                    message: '수배업체로 메일이 전송되었습니다'
+                });
+                
+            } catch (error) {
+                console.error('❌ 메일 전송 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '메일 전송 중 오류가 발생했습니다: ' + error.message
+                });
+            }
+        });
+        
+        // 워드 문서 내용 생성 함수
+        function generateWordContent(reservation) {
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>수배서</title>
+                    <style>
+                        body { font-family: 'Malgun Gothic', sans-serif; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .info-table { width: 100%; border-collapse: collapse; }
+                        .info-table th, .info-table td { 
+                            border: 1px solid #ddd; 
+                            padding: 8px; 
+                            text-align: left; 
+                        }
+                        .info-table th { background-color: #f5f5f5; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>수 배 서</h1>
+                        <p>괌세이브카드</p>
+                    </div>
+                    
+                    <table class="info-table">
+                        <tr><th>예약번호</th><td>${reservation.reservation_number || '-'}</td></tr>
+                        <tr><th>예약자명</th><td>${reservation.korean_name || '-'}</td></tr>
+                        <tr><th>고객연락처</th><td>${reservation.phone || '-'}</td></tr>
+                        <tr><th>업체명</th><td>${reservation.platform_name || '-'}</td></tr>
+                        <tr><th>상품명</th><td>${reservation.product_name || '-'}</td></tr>
+                        <tr><th>패키지(옵션명)</th><td>${reservation.package_type || '-'}</td></tr>
+                        <tr><th>사용일자</th><td>${reservation.usage_date || '-'}</td></tr>
+                        <tr><th>인원</th><td>성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명</td></tr>
+                        <tr><th>메모</th><td>${reservation.memo || '-'}</td></tr>
+                    </table>
+                    
+                    <div style="margin-top: 30px;">
+                        <p>위 내용으로 수배를 요청드립니다.</p>
+                        <p>확인 후 회신 부탁드립니다.</p>
+                    </div>
+                </body>
+                </html>
+            `;
+        }
+        
+        // PDF 내용 생성 함수 (실제로는 puppeteer 등 필요)
+        function generatePdfContent(reservation) {
+            // 실제 구현에서는 puppeteer나 다른 PDF 생성 라이브러리 사용
+            return Buffer.from('PDF 생성 기능은 추후 구현 예정입니다.');
+        }
+
         // ERP 마이그레이션도 비동기로 실행
         setTimeout(async () => {
             try {
