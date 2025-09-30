@@ -6358,110 +6358,12 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
     }
 });
 
-// 수배업체 로그인 페이지
-app.get('/vendor/login/:token', async (req, res) => {
-    try {
-        const { token } = req.params;
-        console.log('🔐 수배업체 로그인 페이지 요청:', token);
-        
-        // 수배서 정보 조회 (로그인 페이지에 표시할 정보)
-        const assignmentResult = await pool.query(`
-            SELECT r.reservation_number, r.product_name, r.usage_date
-            FROM assignments a
-            JOIN reservations r ON a.reservation_id = r.id
-            WHERE a.assignment_token = $1
-        `, [token]);
-        
-        const assignmentInfo = assignmentResult.rows.length > 0 ? assignmentResult.rows[0] : null;
-        
-        res.render('vendor-login', {
-            title: '수배업체 로그인',
-            token: token,
-            assignmentInfo: assignmentInfo,
-            error: null
-        });
-        
-    } catch (error) {
-        console.error('❌ 수배업체 로그인 페이지 오류:', error);
-        res.status(500).render('error', {
-            title: '로그인 페이지 오류',
-            message: '로그인 페이지를 불러오는 중 오류가 발생했습니다.',
-            backUrl: '/'
-        });
-    }
-});
 
-// 수배업체 로그인 처리
-app.post('/vendor/login', async (req, res) => {
-    try {
-        const { vendor_id, password, token, redirect } = req.body;
-        console.log('🔐 수배업체 로그인 시도:', vendor_id, 'token:', token);
-        
-        // 수배업체 인증
-        const vendorResult = await pool.query(`
-            SELECT id, vendor_id, vendor_name, password_hash
-            FROM vendors 
-            WHERE vendor_id = $1 AND is_active = true
-        `, [vendor_id]);
-        
-        if (vendorResult.rows.length === 0) {
-            return res.render('vendor-login', {
-                title: '수배업체 로그인',
-                token: token,
-                assignmentInfo: null,
-                error: '존재하지 않는 수배업체 ID입니다.'
-            });
-        }
-        
-        const vendor = vendorResult.rows[0];
-        
-        // 패스워드 확인 (실제로는 bcrypt 사용해야 함)
-        const bcrypt = require('bcrypt');
-        const isValidPassword = await bcrypt.compare(password, vendor.password_hash);
-        
-        if (!isValidPassword) {
-            return res.render('vendor-login', {
-                title: '수배업체 로그인',
-                token: token,
-                assignmentInfo: null,
-                error: '패스워드가 올바르지 않습니다.'
-            });
-        }
-        
-        // 세션에 로그인 정보 저장
-        req.session.vendor_id = vendor.vendor_id;
-        req.session.vendor_name = vendor.vendor_name;
-        req.session.assignment_token = token;
-        
-        console.log('✅ 수배업체 로그인 성공:', vendor.vendor_name);
-        
-        // 수배서 페이지로 리다이렉트
-        res.redirect(redirect || `/assignment/${token}`);
-        
-    } catch (error) {
-        console.error('❌ 수배업체 로그인 처리 오류:', error);
-        res.render('vendor-login', {
-            title: '수배업체 로그인',
-            token: req.body.token,
-            assignmentInfo: null,
-            error: '로그인 처리 중 오류가 발생했습니다.'
-        });
-    }
-});
-
-// 수배서 페이지 라우트 (로그인 필요)
+// 수배서 페이지 라우트
 app.get('/assignment/:token', async (req, res) => {
     try {
         const { token } = req.params;
         console.log('🔍 수배서 페이지 요청:', token);
-        
-        // 세션에서 수배업체 로그인 확인
-        if (!req.session.vendor_id || req.session.assignment_token !== token) {
-            console.log('🔐 로그인 필요 - 로그인 페이지로 리다이렉트');
-            return res.redirect(`/vendor/login/${token}`);
-        }
-        
-        console.log('✅ 수배업체 로그인 확인됨:', req.session.vendor_name);
 
         // 수배서 정보 조회
         const query = `
@@ -6693,15 +6595,6 @@ app.get('/debug/simple-tokens', async (req, res) => {
     }
 });
 
-// 수배업체 로그아웃
-app.get('/vendor/logout', (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            console.error('❌ 세션 삭제 오류:', err);
-        }
-        res.redirect('/');
-    });
-});
 
 // 수배서 테스트 라우트 (간단한 HTML 반환)
 app.get('/assignment-test/:token', async (req, res) => {

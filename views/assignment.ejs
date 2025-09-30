@@ -53,17 +53,6 @@
                     <p class="mb-0 opacity-75">예약번호: <%= assignment.reservation_number %></p>
                 </div>
                 <div class="col-md-4 text-md-end">
-                    <div class="mb-2">
-                        <% if (vendor) { %>
-                        <small class="text-white-50">
-                            <i class="bi bi-person me-1"></i>
-                            <%= vendor.vendor_id %> 로그인됨
-                        </small>
-                        <a href="/vendor/logout" class="btn btn-outline-light btn-sm ms-2">
-                            <i class="bi bi-box-arrow-right me-1"></i>로그아웃
-                        </a>
-                        <% } %>
-                    </div>
                     <span class="status-badge badge bg-info">
                         <i class="bi bi-clock me-1"></i>
                         수배 대기중
