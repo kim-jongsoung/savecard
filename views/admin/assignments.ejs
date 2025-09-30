@@ -33,6 +33,106 @@
         .status-voucher-sent { background-color: #17a2b8 !important; }
         .status-cancelled { background-color: #dc3545 !important; }
         .status-refunded { background-color: #6f42c1 !important; }
+        
+        /* 수배서 모달 개선 */
+        .assignment-modal .modal-body {
+            padding: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .assignment-modal .card {
+            margin-bottom: 0.75rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .assignment-modal .card-header {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .assignment-modal .card-body {
+            padding: 0.75rem;
+        }
+        
+        .assignment-modal .form-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        
+        .assignment-modal .fw-bold,
+        .assignment-modal div:not(.form-label) {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        
+        .assignment-modal .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .assignment-modal .btn {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        .assignment-modal .btn i {
+            font-size: 0.75rem;
+        }
+        
+        .assignment-modal .input-group-text {
+            font-size: 0.8rem;
+            padding: 0.375rem 0.5rem;
+        }
+        
+        .assignment-modal .form-control {
+            font-size: 0.8rem;
+            padding: 0.375rem 0.5rem;
+        }
+        
+        /* 칸 형태 구분 */
+        .assignment-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .assignment-info-item {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+        }
+        
+        .assignment-info-item .label {
+            font-size: 0.7rem;
+            color: #6c757d;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        
+        .assignment-info-item .value {
+            font-size: 0.8rem;
+            color: #212529;
+            font-weight: 500;
+        }
+        
+        /* 버튼 및 아이콘 크기 줄이기 */
+        .btn-group-sm > .btn {
+            padding: 4px 8px !important;
+            font-size: 0.75rem !important;
+            border-radius: 4px;
+        }
+        
+        .btn-group-sm > .btn i {
+            font-size: 0.7rem !important;
+        }
     </style>
 </head>
 <body>
@@ -120,7 +220,7 @@
     </main>
 
     <!-- 수배서 관리 모달 -->
-    <div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade assignment-modal" id="assignmentModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
@@ -142,47 +242,47 @@
                                 <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 상태</h6>
                             </div>
                             <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">수배서 번호</label>
-                                        <div class="fw-bold" id="assignment-number">-</div>
+                                <div class="assignment-info-grid">
+                                    <div class="assignment-info-item">
+                                        <span class="label">수배서 번호</span>
+                                        <div class="value" id="assignment-number">-</div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">수배 상태</label>
-                                        <div id="assignment-status">
+                                    <div class="assignment-info-item">
+                                        <span class="label">수배 상태</span>
+                                        <div class="value" id="assignment-status">
                                             <span class="badge bg-warning">대기중</span>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">수배업체</label>
-                                        <div id="assignment-vendor">-</div>
+                                    <div class="assignment-info-item">
+                                        <span class="label">수배업체</span>
+                                        <div class="value" id="assignment-vendor">-</div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">생성일시</label>
-                                        <div id="assignment-created">-</div>
+                                    <div class="assignment-info-item">
+                                        <span class="label">생성일시</span>
+                                        <div class="value" id="assignment-created">-</div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">전송일시</label>
-                                        <div id="assignment-sent">-</div>
+                                    <div class="assignment-info-item">
+                                        <span class="label">전송일시</span>
+                                        <div class="value" id="assignment-sent">-</div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">확인일시</label>
-                                        <div id="assignment-viewed">-</div>
+                                    <div class="assignment-info-item">
+                                        <span class="label">확인일시</span>
+                                        <div class="value" id="assignment-viewed">-</div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">응답일시</label>
-                                        <div id="assignment-responded">-</div>
+                                    <div class="assignment-info-item">
+                                        <span class="label">응답일시</span>
+                                        <div class="value" id="assignment-responded">-</div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label text-muted">수배서 링크</label>
-                                        <div id="assignment-link-status">
+                                    <div class="assignment-info-item">
+                                        <span class="label">수배서 링크</span>
+                                        <div class="value" id="assignment-link-status">
                                             <span class="text-muted">미생성</span>
                                         </div>
                                     </div>
-                                    <div class="col-12">
-                                        <label class="form-label text-muted">수배 메모</label>
-                                        <div id="assignment-notes" class="text-muted">-</div>
-                                    </div>
+                                </div>
+                                <div class="assignment-info-item" style="grid-column: 1 / -1;">
+                                    <span class="label">수배 메모</span>
+                                    <div class="value" id="assignment-notes">-</div>
                                 </div>
                             </div>
                         </div>
