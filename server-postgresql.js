@@ -9603,6 +9603,44 @@ async function startServer() {
             }
         }
 
+        // 예약 ID로 수배서 정보 조회 API
+        app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (req, res) => {
+            try {
+                const { reservationId } = req.params;
+                console.log('📋 수배서 정보 조회 요청:', reservationId);
+                
+                const result = await pool.query(`
+                    SELECT a.*, v.vendor_name, v.email as vendor_email
+                    FROM assignments a
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
+                    WHERE a.reservation_id = $1
+                    ORDER BY a.assigned_at DESC
+                    LIMIT 1
+                `, [reservationId]);
+                
+                if (result.rows.length > 0) {
+                    res.json({
+                        success: true,
+                        assignment: result.rows[0],
+                        assignment_token: result.rows[0].assignment_token
+                    });
+                } else {
+                    res.json({
+                        success: false,
+                        message: '수배서를 찾을 수 없습니다',
+                        assignment: null
+                    });
+                }
+                
+            } catch (error) {
+                console.error('❌ 수배서 정보 조회 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '수배서 정보 조회 중 오류가 발생했습니다: ' + error.message
+                });
+            }
+        });
+
         // 수배서 워드파일 다운로드 API
         app.get('/api/assignments/:reservationId/download/word', requireAuth, async (req, res) => {
             try {

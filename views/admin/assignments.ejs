@@ -134,53 +134,69 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Header info grid -->
-                    <section class="mb-3">
-                        <div class="row g-2">
-                            <div class="col-md-2">
-                                <div class="form-label">예약번호</div>
-                                <div id="m-id" class="fw-semibold">-</div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-label">업체명</div>
-                                <div id="m-vendor">-</div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-label">예약자명</div>
-                                <div id="m-guest">-</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-label">상품명</div>
-                                <div id="m-product">-</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-label">출발일 / 사용일자</div>
-                                <div id="m-dates">-</div>
-                            </div>
-                        </div>
-                        <div class="row g-2 mt-1">
-                            <div class="col-md-3">
-                                <div class="form-label">인원</div>
-                                <div id="m-pax">-</div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-label">수배업체</div>
-                                <div id="m-handler">-</div>
-                            </div>
-                        </div>
-                    </section>
-
                     <!-- 수배서 관리 내용 -->
 
-                        <!-- 수배서관리 -->
-                        <div class="tab-pane fade" id="pane-order" role="tabpanel">
-                            <!-- 수배서 정보 표시 -->
-                            <div class="card mt-3">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-file-text me-2"></i>수배서 정보</h6>
+                        <!-- 수배서 상태 및 정보 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 상태</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">수배서 번호</label>
+                                        <div class="fw-bold" id="assignment-number">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">수배 상태</label>
+                                        <div id="assignment-status">
+                                            <span class="badge bg-warning">대기중</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">수배업체</label>
+                                        <div id="assignment-vendor">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">생성일시</label>
+                                        <div id="assignment-created">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">전송일시</label>
+                                        <div id="assignment-sent">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">확인일시</label>
+                                        <div id="assignment-viewed">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">응답일시</label>
+                                        <div id="assignment-responded">-</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label text-muted">수배서 링크</label>
+                                        <div id="assignment-link-status">
+                                            <span class="text-muted">미생성</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label text-muted">수배 메모</label>
+                                        <div id="assignment-notes" class="text-muted">-</div>
+                                    </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- 예약 정보 요약 (접을 수 있는 형태) -->
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <button class="btn btn-link text-decoration-none p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#reservationSummary" aria-expanded="false">
+                                    <h6 class="mb-0"><i class="bi bi-chevron-right me-2"></i>예약 정보 요약</h6>
+                                </button>
+                            </div>
+                            <div class="collapse" id="reservationSummary">
                                 <div class="card-body">
-                                    <div class="row g-3" id="assignmentDetails">
+                                    <div class="row g-3">
                                         <div class="col-md-3">
                                             <label class="form-label text-muted">예약번호</label>
                                             <div class="fw-bold" id="detail-reservation-number">-</div>
@@ -213,10 +229,6 @@
                                             <label class="form-label text-muted">인원</label>
                                             <div id="detail-people">-</div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">수배업체</label>
-                                            <div id="detail-vendor-name">-</div>
-                                        </div>
                                         <div class="col-md-6">
                                             <label class="form-label text-muted">메모</label>
                                             <div id="detail-memo" class="text-muted">-</div>
@@ -224,6 +236,7 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
                             <!-- 수배서 관리 버튼들 -->
                             <div class="card mt-3">
@@ -1246,17 +1259,11 @@
         }
         
         // 수배서 모달 정보 채우기
-        function populateAssignmentModalDetails(reservation) {
-            // 헤더 정보
-            document.getElementById('m-id').textContent = reservation.reservation_number || reservation.id;
-            document.getElementById('m-vendor').textContent = reservation.platform_name || '-';
-            document.getElementById('m-guest').textContent = reservation.korean_name || '-';
-            document.getElementById('m-product').textContent = reservation.product_name || '-';
-            document.getElementById('m-dates').textContent = formatDate(reservation.usage_date) || '-';
-            document.getElementById('m-pax').textContent = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
-            document.getElementById('m-handler').textContent = reservation.vendor_name || '미지정';
+        async function populateAssignmentModalDetails(reservation) {
+            // 헤더 정보 (간단한 요약)
+            document.getElementById('m-brief').textContent = `${reservation.korean_name || '-'} | ${reservation.product_name || '-'} | ${formatDate(reservation.usage_date) || '-'}`;
             
-            // 상세 정보
+            // 예약 정보 (접을 수 있는 섹션)
             document.getElementById('detail-reservation-number').textContent = reservation.reservation_number || '-';
             document.getElementById('detail-customer-name').textContent = reservation.korean_name || '-';
             document.getElementById('detail-phone').textContent = reservation.phone || '-';
@@ -1267,11 +1274,86 @@
             
             const people = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
             document.getElementById('detail-people').textContent = people;
-            document.getElementById('detail-vendor-name').textContent = reservation.vendor_name || '미지정';
             document.getElementById('detail-memo').textContent = reservation.memo || '-';
             
             // 현재 예약 ID 저장
             window.currentReservationId = reservation.id;
+            
+            // 수배서 정보 로드
+            await loadAssignmentDetails(reservation.id);
+        }
+        
+        // 수배서 상세 정보 로드
+        async function loadAssignmentDetails(reservationId) {
+            try {
+                const response = await fetch(`/api/assignments/by-reservation/${reservationId}`);
+                const result = await response.json();
+                
+                if (result.success && result.assignment) {
+                    const assignment = result.assignment;
+                    
+                    // 수배서 상태 정보
+                    document.getElementById('assignment-number').textContent = assignment.id || '-';
+                    document.getElementById('assignment-vendor').textContent = assignment.vendor_name || '미지정';
+                    document.getElementById('assignment-created').textContent = formatDateTime(assignment.assigned_at) || '-';
+                    document.getElementById('assignment-sent').textContent = formatDateTime(assignment.sent_at) || '미전송';
+                    document.getElementById('assignment-viewed').textContent = formatDateTime(assignment.viewed_at) || '미확인';
+                    document.getElementById('assignment-responded').textContent = formatDateTime(assignment.responded_at) || '미응답';
+                    document.getElementById('assignment-notes').textContent = assignment.notes || '-';
+                    
+                    // 수배 상태 배지
+                    const statusElement = document.getElementById('assignment-status');
+                    const statusBadge = getAssignmentStatusBadge(assignment.status);
+                    statusElement.innerHTML = statusBadge;
+                    
+                    // 링크 상태
+                    const linkStatusElement = document.getElementById('assignment-link-status');
+                    if (assignment.assignment_token) {
+                        linkStatusElement.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>생성됨</span>';
+                        // 링크 필드에 URL 표시
+                        const assignmentUrl = `${window.location.origin}/assignment/${assignment.assignment_token}`;
+                        document.getElementById('assignmentLinkUrl').value = assignmentUrl;
+                        document.getElementById('assignmentLinkGroup').style.display = 'flex';
+                    } else {
+                        linkStatusElement.innerHTML = '<span class="text-muted">미생성</span>';
+                        document.getElementById('assignmentLinkGroup').style.display = 'none';
+                    }
+                    
+                } else {
+                    // 수배서가 없는 경우
+                    document.getElementById('assignment-number').textContent = '미생성';
+                    document.getElementById('assignment-vendor').textContent = '미지정';
+                    document.getElementById('assignment-created').textContent = '-';
+                    document.getElementById('assignment-sent').textContent = '-';
+                    document.getElementById('assignment-viewed').textContent = '-';
+                    document.getElementById('assignment-responded').textContent = '-';
+                    document.getElementById('assignment-notes').textContent = '-';
+                    
+                    const statusElement = document.getElementById('assignment-status');
+                    statusElement.innerHTML = '<span class="badge bg-secondary">미생성</span>';
+                    
+                    document.getElementById('assignment-link-status').innerHTML = '<span class="text-muted">미생성</span>';
+                    document.getElementById('assignmentLinkGroup').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('수배서 정보 로드 오류:', error);
+                showAlert('수배서 정보를 불러오는데 실패했습니다.', 'danger');
+            }
+        }
+        
+        // 수배 상태 배지 생성
+        function getAssignmentStatusBadge(status) {
+            const statusMap = {
+                'pending': '<span class="badge bg-warning">대기중</span>',
+                'sent': '<span class="badge bg-info">전송됨</span>',
+                'viewed': '<span class="badge bg-primary">확인됨</span>',
+                'confirmed': '<span class="badge bg-success">확정됨</span>',
+                'rejected': '<span class="badge bg-danger">거절됨</span>',
+                'cancelled': '<span class="badge bg-secondary">취소됨</span>'
+            };
+            
+            return statusMap[status] || '<span class="badge bg-secondary">알 수 없음</span>';
         }
         
         // 수배서 미리보기
