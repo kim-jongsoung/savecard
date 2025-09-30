@@ -6364,16 +6364,45 @@ app.get('/assignment/:token', async (req, res) => {
     try {
         const { token } = req.params;
         console.log('🔍 수배서 페이지 요청:', token);
+        console.log('🔍 요청 시간:', new Date().toISOString());
+        console.log('🔍 DB 연결 상태:', pool ? 'OK' : 'NULL');
+
+        // 토큰 유효성 검사
+        if (!token || token.length < 10) {
+            console.error('❌ 유효하지 않은 토큰:', token);
+            return res.status(400).send(`
+                <html>
+                    <head><title>잘못된 수배서 링크</title></head>
+                    <body>
+                        <h1>잘못된 수배서 링크</h1>
+                        <p>수배서 토큰이 유효하지 않습니다.</p>
+                        <p>토큰: ${token}</p>
+                        <button onclick="window.close()">닫기</button>
+                    </body>
+                </html>
+            `);
+        }
 
         // 수배서 정보 조회
+        console.log('🔍 DB 쿼리 시작');
         const query = `
             SELECT 
-                a.*,
+                a.id as assignment_id,
+                a.assignment_token,
+                a.reservation_id,
+                a.vendor_id,
+                a.status as assignment_status,
+                a.assigned_at,
+                a.sent_at,
+                a.viewed_at,
+                a.responded_at,
+                a.notes,
+                r.id as reservation_id,
                 r.reservation_number,
                 r.korean_name as customer_name,
                 r.english_first_name,
                 r.english_last_name,
-                r.platform_name as vendor_name,
+                r.platform_name,
                 r.product_name,
                 r.usage_date as departure_date,
                 r.usage_date,
@@ -6381,7 +6410,7 @@ app.get('/assignment/:token', async (req, res) => {
                 r.people_adult as adult_count,
                 r.people_child as child_count,
                 r.people_infant,
-                r.total_amount as total_amount,
+                r.total_amount,
                 r.phone as phone_number,
                 r.email,
                 r.package_type,
@@ -6391,16 +6420,39 @@ app.get('/assignment/:token', async (req, res) => {
             WHERE a.assignment_token = $1
         `;
 
+        console.log('🔍 실행할 쿼리:', query);
+        console.log('🔍 토큰 파라미터:', token);
+
         const result = await pool.query(query, [token]);
+        console.log('🔍 쿼리 결과 개수:', result.rows.length);
 
         if (result.rows.length === 0) {
-            return res.status(404).render('error', { 
-                message: '수배서를 찾을 수 없습니다.',
-                error: { status: 404 }
-            });
+            console.log('❌ 수배서를 찾을 수 없음:', token);
+            
+            // 토큰이 존재하는지 별도 확인
+            const tokenCheck = await pool.query('SELECT assignment_token FROM assignments WHERE assignment_token = $1', [token]);
+            console.log('🔍 토큰 존재 확인:', tokenCheck.rows.length > 0 ? '존재함' : '존재하지 않음');
+            
+            return res.status(404).send(`
+                <html>
+                    <head><title>수배서를 찾을 수 없습니다</title></head>
+                    <body>
+                        <h1>수배서를 찾을 수 없습니다</h1>
+                        <p>요청하신 수배서를 찾을 수 없습니다.</p>
+                        <p><strong>토큰:</strong> ${token}</p>
+                        <p><strong>토큰 길이:</strong> ${token.length}</p>
+                        <p><strong>토큰 존재 여부:</strong> ${tokenCheck.rows.length > 0 ? '존재함' : '존재하지 않음'}</p>
+                        <hr>
+                        <p><small>이 정보를 개발자에게 전달해주세요.</small></p>
+                        <button onclick="window.close()">닫기</button>
+                    </body>
+                </html>
+            `);
         }
 
         const assignment = result.rows[0];
+        console.log('✅ 수배서 조회 성공:', assignment.reservation_number);
+        console.log('🔍 assignment 데이터 키들:', Object.keys(assignment));
 
         // 수배업체 정보 추가 조회
         if (assignment.vendor_id) {
@@ -6416,60 +6468,256 @@ app.get('/assignment/:token', async (req, res) => {
 
         // 수배업체 정보가 없으면 기본값 설정
         if (!assignment.assignment_vendor) {
-            assignment.assignment_vendor = assignment.vendor_name || '미지정';
+            assignment.assignment_vendor = assignment.platform_name || '미지정';
         }
 
+        // 필수 필드들 null 체크 및 기본값 설정
+        const safeAssignment = {
+            ...assignment,
+            reservation_number: assignment.reservation_number || 'N/A',
+            customer_name: assignment.customer_name || '미지정',
+            product_name: assignment.product_name || '미지정',
+            platform_name: assignment.platform_name || '미지정',
+            assignment_vendor: assignment.assignment_vendor || '미지정',
+            adult_count: assignment.adult_count || 0,
+            child_count: assignment.child_count || 0,
+            people_infant: assignment.people_infant || 0,
+            phone_number: assignment.phone_number || '-',
+            email: assignment.email || '-',
+            package_type: assignment.package_type || '-',
+            special_requests: assignment.special_requests || '-',
+            usage_time: assignment.usage_time || '-'
+        };
+
+        console.log('🔍 안전한 assignment 객체 생성 완료');
+        console.log('🔍 주요 필드 확인:');
+        console.log('  - reservation_number:', safeAssignment.reservation_number);
+        console.log('  - customer_name:', safeAssignment.customer_name);
+        console.log('  - product_name:', safeAssignment.product_name);
+
         // 조회 시간 기록
-        await pool.query(`
-            UPDATE assignments 
-            SET viewed_at = NOW() 
-            WHERE assignment_token = $1
-        `, [token]);
+        try {
+            await pool.query(`
+                UPDATE assignments 
+                SET viewed_at = NOW(), view_count = COALESCE(view_count, 0) + 1
+                WHERE assignment_token = $1
+            `, [token]);
+            console.log('✅ 조회 시간 기록 완료');
+        } catch (updateError) {
+            console.error('⚠️ 조회 시간 기록 실패:', updateError.message);
+            // 조회 시간 기록 실패는 치명적이지 않으므로 계속 진행
+        }
 
-        console.log('✅ 수배서 조회 완료:', assignment.reservation_number);
-        console.log('🔍 assignment 객체 키들:', Object.keys(assignment));
-        console.log('🔍 렌더링 시작');
+        console.log('🔍 템플릿 렌더링 시작');
 
+        // 템플릿 렌더링
         res.render('assignment', {
-            assignment: assignment,
-            title: `수배서 - ${assignment.reservation_number}`,
-            isPreview: false, // 실제 수배서 페이지는 미리보기가 아님
+            assignment: safeAssignment,
+            title: `수배서 - ${safeAssignment.reservation_number}`,
+            isPreview: false,
             formatDate: (date) => {
-                if (!date) return '-';
-                return new Date(date).toLocaleDateString('ko-KR');
+                try {
+                    if (!date) return '-';
+                    const dateObj = new Date(date);
+                    if (isNaN(dateObj.getTime())) return '-';
+                    return dateObj.toLocaleDateString('ko-KR');
+                } catch (e) {
+                    console.error('날짜 포맷 오류:', e);
+                    return '-';
+                }
+            },
+            formatDateTime: (datetime) => {
+                try {
+                    if (!datetime) return '-';
+                    const dateObj = new Date(datetime);
+                    if (isNaN(dateObj.getTime())) return '-';
+                    return dateObj.toLocaleString('ko-KR');
+                } catch (e) {
+                    console.error('날짜시간 포맷 오류:', e);
+                    return '-';
+                }
             },
             formatCurrency: (amount) => {
-                if (!amount) return '-';
-                return new Intl.NumberFormat('ko-KR').format(amount) + '원';
+                try {
+                    if (!amount || isNaN(amount)) return '-';
+                    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
+                } catch (e) {
+                    console.error('통화 포맷 오류:', e);
+                    return '-';
+                }
             }
         });
         
-        console.log('✅ 렌더링 완료');
+        console.log('✅ 템플릿 렌더링 완료');
 
     } catch (error) {
-        console.error('❌ 수배서 페이지 오류:', error);
-        console.error('❌ 오류 스택:', error.stack);
-        console.error('❌ 요청 토큰:', req.params.token);
+        console.error('❌❌❌ 수배서 페이지 치명적 오류 ❌❌❌');
+        console.error('❌ 오류 메시지:', error.message);
         console.error('❌ 오류 이름:', error.name);
         console.error('❌ 오류 코드:', error.code);
+        console.error('❌ 요청 토큰:', req.params.token);
+        console.error('❌ 요청 URL:', req.url);
+        console.error('❌ 요청 시간:', new Date().toISOString());
+        console.error('❌ 오류 스택 트레이스:');
+        console.error(error.stack);
+        console.error('❌❌❌ 오류 정보 끝 ❌❌❌');
         
-        // 간단한 HTML 오류 페이지 반환
+        // DB 연결 상태 확인
+        let dbStatus = 'Unknown';
+        try {
+            await pool.query('SELECT 1');
+            dbStatus = 'Connected';
+        } catch (dbError) {
+            dbStatus = `Error: ${dbError.message}`;
+            console.error('❌ DB 연결 오류:', dbError.message);
+        }
+        
+        // 상세한 HTML 오류 페이지 반환
         res.status(500).send(`
-            <html>
-                <head><title>수배서 오류</title></head>
-                <body>
-                    <h1>수배서 페이지 오류</h1>
-                    <p><strong>오류 메시지:</strong> ${error.message}</p>
-                    <p><strong>토큰:</strong> ${req.params.token}</p>
-                    <p><strong>오류 타입:</strong> ${error.name}</p>
-                    ${error.code ? `<p><strong>오류 코드:</strong> ${error.code}</p>` : ''}
-                    <hr>
-                    <p><small>이 오류 정보를 개발자에게 전달해주세요.</small></p>
-                    <button onclick="window.close()">닫기</button>
-                    <button onclick="window.location.reload()">새로고침</button>
-                </body>
+            <!DOCTYPE html>
+            <html lang="ko">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>수배서 페이지 오류</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+                    .error-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .error-title { color: #d32f2f; margin-bottom: 20px; }
+                    .error-details { background: #f8f8f8; padding: 15px; border-radius: 4px; margin: 10px 0; }
+                    .error-code { font-family: monospace; background: #333; color: #fff; padding: 10px; border-radius: 4px; }
+                    .buttons { margin-top: 20px; }
+                    .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+                    .btn-primary { background: #1976d2; color: white; }
+                    .btn-secondary { background: #757575; color: white; }
+                </style>
+            </head>
+            <body>
+                <div class="error-container">
+                    <h1 class="error-title">🚨 수배서 페이지 오류</h1>
+                    
+                    <div class="error-details">
+                        <h3>오류 정보</h3>
+                        <p><strong>오류 메시지:</strong> ${error.message || '알 수 없는 오류'}</p>
+                        <p><strong>오류 타입:</strong> ${error.name || 'Unknown'}</p>
+                        <p><strong>오류 코드:</strong> ${error.code || 'N/A'}</p>
+                        <p><strong>요청 토큰:</strong> ${req.params.token || 'N/A'}</p>
+                        <p><strong>토큰 길이:</strong> ${req.params.token ? req.params.token.length : 'N/A'}</p>
+                        <p><strong>DB 연결 상태:</strong> ${dbStatus}</p>
+                        <p><strong>발생 시간:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+                    </div>
+                    
+                    <div class="error-details">
+                        <h3>디버깅 정보</h3>
+                        <div class="error-code">
+                            <strong>Stack Trace:</strong><br>
+                            ${error.stack ? error.stack.replace(/\n/g, '<br>') : 'No stack trace available'}
+                        </div>
+                    </div>
+                    
+                    <div class="error-details">
+                        <h3>해결 방법</h3>
+                        <ul>
+                            <li>수배서 링크가 올바른지 확인해주세요</li>
+                            <li>잠시 후 다시 시도해주세요</li>
+                            <li>문제가 계속되면 관리자에게 문의해주세요</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="buttons">
+                        <button class="btn btn-primary" onclick="window.location.reload()">🔄 새로고침</button>
+                        <button class="btn btn-secondary" onclick="window.close()">❌ 닫기</button>
+                        <button class="btn btn-secondary" onclick="history.back()">⬅️ 뒤로가기</button>
+                    </div>
+                </div>
+            </body>
             </html>
         `);
+    }
+});
+
+// 특정 토큰 디버깅 라우트
+app.get('/debug/assignment/:token', requireAuth, async (req, res) => {
+    try {
+        const { token } = req.params;
+        console.log('🔍 디버깅 라우트 시작:', token);
+        
+        const debugInfo = {
+            token: token,
+            tokenLength: token.length,
+            timestamp: new Date().toISOString(),
+            checks: []
+        };
+        
+        // 1. 토큰 존재 확인
+        try {
+            const tokenCheck = await pool.query('SELECT * FROM assignments WHERE assignment_token = $1', [token]);
+            debugInfo.checks.push({
+                step: 'token_exists',
+                success: tokenCheck.rows.length > 0,
+                result: tokenCheck.rows.length > 0 ? tokenCheck.rows[0] : null,
+                count: tokenCheck.rows.length
+            });
+        } catch (e) {
+            debugInfo.checks.push({
+                step: 'token_exists',
+                success: false,
+                error: e.message
+            });
+        }
+        
+        // 2. 조인 쿼리 테스트
+        try {
+            const joinQuery = `
+                SELECT a.*, r.reservation_number, r.korean_name, r.product_name
+                FROM assignments a
+                JOIN reservations r ON a.reservation_id = r.id
+                WHERE a.assignment_token = $1
+            `;
+            const joinResult = await pool.query(joinQuery, [token]);
+            debugInfo.checks.push({
+                step: 'join_query',
+                success: joinResult.rows.length > 0,
+                result: joinResult.rows.length > 0 ? joinResult.rows[0] : null,
+                count: joinResult.rows.length
+            });
+        } catch (e) {
+            debugInfo.checks.push({
+                step: 'join_query',
+                success: false,
+                error: e.message
+            });
+        }
+        
+        // 3. 예약 정보 확인
+        const tokenExists = debugInfo.checks.find(c => c.step === 'token_exists');
+        if (tokenExists && tokenExists.success && tokenExists.result) {
+            try {
+                const reservationQuery = 'SELECT * FROM reservations WHERE id = $1';
+                const reservationResult = await pool.query(reservationQuery, [tokenExists.result.reservation_id]);
+                debugInfo.checks.push({
+                    step: 'reservation_exists',
+                    success: reservationResult.rows.length > 0,
+                    result: reservationResult.rows.length > 0 ? reservationResult.rows[0] : null,
+                    count: reservationResult.rows.length
+                });
+            } catch (e) {
+                debugInfo.checks.push({
+                    step: 'reservation_exists',
+                    success: false,
+                    error: e.message
+                });
+            }
+        }
+        
+        res.json(debugInfo);
+        
+    } catch (error) {
+        console.error('디버깅 라우트 오류:', error);
+        res.status(500).json({
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
 
