@@ -8102,54 +8102,101 @@ app.get('/api/reservations/:id', requireAuth, async (req, res) => {
     }
 });
 
-// 예약 정보 수정 API (수배관리 모달용)
+// 예약 정보 수정 API (수배관리 모달용 - 확장된 필드 지원)
 app.put('/api/reservations/:id', requireAuth, async (req, res) => {
     try {
         const reservationId = req.params.id;
-        const {
-            korean_name,
-            english_first_name,
-            english_last_name,
-            people_adult,
-            people_child,
-            people_infant,
-            usage_date
-        } = req.body;
+        const formData = req.body;
         
-        console.log('🔧 예약 정보 수정 API 호출:', reservationId, req.body);
+        console.log('🔧 예약 정보 수정 API 호출:', reservationId, formData);
         
         // 동적 쿼리 생성
         const updateFields = [];
         const values = [];
         let paramIndex = 1;
         
-        if (korean_name !== undefined) {
-            updateFields.push(`korean_name = $${paramIndex++}`);
-            values.push(korean_name);
+        // 예약 정보
+        if (formData.platform_name !== undefined) {
+            updateFields.push(`platform_name = $${paramIndex++}`);
+            values.push(formData.platform_name);
         }
-        if (english_first_name !== undefined) {
-            updateFields.push(`english_first_name = $${paramIndex++}`);
-            values.push(english_first_name);
+        if (formData.payment_status !== undefined) {
+            updateFields.push(`payment_status = $${paramIndex++}`);
+            values.push(formData.payment_status);
         }
-        if (english_last_name !== undefined) {
-            updateFields.push(`english_last_name = $${paramIndex++}`);
-            values.push(english_last_name);
+        
+        // 상품 정보
+        if (formData.product_name !== undefined) {
+            updateFields.push(`product_name = $${paramIndex++}`);
+            values.push(formData.product_name);
         }
-        if (people_adult !== undefined) {
-            updateFields.push(`people_adult = $${paramIndex++}`);
-            values.push(people_adult);
+        if (formData.package_type !== undefined) {
+            updateFields.push(`package_type = $${paramIndex++}`);
+            values.push(formData.package_type);
         }
-        if (people_child !== undefined) {
-            updateFields.push(`people_child = $${paramIndex++}`);
-            values.push(people_child);
-        }
-        if (people_infant !== undefined) {
-            updateFields.push(`people_infant = $${paramIndex++}`);
-            values.push(people_infant);
-        }
-        if (usage_date !== undefined) {
+        
+        // 일정 정보
+        if (formData.usage_date !== undefined) {
             updateFields.push(`usage_date = $${paramIndex++}`);
-            values.push(usage_date);
+            values.push(formData.usage_date);
+        }
+        if (formData.usage_time !== undefined) {
+            updateFields.push(`usage_time = $${paramIndex++}`);
+            values.push(formData.usage_time);
+        }
+        
+        // 예약자 정보
+        if (formData.korean_name !== undefined) {
+            updateFields.push(`korean_name = $${paramIndex++}`);
+            values.push(formData.korean_name);
+        }
+        if (formData.english_name !== undefined) {
+            updateFields.push(`english_name = $${paramIndex++}`);
+            values.push(formData.english_name);
+        }
+        if (formData.phone !== undefined) {
+            updateFields.push(`phone = $${paramIndex++}`);
+            values.push(formData.phone);
+        }
+        if (formData.email !== undefined) {
+            updateFields.push(`email = $${paramIndex++}`);
+            values.push(formData.email);
+        }
+        if (formData.kakao_id !== undefined) {
+            updateFields.push(`kakao_id = $${paramIndex++}`);
+            values.push(formData.kakao_id);
+        }
+        
+        // 인원 및 금액 정보
+        if (formData.people_adult !== undefined) {
+            updateFields.push(`people_adult = $${paramIndex++}`);
+            values.push(formData.people_adult);
+        }
+        if (formData.people_child !== undefined) {
+            updateFields.push(`people_child = $${paramIndex++}`);
+            values.push(formData.people_child);
+        }
+        if (formData.people_infant !== undefined) {
+            updateFields.push(`people_infant = $${paramIndex++}`);
+            values.push(formData.people_infant);
+        }
+        if (formData.adult_price !== undefined) {
+            updateFields.push(`adult_price = $${paramIndex++}`);
+            values.push(formData.adult_price);
+        }
+        if (formData.child_price !== undefined) {
+            updateFields.push(`child_price = $${paramIndex++}`);
+            values.push(formData.child_price);
+        }
+        if (formData.infant_price !== undefined) {
+            updateFields.push(`infant_price = $${paramIndex++}`);
+            values.push(formData.infant_price);
+        }
+        
+        // 특별 요청사항
+        if (formData.memo !== undefined) {
+            updateFields.push(`memo = $${paramIndex++}`);
+            values.push(formData.memo);
         }
         
         if (updateFields.length === 0) {
