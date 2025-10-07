@@ -219,14 +219,14 @@
         </div>
     </main>
 
-    <!-- 수배서 관리 모달 -->
+    <!-- 5개 탭 수배관리 모달 -->
     <div class="modal fade assignment-modal" id="assignmentModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <div class="w-100">
                         <div class="d-flex align-items-center justify-content-between">
-                            <h2 class="h5 mb-1"><i class="bi bi-file-text me-2"></i>수배서 관리</h2>
+                            <h2 class="h5 mb-1"><i class="bi bi-gear me-2"></i>수배관리</h2>
                             <span class="badge rounded-pill bg-secondary" id="m-status">상태</span>
                         </div>
                         <div class="small text-muted" id="m-brief">예약 요약</div>
@@ -234,9 +234,111 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- 수배서 관리 내용 -->
+                    <!-- 5개 탭 네비게이션 -->
+                    <ul class="nav nav-tabs mb-3" id="assignmentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="reservation-tab" data-bs-toggle="tab" data-bs-target="#reservation-pane" type="button" role="tab">
+                                <i class="bi bi-pencil-square me-1"></i>예약변경
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="assignment-tab" data-bs-toggle="tab" data-bs-target="#assignment-pane" type="button" role="tab">
+                                <i class="bi bi-file-text me-1"></i>수배서관리
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#status-pane" type="button" role="tab">
+                                <i class="bi bi-check-circle me-1"></i>상태관리
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="voucher-tab" data-bs-toggle="tab" data-bs-target="#voucher-pane" type="button" role="tab">
+                                <i class="bi bi-ticket-perforated me-1"></i>바우처관리
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="settlement-tab" data-bs-toggle="tab" data-bs-target="#settlement-pane" type="button" role="tab">
+                                <i class="bi bi-calculator me-1"></i>정산이관
+                            </button>
+                        </li>
+                    </ul>
 
-                        <!-- 수배서 상태 및 정보 -->
+                    <!-- 탭 컨텐츠 -->
+                    <div class="tab-content" id="assignmentTabContent">
+                        <!-- 1. 예약변경 탭 -->
+                        <div class="tab-pane fade show active" id="reservation-pane" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-person me-2"></i>예약자 정보</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-2">
+                                                <div class="col-12">
+                                                    <label class="form-label">예약자명</label>
+                                                    <input type="text" class="form-control" id="edit-customer-name" placeholder="예약자명">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">성인수</label>
+                                                    <input type="number" class="form-control" id="edit-adult-count" min="0" value="0">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">아동수</label>
+                                                    <input type="number" class="form-control" id="edit-child-count" min="0" value="0">
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">연락처</label>
+                                                    <input type="text" class="form-control" id="edit-phone" placeholder="연락처">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-calendar me-2"></i>일정 정보</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="form-label">이용일자</label>
+                                                    <input type="date" class="form-control" id="edit-usage-date">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">이용시간</label>
+                                                    <input type="time" class="form-control" id="edit-usage-time">
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">상품명</label>
+                                                    <input type="text" class="form-control" id="edit-product-name" placeholder="상품명">
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">특별요청</label>
+                                                    <textarea class="form-control" id="edit-memo" rows="2" placeholder="특별요청사항"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-primary" onclick="saveReservationChanges()">
+                                            <i class="bi bi-save me-1"></i>예약정보 저장
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="resetReservationForm()">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>초기화
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. 수배서관리 탭 -->
+                        <div class="tab-pane fade" id="assignment-pane" role="tabpanel">
+
+                            <!-- 수배서 상태 및 정보 -->
                         <div class="card">
                             <div class="card-header">
                                 <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 상태</h6>
@@ -390,6 +492,279 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 3. 상태관리 탭 -->
+                        <div class="tab-pane fade" id="status-pane" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>상태 변경</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">현재 상태</label>
+                                                <div id="current-status-display" class="p-2 bg-light rounded">
+                                                    <span class="badge bg-secondary">대기중</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">변경할 상태</label>
+                                                <select class="form-select" id="new-status-select">
+                                                    <option value="pending">대기중 (신규예약)</option>
+                                                    <option value="in_progress">수배중 (현지수배)</option>
+                                                    <option value="confirmed">확정 (수배완료)</option>
+                                                    <option value="voucher_sent">바우처전송완료</option>
+                                                    <option value="cancelled">예약취소</option>
+                                                    <option value="refunded">환불완료</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">변경 사유</label>
+                                                <textarea class="form-control" id="status-change-reason" rows="2" placeholder="상태 변경 사유를 입력하세요"></textarea>
+                                            </div>
+                                            <button class="btn btn-primary" onclick="changeReservationStatus()">
+                                                <i class="bi bi-check-circle me-1"></i>상태 변경
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-key me-2"></i>컨펌번호 관리</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">컨펌번호</label>
+                                                <input type="text" class="form-control" id="confirmation-number" placeholder="컨펌번호 입력">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">수배업체</label>
+                                                <select class="form-select" id="vendor-select">
+                                                    <option value="">수배업체 선택</option>
+                                                    <!-- 수배업체 목록이 여기에 로드됩니다 -->
+                                                </select>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-success" onclick="saveConfirmationNumber()">
+                                                    <i class="bi bi-save me-1"></i>컨펌번호 저장
+                                                </button>
+                                                <button class="btn btn-outline-info" onclick="generateConfirmationNumber()">
+                                                    <i class="bi bi-magic me-1"></i>자동생성
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>상태 변경 로그</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="status-change-log" style="max-height: 200px; overflow-y: auto;">
+                                                <!-- 상태 변경 로그가 여기에 표시됩니다 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. 바우처관리 탭 -->
+                        <div class="tab-pane fade" id="voucher-pane" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-ticket-perforated me-2"></i>바우처 생성 및 관리</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <div class="d-grid gap-2">
+                                                        <button class="btn btn-success" onclick="generateVoucher()">
+                                                            <i class="bi bi-plus-circle me-1"></i>바우처 생성
+                                                        </button>
+                                                        <button class="btn btn-primary" onclick="previewVoucher()">
+                                                            <i class="bi bi-eye me-1"></i>바우처 미리보기
+                                                        </button>
+                                                        <div class="input-group" id="voucherLinkGroup" style="display: none;">
+                                                            <input type="text" class="form-control" id="voucherLinkUrl" readonly placeholder="바우처 링크가 생성됩니다">
+                                                            <button class="btn btn-outline-secondary" onclick="copyVoucherLink()">
+                                                                <i class="bi bi-clipboard"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="d-grid gap-2">
+                                                        <button class="btn btn-info" onclick="sendVoucherKakao()">
+                                                            <i class="bi bi-chat-dots me-1"></i>카카오톡 전송
+                                                        </button>
+                                                        <button class="btn btn-outline-info" onclick="sendVoucherEmail()">
+                                                            <i class="bi bi-envelope me-1"></i>이메일 전송
+                                                        </button>
+                                                        <button class="btn btn-outline-secondary" onclick="downloadVoucherPdf()">
+                                                            <i class="bi bi-file-pdf me-1"></i>PDF 다운로드
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 괌세이브카드 발급 코드 섹션 -->
+                                            <div class="mt-4 p-3 bg-light rounded">
+                                                <h6 class="text-primary"><i class="bi bi-credit-card me-2"></i>괌세이브카드 발급</h6>
+                                                <div class="row g-2">
+                                                    <div class="col-md-8">
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">발급코드</span>
+                                                            <input type="text" class="form-control" id="savecard-code" readonly placeholder="자동 생성됩니다">
+                                                            <button class="btn btn-outline-primary" onclick="generateSavecardCode()">
+                                                                <i class="bi bi-arrow-repeat"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <button class="btn btn-outline-success w-100" onclick="copySavecardInfo()">
+                                                            <i class="bi bi-clipboard me-1"></i>발급정보 복사
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <small class="text-muted mt-2 d-block">
+                                                    <i class="bi bi-info-circle me-1"></i>
+                                                    이 코드로 괌세이브카드를 발급받을 수 있습니다. 바우처와 함께 고객에게 전달하세요.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>바우처 상태</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="voucher-status-info">
+                                                <div class="mb-2">
+                                                    <small class="text-muted">생성일시</small>
+                                                    <div id="voucher-created-at">-</div>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small class="text-muted">전송일시</small>
+                                                    <div id="voucher-sent-at">-</div>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small class="text-muted">확인일시</small>
+                                                    <div id="voucher-viewed-at">-</div>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <small class="text-muted">바우처 상태</small>
+                                                    <div id="voucher-status-badge">
+                                                        <span class="badge bg-secondary">미생성</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <hr>
+                                            <div id="voucher-actions">
+                                                <button class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="resendVoucher()">
+                                                    <i class="bi bi-send me-1"></i>재전송
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm w-100" onclick="cancelVoucher()">
+                                                    <i class="bi bi-x-circle me-1"></i>바우처 취소
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. 정산이관 탭 -->
+                        <div class="tab-pane fade" id="settlement-pane" role="tabpanel">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-list-check me-2"></i>정산 체크리스트</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="check-voucher-sent">
+                                                <label class="form-check-label" for="check-voucher-sent">
+                                                    바우처 전송 완료
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="check-service-completed">
+                                                <label class="form-check-label" for="check-service-completed">
+                                                    서비스 이용 완료
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="check-vendor-payment">
+                                                <label class="form-check-label" for="check-vendor-payment">
+                                                    수배업체 정산 확인
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="check-customer-feedback">
+                                                <label class="form-check-label" for="check-customer-feedback">
+                                                    고객 피드백 수집
+                                                </label>
+                                            </div>
+                                            <div class="form-check mb-3">
+                                                <input class="form-check-input" type="checkbox" id="check-documents">
+                                                <label class="form-check-label" for="check-documents">
+                                                    관련 서류 정리
+                                                </label>
+                                            </div>
+                                            <button class="btn btn-success w-100" onclick="transferToSettlement()" disabled id="transfer-btn">
+                                                <i class="bi bi-arrow-right-circle me-1"></i>정산관리로 이관
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="bi bi-calculator me-2"></i>정산 정보</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="form-label">매출액</label>
+                                                    <input type="text" class="form-control" id="settlement-revenue" readonly>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">매입액</label>
+                                                    <input type="text" class="form-control" id="settlement-cost" placeholder="매입액 입력">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">수수료</label>
+                                                    <input type="text" class="form-control" id="settlement-fee" placeholder="수수료 입력">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label">순이익</label>
+                                                    <input type="text" class="form-control" id="settlement-profit" readonly>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">정산 메모</label>
+                                                    <textarea class="form-control" id="settlement-memo" rows="3" placeholder="정산 관련 메모"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                <button class="btn btn-outline-primary" onclick="calculateProfit()">
+                                                    <i class="bi bi-calculator me-1"></i>수익 계산
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -1825,6 +2200,536 @@
             `;
             
             historyDiv.insertAdjacentHTML('afterbegin', newItem);
+        }
+        
+        // 바우처 관련 함수들
+        
+        // 바우처 생성
+        async function generateVoucher() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 바우처 링크 표시
+                    const voucherUrl = `${window.location.origin}/voucher/${result.voucher_token}`;
+                    document.getElementById('voucherLinkUrl').value = voucherUrl;
+                    document.getElementById('voucherLinkGroup').style.display = 'flex';
+                    
+                    // 괌세이브카드 발급 코드 자동 생성
+                    if (result.savecard_code) {
+                        document.getElementById('savecard-code').value = result.savecard_code;
+                    }
+                    
+                    // 바우처 상태 업데이트
+                    updateVoucherStatus(result.voucher);
+                    
+                    showAlert('바우처가 성공적으로 생성되었습니다!', 'success');
+                    addToHistory('바우처 생성', 'success');
+                } else {
+                    showAlert('바우처 생성에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('바우처 생성 오류:', error);
+                showAlert('바우처 생성 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 바우처 미리보기
+        async function previewVoucher() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            try {
+                // 바우처 토큰 확인
+                const response = await fetch(`/api/reservations/${window.currentReservationId}`);
+                const result = await response.json();
+                
+                if (result.success && result.reservation.voucher_token) {
+                    const voucherUrl = `/voucher/${result.reservation.voucher_token}`;
+                    window.open(voucherUrl, '_blank', 'width=800,height=600');
+                    addToHistory('바우처 미리보기', 'info');
+                } else {
+                    showAlert('먼저 바우처를 생성해주세요.', 'warning');
+                }
+            } catch (error) {
+                console.error('바우처 미리보기 오류:', error);
+                showAlert('바우처 미리보기 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 바우처 링크 복사
+        function copyVoucherLink() {
+            const linkInput = document.getElementById('voucherLinkUrl');
+            if (linkInput.value) {
+                navigator.clipboard.writeText(linkInput.value).then(() => {
+                    showAlert('바우처 링크가 클립보드에 복사되었습니다!', 'success');
+                    addToHistory('바우처 링크 복사', 'info');
+                }).catch(err => {
+                    console.error('복사 실패:', err);
+                    showAlert('링크 복사에 실패했습니다.', 'danger');
+                });
+            } else {
+                showAlert('복사할 바우처 링크가 없습니다.', 'warning');
+            }
+        }
+        
+        // 카카오톡 전송 (향후 구현)
+        async function sendVoucherKakao() {
+            showAlert('카카오톡 전송 기능은 API 연동 후 구현 예정입니다.', 'info');
+            // 향후 카카오톡 API 연동 시 구현
+        }
+        
+        // 이메일 전송
+        async function sendVoucherEmail() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            const voucherUrl = document.getElementById('voucherLinkUrl').value;
+            if (!voucherUrl) {
+                showAlert('먼저 바우처를 생성해주세요.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/send-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        voucher_url: voucherUrl,
+                        message: '바우처를 확인해주세요.'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 이메일로 전송되었습니다!', 'success');
+                    addToHistory('바우처 이메일 전송', 'success');
+                } else {
+                    showAlert('이메일 전송에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('이메일 전송 오류:', error);
+                showAlert('이메일 전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // PDF 다운로드
+        async function downloadVoucherPdf() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/download`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `바우처_${window.currentReservationId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showAlert('바우처 PDF 다운로드가 완료되었습니다!', 'success');
+                    addToHistory('바우처 PDF 다운로드', 'success');
+                } else {
+                    showAlert('PDF 다운로드에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('PDF 다운로드 오류:', error);
+                showAlert('PDF 다운로드 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 괌세이브카드 발급 코드 생성
+        function generateSavecardCode() {
+            // 6자리 발급 코드 생성 (소문자+숫자+소문자)
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            
+            const code = 
+                letters.charAt(Math.floor(Math.random() * letters.length)) +
+                Array.from({length: 4}, () => numbers.charAt(Math.floor(Math.random() * numbers.length))).join('') +
+                letters.charAt(Math.floor(Math.random() * letters.length));
+            
+            document.getElementById('savecard-code').value = code;
+            showAlert('발급 코드가 생성되었습니다: ' + code, 'success');
+        }
+        
+        // 발급 정보 복사
+        function copySavecardInfo() {
+            const code = document.getElementById('savecard-code').value;
+            if (!code) {
+                showAlert('먼저 발급 코드를 생성해주세요.', 'warning');
+                return;
+            }
+            
+            const info = `🎫 괌세이브카드 무료 발급\n\n발급코드: ${code}\n\n📍 발급 방법:\n1. https://www.guamsavecard.com/register 접속\n2. 위 발급코드 입력\n3. 개인정보 입력 후 발급 완료\n\n💰 30만원 상당의 할인 혜택을 받으세요!`;
+            
+            navigator.clipboard.writeText(info).then(() => {
+                showAlert('발급 정보가 클립보드에 복사되었습니다!', 'success');
+                addToHistory('발급 정보 복사', 'info');
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                showAlert('정보 복사에 실패했습니다.', 'danger');
+            });
+        }
+        
+        // 바우처 상태 업데이트
+        function updateVoucherStatus(voucher) {
+            if (!voucher) return;
+            
+            document.getElementById('voucher-created-at').textContent = 
+                voucher.created_at ? formatDateTime(voucher.created_at) : '-';
+            document.getElementById('voucher-sent-at').textContent = 
+                voucher.sent_at ? formatDateTime(voucher.sent_at) : '-';
+            document.getElementById('voucher-viewed-at').textContent = 
+                voucher.viewed_at ? formatDateTime(voucher.viewed_at) : '-';
+            
+            const statusBadge = document.getElementById('voucher-status-badge');
+            if (voucher.status === 'sent') {
+                statusBadge.innerHTML = '<span class="badge bg-success">전송완료</span>';
+            } else if (voucher.status === 'viewed') {
+                statusBadge.innerHTML = '<span class="badge bg-info">고객확인</span>';
+            } else {
+                statusBadge.innerHTML = '<span class="badge bg-warning">생성완료</span>';
+            }
+        }
+        
+        // 바우처 재전송
+        async function resendVoucher() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            if (!confirm('바우처를 재전송하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/resend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 재전송되었습니다!', 'success');
+                    addToHistory('바우처 재전송', 'success');
+                } else {
+                    showAlert('바우처 재전송에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('바우처 재전송 오류:', error);
+                showAlert('바우처 재전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 바우처 취소
+        async function cancelVoucher() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            if (!confirm('바우처를 취소하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 취소되었습니다.', 'success');
+                    addToHistory('바우처 취소', 'success');
+                    
+                    // UI 초기화
+                    document.getElementById('voucherLinkGroup').style.display = 'none';
+                    document.getElementById('voucherLinkUrl').value = '';
+                    document.getElementById('savecard-code').value = '';
+                    
+                    const statusBadge = document.getElementById('voucher-status-badge');
+                    statusBadge.innerHTML = '<span class="badge bg-secondary">취소됨</span>';
+                } else {
+                    showAlert('바우처 취소에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('바우처 취소 오류:', error);
+                showAlert('바우처 취소 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 예약 변경사항 저장
+        async function saveReservationChanges() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            const formData = {
+                korean_name: document.getElementById('edit-customer-name').value,
+                people_adult: parseInt(document.getElementById('edit-adult-count').value) || 0,
+                people_child: parseInt(document.getElementById('edit-child-count').value) || 0,
+                phone: document.getElementById('edit-phone').value,
+                usage_date: document.getElementById('edit-usage-date').value,
+                usage_time: document.getElementById('edit-usage-time').value,
+                product_name: document.getElementById('edit-product-name').value,
+                memo: document.getElementById('edit-memo').value
+            };
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('예약 정보가 저장되었습니다!', 'success');
+                    addToHistory('예약 정보 수정', 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert('예약 정보 저장에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('예약 정보 저장 오류:', error);
+                showAlert('예약 정보 저장 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 예약 폼 초기화
+        function resetReservationForm() {
+            if (window.reservations && window.currentReservationId) {
+                const reservation = window.reservations.find(r => r.id === window.currentReservationId);
+                if (reservation) {
+                    document.getElementById('edit-customer-name').value = reservation.korean_name || '';
+                    document.getElementById('edit-adult-count').value = reservation.people_adult || 0;
+                    document.getElementById('edit-child-count').value = reservation.people_child || 0;
+                    document.getElementById('edit-phone').value = reservation.phone || '';
+                    document.getElementById('edit-usage-date').value = reservation.usage_date ? reservation.usage_date.split('T')[0] : '';
+                    document.getElementById('edit-usage-time').value = reservation.usage_time || '';
+                    document.getElementById('edit-product-name').value = reservation.product_name || '';
+                    document.getElementById('edit-memo').value = reservation.memo || '';
+                }
+            }
+        }
+        
+        // 상태 변경
+        async function changeReservationStatus() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            const newStatus = document.getElementById('new-status-select').value;
+            const reason = document.getElementById('status-change-reason').value;
+            
+            if (!newStatus) {
+                showAlert('변경할 상태를 선택해주세요.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: newStatus,
+                        reason: reason
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('예약 상태가 변경되었습니다!', 'success');
+                    addToHistory(`상태 변경: ${getReservationStatusText(newStatus)}`, 'success');
+                    loadAssignments(); // 목록 새로고침
+                    
+                    // 현재 상태 표시 업데이트
+                    const currentStatusDisplay = document.getElementById('current-status-display');
+                    currentStatusDisplay.innerHTML = `<span class="badge bg-${getBootstrapStatusClass(newStatus)}">${getReservationStatusText(newStatus)}</span>`;
+                    
+                    // 폼 초기화
+                    document.getElementById('status-change-reason').value = '';
+                } else {
+                    showAlert('상태 변경에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('상태 변경 오류:', error);
+                showAlert('상태 변경 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 컨펌번호 저장
+        async function saveConfirmationNumber() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            const confirmationNumber = document.getElementById('confirmation-number').value;
+            const vendorId = document.getElementById('vendor-select').value;
+            
+            if (!confirmationNumber) {
+                showAlert('컨펌번호를 입력해주세요.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        confirmation_number: confirmationNumber,
+                        vendor_id: vendorId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('컨펌번호가 저장되었습니다!', 'success');
+                    addToHistory(`컨펌번호 저장: ${confirmationNumber}`, 'success');
+                    loadAssignments(); // 목록 새로고침
+                } else {
+                    showAlert('컨펌번호 저장에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('컨펌번호 저장 오류:', error);
+                showAlert('컨펌번호 저장 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 컨펌번호 자동 생성
+        function generateConfirmationNumber() {
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+            const confirmationNumber = `GU${timestamp}${random}`;
+            
+            document.getElementById('confirmation-number').value = confirmationNumber;
+            showAlert('컨펌번호가 자동 생성되었습니다: ' + confirmationNumber, 'success');
+        }
+        
+        // 정산 체크리스트 관리
+        document.addEventListener('DOMContentLoaded', function() {
+            // 체크박스 이벤트 리스너
+            const checkboxes = [
+                'check-voucher-sent',
+                'check-service-completed', 
+                'check-vendor-payment',
+                'check-customer-feedback',
+                'check-documents'
+            ];
+            
+            checkboxes.forEach(id => {
+                const checkbox = document.getElementById(id);
+                if (checkbox) {
+                    checkbox.addEventListener('change', updateTransferButton);
+                }
+            });
+        });
+        
+        // 정산 이관 버튼 활성화 체크
+        function updateTransferButton() {
+            const checkboxes = [
+                'check-voucher-sent',
+                'check-service-completed', 
+                'check-vendor-payment',
+                'check-customer-feedback',
+                'check-documents'
+            ];
+            
+            const allChecked = checkboxes.every(id => {
+                const checkbox = document.getElementById(id);
+                return checkbox && checkbox.checked;
+            });
+            
+            const transferBtn = document.getElementById('transfer-btn');
+            if (transferBtn) {
+                transferBtn.disabled = !allChecked;
+            }
+        }
+        
+        // 정산관리로 이관
+        async function transferToSettlement() {
+            if (!window.currentReservationId) {
+                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                return;
+            }
+            
+            if (!confirm('정산관리로 이관하시겠습니까? 이 작업 후에는 수배관리에서 제외됩니다.')) return;
+            
+            const settlementData = {
+                revenue: document.getElementById('settlement-revenue').value,
+                cost: document.getElementById('settlement-cost').value,
+                fee: document.getElementById('settlement-fee').value,
+                profit: document.getElementById('settlement-profit').value,
+                memo: document.getElementById('settlement-memo').value
+            };
+            
+            try {
+                const response = await fetch(`/api/reservations/${window.currentReservationId}/settlement`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settlementData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('정산관리로 이관되었습니다!', 'success');
+                    addToHistory('정산관리 이관', 'success');
+                    
+                    // 모달 닫기
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('assignmentModal'));
+                    if (modal) modal.hide();
+                    
+                    // 목록 새로고침
+                    loadAssignments();
+                } else {
+                    showAlert('정산 이관에 실패했습니다: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('정산 이관 오류:', error);
+                showAlert('정산 이관 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 수익 계산
+        function calculateProfit() {
+            const revenue = parseFloat(document.getElementById('settlement-revenue').value) || 0;
+            const cost = parseFloat(document.getElementById('settlement-cost').value) || 0;
+            const fee = parseFloat(document.getElementById('settlement-fee').value) || 0;
+            
+            const profit = revenue - cost - fee;
+            document.getElementById('settlement-profit').value = profit.toFixed(2);
+            
+            showAlert('수익이 계산되었습니다: ' + profit.toLocaleString('ko-KR') + '원', 'info');
         }
         
         // 날짜/시간 포맷팅
