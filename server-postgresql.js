@@ -3475,20 +3475,7 @@ async function saveReservationToSixTables(parsedData) {
         
         const reservationId = reservationResult.rows[0].reservation_id;
         
-        // 2. reservation_schedules 테이블에 일정 정보 저장
-        if (parsedData.usage_date || parsedData.usage_time || parsedData.package_type) {
-            await client.query(`
-                INSERT INTO reservation_schedules (
-                    reservation_id, usage_date, usage_time, package_type, package_count
-                ) VALUES ($1, $2, $3, $4, $5)
-            `, [
-                reservationId,
-                parsedData.usage_date,
-                parsedData.usage_time,
-                parsedData.package_type,
-                parsedData.package_count || 1
-            ]);
-        }
+        // 일정 정보는 이미 reservations 테이블에 저장됨 (usage_date, usage_time, package_type)
         
         // 3. reservation_customers 테이블에 고객 정보 저장
         await client.query(`
@@ -3568,55 +3555,11 @@ async function saveReservationToSixTables(parsedData) {
     }
 }
 
-// 예약 상세 조회 (6개 테이블 JOIN)
+// 예약 상세 조회 (단일 reservations 테이블)
 async function getReservationById(reservationId) {
     try {
         const result = await pool.query(`
-            SELECT 
-                r.reservation_id,
-                r.reservation_code,
-                r.reservation_channel,
-                r.platform_name,
-                r.reservation_status,
-                r.reservation_datetime,
-                r.product_name,
-                r.total_quantity,
-                r.total_price,
-                r.created_at,
-                r.updated_at,
-                
-                s.usage_date,
-                s.usage_time,
-                s.package_type,
-                s.package_count,
-                
-                c.name_kr,
-                c.name_en_first,
-                c.name_en_last,
-                c.phone,
-                c.email,
-                c.kakao_id,
-                c.people_adult,
-                c.people_child,
-                c.people_infant,
-                c.memo,
-                
-                p.adult_unit_price,
-                p.child_unit_price,
-                p.infant_unit_price,
-                p.platform_sale_amount,
-                p.platform_settlement_amount,
-                p.payment_status,
-                p.payment_date,
-                
-                pol.policy_text
-                
-            FROM reservations r
-            LEFT JOIN reservation_schedules s ON r.reservation_id = s.reservation_id
-            LEFT JOIN reservation_customers c ON r.reservation_id = c.reservation_id
-            LEFT JOIN reservation_payments p ON r.reservation_id = p.reservation_id
-            LEFT JOIN cancellation_policies pol ON r.reservation_id = pol.reservation_id
-            WHERE r.reservation_id = $1
+            SELECT * FROM reservations WHERE id = $1
         `, [reservationId]);
         
         return result.rows[0] || null;
@@ -3653,17 +3596,7 @@ async function updateReservationInSixTables(reservationId, updateData) {
             updateData.total_price
         ]);
         
-        // 2. reservation_schedules 테이블 업데이트
-        await client.query(`
-            UPDATE reservation_schedules SET
-                usage_date = $2,
-                usage_time = $3
-            WHERE reservation_id = $1
-        `, [
-            reservationId,
-            updateData.usage_date,
-            updateData.usage_time
-        ]);
+        // 일정 정보는 이미 reservations 테이블에서 업데이트됨
         
         // 3. reservation_customers 테이블 업데이트
         await client.query(`
@@ -8150,10 +8083,19 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
             updateFields.push(`korean_name = $${paramIndex++}`);
             values.push(formData.korean_name);
         }
+        
+        // 영문명 처리 (english_name을 first_name과 last_name으로 분리)
         if (formData.english_name !== undefined) {
-            updateFields.push(`english_name = $${paramIndex++}`);
-            values.push(formData.english_name);
+            const nameParts = formData.english_name.split(' ');
+            const firstName = nameParts.slice(1).join(' ') || '';
+            const lastName = nameParts[0] || '';
+            
+            updateFields.push(`english_first_name = $${paramIndex++}`);
+            values.push(firstName);
+            updateFields.push(`english_last_name = $${paramIndex++}`);
+            values.push(lastName);
         }
+        
         if (formData.phone !== undefined) {
             updateFields.push(`phone = $${paramIndex++}`);
             values.push(formData.phone);
@@ -8181,17 +8123,18 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
             values.push(formData.people_infant);
         }
         if (formData.adult_price !== undefined) {
-            updateFields.push(`adult_price = $${paramIndex++}`);
+            updateFields.push(`adult_unit_price = $${paramIndex++}`);
             values.push(formData.adult_price);
         }
         if (formData.child_price !== undefined) {
-            updateFields.push(`child_price = $${paramIndex++}`);
+            updateFields.push(`child_unit_price = $${paramIndex++}`);
             values.push(formData.child_price);
         }
-        if (formData.infant_price !== undefined) {
-            updateFields.push(`infant_price = $${paramIndex++}`);
-            values.push(formData.infant_price);
-        }
+        // infant_unit_price 컬럼이 없으므로 제외
+        // if (formData.infant_price !== undefined) {
+        //     updateFields.push(`infant_unit_price = $${paramIndex++}`);
+        //     values.push(formData.infant_price);
+        // }
         
         // 특별 요청사항
         if (formData.memo !== undefined) {
