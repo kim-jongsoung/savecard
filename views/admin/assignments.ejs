@@ -219,243 +219,447 @@
         </div>
     </main>
 
-    <!-- 5개 탭 수배관리 모달 -->
-    <div class="modal fade assignment-modal" id="assignmentModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <!-- 1. 예약변경 모달 -->
+    <div class="modal fade" id="reservationEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <div class="w-100">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <h2 class="h5 mb-1"><i class="bi bi-gear me-2"></i>수배관리</h2>
-                            <span class="badge rounded-pill bg-secondary" id="m-status">상태</span>
-                        </div>
-                        <div class="small text-muted" id="m-brief">예약 요약</div>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>예약변경</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- 5개 탭 네비게이션 -->
-                    <ul class="nav nav-tabs mb-3" id="assignmentTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="reservation-tab" data-bs-toggle="tab" data-bs-target="#reservation-pane" type="button" role="tab">
-                                <i class="bi bi-pencil-square me-1"></i>예약변경
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="assignment-tab" data-bs-toggle="tab" data-bs-target="#assignment-pane" type="button" role="tab">
-                                <i class="bi bi-file-text me-1"></i>수배서관리
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#status-pane" type="button" role="tab">
-                                <i class="bi bi-check-circle me-1"></i>상태관리
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="voucher-tab" data-bs-toggle="tab" data-bs-target="#voucher-pane" type="button" role="tab">
-                                <i class="bi bi-ticket-perforated me-1"></i>바우처관리
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="settlement-tab" data-bs-toggle="tab" data-bs-target="#settlement-pane" type="button" role="tab">
-                                <i class="bi bi-calculator me-1"></i>정산이관
-                            </button>
-                        </li>
-                    </ul>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>예약자 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <label class="form-label">예약자명</label>
+                                            <input type="text" class="form-control" id="edit-customer-name" placeholder="예약자명">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">성인수</label>
+                                            <input type="number" class="form-control" id="edit-adult-count" min="0" value="0">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">아동수</label>
+                                            <input type="number" class="form-control" id="edit-child-count" min="0" value="0">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">연락처</label>
+                                            <input type="text" class="form-control" id="edit-phone" placeholder="연락처">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-calendar me-2"></i>일정 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label">이용일자</label>
+                                            <input type="date" class="form-control" id="edit-usage-date">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">이용시간</label>
+                                            <input type="time" class="form-control" id="edit-usage-time">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">상품명</label>
+                                            <input type="text" class="form-control" id="edit-product-name" placeholder="상품명">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">특별요청</label>
+                                            <textarea class="form-control" id="edit-memo" rows="2" placeholder="특별요청사항"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary" onclick="saveReservationChanges()">
+                        <i class="bi bi-save me-1"></i>저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <!-- 탭 컨텐츠 -->
-                    <div class="tab-content" id="assignmentTabContent">
-                        <!-- 1. 예약변경 탭 -->
-                        <div class="tab-pane fade show active" id="reservation-pane" role="tabpanel">
+    <!-- 2. 수배서관리 모달 -->
+    <div class="modal fade" id="assignmentManageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-text me-2"></i>수배서관리</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 상태</h6>
+                        </div>
+                        <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="card">
-                                        <div class="card-header">
-                                            <h6 class="mb-0"><i class="bi bi-person me-2"></i>예약자 정보</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row g-2">
-                                                <div class="col-12">
-                                                    <label class="form-label">예약자명</label>
-                                                    <input type="text" class="form-control" id="edit-customer-name" placeholder="예약자명">
-                                                </div>
-                                                <div class="col-6">
-                                                    <label class="form-label">성인수</label>
-                                                    <input type="number" class="form-control" id="edit-adult-count" min="0" value="0">
-                                                </div>
-                                                <div class="col-6">
-                                                    <label class="form-label">아동수</label>
-                                                    <input type="number" class="form-control" id="edit-child-count" min="0" value="0">
-                                                </div>
-                                                <div class="col-12">
-                                                    <label class="form-label">연락처</label>
-                                                    <input type="text" class="form-control" id="edit-phone" placeholder="연락처">
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <label class="form-label">수배서 번호</label>
+                                    <div class="fw-bold" id="assignment-number">-</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">수배 상태</label>
+                                    <div id="assignment-status">
+                                        <span class="badge bg-warning">대기중</span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="card">
-                                        <div class="card-header">
-                                            <h6 class="mb-0"><i class="bi bi-calendar me-2"></i>일정 정보</h6>
-                                        </div>
-                                        <div class="card-body">
-                                            <div class="row g-2">
-                                                <div class="col-6">
-                                                    <label class="form-label">이용일자</label>
-                                                    <input type="date" class="form-control" id="edit-usage-date">
-                                                </div>
-                                                <div class="col-6">
-                                                    <label class="form-label">이용시간</label>
-                                                    <input type="time" class="form-control" id="edit-usage-time">
-                                                </div>
-                                                <div class="col-12">
-                                                    <label class="form-label">상품명</label>
-                                                    <input type="text" class="form-control" id="edit-product-name" placeholder="상품명">
-                                                </div>
-                                                <div class="col-12">
-                                                    <label class="form-label">특별요청</label>
-                                                    <textarea class="form-control" id="edit-memo" rows="2" placeholder="특별요청사항"></textarea>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <label class="form-label">수배업체</label>
+                                    <div id="assignment-vendor">-</div>
                                 </div>
-                                <div class="col-12">
-                                    <div class="d-flex gap-2">
-                                        <button class="btn btn-primary" onclick="saveReservationChanges()">
-                                            <i class="bi bi-save me-1"></i>예약정보 저장
-                                        </button>
-                                        <button class="btn btn-outline-secondary" onclick="resetReservationForm()">
-                                            <i class="bi bi-arrow-clockwise me-1"></i>초기화
-                                        </button>
-                                    </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">생성일시</label>
+                                    <div id="assignment-created">-</div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- 2. 수배서관리 탭 -->
-                        <div class="tab-pane fade" id="assignment-pane" role="tabpanel">
-
-                            <!-- 수배서 상태 및 정보 -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 상태</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="assignment-info-grid">
-                                    <div class="assignment-info-item">
-                                        <span class="label">수배서 번호</span>
-                                        <div class="value" id="assignment-number">-</div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">수배 상태</span>
-                                        <div class="value" id="assignment-status">
-                                            <span class="badge bg-warning">대기중</span>
-                                        </div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">수배업체</span>
-                                        <div class="value" id="assignment-vendor">-</div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">생성일시</span>
-                                        <div class="value" id="assignment-created">-</div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">전송일시</span>
-                                        <div class="value" id="assignment-sent">-</div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">확인일시</span>
-                                        <div class="value" id="assignment-viewed">-</div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">응답일시</span>
-                                        <div class="value" id="assignment-responded">-</div>
-                                    </div>
-                                    <div class="assignment-info-item">
-                                        <span class="label">수배서 링크</span>
-                                        <div class="value" id="assignment-link-status">
-                                            <span class="text-muted">미생성</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="assignment-info-item" style="grid-column: 1 / -1;">
-                                    <span class="label">수배 메모</span>
-                                    <div class="value" id="assignment-notes">-</div>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>수배서 관리</h6>
                         </div>
-
-                        <!-- 예약 정보 요약 (접을 수 있는 형태) -->
-                        <div class="card mt-3">
-                            <div class="card-header">
-                                <button class="btn btn-link text-decoration-none p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#reservationSummary" aria-expanded="false">
-                                    <h6 class="mb-0"><i class="bi bi-chevron-right me-2"></i>예약 정보 요약</h6>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="previewAssignment()">
+                                    <i class="bi bi-eye me-1"></i>수배서 미리보기
+                                </button>
+                                <button class="btn btn-outline-success" onclick="sendAssignment()">
+                                    <i class="bi bi-send me-1"></i>수배서 전송
+                                </button>
+                                <button class="btn btn-outline-info" onclick="copyAssignmentLink()">
+                                    <i class="bi bi-link me-1"></i>링크 복사
                                 </button>
                             </div>
-                            <div class="collapse" id="reservationSummary">
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">예약번호</label>
-                                            <div class="fw-bold" id="detail-reservation-number">-</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">예약자명</label>
-                                            <div id="detail-customer-name">-</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">고객연락처</label>
-                                            <div id="detail-phone">-</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">업체명</label>
-                                            <div id="detail-platform">-</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label text-muted">상품명</label>
-                                            <div id="detail-product-name">-</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">패키지(옵션명)</label>
-                                            <div id="detail-package-type">-</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">사용일자</label>
-                                            <div id="detail-usage-date">-</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label text-muted">인원</label>
-                                            <div id="detail-people">-</div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label text-muted">메모</label>
-                                            <div id="detail-memo" class="text-muted">-</div>
-                                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 상태관리 모달 -->
+    <div class="modal fade" id="statusManageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>상태관리</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>현재 상태</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="text-center">
+                                <div id="current-status-display">
+                                    <span class="badge bg-secondary fs-6">상태 로딩중</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>상태 변경</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">새 상태</label>
+                                    <select class="form-select" id="new-status-select">
+                                        <option value="">상태 선택</option>
+                                        <option value="pending">대기중</option>
+                                        <option value="in-progress">진행중</option>
+                                        <option value="confirmed">확정완료</option>
+                                        <option value="voucher-sent">바우처전송</option>
+                                        <option value="cancelled">취소</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">변경 사유</label>
+                                    <input type="text" class="form-control" id="status-change-reason" placeholder="변경 사유">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-key me-2"></i>컨펌번호 관리</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-8">
+                                    <label class="form-label">컨펌번호</label>
+                                    <input type="text" class="form-control" id="confirmation-number" placeholder="컨펌번호 입력">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button class="btn btn-outline-secondary w-100" onclick="generateConfirmationNumber()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>자동생성
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-success" onclick="changeReservationStatus()">
+                        <i class="bi bi-check me-1"></i>상태 변경
+                    </button>
+                    <button class="btn btn-primary" onclick="saveConfirmationNumber()">
+                        <i class="bi bi-key me-1"></i>컨펌번호 저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 바우처관리 모달 -->
+    <div class="modal fade" id="voucherManageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-ticket-perforated me-2"></i>바우처관리</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>바우처 상태</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">생성일시</label>
+                                    <div id="voucher-created-at">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">전송일시</label>
+                                    <div id="voucher-sent-at">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">확인일시</label>
+                                    <div id="voucher-viewed-at">-</div>
+                                </div>
+                                <div class="col-12 text-center">
+                                    <div id="voucher-status-badge">
+                                        <span class="badge bg-secondary">미생성</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <!-- 바우처 링크 -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-link me-2"></i>바우처 링크</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="input-group" id="voucherLinkGroup" style="display: none;">
+                                <input type="text" class="form-control" id="voucherLinkUrl" readonly>
+                                <button class="btn btn-outline-secondary" onclick="copyVoucherLink()">
+                                    <i class="bi bi-clipboard me-1"></i>복사
+                                </button>
+                            </div>
+                            <div class="text-muted" id="voucherLinkPlaceholder">
+                                바우처를 생성하면 링크가 표시됩니다.
+                            </div>
+                        </div>
+                    </div>
 
-                            <!-- 수배서 관리 버튼들 -->
-                            <div class="card mt-3">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-gear me-2"></i>수배서 관리</h6>
+                    <!-- 괌세이브카드 발급 -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-credit-card me-2"></i>괌세이브카드 발급</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-8">
+                                    <label class="form-label">발급 코드</label>
+                                    <input type="text" class="form-control" id="savecard-code" placeholder="자동 생성됩니다">
                                 </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="d-grid gap-2">
-                                                <button class="btn btn-outline-primary" onclick="previewAssignment()">
-                                                    <i class="bi bi-eye me-1"></i>수배서 미리보기
-                                                </button>
-                                                <button class="btn btn-success" onclick="generateAssignmentLink()">
-                                                    <i class="bi bi-link-45deg me-1"></i>수배서 링크 생성
-                                                </button>
-                                                <div class="input-group" id="assignmentLinkGroup" style="display: none;">
+                                <div class="col-4">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button class="btn btn-outline-primary w-100" onclick="generateSavecardCode()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i>재생성
+                                    </button>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-outline-success w-100" onclick="copySavecardInfo()">
+                                        <i class="bi bi-clipboard me-1"></i>발급정보 복사
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 바우처 관리 버튼들 -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>바우처 관리</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <button class="btn btn-primary w-100" onclick="generateVoucher()">
+                                        <i class="bi bi-plus-circle me-1"></i>바우처 생성
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-info w-100" onclick="previewVoucher()">
+                                        <i class="bi bi-eye me-1"></i>미리보기
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-success w-100" onclick="sendVoucherEmail()">
+                                        <i class="bi bi-envelope me-1"></i>이메일
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-warning w-100" onclick="sendVoucherKakao()">
+                                        <i class="bi bi-chat-dots me-1"></i>카카오톡
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-primary w-100" onclick="downloadVoucherPdf()">
+                                        <i class="bi bi-download me-1"></i>PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. 정산이관 모달 -->
+    <div class="modal fade" id="settlementModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calculator me-2"></i>정산이관</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-check2-square me-2"></i>완료 체크리스트</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-voucher-sent">
+                                <label class="form-check-label" for="check-voucher-sent">
+                                    바우처 전송 완료
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-service-completed">
+                                <label class="form-check-label" for="check-service-completed">
+                                    서비스 이용 완료
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-vendor-payment">
+                                <label class="form-check-label" for="check-vendor-payment">
+                                    업체 정산 완료
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-customer-feedback">
+                                <label class="form-check-label" for="check-customer-feedback">
+                                    고객 피드백 수집
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check-documents">
+                                <label class="form-check-label" for="check-documents">
+                                    관련 서류 정리
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>정산 정보</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">매출액</label>
+                                    <input type="number" class="form-control" id="settlement-revenue" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">원가</label>
+                                    <input type="number" class="form-control" id="settlement-cost" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">수수료</label>
+                                    <input type="number" class="form-control" id="settlement-fee" placeholder="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">순이익</label>
+                                    <input type="number" class="form-control" id="settlement-profit" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-outline-secondary" onclick="calculateProfit()">
+                                        <i class="bi bi-calculator me-1"></i>수익 계산
+                                    </button>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">정산 메모</label>
+                                    <textarea class="form-control" id="settlement-memo" rows="3" placeholder="정산 관련 메모"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-danger" id="transfer-btn" onclick="transferToSettlement()" disabled>
+                        <i class="bi bi-arrow-right me-1"></i>정산관리로 이관
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 히스토리 로그 모달 -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>작업 히스토리</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historyList">
+                        <!-- 히스토리 항목들이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
                                                     <input type="text" class="form-control" id="assignmentLinkUrl" readonly>
                                                     <button class="btn btn-outline-secondary copy-btn" onclick="copyAssignmentLink()">
                                                         <i class="bi bi-clipboard"></i>
@@ -869,29 +1073,35 @@
                             <span class="money"><i class="bi bi-cash-coin me-1"></i>${amount}</span>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
-                            <button class="btn btn-sm ${getAssignmentIconClass(reservation)}" 
-                                    onclick="openAssignmentModal(${reservation.id})" 
+                            <button class="btn btn-outline-primary btn-sm" 
+                                    onclick="openReservationEditModal(${reservation.id})" 
                                     data-reservation='${JSON.stringify(reservation)}'
-                                    title="${getAssignmentTooltip(reservation)}">
+                                    title="예약변경">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" 
+                                    onclick="openAssignmentManageModal(${reservation.id})" 
+                                    data-reservation='${JSON.stringify(reservation)}'
+                                    title="수배서관리">
                                 <i class="bi bi-file-text"></i>
                             </button>
-                            <button class="btn btn-outline-info" onclick="viewVoucher(${reservation.id})" title="바우처 보기">
+                            <button class="btn btn-outline-success btn-sm" 
+                                    onclick="openStatusManageModal(${reservation.id})" 
+                                    data-reservation='${JSON.stringify(reservation)}'
+                                    title="상태관리">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" 
+                                    onclick="openVoucherManageModal(${reservation.id})" 
+                                    data-reservation='${JSON.stringify(reservation)}'
+                                    title="바우처관리">
                                 <i class="bi bi-ticket-perforated"></i>
                             </button>
-                            <button class="btn btn-primary btn-manage" data-bs-toggle="modal" data-bs-target="#manageModal" 
-                                    data-resv='${JSON.stringify({
-                                        id: reservation.reservation_number || reservation.id,
-                                        status: statusText,
-                                        vendor: reservation.platform_name || '-',
-                                        guest: reservation.korean_name || '-',
-                                        product: reservation.product_name || '-',
-                                        dep: formatDate(reservation.usage_date) || '-',
-                                        use: formatDate(reservation.usage_date) || '-',
-                                        pax: {adult: reservation.people_adult || 0, child: reservation.people_child || 0},
-                                        amount: reservation.total_price || 0,
-                                        handler: reservation.vendor_name || '미지정'
-                                    })}' title="관리">
-                                <i class="bi bi-gear"></i>
+                            <button class="btn btn-outline-warning btn-sm" 
+                                    onclick="openSettlementModal(${reservation.id})" 
+                                    data-reservation='${JSON.stringify(reservation)}'
+                                    title="정산이관">
+                                <i class="bi bi-calculator"></i>
                             </button>
                         </div>
                     </article>
@@ -1714,26 +1924,111 @@
             }).format(amount);
         }
 
-        // 수배서 모달 열기
-        function openAssignmentModal(reservationId, buttonElement) {
-            console.log('수배서 모달 열기:', reservationId);
+        // 1. 예약변경 모달 열기
+        function openReservationEditModal(reservationId) {
+            const reservation = getReservationData(reservationId);
+            if (!reservation) return;
             
+            window.currentReservationId = reservationId;
+            
+            // 폼에 데이터 채우기
+            document.getElementById('edit-customer-name').value = reservation.korean_name || '';
+            document.getElementById('edit-adult-count').value = reservation.people_adult || 0;
+            document.getElementById('edit-child-count').value = reservation.people_child || 0;
+            document.getElementById('edit-phone').value = reservation.phone || '';
+            document.getElementById('edit-usage-date').value = reservation.usage_date ? reservation.usage_date.split('T')[0] : '';
+            document.getElementById('edit-usage-time').value = reservation.usage_time || '';
+            document.getElementById('edit-product-name').value = reservation.product_name || '';
+            document.getElementById('edit-memo').value = reservation.memo || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('reservationEditModal'));
+            modal.show();
+        }
+
+        // 2. 수배서관리 모달 열기
+        function openAssignmentManageModal(reservationId) {
+            const reservation = getReservationData(reservationId);
+            if (!reservation) return;
+            
+            window.currentReservationId = reservationId;
+            
+            // 수배서 정보 표시
+            document.getElementById('assignment-number').textContent = reservation.assignment_number || '-';
+            document.getElementById('assignment-vendor').textContent = reservation.vendor_name || '-';
+            document.getElementById('assignment-created').textContent = formatDateTime(reservation.created_at) || '-';
+            
+            const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
+            modal.show();
+        }
+
+        // 3. 상태관리 모달 열기
+        function openStatusManageModal(reservationId) {
+            const reservation = getReservationData(reservationId);
+            if (!reservation) return;
+            
+            window.currentReservationId = reservationId;
+            
+            // 현재 상태 표시
+            const statusText = getReservationStatusText(reservation.payment_status);
+            const statusClass = getBootstrapStatusClass(reservation.payment_status);
+            document.getElementById('current-status-display').innerHTML = 
+                `<span class="badge bg-${statusClass} fs-6">${statusText}</span>`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('statusManageModal'));
+            modal.show();
+        }
+
+        // 4. 바우처관리 모달 열기
+        function openVoucherManageModal(reservationId) {
+            const reservation = getReservationData(reservationId);
+            if (!reservation) return;
+            
+            window.currentReservationId = reservationId;
+            
+            // 바우처 상태 확인 및 표시
+            checkVoucherStatus(reservationId);
+            
+            const modal = new bootstrap.Modal(document.getElementById('voucherManageModal'));
+            modal.show();
+        }
+
+        // 5. 정산이관 모달 열기
+        function openSettlementModal(reservationId) {
+            const reservation = getReservationData(reservationId);
+            if (!reservation) return;
+            
+            window.currentReservationId = reservationId;
+            
+            // 체크박스 초기화
+            const checkboxes = ['check-voucher-sent', 'check-service-completed', 'check-vendor-payment', 'check-customer-feedback', 'check-documents'];
+            checkboxes.forEach(id => {
+                const checkbox = document.getElementById(id);
+                if (checkbox) checkbox.checked = false;
+            });
+            
+            updateTransferButton();
+            
+            const modal = new bootstrap.Modal(document.getElementById('settlementModal'));
+            modal.show();
+        }
+
+        // 예약 데이터 가져오기 헬퍼 함수
+        function getReservationData(reservationId) {
             let reservation = null;
             
-            // 버튼 엘리먼트에서 예약 데이터 가져오기 (이벤트에서 호출된 경우)
+            // 이벤트에서 버튼 데이터 가져오기
             if (event && event.target) {
                 const btn = event.target.closest('button');
                 if (btn && btn.getAttribute('data-reservation')) {
                     try {
                         reservation = JSON.parse(btn.getAttribute('data-reservation'));
-                        console.log('버튼에서 예약 데이터 로드:', reservation);
                     } catch (e) {
                         console.error('예약 데이터 파싱 오류:', e);
                     }
                 }
             }
             
-            // 버튼에서 데이터를 가져오지 못한 경우 전역 데이터에서 찾기
+            // 전역 데이터에서 찾기
             if (!reservation) {
                 reservation = window.reservations?.find(r => r.id === reservationId);
             }
@@ -1741,20 +2036,40 @@
             if (!reservation) {
                 console.error('예약 정보를 찾을 수 없습니다. reservationId:', reservationId);
                 showAlert('예약 정보를 찾을 수 없습니다.', 'danger');
-                return;
+                return null;
             }
             
-            console.log('사용할 예약 데이터:', reservation);
-            
-            // 수배서 정보 표시
-            populateAssignmentModalDetails(reservation);
-            
-            // 수배서 관리 모달 열기
-            const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
-            modal.show();
-            
-            // 히스토리 로드
-            loadAssignmentHistory(reservationId);
+            return reservation;
+        }
+
+        // 바우처 상태 확인
+        async function checkVoucherStatus(reservationId) {
+            try {
+                const response = await fetch(`/api/reservations/${reservationId}`);
+                const result = await response.json();
+                
+                if (result.success && result.reservation.voucher_token) {
+                    // 바우처가 이미 생성된 경우
+                    const voucherUrl = `${window.location.origin}/voucher/${result.reservation.voucher_token}`;
+                    document.getElementById('voucherLinkUrl').value = voucherUrl;
+                    document.getElementById('voucherLinkGroup').style.display = 'flex';
+                    document.getElementById('voucherLinkPlaceholder').style.display = 'none';
+                    
+                    // 세이브카드 코드 표시
+                    if (result.reservation.savecard_code) {
+                        document.getElementById('savecard-code').value = result.reservation.savecard_code;
+                    }
+                    
+                    // 바우처 상태 업데이트
+                    updateVoucherStatus(result.voucher);
+                } else {
+                    // 바우처가 생성되지 않은 경우
+                    document.getElementById('voucherLinkGroup').style.display = 'none';
+                    document.getElementById('voucherLinkPlaceholder').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('바우처 상태 확인 오류:', error);
+            }
         }
         
         // 수배서 모달 정보 채우기
@@ -2538,7 +2853,7 @@
             }
         }
         
-        // 상태 변경
+        // 상태 변경 (바우처 자동 생성 포함)
         async function changeReservationStatus() {
             if (!window.currentReservationId) {
                 showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
@@ -2568,11 +2883,19 @@
                 if (result.success) {
                     showAlert('예약 상태가 변경되었습니다!', 'success');
                     addToHistory(`상태 변경: ${getReservationStatusText(newStatus)}`, 'success');
+                    
+                    // 확정 상태로 변경된 경우 바우처 자동 생성
+                    if (newStatus === 'confirmed') {
+                        await autoGenerateVoucher(window.currentReservationId);
+                    }
+                    
                     loadAssignments(); // 목록 새로고침
                     
                     // 현재 상태 표시 업데이트
                     const currentStatusDisplay = document.getElementById('current-status-display');
-                    currentStatusDisplay.innerHTML = `<span class="badge bg-${getBootstrapStatusClass(newStatus)}">${getReservationStatusText(newStatus)}</span>`;
+                    if (currentStatusDisplay) {
+                        currentStatusDisplay.innerHTML = `<span class="badge bg-${getBootstrapStatusClass(newStatus)}">${getReservationStatusText(newStatus)}</span>`;
+                    }
                     
                     // 폼 초기화
                     document.getElementById('status-change-reason').value = '';
@@ -2583,6 +2906,49 @@
                 console.error('상태 변경 오류:', error);
                 showAlert('상태 변경 중 오류가 발생했습니다.', 'danger');
             }
+        }
+
+        // 바우처 자동 생성 (예약 확정 시)
+        async function autoGenerateVoucher(reservationId) {
+            try {
+                showAlert('예약이 확정되어 바우처를 자동 생성 중입니다...', 'info');
+                
+                // 세이브카드 코드 먼저 생성
+                const savecardCode = generateRandomSavecardCode();
+                
+                const response = await fetch(`/api/reservations/${reservationId}/voucher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        auto_generate: true,
+                        savecard_code: savecardCode
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('바우처가 자동으로 생성되었습니다! 괌세이브카드 발급코드도 함께 생성되었습니다.', 'success');
+                    addToHistory('바우처 자동 생성 (예약 확정)', 'success');
+                    addToHistory(`세이브카드 발급코드 생성: ${savecardCode}`, 'info');
+                } else {
+                    console.error('바우처 자동 생성 실패:', result.message);
+                    showAlert('바우처 자동 생성에 실패했습니다. 수동으로 생성해주세요.', 'warning');
+                }
+            } catch (error) {
+                console.error('바우처 자동 생성 오류:', error);
+                showAlert('바우처 자동 생성 중 오류가 발생했습니다. 수동으로 생성해주세요.', 'warning');
+            }
+        }
+
+        // 랜덤 세이브카드 코드 생성
+        function generateRandomSavecardCode() {
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            
+            return letters.charAt(Math.floor(Math.random() * letters.length)) +
+                   Array.from({length: 4}, () => numbers.charAt(Math.floor(Math.random() * numbers.length))).join('') +
+                   letters.charAt(Math.floor(Math.random() * letters.length));
         }
         
         // 컨펌번호 저장
