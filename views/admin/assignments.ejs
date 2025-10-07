@@ -2402,19 +2402,47 @@
             historyDiv.innerHTML = html;
         }
         
-        // 히스토리에 항목 추가 (모든 모달의 히스토리에 추가)
-        function addToHistory(action, type = 'info') {
-            console.log(`📝 히스토리: ${action} (${type})`);
+        // 히스토리에 항목 추가 (변경 내역 추적 기능 포함)
+        function addToHistory(action, type = 'info', changes = null, details = null) {
+            console.log(`📝 히스토리: ${action} (${type})`, changes);
             
             const typeClass = type === 'success' ? 'text-success' : type === 'danger' ? 'text-danger' : 'text-info';
             const icon = type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
             
+            // 변경 내역 HTML 생성
+            let changesHtml = '';
+            if (changes && Object.keys(changes).length > 0) {
+                changesHtml = '<div class="mt-1">';
+                Object.entries(changes).forEach(([field, change]) => {
+                    const fieldName = getFieldDisplayName(field);
+                    changesHtml += `
+                        <div class="change-item">
+                            <small class="text-muted">
+                                <strong>${fieldName}:</strong> 
+                                <span class="text-decoration-line-through text-danger">${change.from || '(없음)'}</span> 
+                                → 
+                                <span class="text-success">${change.to || '(없음)'}</span>
+                            </small>
+                        </div>
+                    `;
+                });
+                changesHtml += '</div>';
+            }
+            
+            // 추가 세부사항 HTML
+            let detailsHtml = '';
+            if (details) {
+                detailsHtml = `<div class="mt-1"><small class="text-muted">${details}</small></div>`;
+            }
+            
             const newItem = `
-                <div class="d-flex align-items-center mb-2 p-2 border-start border-3 border-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'} bg-light">
-                    <i class="bi ${icon} ${typeClass} me-2"></i>
+                <div class="d-flex align-items-start mb-2 p-2 border-start border-3 border-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'} bg-light">
+                    <i class="bi ${icon} ${typeClass} me-2 mt-1"></i>
                     <div class="flex-grow-1">
                         <div class="fw-medium">${action}</div>
                         <small class="text-muted">${new Date().toLocaleString('ko-KR')}</small>
+                        ${changesHtml}
+                        ${detailsHtml}
                     </div>
                 </div>
             `;
@@ -2440,6 +2468,33 @@
             });
         }
         
+        // 필드명을 한국어로 변환하는 함수
+        function getFieldDisplayName(fieldName) {
+            const fieldNames = {
+                'korean_name': '예약자명',
+                'english_name': '영문명',
+                'phone': '연락처',
+                'email': '이메일',
+                'people_adult': '성인 인원',
+                'people_child': '아동 인원',
+                'people_infant': '유아 인원',
+                'usage_date': '이용일자',
+                'usage_time': '이용시간',
+                'product_name': '상품명',
+                'package_type': '패키지',
+                'memo': '메모',
+                'payment_status': '예약상태',
+                'vendor_name': '수배업체',
+                'confirmation_number': '컨펌번호',
+                'voucher_token': '바우처',
+                'savecard_code': '세이브카드 코드',
+                'total_price': '총 금액',
+                'cost_price': '원가',
+                'platform_name': '플랫폼'
+            };
+            return fieldNames[fieldName] || fieldName;
+        }
+        
         // 모달별 히스토리 로드
         async function loadModalHistory(reservationId) {
             try {
@@ -2447,11 +2502,34 @@
                 // const response = await fetch(`/api/reservations/${reservationId}/history`);
                 // const result = await response.json();
                 
-                // 임시로 샘플 히스토리 표시
+                // 임시로 샘플 히스토리 표시 (업그레이드된 형식)
                 const sampleHistory = [
-                    { action: '예약 생성', type: 'info', time: new Date(Date.now() - 86400000) },
-                    { action: '수배서 생성', type: 'success', time: new Date(Date.now() - 43200000) },
-                    { action: '수배서 전송', type: 'success', time: new Date(Date.now() - 21600000) }
+                    { 
+                        action: '예약 생성', 
+                        type: 'info', 
+                        time: new Date(Date.now() - 86400000),
+                        details: '새로운 예약이 등록되었습니다.'
+                    },
+                    { 
+                        action: '예약 정보 수정', 
+                        type: 'success', 
+                        time: new Date(Date.now() - 43200000),
+                        changes: {
+                            korean_name: { from: '김종성', to: '이종성' },
+                            phone: { from: '010-1234-5678', to: '010-9876-5432' }
+                        },
+                        details: '2개 항목이 변경되었습니다.'
+                    },
+                    { 
+                        action: '컨펌번호 저장', 
+                        type: 'success', 
+                        time: new Date(Date.now() - 21600000),
+                        changes: {
+                            confirmation_number: { from: '(없음)', to: 'ABC123456' },
+                            vendor_name: { from: '(없음)', to: '괌 투어 컴퍼니' }
+                        },
+                        details: '예약이 확정되었습니다.'
+                    }
                 ];
                 
                 const historyContainers = [
@@ -2465,15 +2543,45 @@
                 historyContainers.forEach(containerId => {
                     const container = document.getElementById(containerId);
                     if (container) {
-                        const historyHtml = sampleHistory.map(item => `
-                            <div class="d-flex align-items-center mb-2 p-2 border-start border-3 border-${item.type === 'success' ? 'success' : 'info'} bg-light">
-                                <i class="bi ${item.type === 'success' ? 'bi-check-circle text-success' : 'bi-info-circle text-info'} me-2"></i>
-                                <div class="flex-grow-1">
-                                    <div class="fw-medium">${item.action}</div>
-                                    <small class="text-muted">${item.time.toLocaleString('ko-KR')}</small>
+                        const historyHtml = sampleHistory.map(item => {
+                            // 변경 내역 HTML 생성
+                            let changesHtml = '';
+                            if (item.changes && Object.keys(item.changes).length > 0) {
+                                changesHtml = '<div class="mt-1">';
+                                Object.entries(item.changes).forEach(([field, change]) => {
+                                    const fieldName = getFieldDisplayName(field);
+                                    changesHtml += `
+                                        <div class="change-item">
+                                            <small class="text-muted">
+                                                <strong>${fieldName}:</strong> 
+                                                <span class="text-decoration-line-through text-danger">${change.from}</span> 
+                                                → 
+                                                <span class="text-success">${change.to}</span>
+                                            </small>
+                                        </div>
+                                    `;
+                                });
+                                changesHtml += '</div>';
+                            }
+                            
+                            // 추가 세부사항 HTML
+                            let detailsHtml = '';
+                            if (item.details) {
+                                detailsHtml = `<div class="mt-1"><small class="text-muted">${item.details}</small></div>`;
+                            }
+                            
+                            return `
+                                <div class="d-flex align-items-start mb-2 p-2 border-start border-3 border-${item.type === 'success' ? 'success' : 'info'} bg-light">
+                                    <i class="bi ${item.type === 'success' ? 'bi-check-circle text-success' : 'bi-info-circle text-info'} me-2 mt-1"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-medium">${item.action}</div>
+                                        <small class="text-muted">${item.time.toLocaleString('ko-KR')}</small>
+                                        ${changesHtml}
+                                        ${detailsHtml}
+                                    </div>
                                 </div>
-                            </div>
-                        `).join('');
+                            `;
+                        }).join('');
                         
                         container.innerHTML = historyHtml;
                     }
@@ -2670,12 +2778,15 @@
             }
         }
         
-        // 예약 변경사항 저장
+        // 예약 변경사항 저장 (변경 내역 추적 포함)
         async function saveReservationChanges() {
             if (!window.currentReservationId) {
                 showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
                 return;
             }
+            
+            // 현재 예약 데이터 가져오기
+            const currentReservation = getReservationData(window.currentReservationId);
             
             const formData = {
                 korean_name: document.getElementById('edit-customer-name').value,
@@ -2688,6 +2799,23 @@
                 memo: document.getElementById('edit-memo').value
             };
             
+            // 변경 내역 추적
+            const changes = {};
+            if (currentReservation) {
+                Object.keys(formData).forEach(key => {
+                    const oldValue = currentReservation[key];
+                    const newValue = formData[key];
+                    
+                    // 값이 실제로 변경된 경우만 추적
+                    if (oldValue != newValue) {
+                        changes[key] = {
+                            from: oldValue,
+                            to: newValue
+                        };
+                    }
+                });
+            }
+            
             try {
                 const response = await fetch(`/api/reservations/${window.currentReservationId}`, {
                     method: 'PATCH',
@@ -2699,7 +2827,14 @@
                 
                 if (result.success) {
                     showAlert('예약 정보가 저장되었습니다!', 'success');
-                    addToHistory('예약 정보 수정', 'success');
+                    
+                    // 변경 내역과 함께 히스토리 추가
+                    if (Object.keys(changes).length > 0) {
+                        addToHistory('예약 정보 수정', 'success', changes, `${Object.keys(changes).length}개 항목이 변경되었습니다.`);
+                    } else {
+                        addToHistory('예약 정보 저장', 'info', null, '변경된 내용이 없습니다.');
+                    }
+                    
                     loadAssignments(); // 목록 새로고침
                 } else {
                     showAlert('예약 정보 저장에 실패했습니다: ' + result.message, 'danger');
@@ -2727,7 +2862,7 @@
             }
         }
         
-        // 상태 변경 (바우처 자동 생성 포함)
+        // 상태 변경 (바우처 자동 생성 포함, 변경 내역 추적)
         async function changeReservationStatus() {
             if (!window.currentReservationId) {
                 showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
@@ -2741,6 +2876,10 @@
                 showAlert('변경할 상태를 선택해주세요.', 'warning');
                 return;
             }
+            
+            // 현재 예약 데이터 가져오기
+            const currentReservation = getReservationData(window.currentReservationId);
+            const oldStatus = currentReservation ? currentReservation.payment_status : null;
             
             try {
                 const response = await fetch(`/api/reservations/${window.currentReservationId}/status`, {
@@ -2756,7 +2895,17 @@
                 
                 if (result.success) {
                     showAlert('예약 상태가 변경되었습니다!', 'success');
-                    addToHistory(`상태 변경: ${getReservationStatusText(newStatus)}`, 'success');
+                    
+                    // 상태 변경 내역 추적
+                    const changes = {
+                        payment_status: {
+                            from: getReservationStatusText(oldStatus),
+                            to: getReservationStatusText(newStatus)
+                        }
+                    };
+                    
+                    const details = reason ? `변경 사유: ${reason}` : null;
+                    addToHistory('예약 상태 변경', 'success', changes, details);
                     
                     // 확정 상태로 변경된 경우 바우처 자동 생성
                     if (newStatus === 'confirmed') {
@@ -2854,7 +3003,30 @@
                 
                 if (result.success) {
                     showAlert('컨펌번호가 저장되었습니다!', 'success');
-                    addToHistory(`컨펌번호 저장: ${confirmationNumber}`, 'success');
+                    
+                    // 현재 예약 데이터 가져오기
+                    const currentReservation = getReservationData(window.currentReservationId);
+                    const oldConfirmationNumber = currentReservation ? currentReservation.confirmation_number : null;
+                    
+                    // 컨펌번호 변경 내역 추적
+                    const changes = {
+                        confirmation_number: {
+                            from: oldConfirmationNumber || '(없음)',
+                            to: confirmationNumber
+                        }
+                    };
+                    
+                    // 수배업체 정보도 변경된 경우 추가
+                    if (vendorId && currentReservation && currentReservation.vendor_id !== vendorId) {
+                        const vendorSelect = document.getElementById('vendor-select');
+                        const vendorName = vendorSelect.options[vendorSelect.selectedIndex].text;
+                        changes.vendor_name = {
+                            from: currentReservation.vendor_name || '(없음)',
+                            to: vendorName
+                        };
+                    }
+                    
+                    addToHistory('컨펌번호 저장', 'success', changes, '예약이 확정되었습니다.');
                     loadAssignments(); // 목록 새로고침
                 } else {
                     showAlert('컨펌번호 저장에 실패했습니다: ' + result.message, 'danger');
