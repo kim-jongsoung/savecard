@@ -2654,12 +2654,16 @@
         // 모달별 히스토리 로드
         async function loadModalHistory(reservationId) {
             try {
-                // 실제 히스토리 데이터를 로드하는 API 호출 (향후 구현)
-                // const response = await fetch(`/api/reservations/${reservationId}/history`);
-                // const result = await response.json();
+                // 실제 히스토리 데이터를 로드하는 API 호출
+                const response = await fetch(`/api/reservations/${reservationId}/history`);
+                const result = await response.json();
                 
-                // 임시로 샘플 히스토리 표시 (업그레이드된 형식)
-                const sampleHistory = [
+                let historyData = [];
+                if (result.success && result.data) {
+                    historyData = result.data;
+                } else {
+                    // API 실패 시 샘플 히스토리 표시
+                    historyData = [
                     { 
                         action: '예약 생성', 
                         type: 'info', 
@@ -2686,7 +2690,8 @@
                         },
                         details: '예약이 확정되었습니다.'
                     }
-                ];
+                    ];
+                }
                 
                 const historyContainers = [
                     'assignmentHistory',
@@ -2699,7 +2704,7 @@
                 historyContainers.forEach(containerId => {
                     const container = document.getElementById(containerId);
                     if (container) {
-                        const historyHtml = sampleHistory.map(item => {
+                        const historyHtml = historyData.map(item => {
                             // 변경 내역 HTML 생성
                             let changesHtml = '';
                             if (item.changes && Object.keys(item.changes).length > 0) {
@@ -2731,7 +2736,7 @@
                                     <i class="bi ${item.type === 'success' ? 'bi-check-circle text-success' : 'bi-info-circle text-info'} me-2 mt-1"></i>
                                     <div class="flex-grow-1">
                                         <div class="fw-medium">${item.action}</div>
-                                        <small class="text-muted">${item.time.toLocaleString('ko-KR')}</small>
+                                        <small class="text-muted">${new Date(item.time).toLocaleString('ko-KR')}</small>
                                         ${changesHtml}
                                         ${detailsHtml}
                                     </div>

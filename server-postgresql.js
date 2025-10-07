@@ -5607,6 +5607,60 @@ app.post('/api/drafts/:id/reject', requireAuth, async (req, res) => {
     }
 });
 
+// 예약 히스토리 조회 API
+app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        
+        // 임시로 샘플 히스토리 반환 (실제 구현 시 reservation_logs 테이블 조회)
+        const sampleHistory = [
+            {
+                id: 1,
+                action: '예약 생성',
+                type: 'info',
+                time: new Date(Date.now() - 86400000).toISOString(),
+                changed_by: '관리자',
+                details: '새로운 예약이 등록되었습니다.'
+            },
+            {
+                id: 2,
+                action: '예약 정보 수정',
+                type: 'success',
+                time: new Date(Date.now() - 43200000).toISOString(),
+                changed_by: '관리자',
+                changes: {
+                    korean_name: { from: '김종성', to: '이종성' },
+                    phone: { from: '010-1234-5678', to: '010-9876-5432' }
+                },
+                details: '2개 항목이 변경되었습니다.'
+            },
+            {
+                id: 3,
+                action: '컨펌번호 저장',
+                type: 'success',
+                time: new Date(Date.now() - 21600000).toISOString(),
+                changed_by: '관리자',
+                changes: {
+                    confirmation_number: { from: '(없음)', to: 'ABC123456' }
+                },
+                details: '예약이 확정되었습니다.'
+            }
+        ];
+        
+        res.json({
+            success: true,
+            data: sampleHistory
+        });
+        
+    } catch (error) {
+        console.error('예약 히스토리 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '히스토리 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 예약 삭제 API
 app.delete('/api/reservations/:id', requireAuth, async (req, res) => {
     try {
