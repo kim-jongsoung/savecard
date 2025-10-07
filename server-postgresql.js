@@ -8436,12 +8436,13 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
     }
 });
 
-// 바우처 전송 API
+// 바우처 생성/전송 API (새로운 시스템)
 app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
+        const { auto_generate, savecard_code } = req.body;
 
-        console.log(`📧 바우처 전송 시작: 예약 ID ${id}`);
+        console.log(`🎫 바우처 생성 시작: 예약 ID ${id}`, { auto_generate, savecard_code });
 
         // 예약 정보 조회
         const reservationResult = await pool.query(
@@ -8458,39 +8459,87 @@ app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
 
         const reservation = reservationResult.rows[0];
 
-        // 바우처 토큰 생성
-        const voucher_token = 'VCH' + Date.now() + Math.random().toString(36).substr(2, 9);
-
-        // 예약 상태를 '바우처전송완료'로 변경
-        await pool.query(
-            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
-            ['voucher_sent', id]
+        // 이미 바우처가 생성되었는지 확인
+        const existingVoucher = await pool.query(
+            'SELECT voucher_token FROM assignments WHERE reservation_id = $1 AND voucher_token IS NOT NULL',
+            [id]
         );
 
-        // assignments 테이블에 바우처 토큰 저장
-        await pool.query(
-            `UPDATE assignments 
-             SET voucher_token = $1, updated_at = NOW() 
-             WHERE reservation_id = $2`,
-            [voucher_token, id]
-        );
+        let voucher_token;
+        let generated_savecard_code = savecard_code;
 
-        // TODO: 실제 바우처 이메일/SMS 전송 로직 추가
-        console.log(`📧 바우처 전송 완료: ${reservation.korean_name} (${reservation.phone})`);
+        if (existingVoucher.rows.length > 0) {
+            voucher_token = existingVoucher.rows[0].voucher_token;
+            console.log(`📋 기존 바우처 토큰 사용: ${voucher_token}`);
+        } else {
+            // 새 바우처 토큰 생성
+            voucher_token = 'VCH' + Date.now() + Math.random().toString(36).substr(2, 9);
+            
+            // 세이브카드 코드가 없으면 자동 생성
+            if (!generated_savecard_code) {
+                const letters = 'abcdefghijklmnopqrstuvwxyz';
+                const numbers = '0123456789';
+                generated_savecard_code = 
+                    letters.charAt(Math.floor(Math.random() * letters.length)) +
+                    Array.from({length: 4}, () => numbers.charAt(Math.floor(Math.random() * numbers.length))).join('') +
+                    letters.charAt(Math.floor(Math.random() * letters.length));
+            }
+
+            // assignments 테이블 업데이트 또는 생성
+            const assignmentExists = await pool.query(
+                'SELECT id FROM assignments WHERE reservation_id = $1',
+                [id]
+            );
+
+            if (assignmentExists.rows.length > 0) {
+                // 기존 assignment 업데이트
+                await pool.query(
+                    `UPDATE assignments 
+                     SET voucher_token = $1, savecard_code = $2, sent_at = NOW(), updated_at = NOW() 
+                     WHERE reservation_id = $3`,
+                    [voucher_token, generated_savecard_code, id]
+                );
+            } else {
+                // 새 assignment 생성
+                await pool.query(
+                    `INSERT INTO assignments (reservation_id, voucher_token, savecard_code, sent_at, created_at, updated_at)
+                     VALUES ($1, $2, $3, NOW(), NOW(), NOW())`,
+                    [id, voucher_token, generated_savecard_code]
+                );
+            }
+
+            console.log(`✅ 새 바우처 생성: ${voucher_token}, 세이브카드: ${generated_savecard_code}`);
+        }
+
+        // 예약 상태를 '바우처전송완료'로 변경 (자동 생성이 아닌 경우)
+        if (!auto_generate) {
+            await pool.query(
+                'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+                ['voucher_sent', id]
+            );
+        }
+
         console.log(`🎫 바우처 링크: ${req.protocol}://${req.get('host')}/voucher/${voucher_token}`);
 
         res.json({
             success: true,
-            message: '바우처가 전송되었습니다.',
+            message: auto_generate ? '바우처가 자동 생성되었습니다.' : '바우처가 전송되었습니다.',
             voucher_token: voucher_token,
-            voucher_link: `/voucher/${voucher_token}`
+            savecard_code: generated_savecard_code,
+            voucher_link: `/voucher/${voucher_token}`,
+            voucher: {
+                voucher_token: voucher_token,
+                savecard_code: generated_savecard_code,
+                created_at: new Date(),
+                status: 'created'
+            }
         });
 
     } catch (error) {
-        console.error('❌ 바우처 전송 오류:', error);
+        console.error('❌ 바우처 생성 오류:', error);
         res.status(500).json({
             success: false,
-            message: '바우처 전송 중 오류가 발생했습니다: ' + error.message
+            message: '바우처 생성 중 오류가 발생했습니다: ' + error.message
         });
     }
 });
@@ -8968,56 +9017,102 @@ app.get('/voucher/:token', async (req, res) => {
     try {
         const { token } = req.params;
         
-        // 바우처 정보 조회
+        console.log(`🎫 바우처 페이지 요청: ${token}`);
+        
+        // 바우처 정보 조회 (새로운 시스템에 맞게 수정)
         const voucherQuery = `
-            SELECT a.*, r.*
-            FROM assignments a
-            LEFT JOIN reservations r ON a.reservation_id = r.id
-            WHERE a.voucher_token = $1 AND a.status = 'confirmed'
+            SELECT 
+                r.*,
+                a.voucher_token,
+                a.confirmation_number,
+                a.vendor_name,
+                a.vendor_contact,
+                a.cost_price,
+                a.cost_currency,
+                a.response_at,
+                a.created_at as voucher_created_at,
+                a.sent_at as voucher_sent_at,
+                a.viewed_at as voucher_viewed_at,
+                a.savecard_code
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE a.voucher_token = $1
         `;
         
+        console.log(`🔍 바우처 쿼리 실행: ${token}`);
         const result = await pool.query(voucherQuery, [token]);
+        console.log(`📊 쿼리 결과: ${result.rows.length}개 행 반환`);
         
         if (result.rows.length === 0) {
+            console.log(`❌ 바우처 토큰 ${token}을 찾을 수 없음`);
+            
+            // 디버깅: 최근 바우처 토큰들 조회
+            try {
+                const debugQuery = `
+                    SELECT voucher_token, reservation_id, created_at 
+                    FROM assignments 
+                    WHERE voucher_token IS NOT NULL 
+                    ORDER BY created_at DESC 
+                    LIMIT 5
+                `;
+                const debugResult = await pool.query(debugQuery);
+                console.log('🔍 최근 바우처 토큰들:', debugResult.rows);
+            } catch (debugError) {
+                console.error('디버그 쿼리 오류:', debugError);
+            }
+            
             return res.status(404).render('error', {
                 title: '바우처를 찾을 수 없습니다',
-                message: '유효하지 않은 바우처 링크이거나 아직 확정되지 않은 예약입니다.'
+                message: `바우처 토큰 "${token}"을 찾을 수 없습니다. 링크를 다시 확인해주세요.`
             });
         }
         
         const data = result.rows[0];
-        const assignment = {
-            id: data.id,
-            confirmation_number: data.confirmation_number,
+        
+        // 바우처 조회 기록 남기기
+        try {
+            await pool.query(
+                'UPDATE assignments SET viewed_at = NOW() WHERE voucher_token = $1 AND viewed_at IS NULL',
+                [token]
+            );
+        } catch (viewError) {
+            console.error('바우처 조회 기록 오류:', viewError);
+        }
+        
+        // 바우처 객체 구성
+        const voucher = {
             voucher_token: data.voucher_token,
-            vendor_name: data.vendor_name,
-            vendor_contact: data.vendor_contact,
-            cost_price: data.cost_price,
-            cost_currency: data.cost_currency,
-            response_at: data.response_at
+            savecard_code: data.savecard_code || null,
+            created_at: data.voucher_created_at,
+            sent_at: data.voucher_sent_at,
+            viewed_at: data.voucher_viewed_at,
+            status: data.voucher_sent_at ? (data.voucher_viewed_at ? 'viewed' : 'sent') : 'created'
         };
         
+        // 예약 객체 구성 (새로운 필드명에 맞게 수정)
         const reservation = {
-            id: data.reservation_id,
-            customer_name: data.customer_name,
-            english_name: data.english_name,
+            id: data.id,
             reservation_number: data.reservation_number,
-            product_name: data.product_name,
-            tour_date: data.tour_date,
-            tour_time: data.tour_time,
-            adult_count: data.adult_count,
-            child_count: data.child_count,
-            infant_count: data.infant_count,
-            pickup_location: data.pickup_location,
-            special_requests: data.special_requests,
-            phone_number: data.phone_number,
+            korean_name: data.korean_name,
+            english_name: data.english_name,
+            phone: data.phone,
             email: data.email,
-            platform_name: data.platform_name
+            product_name: data.product_name,
+            package_type: data.package_type,
+            usage_date: data.usage_date,
+            usage_time: data.usage_time,
+            people_adult: data.people_adult,
+            people_child: data.people_child,
+            people_infant: data.people_infant,
+            memo: data.memo,
+            platform_name: data.platform_name,
+            vendor_name: data.vendor_name,
+            total_price: data.total_price
         };
         
         res.render('voucher', {
-            title: `바우처 - ${reservation.customer_name}`,
-            assignment,
+            title: `바우처 - ${reservation.korean_name}`,
+            voucher,
             reservation
         });
         
