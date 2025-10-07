@@ -221,7 +221,7 @@
 
     <!-- 1. 예약변경 모달 -->
     <div class="modal fade" id="reservationEditModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>예약변경</h5>
@@ -229,33 +229,62 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
+                        <!-- 예약 정보 -->
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>예약자 정보</h6>
+                                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>예약 정보</h6>
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-2">
                                         <div class="col-12">
-                                            <label class="form-label">예약자명</label>
-                                            <input type="text" class="form-control" id="edit-customer-name" placeholder="예약자명">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">성인수</label>
-                                            <input type="number" class="form-control" id="edit-adult-count" min="0" value="0">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">아동수</label>
-                                            <input type="number" class="form-control" id="edit-child-count" min="0" value="0">
+                                            <label class="form-label">예약번호</label>
+                                            <input type="text" class="form-control" id="edit-reservation-number" readonly>
                                         </div>
                                         <div class="col-12">
-                                            <label class="form-label">연락처</label>
-                                            <input type="text" class="form-control" id="edit-phone" placeholder="연락처">
+                                            <label class="form-label">업체명</label>
+                                            <input type="text" class="form-control" id="edit-platform-name" placeholder="업체명">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">예약 상태</label>
+                                            <select class="form-select" id="edit-payment-status">
+                                                <option value="pending">대기중 (신규예약)</option>
+                                                <option value="confirmed">확정 (수배완료)</option>
+                                                <option value="cancelled">예약취소</option>
+                                                <option value="refunded">환불완료</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">예약일시</label>
+                                            <input type="text" class="form-control" id="edit-created-at" readonly>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 상품 정보 -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-box me-2"></i>상품 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <label class="form-label">상품명</label>
+                                            <input type="text" class="form-control" id="edit-product-name" placeholder="상품명">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">패키지 타입 (상품 옵션)</label>
+                                            <input type="text" class="form-control" id="edit-package-type" placeholder="패키지 타입">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 일정 정보 -->
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header">
@@ -264,22 +293,100 @@
                                 <div class="card-body">
                                     <div class="row g-2">
                                         <div class="col-6">
-                                            <label class="form-label">이용일자</label>
+                                            <label class="form-label">이용일</label>
                                             <input type="date" class="form-control" id="edit-usage-date">
                                         </div>
                                         <div class="col-6">
                                             <label class="form-label">이용시간</label>
                                             <input type="time" class="form-control" id="edit-usage-time">
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 예약자 정보 -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>예약자 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
                                         <div class="col-12">
-                                            <label class="form-label">상품명</label>
-                                            <input type="text" class="form-control" id="edit-product-name" placeholder="상품명">
+                                            <label class="form-label">한글명</label>
+                                            <input type="text" class="form-control" id="edit-korean-name" placeholder="한글명">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">영문 성</label>
+                                            <input type="text" class="form-control" id="edit-english-lastname" placeholder="Last Name">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">영문 이름</label>
+                                            <input type="text" class="form-control" id="edit-english-firstname" placeholder="First Name">
                                         </div>
                                         <div class="col-12">
-                                            <label class="form-label">특별요청</label>
-                                            <textarea class="form-control" id="edit-memo" rows="2" placeholder="특별요청사항"></textarea>
+                                            <label class="form-label">전화번호</label>
+                                            <input type="text" class="form-control" id="edit-phone" placeholder="전화번호">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">이메일</label>
+                                            <input type="email" class="form-control" id="edit-email" placeholder="이메일">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">카카오ID</label>
+                                            <input type="text" class="form-control" id="edit-kakao-id" placeholder="카카오ID">
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 인원 및 금액 정보 -->
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-people me-2"></i>인원 및 금액 정보</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-md-2">
+                                            <label class="form-label">성인수</label>
+                                            <input type="number" class="form-control" id="edit-people-adult" min="0" value="0">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">아동수</label>
+                                            <input type="number" class="form-control" id="edit-people-child" min="0" value="0">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">유아수</label>
+                                            <input type="number" class="form-control" id="edit-people-infant" min="0" value="0">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">성인 단가($)</label>
+                                            <input type="number" class="form-control" id="edit-adult-price" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">아동 단가($)</label>
+                                            <input type="number" class="form-control" id="edit-child-price" min="0" step="0.01">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">유아 단가($)</label>
+                                            <input type="number" class="form-control" id="edit-infant-price" min="0" step="0.01">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 특별 요청사항 -->
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="bi bi-chat-text me-2"></i>특별 요청사항</h6>
+                                </div>
+                                <div class="card-body">
+                                    <textarea class="form-control" id="edit-memo" rows="3" placeholder="특별 요청사항을 입력하세요"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -1918,14 +2025,46 @@
             
             window.currentReservationId = reservationId;
             
-            // 폼에 데이터 채우기
-            document.getElementById('edit-customer-name').value = reservation.korean_name || '';
-            document.getElementById('edit-adult-count').value = reservation.people_adult || 0;
-            document.getElementById('edit-child-count').value = reservation.people_child || 0;
-            document.getElementById('edit-phone').value = reservation.phone || '';
+            // 예약 정보
+            document.getElementById('edit-reservation-number').value = reservation.reservation_number || '';
+            document.getElementById('edit-platform-name').value = reservation.platform_name || '';
+            document.getElementById('edit-payment-status').value = reservation.payment_status || 'pending';
+            document.getElementById('edit-created-at').value = reservation.created_at ? new Date(reservation.created_at).toLocaleString('ko-KR') : '';
+            
+            // 상품 정보
+            document.getElementById('edit-product-name').value = reservation.product_name || '';
+            document.getElementById('edit-package-type').value = reservation.package_type || '';
+            
+            // 일정 정보
             document.getElementById('edit-usage-date').value = reservation.usage_date ? reservation.usage_date.split('T')[0] : '';
             document.getElementById('edit-usage-time').value = reservation.usage_time || '';
-            document.getElementById('edit-product-name').value = reservation.product_name || '';
+            
+            // 예약자 정보
+            document.getElementById('edit-korean-name').value = reservation.korean_name || '';
+            
+            // 영문명 분리 (english_name에서 성과 이름 분리)
+            if (reservation.english_name) {
+                const nameParts = reservation.english_name.split(' ');
+                document.getElementById('edit-english-lastname').value = nameParts[0] || '';
+                document.getElementById('edit-english-firstname').value = nameParts.slice(1).join(' ') || '';
+            } else {
+                document.getElementById('edit-english-lastname').value = '';
+                document.getElementById('edit-english-firstname').value = '';
+            }
+            
+            document.getElementById('edit-phone').value = reservation.phone || '';
+            document.getElementById('edit-email').value = reservation.email || '';
+            document.getElementById('edit-kakao-id').value = reservation.kakao_id || '';
+            
+            // 인원 및 금액 정보
+            document.getElementById('edit-people-adult').value = reservation.people_adult || 0;
+            document.getElementById('edit-people-child').value = reservation.people_child || 0;
+            document.getElementById('edit-people-infant').value = reservation.people_infant || 0;
+            document.getElementById('edit-adult-price').value = reservation.adult_price || '';
+            document.getElementById('edit-child-price').value = reservation.child_price || '';
+            document.getElementById('edit-infant-price').value = reservation.infant_price || '';
+            
+            // 특별 요청사항
             document.getElementById('edit-memo').value = reservation.memo || '';
             
             const modal = new bootstrap.Modal(document.getElementById('reservationEditModal'));
@@ -2471,26 +2610,43 @@
         // 필드명을 한국어로 변환하는 함수
         function getFieldDisplayName(fieldName) {
             const fieldNames = {
-                'korean_name': '예약자명',
-                'english_name': '영문명',
-                'phone': '연락처',
-                'email': '이메일',
-                'people_adult': '성인 인원',
-                'people_child': '아동 인원',
-                'people_infant': '유아 인원',
-                'usage_date': '이용일자',
-                'usage_time': '이용시간',
-                'product_name': '상품명',
-                'package_type': '패키지',
-                'memo': '메모',
+                // 예약 정보
+                'reservation_number': '예약번호',
+                'platform_name': '업체명',
                 'payment_status': '예약상태',
+                'created_at': '예약일시',
+                
+                // 상품 정보
+                'product_name': '상품명',
+                'package_type': '패키지 타입',
+                
+                // 일정 정보
+                'usage_date': '이용일',
+                'usage_time': '이용시간',
+                
+                // 예약자 정보
+                'korean_name': '한글명',
+                'english_name': '영문명',
+                'phone': '전화번호',
+                'email': '이메일',
+                'kakao_id': '카카오ID',
+                
+                // 인원 및 금액 정보
+                'people_adult': '성인수',
+                'people_child': '아동수',
+                'people_infant': '유아수',
+                'adult_price': '성인 단가($)',
+                'child_price': '아동 단가($)',
+                'infant_price': '유아 단가($)',
+                
+                // 기타
+                'memo': '특별 요청사항',
                 'vendor_name': '수배업체',
                 'confirmation_number': '컨펌번호',
                 'voucher_token': '바우처',
                 'savecard_code': '세이브카드 코드',
                 'total_price': '총 금액',
-                'cost_price': '원가',
-                'platform_name': '플랫폼'
+                'cost_price': '원가'
             };
             return fieldNames[fieldName] || fieldName;
         }
@@ -2788,14 +2944,40 @@
             // 현재 예약 데이터 가져오기
             const currentReservation = getReservationData(window.currentReservationId);
             
+            // 영문명 합치기
+            const englishLastname = document.getElementById('edit-english-lastname').value;
+            const englishFirstname = document.getElementById('edit-english-firstname').value;
+            const englishName = [englishLastname, englishFirstname].filter(name => name.trim()).join(' ');
+            
             const formData = {
-                korean_name: document.getElementById('edit-customer-name').value,
-                people_adult: parseInt(document.getElementById('edit-adult-count').value) || 0,
-                people_child: parseInt(document.getElementById('edit-child-count').value) || 0,
-                phone: document.getElementById('edit-phone').value,
+                // 예약 정보
+                platform_name: document.getElementById('edit-platform-name').value,
+                payment_status: document.getElementById('edit-payment-status').value,
+                
+                // 상품 정보
+                product_name: document.getElementById('edit-product-name').value,
+                package_type: document.getElementById('edit-package-type').value,
+                
+                // 일정 정보
                 usage_date: document.getElementById('edit-usage-date').value,
                 usage_time: document.getElementById('edit-usage-time').value,
-                product_name: document.getElementById('edit-product-name').value,
+                
+                // 예약자 정보
+                korean_name: document.getElementById('edit-korean-name').value,
+                english_name: englishName,
+                phone: document.getElementById('edit-phone').value,
+                email: document.getElementById('edit-email').value,
+                kakao_id: document.getElementById('edit-kakao-id').value,
+                
+                // 인원 및 금액 정보
+                people_adult: parseInt(document.getElementById('edit-people-adult').value) || 0,
+                people_child: parseInt(document.getElementById('edit-people-child').value) || 0,
+                people_infant: parseInt(document.getElementById('edit-people-infant').value) || 0,
+                adult_price: parseFloat(document.getElementById('edit-adult-price').value) || 0,
+                child_price: parseFloat(document.getElementById('edit-child-price').value) || 0,
+                infant_price: parseFloat(document.getElementById('edit-infant-price').value) || 0,
+                
+                // 특별 요청사항
                 memo: document.getElementById('edit-memo').value
             };
             
