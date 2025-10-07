@@ -8073,24 +8073,25 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         // 일정 정보
         if (formData.usage_date !== undefined) {
             updateFields.push(`usage_date = $${paramIndex++}`);
-            values.push(formData.usage_date);
+            values.push(formData.usage_date || null);
         }
         if (formData.usage_time !== undefined) {
             updateFields.push(`usage_time = $${paramIndex++}`);
-            values.push(formData.usage_time);
+            // 빈 문자열을 NULL로 변환 (PostgreSQL TIME 타입 오류 방지)
+            values.push(formData.usage_time === '' ? null : formData.usage_time);
         }
         
         // 예약자 정보
         if (formData.korean_name !== undefined) {
             updateFields.push(`korean_name = $${paramIndex++}`);
-            values.push(formData.korean_name);
+            values.push(formData.korean_name || null);
         }
         
         // 영문명 처리 (english_name을 first_name과 last_name으로 분리)
         if (formData.english_name !== undefined) {
-            const nameParts = formData.english_name.split(' ');
-            const firstName = nameParts.slice(1).join(' ') || '';
-            const lastName = nameParts[0] || '';
+            const nameParts = (formData.english_name || '').split(' ');
+            const firstName = nameParts.slice(1).join(' ') || null;
+            const lastName = nameParts[0] || null;
             
             updateFields.push(`english_first_name = $${paramIndex++}`);
             values.push(firstName);
@@ -8100,15 +8101,15 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         
         if (formData.phone !== undefined) {
             updateFields.push(`phone = $${paramIndex++}`);
-            values.push(formData.phone);
+            values.push(formData.phone || null);
         }
         if (formData.email !== undefined) {
             updateFields.push(`email = $${paramIndex++}`);
-            values.push(formData.email);
+            values.push(formData.email || null);
         }
         if (formData.kakao_id !== undefined) {
             updateFields.push(`kakao_id = $${paramIndex++}`);
-            values.push(formData.kakao_id);
+            values.push(formData.kakao_id || null);
         }
         
         // 인원 및 금액 정보
@@ -8141,7 +8142,7 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         // 특별 요청사항
         if (formData.memo !== undefined) {
             updateFields.push(`memo = $${paramIndex++}`);
-            values.push(formData.memo);
+            values.push(formData.memo || null);
         }
         
         if (updateFields.length === 0) {
