@@ -1140,10 +1140,6 @@
             showAlert('예약 변경사항이 저장되었습니다.', 'success');
         }
 
-        // 수배서 미리보기
-        function previewAssignment() {
-            showAlert('수배서 미리보기 기능은 준비 중입니다.', 'info');
-        }
 
         // 수배서 수정
         function editAssignment() {
@@ -2330,23 +2326,10 @@
             historyDiv.innerHTML = html;
         }
         
-        // 히스토리에 항목 추가
+        // 히스토리에 항목 추가 (간단한 로그 버전)
         function addToHistory(action, type = 'info') {
-            const historyDiv = document.getElementById('assignmentHistory');
-            const typeClass = type === 'success' ? 'text-success' : type === 'danger' ? 'text-danger' : 'text-info';
-            const icon = type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
-            
-            const newItem = `
-                <div class="d-flex align-items-center mb-2">
-                    <i class="bi ${icon} ${typeClass} me-2"></i>
-                    <div class="flex-grow-1">
-                        <div class="fw-medium">${action}</div>
-                        <small class="text-muted">${new Date().toLocaleString('ko-KR')}</small>
-                    </div>
-                </div>
-            `;
-            
-            historyDiv.insertAdjacentHTML('afterbegin', newItem);
+            // 히스토리 UI가 제거되었으므로 콘솔 로그만 남김
+            console.log(`📝 히스토리: ${action} (${type})`);
         }
         
         // 바우처 관련 함수들
