@@ -5717,7 +5717,8 @@ app.get('/api/reservations/:id', requireAuth, async (req, res) => {
     }
 });
 
-// 예약 수정 API
+// 예약 수정 API (구버전 - 6개 테이블 사용, 사용 안함)
+/*
 app.put('/api/reservations/:id', requireAuth, async (req, res) => {
     try {
         const reservationId = req.params.id;
@@ -5748,6 +5749,7 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         });
     }
 });
+*/
 
 // 예약 삭제 API
 app.delete('/api/reservations/:id', requireAuth, async (req, res) => {
