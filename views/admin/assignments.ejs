@@ -529,21 +529,6 @@
                                         <i class="bi bi-eye me-1"></i>미리보기
                                     </button>
                                 </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-outline-success w-100" onclick="sendVoucherEmail()">
-                                        <i class="bi bi-envelope me-1"></i>이메일
-                                    </button>
-                                </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-outline-warning w-100" onclick="sendVoucherKakao()">
-                                        <i class="bi bi-chat-dots me-1"></i>카카오톡
-                                    </button>
-                                </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-outline-primary w-100" onclick="downloadVoucherPdf()">
-                                        <i class="bi bi-download me-1"></i>PDF
-                                    </button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -667,31 +652,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="d-grid gap-2">
-                                                <button class="btn btn-primary" onclick="sendAssignmentEmail()">
-                                                    <i class="bi bi-envelope me-1"></i>수배업체로 메일 전송
-                                                </button>
-                                                <button class="btn btn-outline-info" onclick="downloadAssignmentWord()">
-                                                    <i class="bi bi-file-word me-1"></i>워드파일 다운로드
-                                                </button>
-                                                <button class="btn btn-outline-secondary" onclick="downloadAssignmentPdf()">
-                                                    <i class="bi bi-file-pdf me-1"></i>PDF 다운로드
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 수배 히스토리 -->
-                            <div class="card mt-3">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>수배 업무 히스토리</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div id="assignmentHistory">
-                                        <!-- 히스토리가 여기에 로드됩니다 -->
                                     </div>
                                 </div>
                             </div>
@@ -800,19 +760,6 @@
                                                                 <i class="bi bi-clipboard"></i>
                                                             </button>
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="d-grid gap-2">
-                                                        <button class="btn btn-info" onclick="sendVoucherKakao()">
-                                                            <i class="bi bi-chat-dots me-1"></i>카카오톡 전송
-                                                        </button>
-                                                        <button class="btn btn-outline-info" onclick="sendVoucherEmail()">
-                                                            <i class="bi bi-envelope me-1"></i>이메일 전송
-                                                        </button>
-                                                        <button class="btn btn-outline-secondary" onclick="downloadVoucherPdf()">
-                                                            <i class="bi bi-file-pdf me-1"></i>PDF 다운로드
-                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1216,15 +1163,6 @@
             showAlert('수배서가 전송되었습니다.', 'success');
         }
 
-        // 수배서 이메일 전송
-        function sendAssignmentEmail() {
-            showAlert('수배서가 이메일로 전송되었습니다.', 'success');
-        }
-
-        // 수배서 카카오톡 전송
-        function sendAssignmentKakao() {
-            showAlert('수배서가 카카오톡으로 전송되었습니다.', 'success');
-        }
 
         // 수배서 다운로드
         function downloadAssignment() {
@@ -2353,106 +2291,8 @@
             }
         }
         
-        // 워드파일 다운로드
-        async function downloadAssignmentWord() {
-            if (!window.currentReservationId) {
-                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/assignments/${window.currentReservationId}/download/word`);
-                
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `수배서_${window.currentReservationId}.docx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                    
-                    showAlert('워드파일 다운로드가 완료되었습니다!', 'success');
-                    addToHistory('워드파일 다운로드', 'success');
-                } else {
-                    showAlert('워드파일 다운로드에 실패했습니다.', 'danger');
-                }
-            } catch (error) {
-                console.error('워드파일 다운로드 오류:', error);
-                showAlert('워드파일 다운로드 중 오류가 발생했습니다.', 'danger');
-            }
-        }
         
-        // PDF 다운로드
-        async function downloadAssignmentPdf() {
-            if (!window.currentReservationId) {
-                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/assignments/${window.currentReservationId}/download/pdf`);
-                
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `수배서_${window.currentReservationId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                    
-                    showAlert('PDF 다운로드가 완료되었습니다!', 'success');
-                    addToHistory('PDF 다운로드', 'success');
-                } else {
-                    showAlert('PDF 다운로드에 실패했습니다.', 'danger');
-                }
-            } catch (error) {
-                console.error('PDF 다운로드 오류:', error);
-                showAlert('PDF 다운로드 중 오류가 발생했습니다.', 'danger');
-            }
-        }
         
-        // 수배업체로 메일 전송
-        async function sendAssignmentEmail() {
-            if (!window.currentReservationId) {
-                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
-                return;
-            }
-            
-            const linkUrl = document.getElementById('assignmentLinkUrl').value;
-            if (!linkUrl) {
-                showAlert('먼저 수배서 링크를 생성해주세요.', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/assignments/${window.currentReservationId}/send-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        assignment_url: linkUrl,
-                        message: '수배서를 확인해주세요.'
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('수배업체로 메일이 전송되었습니다!', 'success');
-                    addToHistory('수배업체 메일 전송', 'success');
-                } else {
-                    showAlert('메일 전송에 실패했습니다: ' + result.message, 'danger');
-                }
-            } catch (error) {
-                console.error('메일 전송 오류:', error);
-                showAlert('메일 전송 중 오류가 발생했습니다.', 'danger');
-            }
-        }
         
         // 수배 히스토리 로드
         async function loadAssignmentHistory(reservationId) {
@@ -2600,80 +2440,7 @@
             }
         }
         
-        // 카카오톡 전송 (향후 구현)
-        async function sendVoucherKakao() {
-            showAlert('카카오톡 전송 기능은 API 연동 후 구현 예정입니다.', 'info');
-            // 향후 카카오톡 API 연동 시 구현
-        }
         
-        // 이메일 전송
-        async function sendVoucherEmail() {
-            if (!window.currentReservationId) {
-                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
-                return;
-            }
-            
-            const voucherUrl = document.getElementById('voucherLinkUrl').value;
-            if (!voucherUrl) {
-                showAlert('먼저 바우처를 생성해주세요.', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/send-email`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        voucher_url: voucherUrl,
-                        message: '바우처를 확인해주세요.'
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('바우처가 이메일로 전송되었습니다!', 'success');
-                    addToHistory('바우처 이메일 전송', 'success');
-                } else {
-                    showAlert('이메일 전송에 실패했습니다: ' + result.message, 'danger');
-                }
-            } catch (error) {
-                console.error('이메일 전송 오류:', error);
-                showAlert('이메일 전송 중 오류가 발생했습니다.', 'danger');
-            }
-        }
-        
-        // PDF 다운로드
-        async function downloadVoucherPdf() {
-            if (!window.currentReservationId) {
-                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/download`);
-                
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `바우처_${window.currentReservationId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                    
-                    showAlert('바우처 PDF 다운로드가 완료되었습니다!', 'success');
-                    addToHistory('바우처 PDF 다운로드', 'success');
-                } else {
-                    showAlert('PDF 다운로드에 실패했습니다.', 'danger');
-                }
-            } catch (error) {
-                console.error('PDF 다운로드 오류:', error);
-                showAlert('PDF 다운로드 중 오류가 발생했습니다.', 'danger');
-            }
-        }
         
         // 괌세이브카드 발급 코드 생성
         function generateSavecardCode() {
@@ -2730,34 +2497,6 @@
             }
         }
         
-        // 바우처 재전송
-        async function resendVoucher() {
-            if (!window.currentReservationId) {
-                showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
-                return;
-            }
-            
-            if (!confirm('바우처를 재전송하시겠습니까?')) return;
-            
-            try {
-                const response = await fetch(`/api/reservations/${window.currentReservationId}/voucher/resend`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('바우처가 재전송되었습니다!', 'success');
-                    addToHistory('바우처 재전송', 'success');
-                } else {
-                    showAlert('바우처 재전송에 실패했습니다: ' + result.message, 'danger');
-                }
-            } catch (error) {
-                console.error('바우처 재전송 오류:', error);
-                showAlert('바우처 재전송 중 오류가 발생했습니다.', 'danger');
-            }
-        }
         
         // 바우처 취소
         async function cancelVoucher() {
