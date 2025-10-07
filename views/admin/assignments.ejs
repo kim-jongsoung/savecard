@@ -285,6 +285,18 @@
                         </div>
                     </div>
                 </div>
+                <!-- 업무 히스토리 -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>업무 히스토리</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="reservationHistory" class="history-container" style="max-height: 200px; overflow-y: auto;">
+                            <p class="text-muted text-center">히스토리를 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button class="btn btn-primary" onclick="saveReservationChanges()">
@@ -346,6 +358,18 @@
                                 <button class="btn btn-outline-info" onclick="copyAssignmentLink()">
                                     <i class="bi bi-link me-1"></i>링크 복사
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 업무 히스토리 -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>업무 히스토리</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="assignmentHistory" class="history-container" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted text-center">히스토리를 불러오는 중...</p>
                             </div>
                         </div>
                     </div>
@@ -427,6 +451,18 @@
                     <button class="btn btn-primary" onclick="saveConfirmationNumber()">
                         <i class="bi bi-key me-1"></i>컨펌번호 저장
                     </button>
+                </div>
+                
+                <!-- 업무 히스토리 -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>업무 히스토리</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="statusHistory" class="history-container" style="max-height: 200px; overflow-y: auto;">
+                            <p class="text-muted text-center">히스토리를 불러오는 중...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -532,6 +568,18 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- 업무 히스토리 -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>업무 히스토리</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="voucherHistory" class="history-container" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted text-center">히스토리를 불러오는 중...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -619,6 +667,19 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- 업무 히스토리 -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>업무 히스토리</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="settlementHistory" class="history-container" style="max-height: 200px; overflow-y: auto;">
+                            <p class="text-muted text-center">히스토리를 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button class="btn btn-danger" id="transfer-btn" onclick="transferToSettlement()" disabled>
@@ -1869,6 +1930,9 @@
             
             const modal = new bootstrap.Modal(document.getElementById('reservationEditModal'));
             modal.show();
+            
+            // 히스토리 로드
+            loadModalHistory(reservationId);
         }
 
         // 2. 수배서관리 모달 열기
@@ -1885,6 +1949,9 @@
             
             const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
             modal.show();
+            
+            // 히스토리 로드
+            loadModalHistory(reservationId);
         }
 
         // 3. 상태관리 모달 열기
@@ -1902,6 +1969,9 @@
             
             const modal = new bootstrap.Modal(document.getElementById('statusManageModal'));
             modal.show();
+            
+            // 히스토리 로드
+            loadModalHistory(reservationId);
         }
 
         // 4. 바우처관리 모달 열기
@@ -1916,6 +1986,9 @@
             
             const modal = new bootstrap.Modal(document.getElementById('voucherManageModal'));
             modal.show();
+            
+            // 히스토리 로드
+            loadModalHistory(reservationId);
         }
 
         // 5. 정산이관 모달 열기
@@ -1936,6 +2009,9 @@
             
             const modal = new bootstrap.Modal(document.getElementById('settlementModal'));
             modal.show();
+            
+            // 히스토리 로드
+            loadModalHistory(reservationId);
         }
 
         // 예약 데이터 가져오기 헬퍼 함수
@@ -2326,10 +2402,94 @@
             historyDiv.innerHTML = html;
         }
         
-        // 히스토리에 항목 추가 (간단한 로그 버전)
+        // 히스토리에 항목 추가 (모든 모달의 히스토리에 추가)
         function addToHistory(action, type = 'info') {
-            // 히스토리 UI가 제거되었으므로 콘솔 로그만 남김
             console.log(`📝 히스토리: ${action} (${type})`);
+            
+            const typeClass = type === 'success' ? 'text-success' : type === 'danger' ? 'text-danger' : 'text-info';
+            const icon = type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
+            
+            const newItem = `
+                <div class="d-flex align-items-center mb-2 p-2 border-start border-3 border-${type === 'success' ? 'success' : type === 'danger' ? 'danger' : 'info'} bg-light">
+                    <i class="bi ${icon} ${typeClass} me-2"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-medium">${action}</div>
+                        <small class="text-muted">${new Date().toLocaleString('ko-KR')}</small>
+                    </div>
+                </div>
+            `;
+            
+            // 모든 히스토리 컨테이너에 추가
+            const historyContainers = [
+                'assignmentHistory',
+                'statusHistory', 
+                'voucherHistory',
+                'settlementHistory',
+                'reservationHistory'
+            ];
+            
+            historyContainers.forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (container) {
+                    // 로딩 메시지 제거
+                    if (container.innerHTML.includes('히스토리를 불러오는 중')) {
+                        container.innerHTML = '';
+                    }
+                    container.insertAdjacentHTML('afterbegin', newItem);
+                }
+            });
+        }
+        
+        // 모달별 히스토리 로드
+        async function loadModalHistory(reservationId) {
+            try {
+                // 실제 히스토리 데이터를 로드하는 API 호출 (향후 구현)
+                // const response = await fetch(`/api/reservations/${reservationId}/history`);
+                // const result = await response.json();
+                
+                // 임시로 샘플 히스토리 표시
+                const sampleHistory = [
+                    { action: '예약 생성', type: 'info', time: new Date(Date.now() - 86400000) },
+                    { action: '수배서 생성', type: 'success', time: new Date(Date.now() - 43200000) },
+                    { action: '수배서 전송', type: 'success', time: new Date(Date.now() - 21600000) }
+                ];
+                
+                const historyContainers = [
+                    'assignmentHistory',
+                    'statusHistory', 
+                    'voucherHistory',
+                    'settlementHistory',
+                    'reservationHistory'
+                ];
+                
+                historyContainers.forEach(containerId => {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        const historyHtml = sampleHistory.map(item => `
+                            <div class="d-flex align-items-center mb-2 p-2 border-start border-3 border-${item.type === 'success' ? 'success' : 'info'} bg-light">
+                                <i class="bi ${item.type === 'success' ? 'bi-check-circle text-success' : 'bi-info-circle text-info'} me-2"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium">${item.action}</div>
+                                    <small class="text-muted">${item.time.toLocaleString('ko-KR')}</small>
+                                </div>
+                            </div>
+                        `).join('');
+                        
+                        container.innerHTML = historyHtml;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('히스토리 로드 오류:', error);
+                // 오류 시 기본 메시지 표시
+                const historyContainers = ['assignmentHistory', 'statusHistory', 'voucherHistory', 'settlementHistory', 'reservationHistory'];
+                historyContainers.forEach(containerId => {
+                    const container = document.getElementById(containerId);
+                    if (container) {
+                        container.innerHTML = '<p class="text-muted text-center">히스토리를 불러올 수 없습니다.</p>';
+                    }
+                });
+            }
         }
         
         // 바우처 관련 함수들
