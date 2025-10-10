@@ -4513,11 +4513,10 @@ app.get('/admin/inbox', requireAuth, async (req, res) => {
     }
 });
 
-// 예약 관리 페이지 (수배관리로 리다이렉트)
+// 예약 관리 페이지 (수배서 미생성 예약만 표시)
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
-        console.log('📋 예약 관리 페이지 접근 → 수배관리 페이지로 리다이렉트');
-        return res.redirect('/admin/assignments');
+        console.log('📋 예약 관리 페이지 접근 (수배서 미생성 예약 표시)');
         
         // 페이징 파라미터
         const page = parseInt(req.query.page) || 1;
@@ -8647,7 +8646,11 @@ app.post('/api/vendors/match', requireAuth, async (req, res) => {
         
         const result = await pool.query(matchQuery, [product_name]);
         
-        console.log('📊 매칭 쿼리 결과:', result.rows.length > 0 ? result.rows[0].vendor_name : '매칭 없음');
+        console.log('📊 매칭 시도:', {
+            상품명: product_name,
+            결과: result.rows.length > 0 ? result.rows[0].vendor_name : '매칭 없음',
+            매칭키워드: result.rows.length > 0 ? result.rows[0].product_keyword : 'N/A'
+        });
         
         if (result.rows.length > 0) {
             res.json({
