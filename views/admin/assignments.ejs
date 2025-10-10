@@ -1833,15 +1833,42 @@
                     return;
                 }
                 
+                console.log('🔗 수배서 링크 복사 시작 - reservationId:', window.currentReservationId);
+                
                 const response = await fetch(`/api/assignments/by-reservation/${window.currentReservationId}`);
                 const result = await response.json();
                 
-                let linkUrl = '';
+                console.log('📊 API 응답:', result);
                 
-                if (result.success && result.assignment_token) {
-                    linkUrl = `${window.location.origin}/assignment/${result.assignment_token}`;
+                let linkUrl = '';
+                let assignmentToken = '';
+                
+                // assignment 객체에서 토큰 가져오기
+                if (result.success && result.assignment && result.assignment.assignment_token) {
+                    assignmentToken = result.assignment.assignment_token;
+                    linkUrl = `${window.location.origin}/assignment/${assignmentToken}`;
+                    console.log('✅ 토큰 찾음:', assignmentToken);
+                } else if (result.success && result.assignment && !result.assignment.assignment_token) {
+                    // 토큰이 없으면 생성 API 호출
+                    console.log('⚠️ 토큰 없음 - 생성 시도');
+                    const generateResponse = await fetch(`/api/assignments/${window.currentReservationId}/generate-link`, {
+                        method: 'POST'
+                    });
+                    const generateResult = await generateResponse.json();
+                    
+                    console.log('📊 토큰 생성 결과:', generateResult);
+                    
+                    if (generateResult.success && generateResult.assignment_token) {
+                        assignmentToken = generateResult.assignment_token;
+                        linkUrl = `${window.location.origin}/assignment/${assignmentToken}`;
+                        console.log('✅ 새 토큰 생성:', assignmentToken);
+                    } else {
+                        showAlert('토큰 생성에 실패했습니다.', 'danger');
+                        return;
+                    }
                 } else {
-                    showAlert('수배서 토큰을 찾을 수 없습니다. 먼저 수배서를 생성해주세요.', 'warning');
+                    showAlert('수배서를 찾을 수 없습니다. 먼저 수배서를 생성해주세요.', 'warning');
+                    console.error('❌ 수배서 없음:', result);
                     return;
                 }
                 

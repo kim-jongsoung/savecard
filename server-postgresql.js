@@ -7387,9 +7387,9 @@ app.post('/api/assignments/:reservationId/generate-link', requireAuth, async (re
             // 새 수배서 생성
             await pool.query(`
                 INSERT INTO assignments (
-                    reservation_id, assignment_token, assignment_status, 
+                    reservation_id, assignment_token, status, 
                     created_at, updated_at
-                ) VALUES ($1, $2, 'created', NOW(), NOW())
+                ) VALUES ($1, $2, 'draft', NOW(), NOW())
             `, [reservationId, token]);
             
             console.log('✅ 새 수배서 생성:', token);
@@ -7412,13 +7412,17 @@ app.post('/api/assignments/:reservationId/generate-link', requireAuth, async (re
             console.log('✅ 기존 토큰 사용:', token);
         }
         
-        const assignmentUrl = `https://www.guamsavecard.com/assignment/${token}`;
+        const assignmentUrl = `${req.protocol}://${req.get('host')}/assignment/${token}`;
         
-        // 로그 기록
-        await pool.query(`
-            INSERT INTO assignment_logs (reservation_id, action, details, created_at)
-            VALUES ($1, 'link_generated', $2, NOW())
-        `, [reservationId, JSON.stringify({ url: assignmentUrl })]);
+        // 로그 기록 (선택적)
+        try {
+            await pool.query(`
+                INSERT INTO assignment_logs (reservation_id, action, details, created_at)
+                VALUES ($1, 'link_generated', $2, NOW())
+            `, [reservationId, JSON.stringify({ url: assignmentUrl })]);
+        } catch (logError) {
+            console.log('⚠️ 로그 기록 실패 (테이블 없음):', logError.message);
+        }
         
         console.log('📎 수배서 링크 생성 완료:', assignmentUrl);
         
@@ -7426,6 +7430,7 @@ app.post('/api/assignments/:reservationId/generate-link', requireAuth, async (re
             success: true,
             message: '수배서 링크가 생성되었습니다',
             link: assignmentUrl,
+            assignment_token: token,  // 프론트엔드 호환성
             token: token
         });
         
