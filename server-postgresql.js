@@ -8853,6 +8853,10 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             paramIndex++;
             whereClause += ` AND r.payment_status = $${paramIndex}`;
             queryParams.push(status);
+        } else {
+            // 상태 필터가 없으면 예약취소는 기본적으로 제외
+            whereClause += ` AND r.payment_status != 'cancelled'`;
+            console.log('✅ 예약취소 건 제외');
         }
         
         // 검색 필터 (예약번호, 상품명, 고객명)
