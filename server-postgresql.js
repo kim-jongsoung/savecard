@@ -5143,13 +5143,9 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
                 
                 const autoAssignment = await createAutoAssignment(reservationId, normalizedData.product_name);
                 
-                // 수배가 생성되었으면 예약 상태를 'in_progress'로 변경
+                // 수배가 생성되었으면 히스토리만 저장 (상태는 pending 유지)
                 if (autoAssignment) {
-                    await pool.query(
-                        'UPDATE reservations SET payment_status = $1 WHERE id = $2',
-                        ['in_progress', reservationId]
-                    );
-                    console.log('✅ 예약 상태를 수배중(in_progress)으로 변경');
+                    console.log('✅ 수배업체 자동 매칭 완료:', autoAssignment.vendor.vendor_name);
                     
                     // 히스토리 저장
                     try {
@@ -5158,11 +5154,10 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
                             VALUES ($1, $2, $3, $4, $5, $6)
                         `, [
                             reservationId,
-                            '자동 수배 생성',
+                            '수배업체 자동 매칭',
                             'success',
                             'system',
                             JSON.stringify({ 
-                                payment_status: { from: 'pending', to: 'in_progress' },
                                 vendor_name: autoAssignment.vendor.vendor_name
                             }),
                             `수배업체 자동 매칭: ${autoAssignment.vendor.vendor_name}`
@@ -7793,12 +7788,12 @@ async function createAutoAssignment(reservationId, productName) {
         const crypto = require('crypto');
         const assignment_token = crypto.randomBytes(16).toString('hex');
         
-        // 자동 수배서 생성 (바로 확정 상태)
+        // 자동 수배서 생성 (대기중 상태로 시작)
         const insertQuery = `
             INSERT INTO assignments (
                 reservation_id, vendor_id, vendor_name, vendor_contact,
-                assignment_token, status, notes, assigned_by, assigned_at, sent_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+                assignment_token, status, notes, assigned_by, assigned_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
             RETURNING *
         `;
         
@@ -7814,8 +7809,8 @@ async function createAutoAssignment(reservationId, productName) {
             vendor.vendor_name,
             JSON.stringify(vendor_contact),
             assignment_token,
-            'sent', // 바로 전송 상태로 설정
-            `자동 생성된 수배서 (${productName})`,
+            'pending', // 대기중 상태로 생성
+            `자동 매칭된 수배서 (${productName})`,
             'system'
         ];
         
@@ -8182,6 +8177,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             assignmentsQuery = `
                 SELECT 
                     r.*,
+                    CONCAT(r.english_last_name, ' ', r.english_first_name) as english_name,
                     a.id as assignment_id,
                     a.vendor_name,
                     a.vendor_contact,
@@ -8207,6 +8203,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             assignmentsQuery = `
                 SELECT 
                     r.*,
+                    CONCAT(r.english_last_name, ' ', r.english_first_name) as english_name,
                     NULL as assignment_id,
                     NULL as vendor_name,
                     NULL as vendor_contact,
@@ -8641,9 +8638,9 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
             });
         }
         
-        // 기존 컨펌번호 조회
+        // 기존 컨펌번호 및 상태 조회
         const oldReservation = await pool.query(
-            'SELECT confirmation_number FROM reservations WHERE id = $1',
+            'SELECT confirmation_number, payment_status FROM reservations WHERE id = $1',
             [reservationId]
         );
         
@@ -8655,6 +8652,7 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
         }
         
         const oldConfirmationNumber = oldReservation.rows[0].confirmation_number;
+        const oldStatus = oldReservation.rows[0].payment_status;
         
         // 컨펌번호 업데이트 (컨펌번호 컬럼이 없을 수 있으므로 동적 추가)
         await pool.query(`
@@ -8669,12 +8667,25 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
             END $$;
         `);
         
+        // 컨펌번호 저장 + 상태를 confirmed로 변경
         const result = await pool.query(
-            'UPDATE reservations SET confirmation_number = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-            [confirmation_number, reservationId]
+            'UPDATE reservations SET confirmation_number = $1, payment_status = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+            [confirmation_number, 'confirmed', reservationId]
         );
         
-        console.log('✅ 컨펌번호 저장 완료:', confirmation_number);
+        console.log('✅ 컨펌번호 저장 및 상태 변경 완료:', confirmation_number, '→ confirmed');
+        
+        // assignments 테이블도 업데이트
+        try {
+            await pool.query(`
+                UPDATE assignments 
+                SET confirmation_number = $1, status = 'confirmed', response_at = NOW(), updated_at = NOW()
+                WHERE reservation_id = $2
+            `, [confirmation_number, reservationId]);
+            console.log('✅ assignments 테이블도 업데이트 완료');
+        } catch (assignmentError) {
+            console.error('⚠️ assignments 테이블 업데이트 실패:', assignmentError);
+        }
         
         // 변경 이력 저장
         try {
@@ -8683,11 +8694,14 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                 VALUES ($1, $2, $3, $4, $5, $6)
             `, [
                 reservationId,
-                '컨펌번호 저장',
+                '컨펌번호 저장 및 확정',
                 'success',
                 req.session?.username || '관리자',
-                JSON.stringify({ confirmation_number: { from: oldConfirmationNumber || '(없음)', to: confirmation_number } }),
-                '예약이 확정되었습니다.'
+                JSON.stringify({ 
+                    confirmation_number: { from: oldConfirmationNumber || '(없음)', to: confirmation_number },
+                    payment_status: { from: oldStatus, to: 'confirmed' }
+                }),
+                `예약이 확정되었습니다. 컨펌번호: ${confirmation_number}`
             ]);
         } catch (logError) {
             console.error('⚠️ 컨펌번호 저장 이력 실패:', logError);

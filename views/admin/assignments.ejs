@@ -1805,14 +1805,49 @@
         }
 
         // 수배서 링크 복사
-        function copyAssignmentLink() {
-            const linkInput = document.getElementById('assignmentLinkInput');
-            if (linkInput && linkInput.value) {
-                linkInput.select();
-                document.execCommand('copy');
-                showAlert('링크가 클립보드에 복사되었습니다.', 'success');
-            } else {
-                showAlert('복사할 링크가 없습니다.', 'warning');
+        async function copyAssignmentLink() {
+            try {
+                // 먼저 수배서 토큰 가져오기
+                if (!window.currentReservationId) {
+                    showAlert('예약 정보가 선택되지 않았습니다.', 'warning');
+                    return;
+                }
+                
+                const response = await fetch(`/api/assignments/by-reservation/${window.currentReservationId}`);
+                const result = await response.json();
+                
+                let linkUrl = '';
+                
+                if (result.success && result.assignment_token) {
+                    linkUrl = `${window.location.origin}/assignment/${result.assignment_token}`;
+                } else {
+                    showAlert('수배서 토큰을 찾을 수 없습니다. 먼저 수배서를 생성해주세요.', 'warning');
+                    return;
+                }
+                
+                // 클립보드에 복사
+                if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(linkUrl);
+                    showAlert('✅ 수배서 링크가 클립보드에 복사되었습니다!', 'success');
+                    
+                    // 링크를 input에도 표시
+                    const linkInput = document.getElementById('assignmentLinkInput');
+                    if (linkInput) {
+                        linkInput.value = linkUrl;
+                    }
+                } else {
+                    // fallback
+                    const linkInput = document.getElementById('assignmentLinkInput');
+                    if (linkInput) {
+                        linkInput.value = linkUrl;
+                        linkInput.select();
+                        document.execCommand('copy');
+                        showAlert('✅ 수배서 링크가 클립보드에 복사되었습니다!', 'success');
+                    }
+                }
+            } catch (error) {
+                console.error('링크 복사 실패:', error);
+                showAlert('링크 복사 중 오류가 발생했습니다.', 'error');
             }
         }
 
@@ -3246,7 +3281,7 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showAlert('컨펌번호가 저장되었습니다!', 'success');
+                    showAlert('✅ 컨펌번호가 저장되고 예약이 확정되었습니다!', 'success');
                     
                     // 현재 예약 데이터 가져오기
                     const currentReservation = getReservationData(window.currentReservationId);
@@ -3257,6 +3292,10 @@
                         confirmation_number: {
                             from: oldConfirmationNumber || '(없음)',
                             to: confirmationNumber
+                        },
+                        payment_status: {
+                            from: '수배중',
+                            to: '확정완료'
                         }
                     };
                     
@@ -3270,8 +3309,11 @@
                         };
                     }
                     
-                    addToHistory('컨펌번호 저장', 'success', changes, '예약이 확정되었습니다.');
-                    loadAssignments(); // 목록 새로고침
+                    addToHistory('컨펌번호 저장 및 확정', 'success', changes, '예약이 확정되었습니다.');
+                    
+                    // 목록 및 히스토리 새로고침
+                    loadAssignments();
+                    loadModalHistory(window.currentReservationId);
                 } else {
                     showAlert('컨펌번호 저장에 실패했습니다: ' + result.message, 'danger');
                 }
