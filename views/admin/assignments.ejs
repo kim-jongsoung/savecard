@@ -2197,14 +2197,29 @@
             // 히스토리 로드
             loadModalHistory(reservationId);
             
-            // 5초마다 수배서 상태 자동 새로고침
+            // 3초마다 수배서 상태 자동 새로고침 (최대 10회)
             if (window.assignmentRefreshInterval) {
                 clearInterval(window.assignmentRefreshInterval);
             }
+            let refreshCount = 0;
+            const maxRefresh = 10; // 최대 10회 (30초)
+            
             window.assignmentRefreshInterval = setInterval(async () => {
-                console.log('🔄 수배서 상태 자동 새로고침...');
-                await loadAssignmentDetails(reservationId);
-            }, 5000);
+                refreshCount++;
+                console.log(`🔄 수배서 상태 자동 새로고침... (${refreshCount}/${maxRefresh})`);
+                
+                try {
+                    await loadAssignmentDetails(reservationId);
+                } catch (error) {
+                    console.error('❌ 자동 새로고침 오류:', error);
+                }
+                
+                // 최대 횟수 도달 시 중지
+                if (refreshCount >= maxRefresh) {
+                    clearInterval(window.assignmentRefreshInterval);
+                    console.log('🛑 자동 새로고침 종료 (최대 횟수 도달)');
+                }
+            }, 3000);
             
             // 모달 닫힐 때 인터벌 정리
             document.getElementById('assignmentManageModal').addEventListener('hidden.bs.modal', function() {
@@ -2388,11 +2403,20 @@
         // 수배서 상세 정보 로드
         async function loadAssignmentDetails(reservationId) {
             try {
+                console.log('🔍 수배서 상세 정보 로드 시작:', reservationId);
                 const response = await fetch(`/api/assignments/by-reservation/${reservationId}`);
+                
+                if (!response.ok) {
+                    console.error('❌ API 응답 오류:', response.status);
+                    return;
+                }
+                
                 const result = await response.json();
+                console.log('📊 API 응답:', result);
                 
                 if (result.success && result.assignment) {
                     const assignment = result.assignment;
+                    console.log('✅ 수배서 데이터:', assignment);
                     
                     // 수배서 상태 정보
                     document.getElementById('assignment-number').textContent = assignment.id || '-';

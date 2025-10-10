@@ -7760,17 +7760,28 @@ app.post('/assignment/:token/view', async (req, res) => {
             `, [token]);
             console.log('✅ 수배서 업데이트 완료:', updateResult.rows[0]);
             
-            // 2. 예약 상태를 '수배중(in_progress)'으로 변경
+            // 2. 예약 현재 상태 확인
+            const currentReservation = await pool.query(`
+                SELECT id, payment_status FROM reservations WHERE id = $1
+            `, [assignment.reservation_id]);
+            console.log('🔍 현재 예약 상태:', currentReservation.rows[0]);
+            
+            // 3. 예약 상태를 '수배중(in_progress)'으로 변경
             const reservationUpdateResult = await pool.query(`
                 UPDATE reservations 
                 SET payment_status = 'in_progress',
                     updated_at = NOW()
-                WHERE id = $1 AND payment_status = 'pending'
+                WHERE id = $1 AND payment_status IN ('pending', 'confirmed')
                 RETURNING id, payment_status
             `, [assignment.reservation_id]);
-            console.log('✅ 예약 상태 변경:', reservationUpdateResult.rows.length > 0 ? reservationUpdateResult.rows[0] : '변경 없음(이미 수배중)');
             
-            // 3. 업무 히스토리에 열람 기록
+            if (reservationUpdateResult.rows.length > 0) {
+                console.log('✅ 예약 상태 변경 성공:', reservationUpdateResult.rows[0]);
+            } else {
+                console.log('⚠️ 예약 상태 변경 실패 - 현재 상태가 pending 또는 confirmed가 아님');
+            }
+            
+            // 4. 업무 히스토리에 열람 기록
             try {
                 await pool.query(`
                     INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details, created_at)
@@ -7874,6 +7885,56 @@ app.post('/assignment/:token/reject', async (req, res) => {
     } catch (error) {
         console.error('❌ 수배서 거절 오류:', error);
         res.status(500).json({ success: false, message: '수배서 거절 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
+// 예약 ID로 수배서 정보 조회 API
+app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        
+        console.log('🔍 수배서 조회 by-reservation:', reservationId);
+        
+        // 수배서 정보 조회
+        const query = `
+            SELECT 
+                a.*,
+                v.vendor_name,
+                v.email as vendor_email,
+                v.phone as vendor_phone
+            FROM assignments a
+            LEFT JOIN vendors v ON a.vendor_id = v.id
+            WHERE a.reservation_id = $1
+            ORDER BY a.created_at DESC
+            LIMIT 1
+        `;
+        
+        const result = await pool.query(query, [reservationId]);
+        
+        if (result.rows.length === 0) {
+            console.log('⚠️ 수배서 없음 - reservation_id:', reservationId);
+            return res.json({ success: true, assignment: null });
+        }
+        
+        const assignment = result.rows[0];
+        console.log('✅ 수배서 조회 성공:', {
+            id: assignment.id,
+            viewed_at: assignment.viewed_at,
+            sent_at: assignment.sent_at,
+            status: assignment.status
+        });
+        
+        res.json({ 
+            success: true, 
+            assignment: assignment 
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '수배서 정보를 불러오는데 실패했습니다: ' + error.message 
+        });
     }
 });
 
