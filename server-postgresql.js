@@ -248,7 +248,7 @@ async function initializeDatabase() {
           `);
           console.log('✅ vendors 테이블 생성 완료');
           
-          // 2. vendor_products 테이블 (업체별 담당 상품)
+          // 2. vendor_products 테이블 (업체별 담당 상품 - 자동 매칭용)
           await pool.query(`
             CREATE TABLE IF NOT EXISTS vendor_products (
               id SERIAL PRIMARY KEY,
@@ -257,9 +257,17 @@ async function initializeDatabase() {
               priority INTEGER DEFAULT 1,
               is_active BOOLEAN DEFAULT true,
               created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW(),
               UNIQUE(vendor_id, product_keyword)
             )
           `);
+          
+          // updated_at 컬럼 추가 (기존 테이블용)
+          await pool.query(`
+            ALTER TABLE vendor_products 
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
+          `);
+          
           console.log('✅ vendor_products 테이블 생성 완료');
           
           // 3. assignments 테이블 (수배 배정 내역)
@@ -395,28 +403,31 @@ app.get('/api/test', (req, res) => {
 // 예약관리 페이지 전용 API - 대기중 상태만 표시
 app.get('/api/reservations', async (req, res) => {
     try {
-        console.log('🔍 예약관리 API 호출 - 대기중 상태만 조회');
+        console.log('🔍 예약관리 API 호출 - 수배서 미생성 예약 조회');
         
-        // 대기중(pending) 상태만 조회 - 예약관리 페이지 전용
+        // ✅ 예약관리 페이지: assignment_token이 없는 예약만 표시 (수배서 미생성)
+        // 즉, 수배업체 자동 매칭 안 된 예약들
         const query = `
-            SELECT * FROM reservations 
-            WHERE payment_status = 'pending' OR payment_status IS NULL
+            SELECT r.* 
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE a.assignment_token IS NULL
             ORDER BY 
-                CASE WHEN payment_status = 'pending' THEN 0 ELSE 1 END,
-                created_at DESC 
+                CASE WHEN r.payment_status = 'pending' THEN 0 ELSE 1 END,
+                r.created_at DESC 
             LIMIT 100
         `;
         
         const result = await pool.query(query);
         
-        console.log(`📋 예약관리 조회 결과: ${result.rows.length}건 (대기중 상태만)`);
+        console.log(`📋 예약관리 조회 결과: ${result.rows.length}건 (수배서 미생성)`);
         
         res.json({
             success: true,
             count: result.rows.length,
             reservations: result.rows,
-            filter: 'pending_only',
-            message: '대기중 예약만 표시됩니다'
+            filter: 'no_assignment_token',
+            message: '수배서가 생성되지 않은 예약만 표시됩니다 (수배업체 미지정)'
         });
     } catch (error) {
         console.error('예약 목록 조회 오류:', error);
@@ -7998,6 +8009,384 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
 });
 */
 
+// ============================================
+// 수배업체 관리 API
+// ============================================
+
+// 수배업체 목록 조회
+app.get('/api/vendors', requireAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                v.*,
+                COUNT(DISTINCT vp.id) as product_count,
+                COUNT(DISTINCT a.id) as assignment_count
+            FROM vendors v
+            LEFT JOIN vendor_products vp ON v.id = vp.vendor_id
+            LEFT JOIN assignments a ON v.id = a.vendor_id
+            GROUP BY v.id
+            ORDER BY v.created_at DESC
+        `;
+        
+        const result = await pool.query(query);
+        
+        res.json({
+            success: true,
+            vendors: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배업체 목록 조회 실패: ' + error.message
+        });
+    }
+});
+
+// 수배업체 단일 조회 (상품 포함)
+app.get('/api/vendors/:vendorId', requireAuth, async (req, res) => {
+    try {
+        const { vendorId } = req.params;
+        
+        // 수배업체 정보
+        const vendorQuery = 'SELECT * FROM vendors WHERE id = $1';
+        const vendorResult = await pool.query(vendorQuery, [vendorId]);
+        
+        if (vendorResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배업체를 찾을 수 없습니다'
+            });
+        }
+        
+        // 담당 상품 목록
+        const productsQuery = `
+            SELECT * FROM vendor_products 
+            WHERE vendor_id = $1 
+            ORDER BY priority ASC, created_at ASC
+        `;
+        const productsResult = await pool.query(productsQuery, [vendorId]);
+        
+        res.json({
+            success: true,
+            vendor: vendorResult.rows[0],
+            products: productsResult.rows
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배업체 조회 실패: ' + error.message
+        });
+    }
+});
+
+// 수배업체 등록
+app.post('/api/vendors', requireAuth, async (req, res) => {
+    try {
+        const { vendor_name, vendor_id, password, email, phone, contact_person, 
+                business_type, description, notification_email, products } = req.body;
+        
+        if (!vendor_name || !vendor_id || !password || !email) {
+            return res.status(400).json({
+                success: false,
+                message: '필수 항목을 입력해주세요'
+            });
+        }
+        
+        // 비밀번호 해싱
+        const bcrypt = require('bcrypt');
+        const password_hash = await bcrypt.hash(password, 10);
+        
+        // 수배업체 등록
+        const vendorQuery = `
+            INSERT INTO vendors (
+                vendor_name, vendor_id, password_hash, email, phone, 
+                contact_person, business_type, description, notification_email,
+                is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
+            RETURNING *
+        `;
+        
+        const vendorResult = await pool.query(vendorQuery, [
+            vendor_name, vendor_id, password_hash, email, phone || null,
+            contact_person || null, business_type || null, description || null,
+            notification_email || email
+        ]);
+        
+        const newVendor = vendorResult.rows[0];
+        
+        // 담당 상품 등록
+        if (products && products.length > 0) {
+            for (const product of products) {
+                await pool.query(`
+                    INSERT INTO vendor_products (vendor_id, product_keyword, priority, is_active)
+                    VALUES ($1, $2, $3, true)
+                `, [newVendor.id, product.keyword, product.priority || 1]);
+            }
+        }
+        
+        console.log('✅ 수배업체 등록 완료:', vendor_name);
+        
+        res.json({
+            success: true,
+            message: '수배업체가 등록되었습니다',
+            vendor: newVendor
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 등록 오류:', error);
+        
+        // 중복 오류 처리
+        if (error.code === '23505') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 등록된 업체명 또는 아이디입니다'
+            });
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: '수배업체 등록 실패: ' + error.message
+        });
+    }
+});
+
+// 수배업체 수정
+app.put('/api/vendors/:vendorId', requireAuth, async (req, res) => {
+    try {
+        const { vendorId } = req.params;
+        const { vendor_name, vendor_id, password, email, phone, contact_person,
+                business_type, description, notification_email, products } = req.body;
+        
+        if (!vendor_name || !vendor_id || !email) {
+            return res.status(400).json({
+                success: false,
+                message: '필수 항목을 입력해주세요'
+            });
+        }
+        
+        let updateQuery;
+        let updateParams;
+        
+        // 비밀번호 변경 여부 확인
+        if (password && password.trim() !== '') {
+            const bcrypt = require('bcrypt');
+            const password_hash = await bcrypt.hash(password, 10);
+            
+            updateQuery = `
+                UPDATE vendors SET
+                    vendor_name = $1, vendor_id = $2, password_hash = $3, email = $4,
+                    phone = $5, contact_person = $6, business_type = $7, description = $8,
+                    notification_email = $9, updated_at = NOW()
+                WHERE id = $10
+                RETURNING *
+            `;
+            updateParams = [
+                vendor_name, vendor_id, password_hash, email, phone || null,
+                contact_person || null, business_type || null, description || null,
+                notification_email || email, vendorId
+            ];
+        } else {
+            updateQuery = `
+                UPDATE vendors SET
+                    vendor_name = $1, vendor_id = $2, email = $3, phone = $4,
+                    contact_person = $5, business_type = $6, description = $7,
+                    notification_email = $8, updated_at = NOW()
+                WHERE id = $9
+                RETURNING *
+            `;
+            updateParams = [
+                vendor_name, vendor_id, email, phone || null, contact_person || null,
+                business_type || null, description || null, notification_email || email,
+                vendorId
+            ];
+        }
+        
+        const result = await pool.query(updateQuery, updateParams);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배업체를 찾을 수 없습니다'
+            });
+        }
+        
+        // 담당 상품 업데이트 (기존 삭제 후 재등록)
+        await pool.query('DELETE FROM vendor_products WHERE vendor_id = $1', [vendorId]);
+        
+        if (products && products.length > 0) {
+            for (const product of products) {
+                await pool.query(`
+                    INSERT INTO vendor_products (vendor_id, product_keyword, priority, is_active)
+                    VALUES ($1, $2, $3, true)
+                `, [vendorId, product.keyword, product.priority || 1]);
+            }
+        }
+        
+        console.log('✅ 수배업체 수정 완료:', vendor_name);
+        
+        res.json({
+            success: true,
+            message: '수배업체 정보가 수정되었습니다',
+            vendor: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 수정 오류:', error);
+        
+        if (error.code === '23505') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 사용 중인 업체명 또는 아이디입니다'
+            });
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: '수배업체 수정 실패: ' + error.message
+        });
+    }
+});
+
+// 수배업체 삭제
+app.delete('/api/vendors/:vendorId', requireAuth, async (req, res) => {
+    try {
+        const { vendorId } = req.params;
+        
+        // 진행 중인 수배가 있는지 확인
+        const assignmentCheck = await pool.query(`
+            SELECT COUNT(*) as count 
+            FROM assignments 
+            WHERE vendor_id = $1 AND status IN ('pending', 'sent', 'confirmed')
+        `, [vendorId]);
+        
+        if (parseInt(assignmentCheck.rows[0].count) > 0) {
+            return res.status(400).json({
+                success: false,
+                message: '진행 중인 수배가 있어 삭제할 수 없습니다'
+            });
+        }
+        
+        // 수배업체 삭제 (ON DELETE CASCADE로 관련 데이터 자동 삭제)
+        const result = await pool.query('DELETE FROM vendors WHERE id = $1 RETURNING *', [vendorId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '수배업체를 찾을 수 없습니다'
+            });
+        }
+        
+        console.log('✅ 수배업체 삭제 완료:', result.rows[0].vendor_name);
+        
+        res.json({
+            success: true,
+            message: '수배업체가 삭제되었습니다'
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배업체 삭제 실패: ' + error.message
+        });
+    }
+});
+
+// ============================================
+// 수배업체 상품명 관리 API
+// ============================================
+
+// 수배업체별 상품명 목록 조회
+app.get('/api/vendors/:vendorId/products', requireAuth, async (req, res) => {
+    try {
+        const { vendorId } = req.params;
+        
+        const query = `
+            SELECT * FROM vendor_products 
+            WHERE vendor_id = $1 
+            ORDER BY priority ASC, created_at ASC
+        `;
+        
+        const result = await pool.query(query, [vendorId]);
+        
+        res.json({
+            success: true,
+            products: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 상품명 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '상품명 목록 조회 실패: ' + error.message
+        });
+    }
+});
+
+// 수배업체 상품명 추가
+app.post('/api/vendors/:vendorId/products', requireAuth, async (req, res) => {
+    try {
+        const { vendorId } = req.params;
+        const { product_keyword, priority } = req.body;
+        
+        if (!product_keyword) {
+            return res.status(400).json({
+                success: false,
+                message: '상품명 키워드를 입력해주세요'
+            });
+        }
+        
+        const query = `
+            INSERT INTO vendor_products (vendor_id, product_keyword, priority, is_active)
+            VALUES ($1, $2, $3, true)
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, [vendorId, product_keyword, priority || 1]);
+        
+        console.log('✅ 상품명 추가:', product_keyword);
+        
+        res.json({
+            success: true,
+            product: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 상품명 추가 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '상품명 추가 실패: ' + error.message
+        });
+    }
+});
+
+// 수배업체 상품명 삭제
+app.delete('/api/vendors/:vendorId/products/:productId', requireAuth, async (req, res) => {
+    try {
+        const { vendorId, productId } = req.params;
+        
+        const query = 'DELETE FROM vendor_products WHERE id = $1 AND vendor_id = $2';
+        const result = await pool.query(query, [productId, vendorId]);
+        
+        if (result.rowCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '삭제할 상품명을 찾을 수 없습니다'
+            });
+        }
+        
+        console.log('✅ 상품명 삭제 완료');
+        
+        res.json({
+            success: true,
+            message: '상품명이 삭제되었습니다'
+        });
+    } catch (error) {
+        console.error('❌ 상품명 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '상품명 삭제 실패: ' + error.message
+        });
+    }
+});
+
 // 자동 수배 생성 함수
 async function createAutoAssignment(reservationId, productName) {
     try {
@@ -8439,26 +8828,18 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         const limit = 20;
         const offset = (page - 1) * limit;
         
-        // 수배관리 페이지: 대기중(신규) + 수배중 + 확정 상태 표시
-        let whereClause = `WHERE r.payment_status IN ('pending', 'in_progress', 'confirmed', 'voucher_sent')`;
+        // ✅ 수배관리 페이지: assignment_token이 있는 예약만 표시 (수배서 생성됨)
+        let whereClause = `WHERE a.assignment_token IS NOT NULL`;
         const queryParams = [];
         let paramIndex = 0;
         
-        console.log('🔍 수배관리 필터: 대기중(pending) + 수배중(in_progress) + 확정(confirmed) 상태 표시');
+        console.log('🔍 수배관리 필터: 수배서 생성된 예약만 표시 (assignment_token 존재)');
         
-        console.log('🔍 수배관리 API 호출 - 필터:', { page, status, search });
-        
-        // 예약 상태 필터
+        // 예약 상태 필터 (선택 사항)
         if (status) {
-            if (status === 'pending') {
-                whereClause = `WHERE r.payment_status = 'pending'`;
-            } else if (status === 'in_progress') {
-                whereClause = `WHERE r.payment_status = 'in_progress'`;
-            } else if (status === 'confirmed') {
-                whereClause = `WHERE r.payment_status = 'confirmed'`;
-            } else if (status === 'voucher_sent') {
-                whereClause = `WHERE r.payment_status = 'voucher_sent'`;
-            }
+            paramIndex++;
+            whereClause += ` AND r.payment_status = $${paramIndex}`;
+            queryParams.push(status);
         }
         
         // 검색 필터 (예약번호, 상품명, 고객명)
