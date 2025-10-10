@@ -5290,12 +5290,12 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
             
             console.log(`✅ 예약 저장 성공 (ID: ${reservationId})`);
             
-            // 수배서 자동 생성 로직
+            // ✅ 수배서 생성 로직 (파싱 미리보기에서 이미 매칭됨)
             let autoAssignmentResult = null;
             
-            // 1. vendor_id가 직접 지정된 경우 (인박스에서 선택)
+            // vendor_id가 있으면 수배서 생성 (파싱 미리보기에서 선택된 경우)
             if (reservationData.vendor_id && reservationData.vendor_id !== '' && reservationData.vendor_id !== null) {
-                console.log('🏢 수배업체 직접 지정:', reservationData.vendor_id);
+                console.log('🏢 파싱에서 지정된 수배업체:', reservationData.vendor_id);
                 
                 try {
                     // 수배업체 정보 조회
@@ -5330,7 +5330,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                             JSON.stringify(vendor_contact),
                             assignment_token,
                             'pending',
-                            '인박스에서 지정된 수배서',
+                            '파싱 미리보기에서 매칭된 수배서',
                             req.session?.username || 'admin'
                         ]);
                         
@@ -5339,7 +5339,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                             assignment_link: `/assignment/${assignment_token}`
                         };
                         
-                        console.log(`✅ 수배서 생성 완료: ${vendor.vendor_name}`);
+                        console.log(`✅ 수배서 생성 완료: ${vendor.vendor_name} (토큰: ${assignment_token})`);
                         
                         // 히스토리 저장
                         try {
@@ -5352,7 +5352,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                                 'success',
                                 req.session?.username || 'admin',
                                 JSON.stringify({ vendor_name: vendor.vendor_name }),
-                                `인박스에서 수배업체 지정: ${vendor.vendor_name}`
+                                `파싱 미리보기에서 자동 매칭: ${vendor.vendor_name}`
                             ]);
                         } catch (logError) {
                             console.error('⚠️ 히스토리 저장 실패:', logError);
@@ -5361,21 +5361,9 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                 } catch (vendorError) {
                     console.error('❌ 수배서 생성 실패:', vendorError);
                 }
-            }
-            // 2. 상품명으로 자동 매칭 (vendor_id가 없거나 빈 문자열일 때)
-            if (!autoAssignmentResult && reservationData.product_name) {
-                console.log('🔄 상품명으로 자동 수배 매칭 시도:', {
-                    reservationId,
-                    productName: reservationData.product_name
-                });
-                
-                autoAssignmentResult = await createAutoAssignment(reservationId, reservationData.product_name);
-                
-                if (autoAssignmentResult) {
-                    console.log('✅ 자동 매칭 성공:', autoAssignmentResult.vendor.vendor_name);
-                } else {
-                    console.log('⚠️ 매칭되는 수배업체 없음 - 예약관리에 남습니다');
-                }
+            } else {
+                // vendor_id 없음 → 예약관리 페이지로 (수배서 미생성)
+                console.log('⚠️ 수배업체 미지정 → 예약관리 페이지로 이동');
             }
             
             // 3. 바로 확정 상품인 경우 (추가 로직)
