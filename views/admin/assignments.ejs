@@ -944,15 +944,15 @@
                         <div class="row-main" style="flex-direction: column; gap: 8px;">
                             <div style="display: grid; grid-template-columns: 120px 180px 100px 1fr; gap: 12px; align-items: center;">
                                 <span style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.platform_name || '-'}"><strong>${truncate(reservation.platform_name || '-', 8)}</strong></span>
-                                <span class="dim" style="text-align: left; white-space: nowrap;"><i class="bi bi-calendar-check me-1"></i>예약일 ${createdAt}</span>
-                                <span class="dim" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.manager_name || '담당자 미지정'}"><i class="bi bi-person-badge me-1"></i>${managerDisplay}</span>
+                                <span class="dim" style="text-align: left; white-space: nowrap;">예약일 ${createdAt}</span>
+                                <span class="dim" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.manager_name || '담당자 미지정'}">${managerDisplay}</span>
                                 <span class="chip" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 20)}</span>
                             </div>
                             <div style="display: grid; grid-template-columns: 120px 180px 100px 1fr; gap: 12px; align-items: center;">
-                                <span class="dim" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.vendor_name || '수배업체 미지정'}"><i class="bi bi-building me-1"></i>${truncate(reservation.vendor_name || '미지정', 8)}</span>
-                                <span class="dim" style="text-align: left; white-space: nowrap;"><i class="bi bi-calendar2 me-1"></i>이용일 ${formatDate(reservation.usage_date) || '-'}</span>
+                                <span class="dim" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.vendor_name || '수배업체 미지정'}">${truncate(reservation.vendor_name || '미지정', 8)}</span>
+                                <span class="dim" style="text-align: left; white-space: nowrap;">이용일 ${formatDate(reservation.usage_date) || '-'}</span>
                                 <span style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.korean_name || '-'}"><strong>${customerDisplay}</strong></span>
-                                <span class="dim" style="text-align: left; white-space: nowrap;"><i class="bi bi-people me-1"></i>${pax}</span>
+                                <span class="dim" style="text-align: left; white-space: nowrap;">${pax}</span>
                             </div>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
