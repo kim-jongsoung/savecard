@@ -8799,34 +8799,49 @@ app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) =
             console.log('✅ 기존 수배서 상태 업데이트: sent');
         }
         
-        // 예약 상태를 in_progress로 변경 (pending에서만)
+        // 예약 상태를 in_progress로 변경
         const oldStatus = reservation.payment_status;
-        if (oldStatus === 'pending' || oldStatus === 'in_progress') {
+        if (oldStatus !== 'confirmed' && oldStatus !== 'voucher_sent') {
             await pool.query(
                 'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
                 ['in_progress', reservationId]
             );
-            console.log('✅ 예약 상태 변경: pending → in_progress');
+            console.log(`✅ 예약 상태 변경: ${oldStatus} → in_progress`);
+        }
+        
+        // 히스토리 저장 (항상 기록)
+        try {
+            // reservation_logs 테이블 확인 및 생성
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS reservation_logs (
+                    id SERIAL PRIMARY KEY,
+                    reservation_id INTEGER NOT NULL,
+                    action VARCHAR(100) NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    changed_by VARCHAR(100),
+                    changes JSONB,
+                    details TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            `);
             
-            // 히스토리 저장
-            try {
-                await pool.query(`
-                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                `, [
-                    reservationId,
-                    '수배서 전송',
-                    'success',
-                    req.session?.username || '관리자',
-                    JSON.stringify({ 
-                        payment_status: { from: oldStatus, to: 'in_progress' },
-                        assignment_status: { from: 'pending', to: 'sent' }
-                    }),
-                    '수배서가 현지업체로 전송되었습니다.'
-                ]);
-            } catch (logError) {
-                console.error('⚠️ 히스토리 저장 실패:', logError);
-            }
+            await pool.query(`
+                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [
+                reservationId,
+                '수배서 전송',
+                'success',
+                req.session?.username || '관리자',
+                JSON.stringify({ 
+                    payment_status: { from: oldStatus, to: 'in_progress' },
+                    assignment_status: { from: 'pending', to: 'sent' }
+                }),
+                '수배서가 현지업체로 전송되었습니다.'
+            ]);
+            console.log('✅ 수배서 전송 히스토리 저장 완료');
+        } catch (logError) {
+            console.error('⚠️ 히스토리 저장 실패:', logError);
         }
         
         res.json({

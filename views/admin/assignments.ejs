@@ -1174,10 +1174,12 @@
                 const amount = reservation.total_amount ? parseInt(reservation.total_amount).toLocaleString('ko-KR') + '원' : '-';
                 const pax = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
                 
-                console.log('상태 변환 결과:', {
-                    original: reservation.payment_status,
-                    statusText: statusText,
-                    bootstrapClass: bootstrapClass
+                console.log('📊 예약 데이터:', {
+                    id: reservation.id,
+                    reservation_number: reservation.reservation_number,
+                    payment_status: reservation.payment_status,
+                    vendor_name: reservation.vendor_name,
+                    assignment_id: reservation.assignment_id
                 });
                 
                 // 신규예약 뱃지 추가
@@ -1630,9 +1632,10 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showAlert('수배서가 전송되었습니다.', 'success');
+                    showAlert('✅ 수배서가 전송되었습니다!', 'success');
                     loadAssignments(); // 목록 새로고침
-                    loadAssignmentLogs(reservationId); // 로그 새로고침
+                    loadAssignmentLogs(reservationId); // 수배서 로그 새로고침
+                    loadModalHistory(reservationId); // 업무 히스토리 새로고침
                 } else {
                     showAlert(result.message || '수배서 전송에 실패했습니다.', 'error');
                 }
@@ -2421,16 +2424,16 @@
         
         // 수배서 미리보기
         async function previewAssignment() {
-            console.log('수배서 미리보기 시작, currentReservationId:', window.currentReservationId);
+            console.log('🔍 수배서 미리보기 시작, currentReservationId:', window.currentReservationId);
             
             if (!window.currentReservationId) {
-                console.error('예약 정보가 선택되지 않았습니다');
-                showAlert('예약 정보가 선택되지 않았습니다. 수배서 아이콘을 먼저 클릭해주세요.', 'warning');
+                console.error('❌ 예약 정보가 선택되지 않았습니다');
+                showAlert('예약 정보가 선택되지 않았습니다. 수배서 모달을 먼저 열어주세요.', 'warning');
                 return;
             }
             
             try {
-                console.log('수배서 토큰 조회 시작:', window.currentReservationId);
+                console.log('🔍 수배서 토큰 조회 시작:', window.currentReservationId);
                 
                 // 먼저 수배서 토큰을 가져오거나 생성
                 let assignmentToken = null;
@@ -2438,12 +2441,16 @@
                 // 기존 수배서 토큰 확인
                 const tokenResponse = await fetch(`/api/assignments/by-reservation/${window.currentReservationId}`);
                 
+                console.log('📡 API 응답 상태:', tokenResponse.status);
+                
                 if (!tokenResponse.ok) {
-                    throw new Error(`HTTP error! status: ${tokenResponse.status}`);
+                    const errorText = await tokenResponse.text();
+                    console.error('❌ API 호출 실패:', errorText);
+                    throw new Error(`HTTP error! status: ${tokenResponse.status}, message: ${errorText}`);
                 }
                 
                 const tokenResult = await tokenResponse.json();
-                console.log('토큰 조회 결과:', tokenResult);
+                console.log('✅ 토큰 조회 결과:', tokenResult);
                 
                 if (tokenResult.success && tokenResult.assignment_token) {
                     assignmentToken = tokenResult.assignment_token;
