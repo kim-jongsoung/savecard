@@ -1124,6 +1124,7 @@
         // 수배 목록 로드
         async function loadAssignments(page = 1) {
             try {
+                console.log('🔍 loadAssignments 호출 - 페이지:', page);
                 currentPage = page;
                 const params = new URLSearchParams({
                     page: page,
@@ -1134,11 +1135,9 @@
                 const response = await fetch(`/api/assignments?${params}`);
                 const data = await response.json();
 
-                console.log('수배관리 API 응답:', data);
+                console.log('📊 수배관리 API 응답 - assignments 수:', data.data?.assignments?.length);
                 
                 if (data.success) {
-                    console.log('예약 데이터 샘플:', data.data.assignments[0]);
-                    
                     // 전역 변수에 데이터 저장
                     window.reservations = data.data.assignments;
                     
@@ -1174,30 +1173,17 @@
             emptyState.style.display = 'none';
             assignmentsList.style.display = 'block';
 
+            console.log('🔄 렌더링 시작 - 총 예약 수:', assignments.length);
+            
             const html = assignments.map(reservation => {
                 // 전역 저장소에 예약 데이터 저장
                 window.reservationsData[reservation.id] = reservation;
-                console.log('예약 상태 정보:', {
-                    id: reservation.id,
-                    payment_status: reservation.payment_status,
-                    reservation_number: reservation.reservation_number,
-                    platform_name: reservation.platform_name
-                });
                 
                 const statusClass = getStatusClass(reservation.payment_status);
                 const statusText = getReservationStatusText(reservation.payment_status);
                 const bootstrapClass = getBootstrapStatusClass(reservation.payment_status);
                 const amount = reservation.total_amount ? parseInt(reservation.total_amount).toLocaleString('ko-KR') + '원' : '-';
                 const pax = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
-                
-                console.log('📊 예약 데이터:', {
-                    id: reservation.id,
-                    reservation_number: reservation.reservation_number,
-                    payment_status: reservation.payment_status,
-                    platform_name: reservation.platform_name,
-                    vendor_name: reservation.vendor_name,
-                    assignment_id: reservation.assignment_id
-                });
                 
                 // 신규예약 뱃지 추가
                 const isNewReservation = reservation.payment_status === 'pending';
@@ -1250,7 +1236,9 @@
                 `;
             }).join('');
             
+            console.log('✅ HTML 생성 완료 - 길이:', html.length);
             assignmentsList.innerHTML = html;
+            console.log('✅ 렌더링 완료');
         }
 
         // 검색 함수
@@ -2178,10 +2166,7 @@
             if (!reservation) return;
             
             window.currentReservationId = reservationId;
-            window.currentReservation = reservation; // ✅ 추가
-            
-            console.log('🔍 수배서 관리 모달 열기 - reservation:', reservation);
-            console.log('🔍 platform_name:', reservation.platform_name);
+            window.currentReservation = reservation;
             
             // 수배서 정보 표시 (안전하게 요소 확인)
             const assignmentNumberEl = document.getElementById('assignment-number');
@@ -2209,13 +2194,10 @@
                 }
             }
             
-            // 예약업체 (플랫폼) 표시 ✅ 추가
+            // 예약업체 (플랫폼) 표시
             const assignmentPlatformEl = document.getElementById('assignment-platform');
             if (assignmentPlatformEl) {
                 assignmentPlatformEl.textContent = reservation.platform_name || '-';
-                console.log('✅ 플랫폼명 설정:', reservation.platform_name);
-            } else {
-                console.error('❌ assignment-platform 요소를 찾을 수 없습니다');
             }
             
             const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
@@ -2224,37 +2206,8 @@
             // 히스토리 로드
             loadModalHistory(reservationId);
             
-            // 3초마다 수배서 상태 자동 새로고침 (최대 10회)
-            if (window.assignmentRefreshInterval) {
-                clearInterval(window.assignmentRefreshInterval);
-            }
-            let refreshCount = 0;
-            const maxRefresh = 10; // 최대 10회 (30초)
-            
-            window.assignmentRefreshInterval = setInterval(async () => {
-                refreshCount++;
-                console.log(`🔄 수배서 상태 자동 새로고침... (${refreshCount}/${maxRefresh})`);
-                
-                try {
-                    await loadAssignmentDetails(reservationId);
-                } catch (error) {
-                    console.error('❌ 자동 새로고침 오류:', error);
-                }
-                
-                // 최대 횟수 도달 시 중지
-                if (refreshCount >= maxRefresh) {
-                    clearInterval(window.assignmentRefreshInterval);
-                    console.log('🛑 자동 새로고침 종료 (최대 횟수 도달)');
-                }
-            }, 3000);
-            
-            // 모달 닫힐 때 인터벌 정리
-            document.getElementById('assignmentManageModal').addEventListener('hidden.bs.modal', function() {
-                if (window.assignmentRefreshInterval) {
-                    clearInterval(window.assignmentRefreshInterval);
-                    console.log('🛑 자동 새로고침 중지');
-                }
-            }, { once: true });
+            // ⚠️ 자동 새로고침 비활성화 (중복 로드 문제 발생으로 제거)
+            // 필요시 수동으로 모달 재열람하여 최신 정보 확인
         }
 
         // 3. 상태관리 모달 열기
@@ -2364,10 +2317,6 @@
         
         // 수배서 모달 정보 채우기
         async function populateAssignmentModalDetails(reservation) {
-            console.log('🔍 수배서 모달 정보 채우기:', reservation);
-            console.log('🔍 reservation.platform_name:', reservation?.platform_name);
-            console.log('🔍 reservation 전체 키:', Object.keys(reservation || {}));
-            
             if (!reservation) {
                 console.error('❌ 예약 데이터가 없습니다');
                 return;
@@ -2430,7 +2379,6 @@
         // 수배서 상세 정보 로드
         async function loadAssignmentDetails(reservationId) {
             try {
-                console.log('🔍 수배서 상세 정보 로드 시작:', reservationId);
                 const response = await fetch(`/api/assignments/by-reservation/${reservationId}`);
                 
                 if (!response.ok) {
@@ -2439,11 +2387,9 @@
                 }
                 
                 const result = await response.json();
-                console.log('📊 API 응답:', result);
                 
                 if (result.success && result.assignment) {
                     const assignment = result.assignment;
-                    console.log('✅ 수배서 데이터:', assignment);
                     
                     // 수배서 상태 정보
                     document.getElementById('assignment-number').textContent = assignment.id || '-';
@@ -2470,21 +2416,13 @@
                     // 열람 현황 표시
                     const viewsElement = document.getElementById('assignment-views');
                     if (viewsElement) {
-                        console.log('🔍 열람 현황 업데이트:', {
-                            viewed_at: assignment.viewed_at,
-                            sent_at: assignment.sent_at
-                        });
-                        
                         if (assignment.viewed_at) {
                             const viewedTime = formatDateTime(assignment.viewed_at);
                             viewsElement.innerHTML = `<span class="badge bg-success"><i class="bi bi-eye me-1"></i>열람됨</span><br><small class="text-muted">${viewedTime}</small>`;
-                            console.log('✅ 열람됨으로 표시:', viewedTime);
                         } else if (assignment.sent_at) {
                             viewsElement.innerHTML = '<span class="badge bg-warning"><i class="bi bi-clock me-1"></i>전송됨 (미열람)</span>';
-                            console.log('⏳ 전송됨(미열람)으로 표시');
                         } else {
                             viewsElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>미전송</span>';
-                            console.log('⭕ 미전송으로 표시');
                         }
                     }
                     
