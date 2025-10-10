@@ -83,11 +83,21 @@
                             </div>
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">상품명</label>
-                                <input type="text" class="form-control" id="product_name" name="product_name">
+                                <input type="text" class="form-control" id="product_name" name="product_name" onchange="matchVendorByProduct()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">패키지 타입 (상품 옵션)</label>
                                 <input type="text" class="form-control" id="package_type" name="package_type" placeholder="예: 1차 (선셋 & 별빛투어), 오전 투어, 픽업 포함 등">
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    <i class="bi bi-building me-1"></i>수배업체 
+                                    <span class="badge bg-info" id="vendor-match-badge" style="display: none;">자동 매칭됨</span>
+                                </label>
+                                <select class="form-control" id="vendor_id" name="vendor_id">
+                                    <option value="">미지정</option>
+                                </select>
+                                <small class="text-muted">상품명을 입력하면 자동으로 매칭됩니다. 직접 선택도 가능합니다.</small>
                             </div>
                         </div>
 
@@ -1065,8 +1075,72 @@
             updateCurrencyDisplay();
         }
 
+        // 수배업체 목록 로드
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/vendors');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const vendorSelect = document.getElementById('vendor_id');
+                    vendorSelect.innerHTML = '<option value="">미지정</option>';
+                    
+                    data.vendors.forEach(vendor => {
+                        if (vendor.is_active) {
+                            const option = document.createElement('option');
+                            option.value = vendor.id;
+                            option.textContent = vendor.vendor_name;
+                            vendorSelect.appendChild(option);
+                        }
+                    });
+                    
+                    console.log('✅ 수배업체 목록 로드 완료:', data.vendors.length);
+                }
+            } catch (error) {
+                console.error('❌ 수배업체 목록 로드 실패:', error);
+            }
+        }
+
+        // 상품명으로 수배업체 자동 매칭
+        async function matchVendorByProduct() {
+            const productName = document.getElementById('product_name').value;
+            const vendorSelect = document.getElementById('vendor_id');
+            const matchBadge = document.getElementById('vendor-match-badge');
+            
+            if (!productName) {
+                vendorSelect.value = '';
+                matchBadge.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/vendors/match', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product_name: productName })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.vendor) {
+                    vendorSelect.value = data.vendor.id;
+                    matchBadge.style.display = 'inline-block';
+                    console.log('✅ 수배업체 자동 매칭:', data.vendor.vendor_name);
+                } else {
+                    vendorSelect.value = '';
+                    matchBadge.style.display = 'none';
+                    console.log('⚠️ 매칭되는 수배업체 없음');
+                }
+            } catch (error) {
+                console.error('❌ 수배업체 매칭 실패:', error);
+            }
+        }
+
         // 인원 수 및 가격 변경 시 재계산 - 페이지 로드 후 이벤트 리스너 추가
         document.addEventListener('DOMContentLoaded', function() {
+            // 수배업체 목록 로드
+            loadVendors();
+            
             ['adult_count', 'child_count', 'infant_count', 'adult_price', 'child_price', 'infant_price'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -1136,8 +1210,12 @@
                 child_unit_price: parseFloat(formData.child_price) || null,
                 memo: formData.special_requests,
                 channel: 'inbox',
-                guest_count: (parseInt(formData.adult_count) || 1) + (parseInt(formData.child_count) || 0) + (parseInt(formData.infant_count) || 0)
+                guest_count: (parseInt(formData.adult_count) || 1) + (parseInt(formData.child_count) || 0) + (parseInt(formData.infant_count) || 0),
+                vendor_id: formData.vendor_id || null // 수배업체 ID 추가
             };
+            
+            console.log('💾 저장할 데이터:', mappedData);
+            console.log('🏢 선택된 수배업체 ID:', formData.vendor_id);
 
             try {
                 const response = await fetch('/api/reservations', {

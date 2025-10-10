@@ -5275,20 +5275,101 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
 
             const result = await pool.query(insertQuery, values);
             const newReservation = result.rows[0];
+            const reservationId = newReservation.id;
             
-            // 자동 수배 생성 체크 (바로 확정 상품인 경우)
+            console.log(`✅ 예약 저장 성공 (ID: ${reservationId})`);
+            
+            // 수배서 자동 생성 로직
             let autoAssignmentResult = null;
+            
+            // 1. vendor_id가 직접 지정된 경우 (인박스에서 선택)
+            if (reservationData.vendor_id) {
+                console.log('🏢 수배업체 직접 지정:', reservationData.vendor_id);
+                
+                try {
+                    // 수배업체 정보 조회
+                    const vendorQuery = 'SELECT * FROM vendors WHERE id = $1';
+                    const vendorResult = await pool.query(vendorQuery, [reservationData.vendor_id]);
+                    
+                    if (vendorResult.rows.length > 0) {
+                        const vendor = vendorResult.rows[0];
+                        
+                        // 수배서 생성
+                        const crypto = require('crypto');
+                        const assignment_token = crypto.randomBytes(16).toString('hex');
+                        
+                        const assignmentInsert = `
+                            INSERT INTO assignments (
+                                reservation_id, vendor_id, vendor_name, vendor_contact,
+                                assignment_token, status, notes, assigned_by, assigned_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                            RETURNING *
+                        `;
+                        
+                        const vendor_contact = {
+                            email: vendor.email,
+                            phone: vendor.phone,
+                            contact_person: vendor.contact_person
+                        };
+                        
+                        const assignmentResult = await pool.query(assignmentInsert, [
+                            reservationId,
+                            vendor.id,
+                            vendor.vendor_name,
+                            JSON.stringify(vendor_contact),
+                            assignment_token,
+                            'pending',
+                            '인박스에서 지정된 수배서',
+                            req.session?.username || 'admin'
+                        ]);
+                        
+                        autoAssignmentResult = {
+                            vendor: vendor,
+                            assignment_link: `/assignment/${assignment_token}`
+                        };
+                        
+                        console.log(`✅ 수배서 생성 완료: ${vendor.vendor_name}`);
+                        
+                        // 히스토리 저장
+                        try {
+                            await pool.query(`
+                                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                                VALUES ($1, $2, $3, $4, $5, $6)
+                            `, [
+                                reservationId,
+                                '수배업체 지정',
+                                'success',
+                                req.session?.username || 'admin',
+                                JSON.stringify({ vendor_name: vendor.vendor_name }),
+                                `인박스에서 수배업체 지정: ${vendor.vendor_name}`
+                            ]);
+                        } catch (logError) {
+                            console.error('⚠️ 히스토리 저장 실패:', logError);
+                        }
+                    }
+                } catch (vendorError) {
+                    console.error('❌ 수배서 생성 실패:', vendorError);
+                }
+            }
+            // 2. 상품명으로 자동 매칭 (vendor_id가 없을 때)
+            else if (reservationData.product_name) {
+                console.log('🔄 자동 수배서 생성 시도 (관리자):', {
+                    reservationId,
+                    productName: reservationData.product_name
+                });
+                
+                autoAssignmentResult = await createAutoAssignment(reservationId, reservationData.product_name);
+            }
+            
+            // 3. 바로 확정 상품인 경우 (추가 로직)
             if (reservationData.product_name && isAutoConfirmProduct(reservationData.product_name)) {
                 console.log('🎯 바로 확정 상품 감지:', reservationData.product_name);
                 
                 // 예약 상태를 확정으로 업데이트
                 await pool.query(
                     'UPDATE reservations SET payment_status = $1 WHERE id = $2',
-                    ['confirmed', newReservation.id]
+                    ['confirmed', reservationId]
                 );
-                
-                // 자동 수배서 생성
-                autoAssignmentResult = await createAutoAssignment(newReservation.id, reservationData.product_name);
             }
             
             const response = {
@@ -7971,6 +8052,82 @@ app.get('/admin/setup-assignments', requireAuth, async (req, res) => {
         });
     }
 });
+
+// ==================== 수배업체 API ====================
+
+// 수배업체 목록 조회 API
+app.get('/api/vendors', requireAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT v.*, 
+                   COUNT(vp.id) as product_count
+            FROM vendors v
+            LEFT JOIN vendor_products vp ON v.id = vp.vendor_id
+            GROUP BY v.id
+            ORDER BY v.vendor_name ASC
+        `;
+        
+        const result = await pool.query(query);
+        
+        res.json({
+            success: true,
+            vendors: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 수배업체 목록 조회 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배업체 목록 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 상품명으로 수배업체 자동 매칭 API
+app.post('/api/vendors/match', requireAuth, async (req, res) => {
+    try {
+        const { product_name } = req.body;
+        
+        if (!product_name) {
+            return res.json({
+                success: false,
+                message: '상품명이 필요합니다.'
+            });
+        }
+        
+        const matchQuery = `
+            SELECT v.*, vp.product_keyword, vp.priority
+            FROM vendors v
+            JOIN vendor_products vp ON v.id = vp.vendor_id
+            WHERE v.is_active = true AND vp.is_active = true
+            AND LOWER($1) LIKE '%' || LOWER(vp.product_keyword) || '%'
+            ORDER BY vp.priority ASC, v.created_at ASC
+            LIMIT 1
+        `;
+        
+        const result = await pool.query(matchQuery, [product_name]);
+        
+        if (result.rows.length > 0) {
+            res.json({
+                success: true,
+                vendor: result.rows[0],
+                matched_keyword: result.rows[0].product_keyword
+            });
+        } else {
+            res.json({
+                success: false,
+                message: '매칭되는 수배업체가 없습니다.'
+            });
+        }
+    } catch (error) {
+        console.error('❌ 수배업체 매칭 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배업체 매칭 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// ==================== 수배업체 관리 ====================
 
 // 샘플 수배업체 데이터 추가 (Railway 실행용)
 app.get('/admin/setup-vendors', requireAuth, async (req, res) => {
