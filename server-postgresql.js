@@ -4948,6 +4948,22 @@ app.post('/api/register-reservation', async (req, res) => {
                 
                 const autoAssignment = await createAutoAssignment(reservationId, parsedData.product_name);
                 
+                // 예약 생성 히스토리 저장
+                try {
+                    await pool.query(`
+                        INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details)
+                        VALUES ($1, $2, $3, $4, $5)
+                    `, [
+                        reservationId,
+                        'create',
+                        '예약생성',
+                        '시스템',
+                        `새 예약이 생성되었습니다: ${parsedData.korean_name} - ${parsedData.product_name}`
+                    ]);
+                } catch (logError) {
+                    console.error('❌ 예약 생성 히스토리 저장 실패:', logError);
+                }
+                
                 res.json({
                     success: true,
                     message: '예약이 성공적으로 등록되었습니다.',
@@ -9913,6 +9929,22 @@ app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
             }
 
             console.log(`✅ 새 바우처 생성: ${voucher_token}, 세이브카드: ${generated_savecard_code}`);
+            
+            // 바우처 생성 히스토리 저장
+            try {
+                await pool.query(`
+                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [
+                    id,
+                    'voucher_created',
+                    '바우처생성',
+                    req.session.user?.name || '관리자',
+                    `바우처 토큰: ${voucher_token}, 세이브카드: ${generated_savecard_code}`
+                ]);
+            } catch (logError) {
+                console.error('❌ 바우처 생성 히스토리 저장 실패:', logError);
+            }
         }
 
         // 예약 상태를 '바우처전송완료'로 변경 (자동 생성이 아닌 경우)
@@ -9921,6 +9953,22 @@ app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
                 'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
                 ['voucher_sent', id]
             );
+            
+            // 바우처 전송 히스토리 저장
+            try {
+                await pool.query(`
+                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [
+                    id,
+                    'voucher_sent',
+                    '바우처전송',
+                    req.session.user?.name || '관리자',
+                    '바우처가 고객에게 전송되었습니다'
+                ]);
+            } catch (logError) {
+                console.error('❌ 바우처 전송 히스토리 저장 실패:', logError);
+            }
         }
 
         console.log(`🎫 바우처 링크: ${req.protocol}://${req.get('host')}/voucher/${voucher_token}`);

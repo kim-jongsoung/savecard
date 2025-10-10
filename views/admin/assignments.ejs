@@ -2096,9 +2096,21 @@
                         } else if (item.action_type === 'assignment_sent') {
                             icon = 'bi-send';
                             badgeClass = 'bg-primary';
+                        } else if (item.action_type === 'voucher_created') {
+                            icon = 'bi-ticket-perforated';
+                            badgeClass = 'bg-success';
+                        } else if (item.action_type === 'voucher_sent') {
+                            icon = 'bi-send-check';
+                            badgeClass = 'bg-primary';
+                        } else if (item.action_type === 'voucher_viewed') {
+                            icon = 'bi-eye-fill';
+                            badgeClass = 'bg-info';
                         } else if (item.action_type === 'voucher') {
                             icon = 'bi-ticket-perforated';
                             badgeClass = 'bg-success';
+                        } else if (item.action_type === 'confirmation_saved') {
+                            icon = 'bi-key-fill';
+                            badgeClass = 'bg-warning';
                         }
                         
                         // changes 안전하게 파싱
