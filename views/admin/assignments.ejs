@@ -881,13 +881,24 @@
                 const statusText = getReservationStatusText(reservation.payment_status);
                 const bootstrapClass = getBootstrapStatusClass(reservation.payment_status);
                 const amount = reservation.total_amount ? parseInt(reservation.total_amount).toLocaleString('ko-KR') + '원' : '-';
-                const pax = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
+                const pax = `성인 ${reservation.people_adult || 0} 아동 ${reservation.people_child || 0} 유아 ${reservation.people_infant || 0}`;
                 
                 // 특수 상태 뱃지 추가
                 const isInRevision = reservation.payment_status === 'in_revision';
                 const isNewReservation = reservation.payment_status === 'pending';
-                const revisionBadge = isInRevision ? '<span class="badge bg-warning text-dark ms-2 animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">⚠️ 변경</span>' : '';
-                const newBadge = isNewReservation ? '<span class="badge bg-danger ms-2 animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">🆕 신규</span>' : '';
+                
+                // 상태별 아이콘 마크
+                let statusIcon = '';
+                if (isInRevision) {
+                    statusIcon = '<i class="bi bi-exclamation-triangle-fill text-warning ms-2" title="변경중"></i>';
+                } else if (isNewReservation) {
+                    statusIcon = '<i class="bi bi-star-fill text-danger ms-2" title="신규"></i>';
+                } else if (reservation.assignment_sent_at) {
+                    statusIcon = '<i class="bi bi-send-fill text-primary ms-2" title="발송완료"></i>';
+                }
+                if (reservation.voucher_viewed_at) {
+                    statusIcon += '<i class="bi bi-eye-fill text-success ms-1" title="열람완료"></i>';
+                }
                 
                 // 이용일 완료 여부 확인
                 const today = new Date();
@@ -900,18 +911,30 @@
                 const revisionClass = isInRevision ? 'border-danger border-3' : (isNewReservation ? 'border-danger border-2' : '');
                 const revisionBg = isInRevision ? 'style="background-color: #fff5f5;"' : '';
                 
+                // 예약일시
+                const createdAt = reservation.created_at ? formatDate(reservation.created_at) : '-';
+                
                 return `
                     <article class="row-card table-like ${revisionClass} ${passedClass}" ${revisionBg}>
-                        <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
-                        ${revisionBadge}
-                        ${newBadge}
-                        ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.7rem;">📋 정산대기</span>' : ''}
-                        <div class="row-main">
-                            <span><strong>${reservation.platform_name || '-'}</strong><span class="dim">(${reservation.korean_name || '-'})</span></span>
-                            <span class="chip">${reservation.product_name || '-'}</span>
-                            <span class="dim"><i class="bi bi-calendar2 me-1"></i>출발일 ${formatDate(reservation.usage_date) || '-'}</span>
-                            <span class="dim"><i class="bi bi-building me-1"></i>수배업체: ${reservation.vendor_name || '미지정'}</span>
-                            <span class="money"><i class="bi bi-cash-coin me-1"></i>${amount}</span>
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
+                            ${statusIcon}
+                            ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.7rem;">📋 정산대기</span>' : ''}
+                        </div>
+                        <div class="row-main" style="flex-direction: column; gap: 8px;">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                                <span><strong>${reservation.platform_name || '-'}</strong></span>
+                                <span class="dim"><i class="bi bi-calendar-check me-1"></i>예약일 ${createdAt}</span>
+                                <span class="dim"><i class="bi bi-person-badge me-1"></i>${reservation.manager_name || '담당자 미지정'}</span>
+                                <span class="chip">${reservation.product_name || '-'}</span>
+                            </div>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                                <span class="dim"><i class="bi bi-building me-1"></i>${reservation.vendor_name || '수배업체 미지정'}</span>
+                                <span class="dim"><i class="bi bi-calendar2 me-1"></i>이용일 ${formatDate(reservation.usage_date) || '-'}</span>
+                                <span><strong>${reservation.korean_name || '-'}</strong></span>
+                                <span class="dim"><i class="bi bi-people me-1"></i>${pax}</span>
+                                <span class="money ms-auto"><i class="bi bi-cash-coin me-1"></i>${amount}</span>
+                            </div>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
                             <button class="btn btn-outline-primary btn-sm" 
