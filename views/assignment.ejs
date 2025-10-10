@@ -15,12 +15,26 @@
         }
         
         .document-wrapper {
-            max-width: 21cm;
+            max-width: 95%;
+            width: 100%;
             min-height: 29.7cm;
             margin: 2rem auto;
             background: white;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 2cm;
+            padding: 2rem;
+        }
+        
+        /* 큰 화면에서는 적절한 최대 너비 설정 */
+        @media (min-width: 1400px) {
+            .document-wrapper {
+                max-width: 1320px;
+            }
+        }
+        
+        @media (min-width: 1200px) and (max-width: 1399px) {
+            .document-wrapper {
+                max-width: 1140px;
+            }
         }
         
         /* A4 인쇄 최적화 */
