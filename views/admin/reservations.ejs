@@ -658,12 +658,13 @@
         async function confirmCreateAssignment() {
             const reservationId = document.getElementById('reservationId').value;
             const vendorId = document.getElementById('vendorSelect').value;
-            const notes = document.getElementById('assignmentNotes').value;
             
             if (!vendorId) {
                 alert('수배업체를 선택해주세요.');
                 return;
             }
+            
+            console.log('🔧 수배업체 설정 시작:', { reservationId, vendorId });
             
             try {
                 // 수배서 생성 (토큰 생성, 전송은 안함)
@@ -673,10 +674,12 @@
                     body: JSON.stringify({
                         reservation_id: reservationId,
                         vendor_id: vendorId,
-                        notes: notes || '예약관리에서 수배업체 설정',
+                        notes: '예약관리에서 수배업체 설정',
                         status: 'draft'  // 임시 상태 (전송 안됨)
                     })
                 });
+                
+                console.log('📡 API 응답 상태:', response.status);
                 
                 const result = await response.json();
                 
