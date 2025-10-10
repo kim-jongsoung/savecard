@@ -6493,12 +6493,17 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             req.session.adminUsername || 'admin'
         ]);
 
-        // 예약 상태를 수배중으로 변경
-        await pool.query(`
-            UPDATE reservations 
-            SET payment_status = 'in_progress', updated_at = NOW()
-            WHERE id = $1
-        `, [reservation_id]);
+        // 예약 상태 변경 (draft는 pending 유지, sent는 in_progress로 변경)
+        if (assignmentStatus !== 'draft') {
+            await pool.query(`
+                UPDATE reservations 
+                SET payment_status = 'in_progress', updated_at = NOW()
+                WHERE id = $1
+            `, [reservation_id]);
+            console.log('✅ 예약 상태 변경: in_progress (수배중)');
+        } else {
+            console.log('✅ 예약 상태 유지: pending (신규예약)');
+        }
 
         const assignment = assignmentResult.rows[0];
         const assignment_link = `/assignment/${assignment_token}`;
