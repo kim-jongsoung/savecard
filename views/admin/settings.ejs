@@ -267,14 +267,18 @@
                         <!-- 담당 상품 -->
                         <div class="row mb-4">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-tags me-2"></i>담당 상품 키워드</h6>
-                                <p class="text-muted small">상품명에 포함된 키워드로 자동 매칭됩니다. 우선순위가 높을수록 먼저 선택됩니다.</p>
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-tags me-2"></i>담당 상품명</h6>
+                                <p class="text-muted small">
+                                    <strong>정확한 상품명</strong> 또는 <strong>상품명 패턴</strong>을 입력하세요.<br>
+                                    예: "스타돌핀크루즈", "괌 별빛투어 탕기슨비치", "레오팔레스 골프" 등<br>
+                                    입력한 텍스트가 예약 상품명에 <strong>포함되면</strong> 자동 매칭됩니다.
+                                </p>
                             </div>
                             <div class="col-12">
                                 <div id="productKeywords">
                                     <div class="row mb-2 product-keyword-row">
                                         <div class="col-md-8">
-                                            <input type="text" class="form-control" placeholder="예: 돌핀, 크루즈, 골프" name="product_keyword">
+                                            <input type="text" class="form-control" placeholder="예: 스타돌핀크루즈, 괌 별빛투어, 레오팔레스 골프 18홀" name="product_keyword">
                                         </div>
                                         <div class="col-md-3">
                                             <select class="form-select" name="product_priority">
@@ -291,7 +295,7 @@
                                     </div>
                                 </div>
                                 <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductKeyword()">
-                                    <i class="fas fa-plus me-1"></i>키워드 추가
+                                    <i class="fas fa-plus me-1"></i>상품명 추가
                                 </button>
                             </div>
                         </div>
@@ -549,14 +553,14 @@
             alert('상세 보기 기능은 곧 추가될 예정입니다.');
         }
 
-        // 상품 키워드 추가
+        // 상품명 추가
         function addProductKeyword() {
             const container = document.getElementById('productKeywords');
             const newRow = document.createElement('div');
             newRow.className = 'row mb-2 product-keyword-row';
             newRow.innerHTML = `
                 <div class="col-md-8">
-                    <input type="text" class="form-control" placeholder="예: 돌핀, 크루즈, 골프" name="product_keyword">
+                    <input type="text" class="form-control" placeholder="예: 스타돌핀크루즈, 괌 별빛투어, 레오팔레스 골프 18홀" name="product_keyword">
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="product_priority">
@@ -582,13 +586,13 @@
             }
         }
 
-        // 상품 키워드 초기화
+        // 상품명 초기화
         function resetProductKeywords() {
             const container = document.getElementById('productKeywords');
             container.innerHTML = `
                 <div class="row mb-2 product-keyword-row">
                     <div class="col-md-8">
-                        <input type="text" class="form-control" placeholder="예: 돌핀, 크루즈, 골프" name="product_keyword">
+                        <input type="text" class="form-control" placeholder="예: 스타돌핀크루즈, 괌 별빛투어, 레오팔레스 골프 18홀" name="product_keyword">
                     </div>
                     <div class="col-md-3">
                         <select class="form-select" name="product_priority">
