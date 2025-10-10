@@ -214,20 +214,11 @@
         <div class="assignment-header">
             <div class="container-fluid">
                 <div class="row align-items-center">
-                    <div class="col-8">
+                    <div class="col-12 text-center">
                         <div class="doc-title">
                             <i class="bi bi-file-earmark-text me-2"></i>
-                            Local Assignment Request<br>
-                            <small style="font-size:1.2rem;opacity:0.9;">현지 수배 의뢰서</small>
-                        </div>
-                        <div class="doc-number">
-                            Doc No. <%= assignment.id || 'DRAFT' %> | Reservation No. <%= assignment.reservation_number %>
-                        </div>
-                    </div>
-                    <div class="col-4 text-end">
-                        <div class="official-stamp">
-                            <div>괌세이브카드</div>
-                            <div style="font-size:0.6rem;margin-top:4px;">GUAM SAVE CARD</div>
+                            BOOKING CONFIRMATION<br>
+                            <small style="font-size:1.2rem;opacity:0.9;">예약 확인서</small>
                         </div>
                     </div>
                 </div>
@@ -262,8 +253,8 @@
                                 <% } %>
                             </div>
                             <div class="col-md-6">
-                                <strong>Platform (업체명):</strong><br>
-                                <span class="text-primary fw-bold"><%= assignment.vendor_name || 'N/A' %></span>
+                                <strong>Booking Platform (예약업체):</strong><br>
+                                <span class="text-primary fw-bold"><%= assignment.platform_name || 'N/A' %></span>
                             </div>
                             <div class="col-md-6">
                                 <strong>Product (상품명):</strong><br>
