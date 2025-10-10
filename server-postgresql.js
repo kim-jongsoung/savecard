@@ -6623,9 +6623,9 @@ app.get('/assignment/:token', async (req, res) => {
             }
         }
 
-        // 수배업체 정보가 없으면 기본값 설정
+        // 수배업체 정보가 없으면 '미지정'으로 표시
         if (!assignment.assignment_vendor) {
-            assignment.assignment_vendor = assignment.platform_name || '미지정';
+            assignment.assignment_vendor = '미지정';
         }
 
         // 필수 필드들 null 체크 및 기본값 설정
