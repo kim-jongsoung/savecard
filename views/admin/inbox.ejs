@@ -271,15 +271,15 @@
                                         <select class="form-select" id="newFieldType" onchange="updateValueOptions()">
                                             <option value="">-- 필드 선택 --</option>
                                             <option value="payment_status">예약 상태</option>
-                                            <option value="adult_count">성인수</option>
-                                            <option value="child_count">아동수</option>
-                                            <option value="infant_count">유아수</option>
-                                            <option value="total_amount">총 금액</option>
-                                            <option value="adult_price">성인 단가</option>
-                                            <option value="child_price">아동 단가</option>
-                                            <option value="infant_price">유아 단가</option>
-                                            <option value="platform_name">업체명</option>
-                                            <option value="product_name">상품명</option>
+                                            <option value="adult_count">성인수 (people_adult)</option>
+                                            <option value="child_count">아동수 (people_child)</option>
+                                            <option value="infant_count">유아수 (people_infant)</option>
+                                            <option value="total_amount">총 금액 (total_amount)</option>
+                                            <option value="adult_price">성인 단가 (adult_unit_price)</option>
+                                            <option value="child_price">아동 단가 (child_unit_price)</option>
+                                            <option value="platform_name">플랫폼명 (platform_name)</option>
+                                            <option value="product_name">상품명 (product_name)</option>
+                                            <option value="package_type">패키지 타입 (package_type)</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -861,7 +861,8 @@
                     { value: 'pending', text: '대기중 (신규예약)' },
                     { value: 'in_progress', text: '수배중 (현지수배)' },
                     { value: 'confirmed', text: '확정 (수배완료)' },
-                    { value: 'cancelled', text: '예약취소' }
+                    { value: 'cancelled', text: '예약취소' },
+                    { value: 'refunded', text: '환불완료' }
                 ],
                 'adult_count': [
                     { value: '1', text: '1명' },
@@ -913,16 +914,31 @@
                     { value: '20', text: '$20' }
                 ],
                 'platform_name': [
+                    { value: 'KLOOK', text: 'KLOOK' },
                     { value: '투어비스', text: '투어비스' },
+                    { value: '노을투어', text: '노을투어' },
+                    { value: '괌투어', text: '괌투어' },
                     { value: '하나투어', text: '하나투어' },
                     { value: '모두투어', text: '모두투어' },
-                    { value: '온라인투어', text: '온라인투어' }
+                    { value: 'custom', text: '직접 입력' }
                 ],
                 'product_name': [
-                    { value: '돌핀투어', text: '돌핀투어' },
-                    { value: '스노클링', text: '스노클링' },
-                    { value: '선셋크루즈', text: '선셋크루즈' },
-                    { value: '시티투어', text: '시티투어' }
+                    { value: '괌 별빛투어', text: '괌 별빛투어' },
+                    { value: '괌 돌핀투어', text: '괌 돌핀투어' },
+                    { value: '괌 스노클링', text: '괌 스노클링' },
+                    { value: '괌 선셋크루즈', text: '괌 선셋크루즈' },
+                    { value: '괌 시티투어', text: '괌 시티투어' },
+                    { value: '괌 오션뷰', text: '괌 오션뷰' },
+                    { value: 'custom', text: '직접 입력' }
+                ],
+                'package_type': [
+                    { value: '1차 (선셋 & 별빛투어)', text: '1차 (선셋 & 별빛투어)' },
+                    { value: '2차 (별빛투어)', text: '2차 (별빛투어)' },
+                    { value: '오전 투어', text: '오전 투어' },
+                    { value: '오후 투어', text: '오후 투어' },
+                    { value: '픽업 포함', text: '픽업 포함' },
+                    { value: '픽업 미포함', text: '픽업 미포함' },
+                    { value: 'custom', text: '직접 입력' }
                 ]
             };
             
