@@ -8901,14 +8901,14 @@ app.post('/api/reservations/:id/memo', requireAuth, async (req, res) => {
 // 수배서 생성 API
 app.post('/api/assignments', requireAuth, async (req, res) => {
     try {
-        console.log('수배서 생성 요청:', req.body);
+        console.log('🔧 수배서 생성 요청:', req.body);
         const { reservation_id, vendor_id, notes } = req.body;
 
-        if (!reservation_id || !vendor_id) {
-            console.log('필수 필드 누락:', { reservation_id, vendor_id });
+        if (!reservation_id) {
+            console.log('❌ 필수 필드 누락: reservation_id');
             return res.status(400).json({
                 success: false,
-                message: '예약 ID와 수배업체 ID는 필수입니다.'
+                message: '예약 ID는 필수입니다.'
             });
         }
         
@@ -8923,24 +8923,29 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             });
         }
         
-        // 수배업체 정보 확인
-        const vendorQuery = 'SELECT * FROM vendors WHERE id = $1 AND is_active = true';
-        const vendorResult = await pool.query(vendorQuery, [vendor_id]);
-        
-        if (vendorResult.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: '수배업체를 찾을 수 없습니다.'
-            });
-        }
-        
-        const vendor = vendorResult.rows[0];
-        
         // 고유 토큰 생성
         const crypto = require('crypto');
         const assignment_token = crypto.randomBytes(16).toString('hex');
         
-        // 수배서 생성
+        let vendor = null;
+        let vendor_contact = {};
+        
+        // vendor_id가 제공된 경우에만 수배업체 정보 확인
+        if (vendor_id) {
+            const vendorQuery = 'SELECT * FROM vendors WHERE id = $1 AND is_active = true';
+            const vendorResult = await pool.query(vendorQuery, [vendor_id]);
+            
+            if (vendorResult.rows.length > 0) {
+                vendor = vendorResult.rows[0];
+                vendor_contact = {
+                    email: vendor.email,
+                    phone: vendor.phone,
+                    contact_person: vendor.contact_person
+                };
+            }
+        }
+        
+        // 수배서 생성 (vendor_id 없어도 가능 - 미리보기용)
         const insertQuery = `
             INSERT INTO assignments (
                 reservation_id, vendor_id, vendor_name, vendor_contact,
@@ -8949,49 +8954,59 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             RETURNING *
         `;
         
-        const vendor_contact = {
-            email: vendor.email,
-            phone: vendor.phone,
-            contact_person: vendor.contact_person
-        };
-        
         const insertParams = [
             reservation_id,
-            vendor_id,
-            vendor.vendor_name,
+            vendor_id || null,
+            vendor ? vendor.vendor_name : null,
             JSON.stringify(vendor_contact),
             assignment_token,
-            'requested',
-            notes || '',
+            'pending',
+            notes || '미리보기용 수배서',
             req.session.adminUsername || 'admin'
         ];
         
         const result = await pool.query(insertQuery, insertParams);
         const assignment = result.rows[0];
 
-        // 예약 상태를 "수배중(현지수배)"으로 업데이트 (수배관리로 이동)
-        await pool.query(
-            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
-            ['in_progress', reservation_id]
-        );
+        // vendor_id가 있을 때만 상태 변경 및 자동 전송
+        if (vendor_id && vendor) {
+            // 예약 상태를 "수배중(현지수배)"으로 업데이트
+            await pool.query(
+                'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+                ['in_progress', reservation_id]
+            );
 
-        // 수배서 자동 전송 (상태를 'sent'로 업데이트)
-        await pool.query(
-            'UPDATE assignments SET status = $1, sent_at = NOW(), updated_at = NOW() WHERE id = $2',
-            ['sent', assignment.id]
-        );
+            // 수배서 자동 전송 (상태를 'sent'로 업데이트)
+            await pool.query(
+                'UPDATE assignments SET status = $1, sent_at = NOW(), updated_at = NOW() WHERE id = $2',
+                ['sent', assignment.id]
+            );
 
-        // TODO: 실제 이메일/메신저 전송 로직 추가
-        console.log(`📧 수배서 자동 전송: ${vendor.vendor_name} (${vendor.email})`);
-        console.log(`🔗 수배서 링크: ${req.protocol}://${req.get('host')}/assignment/${assignment_token}`);
+            console.log(`✅ 수배서 자동 생성 및 전송: ${vendor.vendor_name}`);
+            console.log(`🔗 수배서 링크: ${req.protocol}://${req.get('host')}/assignment/${assignment_token}`);
 
-        res.json({
-            success: true,
-            message: '수배서가 생성되고 수배처에 전송되었습니다.',
-            data: assignment,
-            assignment_link: `/assignment/${assignment_token}`,
-            auto_sent: true
-        });
+            res.json({
+                success: true,
+                message: '수배서가 생성되고 수배처에 전송되었습니다.',
+                data: assignment,
+                assignment_token: assignment_token,
+                assignment_link: `/assignment/${assignment_token}`,
+                auto_sent: true
+            });
+        } else {
+            // 미리보기용 수배서 생성 (상태 변경 없음)
+            console.log(`✅ 미리보기용 수배서 생성 완료`);
+            console.log(`🔗 수배서 링크: ${req.protocol}://${req.get('host')}/assignment/${assignment_token}`);
+
+            res.json({
+                success: true,
+                message: '미리보기용 수배서가 생성되었습니다.',
+                data: assignment,
+                assignment_token: assignment_token,
+                assignment_link: `/assignment/${assignment_token}`,
+                auto_sent: false
+            });
+        }
         
     } catch (error) {
         console.error('❌ 수배서 생성 오류:', error);
