@@ -36,6 +36,7 @@
         }
         
         /* 상태별 배지 색상 */
+        .status-in-revision { background-color: #ff6b6b !important; color: #fff !important; }
         .status-pending { background-color: #6c757d !important; }
         .status-in-progress { background-color: #ffc107 !important; color: #000 !important; }
         .status-confirmed { background-color: #28a745 !important; }
@@ -191,6 +192,7 @@
                         <label class="form-label">예약상태</label>
                         <select class="form-select" id="searchStatus">
                             <option value="">전체</option>
+                            <option value="in_revision">수정중(예약변경)</option>
                             <option value="pending">대기중(신규)</option>
                             <option value="in_progress">수배중</option>
                             <option value="confirmed">확정완료</option>
@@ -1206,8 +1208,10 @@
                 const amount = reservation.total_amount ? parseInt(reservation.total_amount).toLocaleString('ko-KR') + '원' : '-';
                 const pax = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
                 
-                // 신규예약 뱃지 추가
+                // 특수 상태 뱃지 추가
+                const isInRevision = reservation.payment_status === 'in_revision';
                 const isNewReservation = reservation.payment_status === 'pending';
+                const revisionBadge = isInRevision ? '<span class="badge bg-warning text-dark ms-2 animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">⚠️ 변경</span>' : '';
                 const newBadge = isNewReservation ? '<span class="badge bg-danger ms-2 animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">🆕 신규</span>' : '';
                 
                 // 이용일 완료 여부 확인
@@ -1217,9 +1221,14 @@
                 const isUsageDatePassed = usageDate && usageDate < today;
                 const passedClass = isUsageDatePassed ? 'bg-light-gray' : '';
                 
+                // 수정중 상태는 빨간 테두리 + 주황 배경
+                const revisionClass = isInRevision ? 'border-danger border-3' : (isNewReservation ? 'border-danger border-2' : '');
+                const revisionBg = isInRevision ? 'style="background-color: #fff5f5;"' : '';
+                
                 return `
-                    <article class="row-card table-like ${isNewReservation ? 'border-danger border-2' : ''} ${passedClass}">
+                    <article class="row-card table-like ${revisionClass} ${passedClass}" ${revisionBg}>
                         <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
+                        ${revisionBadge}
                         ${newBadge}
                         ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.7rem;">📋 정산대기</span>' : ''}
                         <div class="row-main">
@@ -1276,6 +1285,7 @@
         // 풋터 상태 요약 업데이트
         function updateFooterSummary(assignments) {
             const statusCount = {
+                in_revision: 0,
                 pending: 0,
                 in_progress: 0,
                 confirmed: 0,
@@ -1289,8 +1299,13 @@
             });
             
             document.getElementById('totalCount').textContent = `총 ${assignments.length}개`;
-            document.getElementById('statusSummary').textContent = 
-                `신규 ${statusCount.pending} · 수배중 ${statusCount.in_progress} · 확정 ${statusCount.confirmed} · 바우처 ${statusCount.voucher_sent}`;
+            
+            let summaryText = '';
+            if (statusCount.in_revision > 0) summaryText += `변경 ${statusCount.in_revision} · `;
+            summaryText += `신규 ${statusCount.pending} · 수배중 ${statusCount.in_progress} · 확정 ${statusCount.confirmed}`;
+            if (statusCount.voucher_sent > 0) summaryText += ` · 바우처 ${statusCount.voucher_sent}`;
+            
+            document.getElementById('statusSummary').textContent = summaryText;
         }
 
         // 검색 함수
@@ -2119,6 +2134,7 @@
 
         function getBootstrapStatusClass(status) {
             const statusMap = {
+                'in_revision': 'danger',          // 수정중 - 빨간색
                 'pending': 'secondary',           // 대기중 - 회색
                 'in_progress': 'warning',         // 수배중 - 노란색
                 'confirmed': 'success',           // 확정 - 초록색
@@ -2131,6 +2147,7 @@
 
         function getReservationStatusText(status) {
             const statusMap = {
+                'in_revision': '수정중 (예약변경)',
                 'pending': '대기중 (신규예약)',
                 'in_progress': '수배중 (현지수배)',
                 'confirmed': '확정 (수배완료)',
@@ -3180,6 +3197,9 @@
             
             // 변경 내역 추적
             const changes = {};
+            const importantFields = ['product_name', 'package_type', 'people_adult', 'people_child', 'usage_date', 'usage_time', 'memo'];
+            let hasImportantChanges = false;
+            
             if (currentReservation) {
                 Object.keys(formData).forEach(key => {
                     const oldValue = currentReservation[key];
@@ -3191,8 +3211,19 @@
                             from: oldValue,
                             to: newValue
                         };
+                        
+                        // 중요한 필드가 변경되었는지 확인
+                        if (importantFields.includes(key)) {
+                            hasImportantChanges = true;
+                        }
                     }
                 });
+            }
+            
+            // 중요한 변경사항이 있고 현재 상태가 수배중이면 '수정중(예약변경)' 상태로 변경
+            if (hasImportantChanges && (currentReservation.payment_status === 'in_progress' || currentReservation.payment_status === 'confirmed')) {
+                formData.payment_status = 'in_revision';
+                console.log('⚠️ 중요 변경사항 감지 - 상태를 "수정중(예약변경)"으로 변경');
             }
             
             try {

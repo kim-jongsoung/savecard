@@ -8909,10 +8909,11 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 ${whereClause}
                 ORDER BY 
                     CASE r.payment_status
-                        WHEN 'pending' THEN 1
-                        WHEN 'in_progress' THEN 2
-                        WHEN 'confirmed' THEN 3
-                        WHEN 'voucher_sent' THEN 5
+                        WHEN 'in_revision' THEN 0  -- 수정중(예약변경) - 최상단
+                        WHEN 'pending' THEN 1      -- 신규예약
+                        WHEN 'in_progress' THEN 2  -- 수배중
+                        WHEN 'confirmed' THEN 3    -- 확정
+                        WHEN 'voucher_sent' THEN 5 -- 바우처전송
                         ELSE 4
                     END,
                     CASE 
