@@ -1143,6 +1143,9 @@
             }
         }
 
+        // 전역 예약 데이터 저장소
+        window.reservationsData = window.reservationsData || {};
+
         // 수배관리 목록 렌더링 (카드 형태)
         function renderAssignments(assignments) {
             const assignmentsList = document.getElementById('assignmentsList');
@@ -1162,6 +1165,8 @@
             assignmentsList.style.display = 'block';
 
             const html = assignments.map(reservation => {
+                // 전역 저장소에 예약 데이터 저장
+                window.reservationsData[reservation.id] = reservation;
                 console.log('예약 상태 정보:', {
                     id: reservation.id,
                     payment_status: reservation.payment_status,
@@ -1200,31 +1205,31 @@
                         <div class="btn-group btn-group-sm ms-auto" role="group">
                             <button class="btn btn-outline-primary btn-sm" 
                                     onclick="openReservationEditModal(${reservation.id})" 
-                                    data-reservation='${JSON.stringify(reservation)}'
+                                    data-reservation-id="${reservation.id}"
                                     title="예약변경">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                             <button class="btn btn-outline-secondary btn-sm" 
                                     onclick="openAssignmentManageModal(${reservation.id})" 
-                                    data-reservation='${JSON.stringify(reservation)}'
+                                    data-reservation-id="${reservation.id}"
                                     title="수배서관리">
                                 <i class="bi bi-file-text"></i>
                             </button>
                             <button class="btn btn-outline-success btn-sm" 
                                     onclick="openStatusManageModal(${reservation.id})" 
-                                    data-reservation='${JSON.stringify(reservation)}'
+                                    data-reservation-id="${reservation.id}"
                                     title="상태관리">
                                 <i class="bi bi-check-circle"></i>
                             </button>
                             <button class="btn btn-outline-info btn-sm" 
                                     onclick="openVoucherManageModal(${reservation.id})" 
-                                    data-reservation='${JSON.stringify(reservation)}'
+                                    data-reservation-id="${reservation.id}"
                                     title="바우처관리">
                                 <i class="bi bi-ticket-perforated"></i>
                             </button>
                             <button class="btn btn-outline-warning btn-sm" 
                                     onclick="openSettlementModal(${reservation.id})" 
-                                    data-reservation='${JSON.stringify(reservation)}'
+                                    data-reservation-id="${reservation.id}"
                                     title="정산이관">
                                 <i class="bi bi-calculator"></i>
                             </button>
@@ -2230,27 +2235,12 @@
 
         // 예약 데이터 가져오기 헬퍼 함수
         function getReservationData(reservationId) {
-            let reservation = null;
-            
-            // 이벤트에서 버튼 데이터 가져오기
-            if (event && event.target) {
-                const btn = event.target.closest('button');
-                if (btn && btn.getAttribute('data-reservation')) {
-                    try {
-                        reservation = JSON.parse(btn.getAttribute('data-reservation'));
-                    } catch (e) {
-                        console.error('예약 데이터 파싱 오류:', e);
-                    }
-                }
-            }
-            
-            // 전역 데이터에서 찾기
-            if (!reservation) {
-                reservation = window.reservations?.find(r => r.id === reservationId);
-            }
+            // 전역 저장소에서 데이터 가져오기
+            const reservation = window.reservationsData?.[reservationId];
             
             if (!reservation) {
                 console.error('예약 정보를 찾을 수 없습니다. reservationId:', reservationId);
+                console.log('사용 가능한 예약 IDs:', Object.keys(window.reservationsData || {}));
                 showAlert('예약 정보를 찾을 수 없습니다.', 'danger');
                 return null;
             }
