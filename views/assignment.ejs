@@ -445,13 +445,15 @@
                     <% } %>
                 </div>
                 <% } %>
-
-                <!-- 인쇄 버튼 -->
-                <div class="mt-4 no-print">
-                    <button class="btn btn-outline-primary w-100" onclick="window.print()">
-                        <i class="bi bi-printer me-2"></i>Print (인쇄)
-                    </button>
-                </div>
+            </div>
+        </div>
+        
+        <!-- 인쇄 버튼 (최하단) -->
+        <div class="row mt-4 no-print">
+            <div class="col-12 text-center">
+                <button class="btn btn-primary btn-lg" onclick="window.print()" style="min-width: 250px;">
+                    <i class="bi bi-printer me-2"></i>Print (인쇄)
+                </button>
             </div>
         </div>
     </div>
@@ -543,8 +545,14 @@
         window.addEventListener('load', function() {
             // 미리보기가 아닐 때만 열람 기록
             const isPreviewMode = false; // 서버에서 isPreview 변수 전달
+            
+            console.log('🔍 페이지 로드 완료');
+            console.log('🔍 isPreviewMode:', isPreviewMode);
+            console.log('🔍 assignmentToken:', assignmentToken);
+            
             if (!isPreviewMode && assignmentToken) {
-                console.log('📊 수배서 열람 기록 중...');
+                console.log('📊 수배서 열람 기록 시작...');
+                console.log('📊 API URL:', `/assignment/${assignmentToken}/view`);
                 
                 fetch(`/assignment/${assignmentToken}/view`, {
                     method: 'POST',
@@ -555,14 +563,26 @@
                         screen_size: `${window.screen.width}x${window.screen.height}`
                     })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('📊 API 응답 상태:', response.status);
+                    return response.json();
+                })
                 .then(result => {
+                    console.log('📊 API 응답 결과:', result);
                     if (result.success) {
-                        console.log('열람 기록 완료');
+                        console.log('✅ 열람 기록 완료');
+                        if (result.status_changed) {
+                            console.log('✅ 예약 상태 변경: 수배중');
+                        }
+                        if (result.first_view) {
+                            console.log('✅ 첫 열람 기록됨');
+                        }
+                    } else {
+                        console.warn('⚠️ 열람 기록 실패:', result.message);
                     }
                 })
                 .catch(error => {
-                    console.error('열람 기록 실패:', error);
+                    console.error('❌ 열람 기록 오류:', error);
                 });
             }
         });

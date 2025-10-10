@@ -2369,10 +2369,17 @@
                     const platformElement = document.getElementById('assignment-platform');
                     if (platformElement) {
                         // 현재 예약 정보에서 플랫폼명 가져오기
+                        console.log('🔍 플랫폼명 조회 시작');
+                        console.log('  - reservationId:', reservationId);
+                        console.log('  - window.currentReservation:', window.currentReservation);
+                        console.log('  - window.reservationsData[reservationId]:', window.reservationsData?.[reservationId]);
+                        
                         const platformName = window.currentReservation?.platform_name || 
                                            window.reservationsData?.[reservationId]?.platform_name || '-';
                         platformElement.textContent = platformName;
-                        console.log('플랫폼명 표시:', platformName);
+                        console.log('✅ 플랫폼명 표시:', platformName);
+                    } else {
+                        console.error('❌ assignment-platform 요소를 찾을 수 없습니다');
                     }
                     
                     // 열람 현황 표시

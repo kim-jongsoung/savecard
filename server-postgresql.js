@@ -7744,15 +7744,29 @@ app.post('/assignment/:token/view', async (req, res) => {
         
         const assignment = assignmentResult.rows[0];
         
-        // 첫 열람인 경우에만 viewed_at 업데이트
+        // 첫 열람인 경우에만 viewed_at 업데이트 및 상태 변경
         if (!assignment.viewed_at) {
+            // 1. 수배서 viewed_at 업데이트 및 상태를 'sent'로 변경 (아직 draft인 경우)
             await pool.query(`
                 UPDATE assignments 
-                SET viewed_at = NOW(), updated_at = NOW()
+                SET viewed_at = NOW(), 
+                    updated_at = NOW(),
+                    status = CASE 
+                        WHEN status = 'draft' THEN 'sent'
+                        ELSE status 
+                    END
                 WHERE assignment_token = $1
             `, [token]);
             
-            // 업무 히스토리에 열람 기록
+            // 2. 예약 상태를 '수배중(in_progress)'으로 변경
+            await pool.query(`
+                UPDATE reservations 
+                SET payment_status = 'in_progress',
+                    updated_at = NOW()
+                WHERE id = $1 AND payment_status = 'pending'
+            `, [assignment.reservation_id]);
+            
+            // 3. 업무 히스토리에 열람 기록
             try {
                 await pool.query(`
                     INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details, created_at)
@@ -7762,18 +7776,19 @@ app.post('/assignment/:token/view', async (req, res) => {
                     '수배서 열람',
                     'info',
                     'vendor',
-                    `수배업체가 수배서를 열람했습니다. (${user_agent || 'Unknown'}, ${screen_size || 'Unknown'})`
+                    `수배업체가 수배서를 열람했습니다. 상태: 수배중으로 변경 (${user_agent || 'Unknown'}, ${screen_size || 'Unknown'})`
                 ]);
                 
-                console.log('✅ 수배서 첫 열람 기록 완료');
+                console.log('✅ 수배서 첫 열람 기록 완료 + 상태 변경 (수배중)');
             } catch (logError) {
                 console.error('⚠️ 히스토리 기록 실패:', logError);
             }
             
             res.json({ 
                 success: true, 
-                message: '열람 기록이 저장되었습니다.',
-                first_view: true
+                message: '열람 기록이 저장되었습니다. 상태가 수배중으로 변경되었습니다.',
+                first_view: true,
+                status_changed: true
             });
         } else {
             console.log('ℹ️ 이미 열람된 수배서');
