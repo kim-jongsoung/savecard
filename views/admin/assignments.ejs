@@ -943,16 +943,16 @@
                         </div>
                         <div class="row-main" style="flex-direction: column; gap: 8px;">
                             <div style="display: grid; grid-template-columns: 120px 180px 100px 1fr; gap: 12px; align-items: center;">
-                                <span style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.platform_name || '-'}"><strong>${truncate(reservation.platform_name || '-', 8)}</strong></span>
-                                <span class="dim" style="text-align: left; white-space: nowrap;">예약일 ${createdAt}</span>
-                                <span class="dim" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.manager_name || '담당자 미지정'}">${managerDisplay}</span>
-                                <span class="chip" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 20)}</span>
+                                <div style="width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" title="${reservation.platform_name || '-'}"><strong>${truncate(reservation.platform_name || '-', 8)}</strong></div>
+                                <div style="width: 180px; text-align: left; white-space: nowrap;" class="dim">예약일 ${createdAt}</div>
+                                <div style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="dim" title="${reservation.manager_name || '담당자 미지정'}">${managerDisplay}</div>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="chip" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 20)}</div>
                             </div>
                             <div style="display: grid; grid-template-columns: 120px 180px 100px 1fr; gap: 12px; align-items: center;">
-                                <span class="dim" style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.vendor_name || '수배업체 미지정'}">${truncate(reservation.vendor_name || '미지정', 8)}</span>
-                                <span class="dim" style="text-align: left; white-space: nowrap;">이용일 ${formatDate(reservation.usage_date) || '-'}</span>
-                                <span style="text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.korean_name || '-'}"><strong>${customerDisplay}</strong></span>
-                                <span class="dim" style="text-align: left; white-space: nowrap;">${pax}</span>
+                                <div style="width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="dim" title="${reservation.vendor_name || '수배업체 미지정'}">${truncate(reservation.vendor_name || '미지정', 8)}</div>
+                                <div style="width: 180px; text-align: left; white-space: nowrap;" class="dim">이용일 ${formatDate(reservation.usage_date) || '-'}</div>
+                                <div style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" title="${reservation.korean_name || '-'}"><strong>${customerDisplay}</strong></div>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="dim">${pax}</div>
                             </div>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
