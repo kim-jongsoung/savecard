@@ -1160,7 +1160,7 @@
                 const statusClass = getStatusClass(reservation.payment_status);
                 const statusText = getReservationStatusText(reservation.payment_status);
                 const bootstrapClass = getBootstrapStatusClass(reservation.payment_status);
-                const amount = reservation.total_price ? parseInt(reservation.total_price).toLocaleString('ko-KR') + '원' : '-';
+                const amount = reservation.total_amount ? parseInt(reservation.total_amount).toLocaleString('ko-KR') + '원' : '-';
                 const pax = `성인 ${reservation.people_adult || 0}명, 아동 ${reservation.people_child || 0}명`;
                 
                 console.log('상태 변환 결과:', {
@@ -1448,14 +1448,14 @@
                                                             <tr><td class="fw-bold">성명:</td><td>${reservation.korean_name || reservation.platform_name || '-'}</td></tr>
                                                             <tr><td class="fw-bold">연락처:</td><td>${reservation.phone || '-'}</td></tr>
                                                             <tr><td class="fw-bold">이메일:</td><td>${reservation.email || '-'}</td></tr>
-                                                            <tr><td class="fw-bold">인원:</td><td>${reservation.adult_count || 0}명 (성인) ${reservation.child_count ? `+ ${reservation.child_count}명 (아동)` : ''}</td></tr>
+                                                            <tr><td class="fw-bold">인원:</td><td>${reservation.people_adult || 0}명 (성인) ${reservation.people_child ? `+ ${reservation.people_child}명 (아동)` : ''}</td></tr>
                                                         </table>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <h6 class="text-success"><i class="bi bi-calendar-event me-1"></i>예약 정보</h6>
                                                         <table class="table table-sm table-borderless">
                                                             <tr><td class="fw-bold">예약번호:</td><td class="text-primary">${reservation.id}</td></tr>
-                                                            <tr><td class="fw-bold">예약일:</td><td>${reservation.travel_date ? new Date(reservation.travel_date).toLocaleDateString('ko-KR') : '-'}</td></tr>
+                                                            <tr><td class="fw-bold">이용일:</td><td>${reservation.usage_date ? new Date(reservation.usage_date).toLocaleDateString('ko-KR') : '-'}</td></tr>
                                                             <tr><td class="fw-bold">결제금액:</td><td class="text-danger fw-bold">${reservation.total_amount ? reservation.total_amount.toLocaleString() : '0'}원</td></tr>
                                                             <tr><td class="fw-bold">상태:</td><td><span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)}">${getStatusText(reservation.payment_status)}</span></td></tr>
                                                         </table>
