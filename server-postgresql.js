@@ -5294,7 +5294,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
             let autoAssignmentResult = null;
             
             // 1. vendor_id가 직접 지정된 경우 (인박스에서 선택)
-            if (reservationData.vendor_id) {
+            if (reservationData.vendor_id && reservationData.vendor_id !== '' && reservationData.vendor_id !== null) {
                 console.log('🏢 수배업체 직접 지정:', reservationData.vendor_id);
                 
                 try {
@@ -5362,14 +5362,20 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                     console.error('❌ 수배서 생성 실패:', vendorError);
                 }
             }
-            // 2. 상품명으로 자동 매칭 (vendor_id가 없을 때)
-            else if (reservationData.product_name) {
-                console.log('🔄 자동 수배서 생성 시도 (관리자):', {
+            // 2. 상품명으로 자동 매칭 (vendor_id가 없거나 빈 문자열일 때)
+            if (!autoAssignmentResult && reservationData.product_name) {
+                console.log('🔄 상품명으로 자동 수배 매칭 시도:', {
                     reservationId,
                     productName: reservationData.product_name
                 });
                 
                 autoAssignmentResult = await createAutoAssignment(reservationId, reservationData.product_name);
+                
+                if (autoAssignmentResult) {
+                    console.log('✅ 자동 매칭 성공:', autoAssignmentResult.vendor.vendor_name);
+                } else {
+                    console.log('⚠️ 매칭되는 수배업체 없음 - 예약관리에 남습니다');
+                }
             }
             
             // 3. 바로 확정 상품인 경우 (추가 로직)
@@ -8627,12 +8633,14 @@ app.get('/api/vendors', requireAuth, async (req, res) => {
     }
 });
 
-// 상품명으로 수배업체 자동 매칭 API
+// 상품명으로 수배업체 자동 매칭 API (인박스용)
 app.post('/api/vendors/match', requireAuth, async (req, res) => {
     try {
         const { product_name } = req.body;
         
-        if (!product_name) {
+        console.log('🔍 수배업체 매칭 API 호출:', product_name);
+        
+        if (!product_name || product_name.trim() === '') {
             return res.json({
                 success: false,
                 message: '상품명이 필요합니다.'
@@ -8650,6 +8658,8 @@ app.post('/api/vendors/match', requireAuth, async (req, res) => {
         `;
         
         const result = await pool.query(matchQuery, [product_name]);
+        
+        console.log('📊 매칭 쿼리 결과:', result.rows.length > 0 ? result.rows[0].vendor_name : '매칭 없음');
         
         if (result.rows.length > 0) {
             res.json({
@@ -8853,10 +8863,11 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             queryParams.push(`%${search}%`);
         }
         
-        // 총 개수 조회 (assignments 테이블 없어도 안전)
+        // 총 개수 조회
         const countQuery = `
             SELECT COUNT(*) as total 
             FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
             ${whereClause}
         `;
         const countResult = await pool.query(countQuery, queryParams);
