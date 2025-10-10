@@ -224,6 +224,81 @@ async function initializeDatabase() {
         `);
         console.log('✅ reservations 테이블 강제 생성 완료');
         
+        // 수배업체 관련 테이블 생성
+        try {
+          console.log('🏢 수배업체 테이블 생성 시작...');
+          
+          // 1. vendors 테이블 (수배업체 기본 정보)
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS vendors (
+              id SERIAL PRIMARY KEY,
+              vendor_name VARCHAR(100) NOT NULL UNIQUE,
+              vendor_id VARCHAR(50) NOT NULL UNIQUE,
+              password_hash VARCHAR(255) NOT NULL,
+              email VARCHAR(100) NOT NULL,
+              phone VARCHAR(20),
+              contact_person VARCHAR(50),
+              business_type VARCHAR(50),
+              description TEXT,
+              notification_email VARCHAR(100),
+              is_active BOOLEAN DEFAULT true,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          console.log('✅ vendors 테이블 생성 완료');
+          
+          // 2. vendor_products 테이블 (업체별 담당 상품)
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS vendor_products (
+              id SERIAL PRIMARY KEY,
+              vendor_id INTEGER REFERENCES vendors(id) ON DELETE CASCADE,
+              product_keyword VARCHAR(200) NOT NULL,
+              priority INTEGER DEFAULT 1,
+              is_active BOOLEAN DEFAULT true,
+              created_at TIMESTAMP DEFAULT NOW(),
+              UNIQUE(vendor_id, product_keyword)
+            )
+          `);
+          console.log('✅ vendor_products 테이블 생성 완료');
+          
+          // 3. assignments 테이블 (수배 배정 내역)
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS assignments (
+              id SERIAL PRIMARY KEY,
+              reservation_id INTEGER,
+              vendor_id INTEGER REFERENCES vendors(id),
+              vendor_name VARCHAR(100),
+              vendor_contact VARCHAR(50),
+              assignment_token VARCHAR(100) UNIQUE,
+              assigned_by VARCHAR(100),
+              assigned_at TIMESTAMP DEFAULT NOW(),
+              status VARCHAR(20) DEFAULT 'pending',
+              notes TEXT,
+              sent_at TIMESTAMP,
+              viewed_at TIMESTAMP,
+              response_at TIMESTAMP,
+              confirmation_number VARCHAR(100),
+              voucher_token VARCHAR(100),
+              rejection_reason TEXT,
+              cost_amount DECIMAL(10,2),
+              cost_currency VARCHAR(3) DEFAULT 'USD',
+              voucher_number VARCHAR(100),
+              voucher_url TEXT,
+              voucher_issued_at TIMESTAMP,
+              completed_at TIMESTAMP,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          console.log('✅ assignments 테이블 생성 완료');
+          
+          console.log('🎉 수배업체 테이블 생성 완료!');
+          
+        } catch (vendorError) {
+          console.log('⚠️ 수배업체 테이블 생성 중 오류:', vendorError.message);
+        }
+        
         // 기존 테이블에 누락된 컬럼 추가
         await migrateReservationsSchema();
         
@@ -7884,6 +7959,142 @@ app.get('/admin/setup-assignments', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'assignments 테이블 필드 추가 실패: ' + error.message
+        });
+    }
+});
+
+// 샘플 수배업체 데이터 추가 (Railway 실행용)
+app.get('/admin/setup-vendors', requireAuth, async (req, res) => {
+    try {
+        console.log('🏢 샘플 수배업체 데이터 추가 시작...');
+        
+        const client = await pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+            
+            // 샘플 수배업체 데이터
+            const vendors = [
+                {
+                    vendor_name: '괌 돌핀크루즈',
+                    vendor_id: 'dolphin_cruise',
+                    password: 'dolphin123',
+                    email: 'dolphin@guam.com',
+                    phone: '+1-671-555-0001',
+                    contact_person: '김철수',
+                    business_type: '투어/액티비티',
+                    description: '돌핀 워칭 전문 업체',
+                    notification_email: 'dolphin@guam.com',
+                    products: [
+                        { keyword: '돌핀', priority: 1 },
+                        { keyword: 'dolphin', priority: 1 },
+                        { keyword: '크루즈', priority: 2 }
+                    ]
+                },
+                {
+                    vendor_name: '괌 공연장',
+                    vendor_id: 'guam_theater',
+                    password: 'theater123',
+                    email: 'theater@guam.com',
+                    phone: '+1-671-555-0002',
+                    contact_person: '이영희',
+                    business_type: '공연/엔터테인먼트',
+                    description: '각종 공연 및 쇼 운영',
+                    notification_email: 'theater@guam.com',
+                    products: [
+                        { keyword: '공연', priority: 1 },
+                        { keyword: '쇼', priority: 1 },
+                        { keyword: 'show', priority: 2 }
+                    ]
+                },
+                {
+                    vendor_name: '정글리버크루즈',
+                    vendor_id: 'jungle_river',
+                    password: 'jungle123',
+                    email: 'jungle@guam.com',
+                    phone: '+1-671-555-0003',
+                    contact_person: '박민수',
+                    business_type: '투어/액티비티',
+                    description: '정글 리버 크루즈 전문',
+                    notification_email: 'jungle@guam.com',
+                    products: [
+                        { keyword: '정글', priority: 1 },
+                        { keyword: 'jungle', priority: 1 },
+                        { keyword: '리버', priority: 2 }
+                    ]
+                }
+            ];
+            
+            let addedCount = 0;
+            let existingCount = 0;
+            
+            for (const vendor of vendors) {
+                // 패스워드 해시화
+                const password_hash = await bcrypt.hash(vendor.password, 10);
+                
+                // 수배업체 등록 (중복 시 무시)
+                const vendorResult = await client.query(`
+                    INSERT INTO vendors (
+                        vendor_name, vendor_id, password_hash, email, phone, 
+                        contact_person, business_type, description, notification_email
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    ON CONFLICT (vendor_name) DO NOTHING
+                    RETURNING id, vendor_name
+                `, [
+                    vendor.vendor_name, vendor.vendor_id, password_hash, vendor.email, vendor.phone,
+                    vendor.contact_person, vendor.business_type, vendor.description, vendor.notification_email
+                ]);
+                
+                if (vendorResult.rows.length > 0) {
+                    const vendorId = vendorResult.rows[0].id;
+                    console.log(`✅ ${vendor.vendor_name} 등록 완료 (ID: ${vendorId})`);
+                    addedCount++;
+                    
+                    // 담당 상품 등록
+                    for (const product of vendor.products) {
+                        await client.query(`
+                            INSERT INTO vendor_products (vendor_id, product_keyword, priority)
+                            VALUES ($1, $2, $3)
+                            ON CONFLICT (vendor_id, product_keyword) DO NOTHING
+                        `, [vendorId, product.keyword, product.priority]);
+                    }
+                    console.log(`   📦 담당 상품 ${vendor.products.length}개 등록 완료`);
+                } else {
+                    console.log(`⚠️ ${vendor.vendor_name} 이미 존재함 (건너뜀)`);
+                    existingCount++;
+                }
+            }
+            
+            await client.query('COMMIT');
+            
+            // 등록된 수배업체 확인
+            const result = await pool.query(`
+                SELECT v.vendor_name, v.business_type, COUNT(vp.id) as product_count
+                FROM vendors v
+                LEFT JOIN vendor_products vp ON v.id = vp.vendor_id AND vp.is_active = true
+                WHERE v.is_active = true
+                GROUP BY v.id, v.vendor_name, v.business_type
+                ORDER BY v.vendor_name
+            `);
+            
+            res.json({
+                success: true,
+                message: `샘플 수배업체 데이터 추가 완료! (신규: ${addedCount}개, 기존: ${existingCount}개)`,
+                vendors: result.rows
+            });
+            
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+        
+    } catch (error) {
+        console.error('❌ 샘플 수배업체 추가 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '샘플 수배업체 추가 실패: ' + error.message
         });
     }
 });
