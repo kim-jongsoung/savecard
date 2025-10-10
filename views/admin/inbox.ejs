@@ -377,7 +377,7 @@
                 
                 if (result.success) {
                     parsedData = result.parsed_data;
-                    showPreview(result);
+                    await showPreview(result);
                 } else {
                     alert('파싱 실패: ' + result.message);
                 }
@@ -388,7 +388,7 @@
         }
 
         // 미리보기 영역 표시
-        function showPreview(result) {
+        async function showPreview(result) {
             const previewArea = document.getElementById('previewArea');
             const confidenceBadge = document.getElementById('confidenceBadge');
             const parsingMethodBadge = document.getElementById('parsingMethodBadge');
@@ -402,15 +402,15 @@
             // 파싱 방법 배지
             parsingMethodBadge.textContent = result.parsing_method || 'OpenAI';
 
-            // 폼에 데이터 채우기
-            fillPreviewForm(parsedData);
+            // 폼에 데이터 채우기 (수배업체 매칭 포함)
+            await fillPreviewForm(parsedData);
             
             previewArea.style.display = 'block';
             previewArea.scrollIntoView({ behavior: 'smooth' });
         }
 
         // 미리보기 폼에 데이터 채우기
-        function fillPreviewForm(data) {
+        async function fillPreviewForm(data) {
             console.log('📋 파싱된 데이터:', data);
             
             // 업체명 추출 함수 (판매채널/업체명/플랫폼 중 우선순위)
@@ -541,8 +541,8 @@
             // 3단계: 사용자 정의 파싱 규칙 적용 (상품명/업체명 기반 상태 변경)
             applyCustomParsingRules(fieldMappings);
             
-            // 4단계: 수배업체 자동 매칭
-            matchVendorByProduct(fieldMappings.product_name);
+            // 4단계: 수배업체 자동 매칭 (비동기 처리)
+            await matchVendorByProduct(fieldMappings.product_name);
 
             // 기본적으로는 "대기중 (신규예약)" 상태 (특별 규칙이 없는 경우)
             const paymentStatusElement = document.getElementById('payment_status');
@@ -1308,7 +1308,10 @@
 
         // 파싱 시 수배업체 자동 매칭 (파싱 미리보기용)
         async function matchVendorByProduct(productName) {
+            console.log('🔵 matchVendorByProduct 호출됨:', productName);
+            
             if (!productName || productName.trim() === '') {
+                console.log('⚠️ 상품명이 비어있어 매칭 중단');
                 return;
             }
             
@@ -1317,6 +1320,7 @@
             
             try {
                 console.log(`🔍 수배업체 매칭 시도: "${productName}"`);
+                console.log(`📡 API 요청 시작: /api/vendors/match`);
                 
                 const response = await fetch('/api/vendors/match', {
                     method: 'POST',
@@ -1328,7 +1332,9 @@
                     })
                 });
                 
+                console.log(`📥 API 응답 상태: ${response.status}`);
                 const result = await response.json();
+                console.log('📦 API 응답 데이터:', result);
                 
                 if (result.success && result.vendor) {
                     const vendor = result.vendor;
@@ -1337,7 +1343,8 @@
                     vendorSelect.value = vendor.id;
                     matchBadge.style.display = 'inline-block';
                     
-                    console.log(`✅ 수배업체 매칭 성공: ${vendor.vendor_name}`);
+                    console.log(`✅ 수배업체 매칭 성공: ${vendor.vendor_name} (ID: ${vendor.id})`);
+                    console.log(`📌 매칭된 패턴: "${result.matched_keyword}"`);
                     
                     // 매칭 결과 알림 표시
                     showRuleNotification(
@@ -1348,7 +1355,8 @@
                     // 매칭 실패
                     vendorSelect.value = '';
                     matchBadge.style.display = 'none';
-                    console.log(`⚠️ 매칭되는 수배업체 없음: "${productName}"`);
+                    console.log(`❌ 매칭되는 수배업체 없음: "${productName}"`);
+                    console.log('📄 API 응답:', result);
                     showRuleNotification(`❓ "${productName}" 상품에 매칭되는 수배업체가 없습니다.`);
                 }
                 
