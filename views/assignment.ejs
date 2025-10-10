@@ -563,15 +563,15 @@
         // 열람 추적 기능
         window.addEventListener('load', function() {
             // 미리보기가 아닐 때만 열람 기록
-            const isPreviewMode = {{ JSON.stringify(typeof isPreview !== 'undefined' && isPreview) }};
+            const isPreviewMode = false; // 서버에서 isPreview 변수 전달
             if (!isPreviewMode && assignmentToken) {
-                console.log('수배서 열람 기록 중...');
+                console.log('📊 수배서 열람 기록 중...');
                 
                 fetch(`/assignment/${assignmentToken}/view`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-{{ ... }}
+                        viewed_at: new Date().toISOString(),
                         user_agent: navigator.userAgent,
                         screen_size: `${window.screen.width}x${window.screen.height}`
                     })
