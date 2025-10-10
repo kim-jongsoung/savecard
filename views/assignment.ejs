@@ -250,9 +250,15 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>Customer Name (예약자명):</strong><br>
-                                <span class="fs-5"><%= assignment.customer_name || 'N/A' %></span>
                                 <% if (assignment.english_first_name || assignment.english_last_name) { %>
-                                <br><small class="text-muted">영문: <%= (assignment.english_first_name || '') + ' ' + (assignment.english_last_name || '') %></small>
+                                    <span class="fs-5 text-dark"><%= (assignment.english_first_name || '') + ' ' + (assignment.english_last_name || '') %></span>
+                                    <% if (assignment.customer_name) { %>
+                                        <br><small class="text-muted">한글: <%= assignment.customer_name %></small>
+                                    <% } %>
+                                <% } else if (assignment.customer_name) { %>
+                                    <span class="fs-5"><%= assignment.customer_name %></span>
+                                <% } else { %>
+                                    <span class="fs-5">N/A</span>
                                 <% } %>
                             </div>
                             <div class="col-md-6">
