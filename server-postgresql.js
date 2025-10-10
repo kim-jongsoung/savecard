@@ -8294,6 +8294,21 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         
         console.log('🔧 예약 정보 수정 API 호출:', reservationId, formData);
         
+        // 변경 전 데이터 조회 (히스토리 저장용)
+        const oldDataResult = await pool.query(
+            'SELECT * FROM reservations WHERE id = $1',
+            [reservationId]
+        );
+        
+        if (oldDataResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const oldData = oldDataResult.rows[0];
+        
         // 동적 쿼리 생성
         const updateFields = [];
         const values = [];
@@ -8426,15 +8441,49 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         // 변경 이력을 reservation_logs에 저장
         try {
             const changesObj = {};
-            if (formData.korean_name !== undefined) changesObj.korean_name = formData.korean_name;
-            if (formData.english_name !== undefined) changesObj.english_name = formData.english_name;
-            if (formData.phone !== undefined) changesObj.phone = formData.phone;
-            if (formData.email !== undefined) changesObj.email = formData.email;
-            if (formData.product_name !== undefined) changesObj.product_name = formData.product_name;
-            if (formData.usage_date !== undefined) changesObj.usage_date = formData.usage_date;
-            if (formData.usage_time !== undefined) changesObj.usage_time = formData.usage_time;
-            if (formData.people_adult !== undefined) changesObj.people_adult = formData.people_adult;
-            if (formData.people_child !== undefined) changesObj.people_child = formData.people_child;
+            
+            // 각 필드별로 변경 전/후 비교
+            if (formData.korean_name !== undefined && formData.korean_name !== oldData.korean_name) {
+                changesObj.korean_name = { from: oldData.korean_name || '(없음)', to: formData.korean_name || '(없음)' };
+            }
+            
+            if (formData.english_name !== undefined) {
+                const oldEnglishName = `${oldData.english_last_name || ''} ${oldData.english_first_name || ''}`.trim();
+                if (formData.english_name !== oldEnglishName) {
+                    changesObj.english_name = { from: oldEnglishName || '(없음)', to: formData.english_name || '(없음)' };
+                }
+            }
+            
+            if (formData.phone !== undefined && formData.phone !== oldData.phone) {
+                changesObj.phone = { from: oldData.phone || '(없음)', to: formData.phone || '(없음)' };
+            }
+            
+            if (formData.email !== undefined && formData.email !== oldData.email) {
+                changesObj.email = { from: oldData.email || '(없음)', to: formData.email || '(없음)' };
+            }
+            
+            if (formData.product_name !== undefined && formData.product_name !== oldData.product_name) {
+                changesObj.product_name = { from: oldData.product_name || '(없음)', to: formData.product_name || '(없음)' };
+            }
+            
+            if (formData.usage_date !== undefined && formData.usage_date !== oldData.usage_date) {
+                changesObj.usage_date = { 
+                    from: oldData.usage_date ? new Date(oldData.usage_date).toLocaleDateString('ko-KR') : '(없음)', 
+                    to: formData.usage_date ? new Date(formData.usage_date).toLocaleDateString('ko-KR') : '(없음)' 
+                };
+            }
+            
+            if (formData.usage_time !== undefined && formData.usage_time !== oldData.usage_time) {
+                changesObj.usage_time = { from: oldData.usage_time || '(없음)', to: formData.usage_time || '(없음)' };
+            }
+            
+            if (formData.people_adult !== undefined && formData.people_adult !== oldData.people_adult) {
+                changesObj.people_adult = { from: oldData.people_adult || 0, to: formData.people_adult || 0 };
+            }
+            
+            if (formData.people_child !== undefined && formData.people_child !== oldData.people_child) {
+                changesObj.people_child = { from: oldData.people_child || 0, to: formData.people_child || 0 };
+            }
             
             if (Object.keys(changesObj).length > 0) {
                 await pool.query(`
@@ -8448,7 +8497,9 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
                     JSON.stringify(changesObj),
                     `${Object.keys(changesObj).length}개 항목 수정됨`
                 ]);
-                console.log('✅ 변경 이력 저장 완료');
+                console.log('✅ 변경 이력 저장 완료:', Object.keys(changesObj));
+            } else {
+                console.log('ℹ️ 변경된 항목이 없습니다.');
             }
         } catch (logError) {
             console.error('⚠️ 변경 이력 저장 실패:', logError);
