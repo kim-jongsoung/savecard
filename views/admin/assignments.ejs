@@ -922,17 +922,17 @@
                             ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.7rem;">📋 정산대기</span>' : ''}
                         </div>
                         <div class="row-main" style="flex-direction: column; gap: 8px;">
-                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                                <span><strong>${reservation.platform_name || '-'}</strong></span>
-                                <span class="dim"><i class="bi bi-calendar-check me-1"></i>예약일 ${createdAt}</span>
-                                <span class="dim"><i class="bi bi-person-badge me-1"></i>${reservation.manager_name || '담당자 미지정'}</span>
-                                <span class="chip">${reservation.product_name || '-'}</span>
+                            <div style="display: grid; grid-template-columns: 200px 150px 150px 1fr; gap: 12px; align-items: center;">
+                                <span style="text-align: left;"><strong>${reservation.platform_name || '-'}</strong></span>
+                                <span class="dim" style="text-align: left;"><i class="bi bi-calendar-check me-1"></i>예약일 ${createdAt}</span>
+                                <span class="dim" style="text-align: left;"><i class="bi bi-person-badge me-1"></i>${reservation.manager_name || '담당자 미지정'}</span>
+                                <span class="chip" style="text-align: left;">${reservation.product_name || '-'}</span>
                             </div>
-                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                                <span class="dim"><i class="bi bi-building me-1"></i>${reservation.vendor_name || '수배업체 미지정'}</span>
-                                <span class="dim"><i class="bi bi-calendar2 me-1"></i>이용일 ${formatDate(reservation.usage_date) || '-'}</span>
-                                <span><strong>${reservation.korean_name || '-'}</strong></span>
-                                <span class="dim"><i class="bi bi-people me-1"></i>${pax}</span>
+                            <div style="display: grid; grid-template-columns: 200px 150px 150px 1fr; gap: 12px; align-items: center;">
+                                <span class="dim" style="text-align: left;"><i class="bi bi-building me-1"></i>${reservation.vendor_name || '수배업체 미지정'}</span>
+                                <span class="dim" style="text-align: left;"><i class="bi bi-calendar2 me-1"></i>이용일 ${formatDate(reservation.usage_date) || '-'}</span>
+                                <span style="text-align: left;"><strong>${reservation.korean_name || '-'}</strong></span>
+                                <span class="dim" style="text-align: left;"><i class="bi bi-people me-1"></i>${pax}</span>
                             </div>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
