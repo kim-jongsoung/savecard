@@ -2053,8 +2053,11 @@
             historyList.innerHTML = '<p class="text-center text-muted">히스토리를 불러오는 중...</p>';
             
             try {
+                console.log('🔍 히스토리 로드 시작:', reservationId);
                 const response = await fetch(`/api/reservations/${reservationId}/history`);
+                console.log('📡 응답 상태:', response.status);
                 const result = await response.json();
+                console.log('📦 응답 데이터:', result);
                 
                 if (result.success && result.history) {
                     const history = result.history;
@@ -2098,6 +2101,26 @@
                             badgeClass = 'bg-success';
                         }
                         
+                        // changes 안전하게 파싱
+                        let changesHTML = '';
+                        if (item.changes) {
+                            try {
+                                const changesObj = typeof item.changes === 'string' ? JSON.parse(item.changes) : item.changes;
+                                const entries = Object.entries(changesObj).map(([key, value]) => {
+                                    if (value && value.from !== undefined && value.to !== undefined) {
+                                        return `<div>• ${key}: ${value.from} → ${value.to}</div>`;
+                                    }
+                                    return '';
+                                }).filter(html => html !== '').join('');
+                                
+                                if (entries) {
+                                    changesHTML = `<div class="small text-muted">${entries}</div>`;
+                                }
+                            } catch (e) {
+                                console.error('변경사항 파싱 오류:', e, item.changes);
+                            }
+                        }
+                        
                         return `
                             <div class="border-start border-3 border-${badgeClass.replace('bg-', '')} ps-3 mb-3 pb-2">
                                 <div class="d-flex align-items-center mb-1">
@@ -2108,22 +2131,14 @@
                                 <div class="mb-1">
                                     <strong>${item.description || ''}</strong>
                                 </div>
-                                ${item.changes ? `
-                                    <div class="small text-muted">
-                                        ${Object.entries(JSON.parse(item.changes)).map(([key, value]) => {
-                                            if (value.from !== undefined && value.to !== undefined) {
-                                                return `<div>• ${key}: ${value.from} → ${value.to}</div>`;
-                                            }
-                                            return '';
-                                        }).join('')}
-                                    </div>
-                                ` : ''}
+                                ${changesHTML}
                             </div>
                         `;
                     }).join('');
                     
                     historyList.innerHTML = historyHTML;
                 } else {
+                    console.error('히스토리 데이터 없음:', result);
                     historyList.innerHTML = '<p class="text-center text-danger">히스토리를 불러오는데 실패했습니다.</p>';
                 }
             } catch (error) {
