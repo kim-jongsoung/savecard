@@ -299,6 +299,35 @@ async function initializeDatabase() {
           console.log('⚠️ 수배업체 테이블 생성 중 오류:', vendorError.message);
         }
         
+        // reservation_logs 테이블 생성 (업무 히스토리)
+        try {
+          console.log('📜 업무 히스토리 테이블 생성 시작...');
+          
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS reservation_logs (
+              id SERIAL PRIMARY KEY,
+              reservation_id INTEGER REFERENCES reservations(id) ON DELETE CASCADE,
+              action VARCHAR(100) NOT NULL,
+              type VARCHAR(20) DEFAULT 'info',
+              changed_by VARCHAR(100),
+              changes JSONB,
+              details TEXT,
+              created_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          console.log('✅ reservation_logs 테이블 생성 완료');
+          
+          // 인덱스 생성
+          await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_reservation_logs_reservation_id 
+            ON reservation_logs(reservation_id)
+          `);
+          console.log('✅ reservation_logs 인덱스 생성 완료');
+          
+        } catch (logError) {
+          console.log('⚠️ reservation_logs 테이블 생성 중 오류:', logError.message);
+        }
+        
         // 기존 테이블에 누락된 컬럼 추가
         await migrateReservationsSchema();
         
@@ -5683,58 +5712,13 @@ app.post('/api/drafts/:id/reject', requireAuth, async (req, res) => {
 });
 
 // 예약 히스토리 조회 API
+// 구버전 히스토리 API (사용 안함 - 새로운 API로 대체됨)
+/*
 app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
-    try {
-        const reservationId = req.params.id;
-        
-        // 임시로 샘플 히스토리 반환 (실제 구현 시 reservation_logs 테이블 조회)
-        const sampleHistory = [
-            {
-                id: 1,
-                action: '예약 생성',
-                type: 'info',
-                time: new Date(Date.now() - 86400000).toISOString(),
-                changed_by: '관리자',
-                details: '새로운 예약이 등록되었습니다.'
-            },
-            {
-                id: 2,
-                action: '예약 정보 수정',
-                type: 'success',
-                time: new Date(Date.now() - 43200000).toISOString(),
-                changed_by: '관리자',
-                changes: {
-                    korean_name: { from: '김종성', to: '이종성' },
-                    phone: { from: '010-1234-5678', to: '010-9876-5432' }
-                },
-                details: '2개 항목이 변경되었습니다.'
-            },
-            {
-                id: 3,
-                action: '컨펌번호 저장',
-                type: 'success',
-                time: new Date(Date.now() - 21600000).toISOString(),
-                changed_by: '관리자',
-                changes: {
-                    confirmation_number: { from: '(없음)', to: 'ABC123456' }
-                },
-                details: '예약이 확정되었습니다.'
-            }
-        ];
-        
-        res.json({
-            success: true,
-            data: sampleHistory
-        });
-        
-    } catch (error) {
-        console.error('예약 히스토리 조회 오류:', error);
-        res.status(500).json({
-            success: false,
-            message: '히스토리 조회 중 오류가 발생했습니다: ' + error.message
-        });
-    }
+    // 이 API는 더 이상 사용되지 않습니다.
+    // 새로운 API는 8674번째 줄에 구현되어 있습니다.
 });
+*/
 
 // 예약 삭제 API
 app.delete('/api/reservations/:id', requireAuth, async (req, res) => {
@@ -8439,6 +8423,38 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         
         console.log('✅ 예약 정보 수정 완료:', result.rows[0].reservation_number);
         
+        // 변경 이력을 reservation_logs에 저장
+        try {
+            const changesObj = {};
+            if (formData.korean_name !== undefined) changesObj.korean_name = formData.korean_name;
+            if (formData.english_name !== undefined) changesObj.english_name = formData.english_name;
+            if (formData.phone !== undefined) changesObj.phone = formData.phone;
+            if (formData.email !== undefined) changesObj.email = formData.email;
+            if (formData.product_name !== undefined) changesObj.product_name = formData.product_name;
+            if (formData.usage_date !== undefined) changesObj.usage_date = formData.usage_date;
+            if (formData.usage_time !== undefined) changesObj.usage_time = formData.usage_time;
+            if (formData.people_adult !== undefined) changesObj.people_adult = formData.people_adult;
+            if (formData.people_child !== undefined) changesObj.people_child = formData.people_child;
+            
+            if (Object.keys(changesObj).length > 0) {
+                await pool.query(`
+                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                `, [
+                    reservationId,
+                    '예약 정보 수정',
+                    'success',
+                    req.session?.username || '관리자',
+                    JSON.stringify(changesObj),
+                    `${Object.keys(changesObj).length}개 항목 수정됨`
+                ]);
+                console.log('✅ 변경 이력 저장 완료');
+            }
+        } catch (logError) {
+            console.error('⚠️ 변경 이력 저장 실패:', logError);
+            // 이력 저장 실패해도 예약 수정은 성공으로 처리
+        }
+        
         res.json({
             success: true,
             message: '예약 정보가 수정되었습니다.',
@@ -8450,6 +8466,200 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '예약 정보 수정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 예약 상태 변경 API
+app.patch('/api/reservations/:id/status', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        const { status, reason } = req.body;
+        
+        console.log('🔄 예약 상태 변경 요청:', reservationId, status, reason);
+        
+        if (!status) {
+            return res.status(400).json({
+                success: false,
+                message: '상태 값이 필요합니다.'
+            });
+        }
+        
+        // 상태값 변환 (하이픈 제거)
+        const normalizedStatus = status.replace(/-/g, '_');
+        
+        // 기존 상태 조회
+        const oldReservation = await pool.query(
+            'SELECT payment_status FROM reservations WHERE id = $1',
+            [reservationId]
+        );
+        
+        if (oldReservation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const oldStatus = oldReservation.rows[0].payment_status;
+        
+        // 상태 업데이트
+        const result = await pool.query(
+            'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+            [normalizedStatus, reservationId]
+        );
+        
+        console.log('✅ 예약 상태 변경 완료:', oldStatus, '→', normalizedStatus);
+        
+        // 변경 이력 저장
+        try {
+            await pool.query(`
+                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [
+                reservationId,
+                '예약 상태 변경',
+                'success',
+                req.session?.username || '관리자',
+                JSON.stringify({ payment_status: { from: oldStatus, to: normalizedStatus } }),
+                reason || '상태 변경'
+            ]);
+        } catch (logError) {
+            console.error('⚠️ 상태 변경 이력 저장 실패:', logError);
+        }
+        
+        res.json({
+            success: true,
+            message: '예약 상태가 변경되었습니다.',
+            reservation: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 상태 변경 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 상태 변경 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 컨펌번호 저장 API
+app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        const { confirmation_number, vendor_id } = req.body;
+        
+        console.log('🔐 컨펌번호 저장 요청:', reservationId, confirmation_number, vendor_id);
+        
+        if (!confirmation_number) {
+            return res.status(400).json({
+                success: false,
+                message: '컨펌번호가 필요합니다.'
+            });
+        }
+        
+        // 기존 컨펌번호 조회
+        const oldReservation = await pool.query(
+            'SELECT confirmation_number FROM reservations WHERE id = $1',
+            [reservationId]
+        );
+        
+        if (oldReservation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const oldConfirmationNumber = oldReservation.rows[0].confirmation_number;
+        
+        // 컨펌번호 업데이트 (컨펌번호 컬럼이 없을 수 있으므로 동적 추가)
+        await pool.query(`
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'confirmation_number'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN confirmation_number VARCHAR(100);
+                END IF;
+            END $$;
+        `);
+        
+        const result = await pool.query(
+            'UPDATE reservations SET confirmation_number = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+            [confirmation_number, reservationId]
+        );
+        
+        console.log('✅ 컨펌번호 저장 완료:', confirmation_number);
+        
+        // 변경 이력 저장
+        try {
+            await pool.query(`
+                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `, [
+                reservationId,
+                '컨펌번호 저장',
+                'success',
+                req.session?.username || '관리자',
+                JSON.stringify({ confirmation_number: { from: oldConfirmationNumber || '(없음)', to: confirmation_number } }),
+                '예약이 확정되었습니다.'
+            ]);
+        } catch (logError) {
+            console.error('⚠️ 컨펌번호 저장 이력 실패:', logError);
+        }
+        
+        res.json({
+            success: true,
+            message: '컨펌번호가 저장되었습니다.',
+            reservation: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ 컨펌번호 저장 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '컨펌번호 저장 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 예약 히스토리 조회 API (실제 데이터베이스 조회)
+app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        
+        console.log('📜 예약 히스토리 조회:', reservationId);
+        
+        // reservation_logs 테이블에서 히스토리 조회
+        const result = await pool.query(`
+            SELECT 
+                id,
+                action,
+                type,
+                changed_by,
+                changes,
+                details,
+                created_at as time
+            FROM reservation_logs
+            WHERE reservation_id = $1
+            ORDER BY created_at DESC
+        `, [reservationId]);
+        
+        console.log('✅ 히스토리 조회 완료:', result.rows.length, '건');
+        
+        res.json({
+            success: true,
+            data: result.rows
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 히스토리 조회 오류:', error);
+        // 테이블이 없는 경우 빈 배열 반환
+        res.json({
+            success: true,
+            data: []
         });
     }
 });

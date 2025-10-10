@@ -517,15 +517,16 @@
                                     <select class="form-select" id="new-status-select">
                                         <option value="">상태 선택</option>
                                         <option value="pending">대기중</option>
-                                        <option value="in-progress">진행중</option>
+                                        <option value="in_progress">수배중</option>
                                         <option value="confirmed">확정완료</option>
-                                        <option value="voucher-sent">바우처전송</option>
+                                        <option value="voucher_sent">바우처전송</option>
                                         <option value="cancelled">취소</option>
+                                        <option value="refunded">환불</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">변경 사유</label>
-                                    <input type="text" class="form-control" id="status-change-reason" placeholder="변경 사유">
+                                    <input type="text" class="form-control" id="status-change-reason" placeholder="변경 사유 (선택사항)">
                                 </div>
                             </div>
                         </div>
@@ -2081,10 +2082,31 @@
             
             window.currentReservationId = reservationId;
             
-            // 수배서 정보 표시
-            document.getElementById('assignment-number').textContent = reservation.assignment_number || '-';
-            document.getElementById('assignment-vendor').textContent = reservation.vendor_name || '-';
-            document.getElementById('assignment-created').textContent = formatDateTime(reservation.created_at) || '-';
+            // 수배서 정보 표시 (안전하게 요소 확인)
+            const assignmentNumberEl = document.getElementById('assignment-number');
+            if (assignmentNumberEl) {
+                assignmentNumberEl.textContent = reservation.assignment_id || reservation.id || '-';
+            }
+            
+            const assignmentVendorEl = document.getElementById('assignment-vendor');
+            if (assignmentVendorEl) {
+                assignmentVendorEl.textContent = reservation.vendor_name || '미지정';
+            }
+            
+            const assignmentCreatedEl = document.getElementById('assignment-created');
+            if (assignmentCreatedEl) {
+                assignmentCreatedEl.textContent = reservation.assigned_at ? formatDateTime(reservation.assigned_at) : '-';
+            }
+            
+            const assignmentStatusEl = document.getElementById('assignment-status');
+            if (assignmentStatusEl) {
+                if (reservation.assignment_status) {
+                    const statusBadge = getAssignmentStatusBadge(reservation.assignment_status);
+                    assignmentStatusEl.innerHTML = statusBadge;
+                } else {
+                    assignmentStatusEl.innerHTML = '<span class="badge bg-secondary">미생성</span>';
+                }
+            }
             
             const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
             modal.show();
