@@ -450,12 +450,22 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
+                                    <label class="form-label">예약업체 (플랫폼)</label>
+                                    <div id="assignment-platform" class="fw-bold text-primary">-</div>
+                                </div>
+                                <div class="col-md-6">
                                     <label class="form-label">수배업체</label>
                                     <div id="assignment-vendor">-</div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">생성일시</label>
                                     <div id="assignment-created">-</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">열람 현황</label>
+                                    <div id="assignment-views">
+                                        <span class="badge bg-secondary">미열람</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2352,10 +2362,39 @@
                     document.getElementById('assignment-number').textContent = assignment.id || '-';
                     document.getElementById('assignment-vendor').textContent = assignment.vendor_name || '미지정';
                     document.getElementById('assignment-created').textContent = formatDateTime(assignment.assigned_at) || '-';
-                    document.getElementById('assignment-sent').textContent = formatDateTime(assignment.sent_at) || '미전송';
-                    document.getElementById('assignment-viewed').textContent = formatDateTime(assignment.viewed_at) || '미확인';
-                    document.getElementById('assignment-responded').textContent = formatDateTime(assignment.responded_at) || '미응답';
-                    document.getElementById('assignment-notes').textContent = assignment.notes || '-';
+                    
+                    // 플랫폼명 표시 (예약업체)
+                    const platformElement = document.getElementById('assignment-platform');
+                    if (platformElement) {
+                        const reservation = window.reservationsData?.[reservationId];
+                        platformElement.textContent = reservation?.platform_name || '-';
+                    }
+                    
+                    // 열람 현황 표시
+                    const viewsElement = document.getElementById('assignment-views');
+                    if (viewsElement) {
+                        if (assignment.viewed_at) {
+                            const viewedTime = formatDateTime(assignment.viewed_at);
+                            viewsElement.innerHTML = `<span class="badge bg-success"><i class="bi bi-eye me-1"></i>열람됨</span><br><small class="text-muted">${viewedTime}</small>`;
+                        } else if (assignment.sent_at) {
+                            viewsElement.innerHTML = '<span class="badge bg-warning"><i class="bi bi-clock me-1"></i>전송됨 (미열람)</span>';
+                        } else {
+                            viewsElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>미전송</span>';
+                        }
+                    }
+                    
+                    // 기존 필드들 (하위호환성 유지)
+                    const sentElement = document.getElementById('assignment-sent');
+                    if (sentElement) sentElement.textContent = formatDateTime(assignment.sent_at) || '미전송';
+                    
+                    const viewedElement = document.getElementById('assignment-viewed');
+                    if (viewedElement) viewedElement.textContent = formatDateTime(assignment.viewed_at) || '미확인';
+                    
+                    const respondedElement = document.getElementById('assignment-responded');
+                    if (respondedElement) respondedElement.textContent = formatDateTime(assignment.responded_at) || '미응답';
+                    
+                    const notesElement = document.getElementById('assignment-notes');
+                    if (notesElement) notesElement.textContent = assignment.notes || '-';
                     
                     // 수배 상태 배지
                     const statusElement = document.getElementById('assignment-status');

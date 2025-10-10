@@ -7726,6 +7726,71 @@ app.post('/assignment/:token/confirm', async (req, res) => {
     }
 });
 
+// 수배서 열람 추적 API
+app.post('/assignment/:token/view', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { viewed_at, user_agent, screen_size } = req.body;
+        
+        console.log('👁️ 수배서 열람 기록:', { token, viewed_at });
+        
+        // 수배서 조회
+        const assignmentQuery = 'SELECT id, reservation_id, viewed_at FROM assignments WHERE assignment_token = $1';
+        const assignmentResult = await pool.query(assignmentQuery, [token]);
+        
+        if (assignmentResult.rows.length === 0) {
+            return res.status(404).json({ success: false, message: '수배서를 찾을 수 없습니다.' });
+        }
+        
+        const assignment = assignmentResult.rows[0];
+        
+        // 첫 열람인 경우에만 viewed_at 업데이트
+        if (!assignment.viewed_at) {
+            await pool.query(`
+                UPDATE assignments 
+                SET viewed_at = NOW(), updated_at = NOW()
+                WHERE assignment_token = $1
+            `, [token]);
+            
+            // 업무 히스토리에 열람 기록
+            try {
+                await pool.query(`
+                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details, created_at)
+                    VALUES ($1, $2, $3, $4, $5, NOW())
+                `, [
+                    assignment.reservation_id,
+                    '수배서 열람',
+                    'info',
+                    'vendor',
+                    `수배업체가 수배서를 열람했습니다. (${user_agent || 'Unknown'}, ${screen_size || 'Unknown'})`
+                ]);
+                
+                console.log('✅ 수배서 첫 열람 기록 완료');
+            } catch (logError) {
+                console.error('⚠️ 히스토리 기록 실패:', logError);
+            }
+            
+            res.json({ 
+                success: true, 
+                message: '열람 기록이 저장되었습니다.',
+                first_view: true
+            });
+        } else {
+            console.log('ℹ️ 이미 열람된 수배서');
+            res.json({ 
+                success: true, 
+                message: '이미 열람된 수배서입니다.',
+                first_view: false,
+                viewed_at: assignment.viewed_at
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ 수배서 열람 기록 오류:', error);
+        res.status(500).json({ success: false, message: '열람 기록 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
 // 수배서 거절 처리 API
 app.post('/assignment/:token/reject', async (req, res) => {
     try {
