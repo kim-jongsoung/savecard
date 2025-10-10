@@ -43,6 +43,11 @@
         .status-cancelled { background-color: #dc3545 !important; }
         .status-refunded { background-color: #6f42c1 !important; }
         
+        /* 이용일 완료된 건 배경색 */
+        .bg-light-gray {
+            background-color: #f8f9fa !important;
+        }
+        
         /* 수배서 모달 개선 */
         .assignment-modal .modal-body {
             padding: 1rem;
@@ -162,8 +167,8 @@
     </header>
 
     <main class="container my-3">
-        <!-- 필터 패널 (숨김/표시) -->
-        <div id="filterPanel" class="card mb-3" style="display: none;">
+        <!-- 필터 패널 (기본 열림) -->
+        <div id="filterPanel" class="card mb-3">
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-2">
@@ -228,6 +233,21 @@
             <p class="text-muted">예약관리에서 수배서를 생성하면 여기에 표시됩니다.</p>
         </div>
     </main>
+    
+    <!-- 풋터 -->
+    <footer class="bg-white border-top py-3 mt-4">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-muted small">
+                    <span id="totalCount">총 0개</span> | 
+                    <span id="statusSummary">신규 0 · 수배중 0 · 확정 0</span>
+                </div>
+                <div class="col-md-6 text-end text-muted small">
+                    © 2025 괌세이브카드 관리시스템
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- 1. 예약변경 모달 -->
     <div class="modal fade" id="reservationEditModal" tabindex="-1" aria-hidden="true">
@@ -1189,10 +1209,18 @@
                 const isNewReservation = reservation.payment_status === 'pending';
                 const newBadge = isNewReservation ? '<span class="badge bg-danger ms-2 animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">🆕 신규</span>' : '';
                 
+                // 이용일 완료 여부 확인
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const usageDate = reservation.usage_date ? new Date(reservation.usage_date) : null;
+                const isUsageDatePassed = usageDate && usageDate < today;
+                const passedClass = isUsageDatePassed ? 'bg-light-gray' : '';
+                
                 return `
-                    <article class="row-card table-like ${isNewReservation ? 'border-danger border-2' : ''}">
+                    <article class="row-card table-like ${isNewReservation ? 'border-danger border-2' : ''} ${passedClass}">
                         <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
                         ${newBadge}
+                        ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.7rem;">📋 정산대기</span>' : ''}
                         <div class="row-main">
                             <span><strong>${reservation.platform_name || '-'}</strong><span class="dim">(${reservation.korean_name || '-'})</span></span>
                             <span class="chip">${reservation.product_name || '-'}</span>
@@ -1239,6 +1267,29 @@
             console.log('✅ HTML 생성 완료 - 길이:', html.length);
             assignmentsList.innerHTML = html;
             console.log('✅ 렌더링 완료');
+            
+            // 풋터 상태 요약 업데이트
+            updateFooterSummary(assignments);
+        }
+        
+        // 풋터 상태 요약 업데이트
+        function updateFooterSummary(assignments) {
+            const statusCount = {
+                pending: 0,
+                in_progress: 0,
+                confirmed: 0,
+                voucher_sent: 0
+            };
+            
+            assignments.forEach(r => {
+                if (statusCount.hasOwnProperty(r.payment_status)) {
+                    statusCount[r.payment_status]++;
+                }
+            });
+            
+            document.getElementById('totalCount').textContent = `총 ${assignments.length}개`;
+            document.getElementById('statusSummary').textContent = 
+                `신규 ${statusCount.pending} · 수배중 ${statusCount.in_progress} · 확정 ${statusCount.confirmed} · 바우처 ${statusCount.voucher_sent}`;
         }
 
         // 검색 함수

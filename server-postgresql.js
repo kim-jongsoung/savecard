@@ -8838,7 +8838,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         console.log('📋 존재하는 테이블:', tableCheck.rows.map(r => r.table_name));
         
         const { page = 1, status = '', search = '' } = req.query;
-        const limit = 20;
+        const limit = 100;  // 페이지당 100개로 증가
         const offset = (page - 1) * limit;
         
         // ✅ 수배관리 페이지: assignment_token이 있는 예약만 표시 (수배서 생성됨)
@@ -8903,7 +8903,20 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 FROM reservations r
                 LEFT JOIN assignments a ON r.id = a.reservation_id
                 ${whereClause}
-                ORDER BY r.updated_at DESC, r.created_at DESC
+                ORDER BY 
+                    CASE r.payment_status
+                        WHEN 'pending' THEN 1
+                        WHEN 'in_progress' THEN 2
+                        WHEN 'confirmed' THEN 3
+                        WHEN 'voucher_sent' THEN 5
+                        ELSE 4
+                    END,
+                    CASE 
+                        WHEN r.usage_date < CURRENT_DATE THEN 0
+                        ELSE 1
+                    END DESC,
+                    r.usage_date ASC,
+                    r.created_at DESC
                 LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
             `;
         } else {
