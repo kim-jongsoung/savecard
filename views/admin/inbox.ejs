@@ -494,9 +494,11 @@
             }
 
             // 모든 필드 매핑 (AI 파서 필드명 → 폼 필드명)
+            const companyName = extractCompanyName(data);
             const fieldMappings = {
                 'reservation_number': data.reservation_number || data.booking_reference || data.order_number || '',
-                'platform_name': extractCompanyName(data),
+                'platform_name': companyName,
+                'channel': companyName,  // 업체명과 플랫폼명 동기화
                 'payment_status': 'pending', // 기본값: 대기중 (신규예약)
                 'product_name': data.product_name || data.tour_name || data.service_name || '',
                 'package_type': data.package_type || data.package || data.option || '',
@@ -1156,6 +1158,7 @@
             const mappedData = {
                 reservation_number: formData.reservation_number,
                 platform_name: formData.platform_name,
+                channel: formData.platform_name,  // ✅ 업체명과 플랫폼명 동기화
                 payment_status: formData.payment_status || 'pending', // 파싱 규칙에 따라 설정된 상태 유지
                 product_name: formData.product_name,
                 package_type: formData.package_type,
@@ -1174,13 +1177,17 @@
                 adult_unit_price: parseFloat(formData.adult_price) || null,
                 child_unit_price: parseFloat(formData.child_price) || null,
                 memo: formData.special_requests,
-                channel: 'inbox',
                 guest_count: (parseInt(formData.adult_count) || 1) + (parseInt(formData.child_count) || 0) + (parseInt(formData.infant_count) || 0),
                 vendor_id: formData.vendor_id || null // 수배업체 ID 추가
             };
             
             console.log('💾 저장할 데이터:', mappedData);
             console.log('🏢 선택된 수배업체 ID:', formData.vendor_id);
+            console.log('📋 업체명 동기화:', {
+                platform_name: mappedData.platform_name,
+                channel: mappedData.channel,
+                동일여부: mappedData.platform_name === mappedData.channel ? '✅' : '❌'
+            });
 
             try {
                 const response = await fetch('/api/reservations', {
