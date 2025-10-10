@@ -317,8 +317,8 @@
                     <button type="button" class="btn btn-danger" onclick="deleteReservation()">
                         <i class="fas fa-trash me-1"></i>삭제
                     </button>
-                    <button type="button" class="btn btn-success" id="createAssignmentBtn" onclick="createAssignment()" style="display: none;">
-                        <i class="fas fa-file-text me-1"></i>수배서 보기/전송
+                    <button type="button" class="btn btn-success" id="createAssignmentBtn" onclick="setVendor()" style="display: none;">
+                        <i class="fas fa-building me-1"></i>수배업체 설정
                     </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button type="button" class="btn btn-primary" onclick="saveReservation()">
@@ -334,7 +334,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">수배업체 선택</h5>
+                    <h5 class="modal-title">수배업체 설정</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -347,16 +347,13 @@
                         <select class="form-select" id="vendorSelect">
                             <option value="">수배업체를 선택하세요</option>
                         </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">수배 메모</label>
-                        <textarea class="form-control" id="assignmentNotes" rows="3" placeholder="수배업체에 전달할 메모를 입력하세요"></textarea>
+                        <small class="text-muted">수배업체를 선택하면 예약이 수배중 상태로 변경되고 수배관리 페이지에 표시됩니다.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button type="button" class="btn btn-success" onclick="confirmCreateAssignment()">
-                        <i class="fas fa-paper-plane me-1"></i>수배서 전송
+                        <i class="fas fa-check me-1"></i>수배업체 설정
                     </button>
                 </div>
             </div>
@@ -507,7 +504,7 @@
             document.getElementById('infant_price').value = reservation.infant_unit_price || 0;
             document.getElementById('special_requests').value = reservation.memo || '';
 
-            // 수배서 보기/전송 버튼 표시/숨김 (대기중 상태일 때만 표시)
+            // 수배업체 설정 버튼 표시/숨김 (대기중 상태일 때만 표시)
             const createAssignmentBtn = document.getElementById('createAssignmentBtn');
             if (reservation.payment_status === 'pending') {
                 createAssignmentBtn.style.display = 'inline-block';
@@ -614,8 +611,8 @@
             return classMap[status] || 'pending';
         }
 
-        // 수배서 보기/전송 버튼 클릭
-        async function createAssignment() {
+        // 수배업체 설정 버튼 클릭
+        async function setVendor() {
             const reservationId = document.getElementById('reservationId').value;
             const productName = document.getElementById('product_name').value;
             
@@ -657,7 +654,7 @@
             }
         }
         
-        // 수배서 전송 확인
+        // 수배업체 설정 확인
         async function confirmCreateAssignment() {
             const reservationId = document.getElementById('reservationId').value;
             const vendorId = document.getElementById('vendorSelect').value;
@@ -669,20 +666,22 @@
             }
             
             try {
+                // 수배서 생성 (토큰 생성, 전송은 안함)
                 const response = await fetch('/api/assignments', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         reservation_id: reservationId,
                         vendor_id: vendorId,
-                        notes: notes
+                        notes: notes || '예약관리에서 수배업체 설정',
+                        status: 'draft'  // 임시 상태 (전송 안됨)
                     })
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('수배서가 생성되고 수배처에 자동 전송되었습니다.');
+                    alert('수배업체가 설정되었습니다. 수배관리 페이지에서 수배서를 전송할 수 있습니다.');
                     
                     // 모달들 닫기
                     bootstrap.Modal.getInstance(document.getElementById('vendorSelectModal')).hide();
@@ -692,15 +691,15 @@
                     loadReservations();
                     
                     // 수배관리 페이지로 이동할지 묻기
-                    if (confirm('수배관리 페이지에서 수배 진행 상황을 확인하시겠습니까?')) {
+                    if (confirm('수배관리 페이지로 이동하시겠습니까?')) {
                         window.location.href = '/admin/assignments';
                     }
                 } else {
-                    alert(result.message || '수배서 전송에 실패했습니다.');
+                    alert(result.message || '수배업체 설정에 실패했습니다.');
                 }
             } catch (error) {
-                console.error('수배서 전송 실패:', error);
-                alert('수배서 전송 중 오류가 발생했습니다.');
+                console.error('수배업체 설정 실패:', error);
+                alert('수배업체 설정 중 오류가 발생했습니다.');
             }
         }
 

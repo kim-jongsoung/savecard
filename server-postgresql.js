@@ -6431,8 +6431,8 @@ app.get('/api/field-defs', requireAuth, async (req, res) => {
 // 수배서 생성 API
 app.post('/api/assignments', requireAuth, async (req, res) => {
     try {
-        const { reservation_id, vendor_id, notes } = req.body;
-        console.log('🔧 수배서 생성 요청:', { reservation_id, vendor_id, notes });
+        const { reservation_id, vendor_id, notes, status } = req.body;
+        console.log('🔧 수배서 생성 요청:', { reservation_id, vendor_id, notes, status });
 
         // 예약 정보 조회 (vendor_id 컬럼이 없으므로 reservations 테이블만 조회)
         const reservationQuery = `
@@ -6483,7 +6483,7 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             vendor_info ? vendor_info.vendor_name : '미지정',
             JSON.stringify(vendor_contact),
             assignment_token,
-            'sent',
+            status || 'sent',  // 전달된 status 사용, 기본값은 'sent'
             notes || `수배서 생성 (${reservation.product_name})`,
             req.session.adminUsername || 'admin'
         ]);
