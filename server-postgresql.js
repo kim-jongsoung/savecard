@@ -6648,18 +6648,9 @@ app.get('/assignment/:token', async (req, res) => {
         console.log('  - customer_name:', safeAssignment.customer_name);
         console.log('  - product_name:', safeAssignment.product_name);
 
-        // 조회 시간 기록 (안전하게)
-        try {
-            await pool.query(`
-                UPDATE assignments 
-                SET viewed_at = NOW()
-                WHERE assignment_token = $1
-            `, [token]);
-            console.log('✅ 조회 시간 기록 완료');
-        } catch (updateError) {
-            console.error('⚠️ 조회 시간 기록 실패:', updateError.message);
-            // 조회 시간 기록 실패는 치명적이지 않으므로 계속 진행
-        }
+        // ⚠️ 조회 시간 기록은 클라이언트 사이드 API에서 처리 (POST /assignment/:token/view)
+        // 이유: 히스토리 기록 및 상태 변경을 함께 처리하기 위함
+        console.log('ℹ️ 열람 기록은 클라이언트 API에서 처리됩니다');
 
         console.log('🔍 템플릿 렌더링 시작');
 
@@ -7732,11 +7723,18 @@ app.post('/assignment/:token/view', async (req, res) => {
         const { token } = req.params;
         const { viewed_at, user_agent, screen_size } = req.body;
         
-        console.log('👁️ 수배서 열람 기록:', { token, viewed_at });
+        console.log('='.repeat(60));
+        console.log('👁️ 수배서 열람 추적 API 호출!');
+        console.log('토큰:', token);
+        console.log('시간:', viewed_at);
+        console.log('User Agent:', user_agent);
+        console.log('='.repeat(60));
         
         // 수배서 조회
-        const assignmentQuery = 'SELECT id, reservation_id, viewed_at FROM assignments WHERE assignment_token = $1';
+        const assignmentQuery = 'SELECT id, reservation_id, viewed_at, status FROM assignments WHERE assignment_token = $1';
         const assignmentResult = await pool.query(assignmentQuery, [token]);
+        
+        console.log('🔍 수배서 조회 결과:', assignmentResult.rows.length > 0 ? assignmentResult.rows[0] : '없음');
         
         if (assignmentResult.rows.length === 0) {
             return res.status(404).json({ success: false, message: '수배서를 찾을 수 없습니다.' });
@@ -7746,8 +7744,10 @@ app.post('/assignment/:token/view', async (req, res) => {
         
         // 첫 열람인 경우에만 viewed_at 업데이트 및 상태 변경
         if (!assignment.viewed_at) {
+            console.log('🆕 첫 열람! 업데이트 시작...');
+            
             // 1. 수배서 viewed_at 업데이트 및 상태를 'sent'로 변경 (아직 draft인 경우)
-            await pool.query(`
+            const updateResult = await pool.query(`
                 UPDATE assignments 
                 SET viewed_at = NOW(), 
                     updated_at = NOW(),
@@ -7756,15 +7756,19 @@ app.post('/assignment/:token/view', async (req, res) => {
                         ELSE status 
                     END
                 WHERE assignment_token = $1
+                RETURNING id, viewed_at, status
             `, [token]);
+            console.log('✅ 수배서 업데이트 완료:', updateResult.rows[0]);
             
             // 2. 예약 상태를 '수배중(in_progress)'으로 변경
-            await pool.query(`
+            const reservationUpdateResult = await pool.query(`
                 UPDATE reservations 
                 SET payment_status = 'in_progress',
                     updated_at = NOW()
                 WHERE id = $1 AND payment_status = 'pending'
+                RETURNING id, payment_status
             `, [assignment.reservation_id]);
+            console.log('✅ 예약 상태 변경:', reservationUpdateResult.rows.length > 0 ? reservationUpdateResult.rows[0] : '변경 없음(이미 수배중)');
             
             // 3. 업무 히스토리에 열람 기록
             try {
@@ -7779,19 +7783,25 @@ app.post('/assignment/:token/view', async (req, res) => {
                     `수배업체가 수배서를 열람했습니다. 상태: 수배중으로 변경 (${user_agent || 'Unknown'}, ${screen_size || 'Unknown'})`
                 ]);
                 
-                console.log('✅ 수배서 첫 열람 기록 완료 + 상태 변경 (수배중)');
+                console.log('✅ 수배서 첫 열람 기록 완료 + 히스토리 저장');
             } catch (logError) {
                 console.error('⚠️ 히스토리 기록 실패:', logError);
             }
+            
+            console.log('='.repeat(60));
+            console.log('✅ 모든 처리 완료! 응답 전송');
+            console.log('='.repeat(60));
             
             res.json({ 
                 success: true, 
                 message: '열람 기록이 저장되었습니다. 상태가 수배중으로 변경되었습니다.',
                 first_view: true,
-                status_changed: true
+                status_changed: true,
+                viewed_at: updateResult.rows[0].viewed_at
             });
         } else {
-            console.log('ℹ️ 이미 열람된 수배서');
+            console.log('ℹ️ 이미 열람된 수배서 (viewed_at:', assignment.viewed_at, ')');
+            console.log('='.repeat(60));
             res.json({ 
                 success: true, 
                 message: '이미 열람된 수배서입니다.',

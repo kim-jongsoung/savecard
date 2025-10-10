@@ -544,7 +544,7 @@
         // 열람 추적 기능
         window.addEventListener('load', function() {
             // 미리보기가 아닐 때만 열람 기록
-            const isPreviewMode = false; // 서버에서 isPreview 변수 전달
+            const isPreviewMode = <%= isPreview ? 'true' : 'false' %>;
             
             console.log('🔍 페이지 로드 완료');
             console.log('🔍 isPreviewMode:', isPreviewMode);
