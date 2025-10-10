@@ -1180,7 +1180,8 @@
                 console.log('예약 상태 정보:', {
                     id: reservation.id,
                     payment_status: reservation.payment_status,
-                    reservation_number: reservation.reservation_number
+                    reservation_number: reservation.reservation_number,
+                    platform_name: reservation.platform_name
                 });
                 
                 const statusClass = getStatusClass(reservation.payment_status);
@@ -1193,6 +1194,7 @@
                     id: reservation.id,
                     reservation_number: reservation.reservation_number,
                     payment_status: reservation.payment_status,
+                    platform_name: reservation.platform_name,
                     vendor_name: reservation.vendor_name,
                     assignment_id: reservation.assignment_id
                 });

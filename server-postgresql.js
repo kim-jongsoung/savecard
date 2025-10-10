@@ -8471,6 +8471,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 id: result.rows[0].id,
                 reservation_number: result.rows[0].reservation_number,
                 payment_status: result.rows[0].payment_status,
+                platform_name: result.rows[0].platform_name,
                 vendor_name: result.rows[0].vendor_name
             });
         }
