@@ -2151,6 +2151,10 @@
             if (!reservation) return;
             
             window.currentReservationId = reservationId;
+            window.currentReservation = reservation; // ✅ 추가
+            
+            console.log('🔍 수배서 관리 모달 열기 - reservation:', reservation);
+            console.log('🔍 platform_name:', reservation.platform_name);
             
             // 수배서 정보 표시 (안전하게 요소 확인)
             const assignmentNumberEl = document.getElementById('assignment-number');
@@ -2176,6 +2180,15 @@
                 } else {
                     assignmentStatusEl.innerHTML = '<span class="badge bg-secondary">미생성</span>';
                 }
+            }
+            
+            // 예약업체 (플랫폼) 표시 ✅ 추가
+            const assignmentPlatformEl = document.getElementById('assignment-platform');
+            if (assignmentPlatformEl) {
+                assignmentPlatformEl.textContent = reservation.platform_name || '-';
+                console.log('✅ 플랫폼명 설정:', reservation.platform_name);
+            } else {
+                console.error('❌ assignment-platform 요소를 찾을 수 없습니다');
             }
             
             const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
@@ -2292,10 +2305,12 @@
         
         // 수배서 모달 정보 채우기
         async function populateAssignmentModalDetails(reservation) {
-            console.log('수배서 모달 정보 채우기:', reservation);
+            console.log('🔍 수배서 모달 정보 채우기:', reservation);
+            console.log('🔍 reservation.platform_name:', reservation?.platform_name);
+            console.log('🔍 reservation 전체 키:', Object.keys(reservation || {}));
             
             if (!reservation) {
-                console.error('예약 데이터가 없습니다');
+                console.error('❌ 예약 데이터가 없습니다');
                 return;
             }
             
