@@ -6463,11 +6463,14 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
         const assignment_token = crypto.randomBytes(16).toString('hex');
 
         // 수배서 생성
+        const assignmentStatus = status || 'sent';
+        const sentAt = assignmentStatus === 'draft' ? null : 'NOW()';  // draft는 전송 안됨
+        
         const insertQuery = `
             INSERT INTO assignments (
                 reservation_id, vendor_id, vendor_name, vendor_contact,
                 assignment_token, status, notes, assigned_by, assigned_at, sent_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), ${sentAt})
             RETURNING *
         `;
 
@@ -6477,13 +6480,15 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
             contact_person: vendor_info.contact_person
         } : {};
 
+        console.log('📋 수배서 생성:', { status: assignmentStatus, sent_at: sentAt });
+
         const assignmentResult = await pool.query(insertQuery, [
             reservation_id,
             vendor_id || null,
             vendor_info ? vendor_info.vendor_name : '미지정',
             JSON.stringify(vendor_contact),
             assignment_token,
-            status || 'sent',  // 전달된 status 사용, 기본값은 'sent'
+            assignmentStatus,
             notes || `수배서 생성 (${reservation.product_name})`,
             req.session.adminUsername || 'admin'
         ]);
