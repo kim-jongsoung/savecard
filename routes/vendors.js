@@ -427,52 +427,6 @@ router.post('/match', async (req, res) => {
             });
         }
         
-        const query = `
-            SELECT DISTINCT v.*, vp.product_keyword, vp.priority
-            FROM vendors v
-            JOIN vendor_products vp ON v.id = vp.vendor_id
-            WHERE v.is_active = true 
-            AND vp.is_active = true
-            AND LOWER($1) LIKE LOWER('%' || vp.product_keyword || '%')
-            ORDER BY vp.priority, v.vendor_name
-        `;
-        
-        const result = await pool.query(query, [product_name]);
-        
-        res.json({
-            success: true,
-            matches: result.rows.map(row => ({
-                vendor_id: row.id,
-                vendor_name: row.vendor_name,
-                matched_keyword: row.product_keyword,
-                priority: row.priority,
-                email: row.notification_email || row.email,
-                contact_person: row.contact_person
-            }))
-        });
-        
-    } catch (error) {
-        console.error('수배업체 매칭 실패:', error);
-        res.status(500).json({
-            success: false,
-            message: '수배업체 매칭에 실패했습니다.'
-        });
-    }
-});
-
-// 상품명으로 수배업체 자동 매칭
-router.post('/match', async (req, res) => {
-    try {
-        const pool = req.app.locals.pool;
-        const { product_name } = req.body;
-        
-        if (!product_name) {
-            return res.status(400).json({
-                success: false,
-                message: '상품명이 필요합니다.'
-            });
-        }
-        
         console.log(`🔍 수배업체 매칭 시도: "${product_name}"`);
         
         // 상품명과 매칭되는 수배업체 찾기 (우선순위 순)
