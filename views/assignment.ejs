@@ -563,7 +563,7 @@
         // 열람 추적 기능
         window.addEventListener('load', function() {
             // 미리보기가 아닐 때만 열람 기록
-            const isPreviewMode = <%= typeof isPreview !== 'undefined' && isPreview ? 'true' : 'false' %>;
+            const isPreviewMode = {{ JSON.stringify(typeof isPreview !== 'undefined' && isPreview) }};
             if (!isPreviewMode && assignmentToken) {
                 console.log('수배서 열람 기록 중...');
                 
@@ -571,7 +571,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        viewed_at: new Date().toISOString(),
+{{ ... }}
                         user_agent: navigator.userAgent,
                         screen_size: `${window.screen.width}x${window.screen.height}`
                     })
