@@ -217,10 +217,11 @@
                     <div class="col-8">
                         <div class="doc-title">
                             <i class="bi bi-file-earmark-text me-2"></i>
-                            현지 수배 의뢰서
+                            Local Assignment Request<br>
+                            <small style="font-size:1.2rem;opacity:0.9;">현지 수배 의뢰서</small>
                         </div>
                         <div class="doc-number">
-                            문서번호: <%= assignment.id || 'DRAFT' %> | 예약번호: <%= assignment.reservation_number %>
+                            Doc No. <%= assignment.id || 'DRAFT' %> | Reservation No. <%= assignment.reservation_number %>
                         </div>
                     </div>
                     <div class="col-4 text-end">
@@ -239,56 +240,56 @@
             <div class="col-lg-8">
                 <div class="card info-card mb-4">
                     <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>예약 기본 정보</h5>
+                        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Reservation Information (예약 정보)</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <strong>예약번호 (ID):</strong><br>
+                                <strong>Reservation No. (예약번호):</strong><br>
                                 <code class="fs-5"><%= assignment.reservation_number || assignment.id %></code>
                             </div>
                             <div class="col-md-6">
-                                <strong>예약자명:</strong><br>
-                                <span class="fs-5"><%= assignment.customer_name || '정보 없음' %></span>
+                                <strong>Customer Name (예약자명):</strong><br>
+                                <span class="fs-5"><%= assignment.customer_name || 'N/A' %></span>
                                 <% if (assignment.english_first_name || assignment.english_last_name) { %>
                                 <br><small class="text-muted">영문: <%= (assignment.english_first_name || '') + ' ' + (assignment.english_last_name || '') %></small>
                                 <% } %>
                             </div>
                             <div class="col-md-6">
-                                <strong>업체명:</strong><br>
-                                <span class="text-primary fw-bold"><%= assignment.vendor_name || '정보 없음' %></span>
+                                <strong>Platform (업체명):</strong><br>
+                                <span class="text-primary fw-bold"><%= assignment.vendor_name || 'N/A' %></span>
                             </div>
                             <div class="col-md-6">
-                                <strong>상품명:</strong><br>
-                                <span class="text-success fw-bold"><%= assignment.product_name || '정보 없음' %></span>
+                                <strong>Product (상품명):</strong><br>
+                                <span class="text-success fw-bold"><%= assignment.product_name || 'N/A' %></span>
                                 <% if (assignment.package_type) { %>
-                                <br><small class="text-muted">패키지 타입: <span class="text-info fw-bold"><%= assignment.package_type %></span></small>
+                                <br><small class="text-muted">Package Type: <span class="text-info fw-bold"><%= assignment.package_type %></span></small>
                                 <% } %>
                             </div>
                             <div class="col-md-6">
-                                <strong>출발일 / 사용일자:</strong><br>
-                                <%= assignment.departure_date ? formatDate(assignment.departure_date) : '정보 없음' %>
+                                <strong>Date (사용일자):</strong><br>
+                                <%= assignment.departure_date ? formatDate(assignment.departure_date) : 'N/A' %>
                                 <% if (assignment.usage_time) { %>
-                                <br><small class="text-muted">시간: <%= assignment.usage_time %></small>
+                                <br><small class="text-muted">Time: <%= assignment.usage_time %></small>
                                 <% } %>
                             </div>
                             <div class="col-md-6">
-                                <strong>인원:</strong><br>
-                                성인 <span class="badge bg-primary"><%= assignment.adult_count || 0 %>명</span>
-                                아동 <span class="badge bg-info"><%= assignment.child_count || 0 %>명</span>
+                                <strong>Participants (인원):</strong><br>
+                                Adults <span class="badge bg-primary"><%= assignment.adult_count || 0 %></span>
+                                Children <span class="badge bg-info"><%= assignment.child_count || 0 %></span>
                                 <% if (assignment.people_infant > 0) { %>
-                                유아 <span class="badge bg-secondary"><%= assignment.people_infant %>명</span>
+                                Infants <span class="badge bg-secondary"><%= assignment.people_infant %></span>
                                 <% } %>
                             </div>
                             <% if (assignment.total_amount) { %>
                             <div class="col-md-6">
-                                <strong>총 금액:</strong><br>
+                                <strong>Total Amount (총 금액):</strong><br>
                                 <span class="text-success fw-bold fs-5"><%= formatCurrency(assignment.total_amount) %></span>
                             </div>
                             <% } %>
                             <% if (assignment.phone_number || assignment.email) { %>
                             <div class="col-md-6">
-                                <strong>연락처:</strong><br>
+                                <strong>Contact (연락처):</strong><br>
                                 <% if (assignment.phone_number) { %>
                                 <i class="bi bi-telephone me-1"></i><%= assignment.phone_number %><br>
                                 <% } %>
@@ -304,36 +305,30 @@
                 <!-- 수배 정보 -->
                 <div class="card info-card mb-4">
                     <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>수배 정보</h5>
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>Assignment Information (수배 정보)</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <strong>수배업체:</strong><br>
-                                <span class="fs-5 text-success"><%= assignment.assignment_vendor || assignment.vendor_name || '미지정' %></span>
+                                <strong>Vendor (수배업체):</strong><br>
+                                <span class="fs-5 text-success"><%= assignment.assignment_vendor || assignment.vendor_name || 'Not Assigned' %></span>
                             </div>
                             <div class="col-md-6">
-                                <strong>수배서 전송일시:</strong><br>
+                                <strong>Sent Date (전송일시):</strong><br>
                                 <% if (assignment.sent_at) { %>
-                                    <%= formatDate(assignment.sent_at) %> <%= new Date(assignment.sent_at).toLocaleTimeString('ko-KR') %>
+                                    <%= formatDate(assignment.sent_at) %> <%= new Date(assignment.sent_at).toLocaleTimeString('en-US') %>
                                 <% } else { %>
-                                    미전송
+                                    Not Sent
                                 <% } %>
                             </div>
-                            <% if (assignment.vendor_email || assignment.vendor_phone) { %>
                             <div class="col-12">
-                                <strong>수배업체 연락처:</strong><br>
-                                <% if (assignment.vendor_email) { %>
-                                <i class="bi bi-envelope me-1"></i><%= assignment.vendor_email %><br>
-                                <% } %>
-                                <% if (assignment.vendor_phone) { %>
-                                <i class="bi bi-telephone me-1"></i><%= assignment.vendor_phone %>
-                                <% } %>
+                                <strong>Emergency Contact (비상 연락처):</strong> 
+                                <i class="bi bi-telephone me-1"></i>+1-671-XXX-XXXX | 
+                                <i class="bi bi-envelope me-1"></i>support@guamsavecard.com
                             </div>
-                            <% } %>
                             <% if (assignment.special_requests) { %>
                             <div class="col-12">
-                                <strong>특별 요청사항:</strong><br>
+                                <strong>Special Requests (특별 요청사항):</strong><br>
                                 <div class="alert alert-info">
                                     <i class="bi bi-info-circle me-2"></i><%= assignment.special_requests %>
                                 </div>
@@ -341,7 +336,7 @@
                             <% } %>
                             <% if (assignment.notes) { %>
                             <div class="col-12">
-                                <strong>수배 메모:</strong><br>
+                                <strong>Notes (메모):</strong><br>
                                 <div class="alert alert-warning">
                                     <i class="bi bi-sticky me-2"></i><%= assignment.notes %>
                                 </div>
@@ -357,45 +352,45 @@
                 <% if (!isPreview && assignment.status !== 'draft' && (assignment.status === 'requested' || assignment.status === 'sent')) { %>
                 <div class="response-section">
                     <h5 class="text-center mb-4">
-                        <i class="bi bi-reply me-2"></i>수배 응답
+                        <i class="bi bi-reply me-2"></i>Response (응답)
                     </h5>
                     
                     <div class="d-grid gap-2">
                         <button class="btn btn-success btn-lg btn-response" onclick="confirmAssignment()">
-                            <i class="bi bi-check-lg me-2"></i>확정
+                            <i class="bi bi-check-lg me-2"></i>Confirm (확정)
                         </button>
                         <button class="btn btn-danger btn-lg btn-response" onclick="rejectAssignment()">
-                            <i class="bi bi-x-lg me-2"></i>거절
+                            <i class="bi bi-x-lg me-2"></i>Reject (거절)
                         </button>
                     </div>
 
                     <!-- 확정 시 추가 정보 입력 -->
                     <div id="confirmationDetails" class="mt-4" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">확정번호</label>
+                            <label class="form-label fw-bold">Confirmation Number (확정번호)</label>
                             <input type="text" class="form-control confirmation-input" id="confirmationNumber" 
-                                   placeholder="확정번호를 입력하세요" required>
-                            <small class="text-muted">수배업체에서 발급한 확정번호를 입력해주세요</small>
+                                   placeholder="Enter confirmation number" required>
+                            <small class="text-muted">Please enter the confirmation number issued by your company</small>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">메모 (선택사항)</label>
+                            <label class="form-label fw-bold">Notes (메모)</label>
                             <textarea class="form-control" id="confirmationNotes" rows="2" 
-                                      placeholder="추가 메모사항"></textarea>
+                                      placeholder="Additional notes (optional)"></textarea>
                         </div>
                         <button class="btn btn-success w-100" onclick="submitConfirmation()">
-                            <i class="bi bi-send me-2"></i>확정 완료
+                            <i class="bi bi-send me-2"></i>Submit Confirmation
                         </button>
                     </div>
 
                     <!-- 거절 시 사유 입력 -->
                     <div id="rejectionDetails" class="mt-4" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label fw-bold">거절 사유</label>
+                            <label class="form-label fw-bold">Rejection Reason (거절 사유)</label>
                             <textarea class="form-control" id="rejectionReason" rows="3" 
-                                      placeholder="거절 사유를 입력해주세요" required></textarea>
+                                      placeholder="Please enter rejection reason" required></textarea>
                         </div>
                         <button class="btn btn-danger w-100" onclick="submitRejection()">
-                            <i class="bi bi-send me-2"></i>거절 완료
+                            <i class="bi bi-send me-2"></i>Submit Rejection
                         </button>
                     </div>
                 </div>
@@ -404,14 +399,14 @@
                     <div class="text-success mb-3">
                         <i class="bi bi-check-circle fa-3x"></i>
                     </div>
-                    <h5 class="text-success">수배 확정 완료</h5>
+                    <h5 class="text-success">Confirmed (확정 완료)</h5>
                     <% if (assignment.confirmation_number) { %>
-                    <p class="mb-2"><strong>확정번호:</strong></p>
+                    <p class="mb-2"><strong>Confirmation No.:</strong></p>
                     <code class="fs-5"><%= assignment.confirmation_number %></code>
                     <% } %>
                     <% if (assignment.response_at) { %>
                     <p class="text-muted mt-3">
-                        확정일: <%= formatDate(assignment.response_at) %>
+                        Date: <%= formatDate(assignment.response_at) %>
                     </p>
                     <% } %>
                 </div>
@@ -420,16 +415,16 @@
                     <div class="text-danger mb-3">
                         <i class="bi bi-x-circle fa-3x"></i>
                     </div>
-                    <h5 class="text-danger">수배 거절됨</h5>
+                    <h5 class="text-danger">Rejected (거절됨)</h5>
                     <% if (assignment.rejection_reason) { %>
                     <div class="alert alert-danger mt-3">
-                        <strong>거절 사유:</strong><br>
+                        <strong>Reason:</strong><br>
                         <%= assignment.rejection_reason %>
                     </div>
                     <% } %>
                     <% if (assignment.response_at) { %>
                     <p class="text-muted mt-3">
-                        거절일: <%= formatDate(assignment.response_at) %>
+                        Date: <%= formatDate(assignment.response_at) %>
                     </p>
                     <% } %>
                 </div>
@@ -438,39 +433,26 @@
                     <div class="text-info mb-3">
                         <i class="bi bi-info-circle fa-3x"></i>
                     </div>
-                    <h5 class="text-info">임시 수배서</h5>
+                    <h5 class="text-info">Draft (임시)</h5>
                     <p class="text-muted">
-                        아직 수배서가 생성되지 않았습니다.<br>
-                        예약관리에서 수배서를 생성해주세요.
+                        This assignment has not been finalized yet.<br>
+                        수배서가 아직 생성되지 않았습니다.
                     </p>
                     <% if (isPreview) { %>
                     <div class="alert alert-info mt-3">
                         <small>
                             <i class="bi bi-lightbulb me-1"></i>
-                            이것은 수배서 생성 시 어떻게 보일지 미리보기입니다.
+                            This is a preview of how the assignment will appear.
                         </small>
                     </div>
                     <% } %>
                 </div>
                 <% } %>
 
-                <!-- 비상 연락처 -->
-                <div class="card mt-4">
-                    <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0"><i class="bi bi-telephone me-2"></i>비상 연락처</h6>
-                    </div>
-                    <div class="card-body">
-                        <p class="mb-2"><strong>괌세이브카드</strong></p>
-                        <p class="mb-1"><i class="bi bi-telephone me-1"></i>+1-671-XXX-XXXX</p>
-                        <p class="mb-1"><i class="bi bi-envelope me-1"></i>support@guamsavecard.com</p>
-                        <p class="mb-0"><small class="text-muted">24시간 응급상황 대응</small></p>
-                    </div>
-                </div>
-
                 <!-- 인쇄 버튼 -->
                 <div class="mt-4 no-print">
                     <button class="btn btn-outline-primary w-100" onclick="window.print()">
-                        <i class="bi bi-printer me-2"></i>수배서 인쇄
+                        <i class="bi bi-printer me-2"></i>Print (인쇄)
                     </button>
                 </div>
             </div>

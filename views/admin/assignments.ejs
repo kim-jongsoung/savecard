@@ -2337,9 +2337,11 @@
                 peopleElement.textContent = people;
             }
             
-            // 현재 예약 ID 저장
+            // 현재 예약 ID와 정보 저장
             window.currentReservationId = reservation.id;
+            window.currentReservation = reservation; // 전체 예약 정보 저장
             console.log('현재 예약 ID 저장:', window.currentReservationId);
+            console.log('현재 예약 정보 저장:', reservation);
             
             // 수배서 정보 로드
             if (reservation.id) {
@@ -2366,8 +2368,11 @@
                     // 플랫폼명 표시 (예약업체)
                     const platformElement = document.getElementById('assignment-platform');
                     if (platformElement) {
-                        const reservation = window.reservationsData?.[reservationId];
-                        platformElement.textContent = reservation?.platform_name || '-';
+                        // 현재 예약 정보에서 플랫폼명 가져오기
+                        const platformName = window.currentReservation?.platform_name || 
+                                           window.reservationsData?.[reservationId]?.platform_name || '-';
+                        platformElement.textContent = platformName;
+                        console.log('플랫폼명 표시:', platformName);
                     }
                     
                     // 열람 현황 표시
@@ -2589,18 +2594,7 @@
         }
         
         // 수배서 링크 복사
-        function copyAssignmentLink() {
-            const linkInput = document.getElementById('assignmentLinkUrl');
-            if (linkInput.value) {
-                navigator.clipboard.writeText(linkInput.value).then(() => {
-                    showAlert('수배서 링크가 클립보드에 복사되었습니다!', 'success');
-                    addToHistory('수배서 링크 복사', 'info');
-                }).catch(err => {
-                    console.error('복사 실패:', err);
-                    showAlert('링크 복사에 실패했습니다.', 'danger');
-                });
-            }
-        }
+        // copyAssignmentLink 함수는 1826줄에 정의되어 있음 (중복 제거)
         
         
         
