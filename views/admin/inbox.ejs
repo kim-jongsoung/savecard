@@ -278,6 +278,7 @@
                                             <option value="adult_price">성인 단가 (adult_unit_price)</option>
                                             <option value="child_price">아동 단가 (child_unit_price)</option>
                                             <option value="platform_name">플랫폼명 (platform_name)</option>
+                                            <option value="channel">업체명 (channel)</option>
                                             <option value="product_name">상품명 (product_name)</option>
                                             <option value="package_type">패키지 타입 (package_type)</option>
                                         </select>
@@ -775,8 +776,10 @@
                 'adult_price': '성인 단가',
                 'child_price': '아동 단가',
                 'infant_price': '유아 단가',
-                'platform_name': '업체명',
-                'product_name': '상품명'
+                'platform_name': '플랫폼명',
+                'channel': '업체명',
+                'product_name': '상품명',
+                'package_type': '패키지 타입'
             };
             return fieldNames[fieldType] || fieldType;
         }
@@ -814,6 +817,19 @@
                         element.value = rule.value;
                         element.style.backgroundColor = '#e7f3ff';
                         element.style.border = '2px solid #007bff';
+                        
+                        // ✅ platform_name과 channel 동기화
+                        if (rule.fieldType === 'platform_name') {
+                            fieldMappings.channel = rule.value;
+                            console.log(`🔄 업체명 동기화: platform_name = ${rule.value}, channel = ${rule.value}`);
+                        } else if (rule.fieldType === 'channel') {
+                            fieldMappings.platform_name = rule.value;
+                            const platformElement = document.getElementById('platform_name');
+                            if (platformElement) {
+                                platformElement.value = rule.value;
+                            }
+                            console.log(`🔄 플랫폼명 동기화: channel = ${rule.value}, platform_name = ${rule.value}`);
+                        }
                         
                         // 예약 상태 변경 시 시각적 피드백
                         if (rule.fieldType === 'payment_status') {
@@ -916,6 +932,15 @@
                     { value: '20', text: '$20' }
                 ],
                 'platform_name': [
+                    { value: 'KLOOK', text: 'KLOOK' },
+                    { value: '투어비스', text: '투어비스' },
+                    { value: '노을투어', text: '노을투어' },
+                    { value: '괌투어', text: '괌투어' },
+                    { value: '하나투어', text: '하나투어' },
+                    { value: '모두투어', text: '모두투어' },
+                    { value: 'custom', text: '직접 입력' }
+                ],
+                'channel': [
                     { value: 'KLOOK', text: 'KLOOK' },
                     { value: '투어비스', text: '투어비스' },
                     { value: '노을투어', text: '노을투어' },
