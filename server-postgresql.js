@@ -4502,11 +4502,11 @@ app.get('/admin/inbox', requireAuth, async (req, res) => {
     }
 });
 
-// 예약 관리 페이지 (검수형 백엔드 통합)
+// 예약 관리 페이지 (수배관리로 리다이렉트)
 app.get('/admin/reservations', requireAuth, async (req, res) => {
     try {
-        console.log('📋 예약 관리 페이지 접근 시도');
-        console.log('🔍 dbMode:', dbMode);
+        console.log('📋 예약 관리 페이지 접근 → 수배관리 페이지로 리다이렉트');
+        return res.redirect('/admin/assignments');
         
         // 페이징 파라미터
         const page = parseInt(req.query.page) || 1;
@@ -5143,19 +5143,49 @@ app.post('/admin/reservations/save', requireAuth, async (req, res) => {
                 
                 const autoAssignment = await createAutoAssignment(reservationId, normalizedData.product_name);
                 
+                // 수배가 생성되었으면 예약 상태를 'in_progress'로 변경
+                if (autoAssignment) {
+                    await pool.query(
+                        'UPDATE reservations SET payment_status = $1 WHERE id = $2',
+                        ['in_progress', reservationId]
+                    );
+                    console.log('✅ 예약 상태를 수배중(in_progress)으로 변경');
+                    
+                    // 히스토리 저장
+                    try {
+                        await pool.query(`
+                            INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                            VALUES ($1, $2, $3, $4, $5, $6)
+                        `, [
+                            reservationId,
+                            '자동 수배 생성',
+                            'success',
+                            'system',
+                            JSON.stringify({ 
+                                payment_status: { from: 'pending', to: 'in_progress' },
+                                vendor_name: autoAssignment.vendor.vendor_name
+                            }),
+                            `수배업체 자동 매칭: ${autoAssignment.vendor.vendor_name}`
+                        ]);
+                    } catch (logError) {
+                        console.error('⚠️ 히스토리 저장 실패:', logError);
+                    }
+                }
+                
                 res.json({
                     success: true,
                     message: '예약이 성공적으로 저장되었습니다.',
                     reservation_id: reservationId,
                     auto_assignment: autoAssignment ? {
                         created: true,
-                        vendor: autoAssignment.vendor_name,
-                        assignment_id: autoAssignment.assignment_id
+                        vendor: autoAssignment.vendor.vendor_name,
+                        assignment_id: autoAssignment.assignment.id
                     } : {
                         created: false,
                         reason: '매칭되는 수배업체가 없습니다'
                     },
-                    workflow: 'reservation_saved'
+                    workflow: 'reservation_saved',
+                    redirect: '/admin/assignments' // 수배관리로 바로 이동
                 });
                 
             } catch (dbError) {
@@ -8101,23 +8131,25 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         const limit = 20;
         const offset = (page - 1) * limit;
         
-        // 수배관리 페이지: 수배중 + 확정 상태만 표시 (대기중 제외)
-        let whereClause = `WHERE r.payment_status IN ('in_progress', 'confirmed')`;
+        // 수배관리 페이지: 대기중(신규) + 수배중 + 확정 상태 표시
+        let whereClause = `WHERE r.payment_status IN ('pending', 'in_progress', 'confirmed', 'voucher_sent')`;
         const queryParams = [];
         let paramIndex = 0;
         
-        console.log('🔍 수배관리 필터: 수배중(in_progress) + 확정(confirmed) 상태만 표시');
+        console.log('🔍 수배관리 필터: 대기중(pending) + 수배중(in_progress) + 확정(confirmed) 상태 표시');
         
         console.log('🔍 수배관리 API 호출 - 필터:', { page, status, search });
         
         // 예약 상태 필터
         if (status) {
-            if (status === 'in_progress') {
-                whereClause += ` AND r.payment_status = 'in_progress'`;
+            if (status === 'pending') {
+                whereClause = `WHERE r.payment_status = 'pending'`;
+            } else if (status === 'in_progress') {
+                whereClause = `WHERE r.payment_status = 'in_progress'`;
             } else if (status === 'confirmed') {
-                whereClause += ` AND r.payment_status = 'confirmed'`;
+                whereClause = `WHERE r.payment_status = 'confirmed'`;
             } else if (status === 'voucher_sent') {
-                whereClause += ` AND r.payment_status = 'voucher_sent'`;
+                whereClause = `WHERE r.payment_status = 'voucher_sent'`;
             }
         }
         
@@ -8711,6 +8743,88 @@ app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
         res.json({
             success: true,
             data: []
+        });
+    }
+});
+
+// 수배서 전송 API
+app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.reservationId;
+        
+        console.log('📤 수배서 전송 요청:', reservationId);
+        
+        // 예약 정보 조회
+        const reservationResult = await pool.query(
+            'SELECT * FROM reservations WHERE id = $1',
+            [reservationId]
+        );
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = reservationResult.rows[0];
+        
+        // assignments 확인 및 업데이트
+        const assignmentResult = await pool.query(
+            'SELECT * FROM assignments WHERE reservation_id = $1',
+            [reservationId]
+        );
+        
+        if (assignmentResult.rows.length > 0) {
+            // 기존 assignment가 있으면 업데이트
+            await pool.query(`
+                UPDATE assignments 
+                SET status = 'sent', sent_at = NOW(), updated_at = NOW()
+                WHERE reservation_id = $1
+            `, [reservationId]);
+            console.log('✅ 기존 수배서 상태 업데이트: sent');
+        }
+        
+        // 예약 상태를 in_progress로 변경 (pending에서만)
+        const oldStatus = reservation.payment_status;
+        if (oldStatus === 'pending' || oldStatus === 'in_progress') {
+            await pool.query(
+                'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+                ['in_progress', reservationId]
+            );
+            console.log('✅ 예약 상태 변경: pending → in_progress');
+            
+            // 히스토리 저장
+            try {
+                await pool.query(`
+                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                `, [
+                    reservationId,
+                    '수배서 전송',
+                    'success',
+                    req.session?.username || '관리자',
+                    JSON.stringify({ 
+                        payment_status: { from: oldStatus, to: 'in_progress' },
+                        assignment_status: { from: 'pending', to: 'sent' }
+                    }),
+                    '수배서가 현지업체로 전송되었습니다.'
+                ]);
+            } catch (logError) {
+                console.error('⚠️ 히스토리 저장 실패:', logError);
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: '수배서가 성공적으로 전송되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 전송 중 오류가 발생했습니다: ' + error.message
         });
     }
 });

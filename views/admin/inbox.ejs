@@ -1152,7 +1152,10 @@
                     let successMessage = '✅ 예약이 저장되었습니다.';
                     
                     // 🏢 수배업체 매칭 정보 표시
-                    if (suggestedVendor) {
+                    if (result.auto_assignment && result.auto_assignment.created) {
+                        successMessage += `\n\n🎯 수배업체 자동 매칭:\n📍 ${result.auto_assignment.vendor}`;
+                        successMessage += '\n\n수배관리 페이지로 이동합니다...';
+                    } else if (suggestedVendor) {
                         successMessage += `\n\n🎯 수배업체 자동 매칭:\n📍 ${suggestedVendor.vendor_name}\n📧 ${suggestedVendor.email}\n👤 ${suggestedVendor.contact_person || '담당자 미등록'}`;
                         
                         // 수배업체 매칭 알림 표시
@@ -1161,6 +1164,11 @@
                     
                     alert(successMessage);
                     clearForm();
+                    
+                    // 수배관리 페이지로 리다이렉트
+                    setTimeout(() => {
+                        window.location.href = '/admin/assignments';
+                    }, 1000);
                 } else {
                     alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
                 }

@@ -26,6 +26,15 @@
         .tab-pane { padding-top:12px; }
         .copy-btn { white-space:nowrap; }
         
+        /* 신규 뱃지 애니메이션 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate__pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
         /* 상태별 배지 색상 */
         .status-pending { background-color: #6c757d !important; }
         .status-in-progress { background-color: #ffc107 !important; color: #000 !important; }
@@ -177,9 +186,10 @@
                         <label class="form-label">예약상태</label>
                         <select class="form-select" id="searchStatus">
                             <option value="">전체</option>
+                            <option value="pending">대기중(신규)</option>
                             <option value="in_progress">수배중</option>
-                            <option value="confirmed">확정</option>
-                            <option value="voucher_sent">바우처전송완료</option>
+                            <option value="confirmed">확정완료</option>
+                            <option value="voucher_sent">바우처전송</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -1170,9 +1180,14 @@
                     bootstrapClass: bootstrapClass
                 });
                 
+                // 신규예약 뱃지 추가
+                const isNewReservation = reservation.payment_status === 'pending';
+                const newBadge = isNewReservation ? '<span class="badge bg-danger ms-2 animate__animated animate__pulse animate__infinite" style="font-size: 0.7rem;">🆕 신규</span>' : '';
+                
                 return `
-                    <article class="row-card table-like">
+                    <article class="row-card table-like ${isNewReservation ? 'border-danger border-2' : ''}">
                         <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
+                        ${newBadge}
                         <div class="row-main">
                             <span><strong>${reservation.platform_name || '-'}</strong><span class="dim">(${reservation.korean_name || '-'})</span></span>
                             <span class="chip">${reservation.product_name || '-'}</span>
