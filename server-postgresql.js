@@ -9460,12 +9460,12 @@ app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
         const result = await pool.query(`
             SELECT 
                 id,
-                action,
-                type,
+                action as action_type,
+                type as action_type_kr,
                 changed_by,
                 changes,
-                details,
-                created_at as time
+                details as description,
+                created_at
             FROM reservation_logs
             WHERE reservation_id = $1
             ORDER BY created_at DESC
@@ -9475,7 +9475,7 @@ app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
         
         res.json({
             success: true,
-            data: result.rows
+            history: result.rows
         });
         
     } catch (error) {
@@ -9483,7 +9483,7 @@ app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
         // 테이블이 없는 경우 빈 배열 반환
         res.json({
             success: true,
-            data: []
+            history: []
         });
     }
 });
