@@ -83,7 +83,7 @@
                             </div>
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">상품명</label>
-                                <input type="text" class="form-control" id="product_name" name="product_name" onchange="matchVendorByProduct()">
+                                <input type="text" class="form-control" id="product_name" name="product_name" onchange="matchVendorByProductOnChange()">
                             </div>
                             <div class="col-md-4 mb-3">
                                 <label class="form-label">패키지 타입 (상품 옵션)</label>
@@ -1117,38 +1117,11 @@
             }
         }
 
-        // 상품명으로 수배업체 자동 매칭
-        async function matchVendorByProduct() {
+        // 상품명 입력 시 수배업체 자동 매칭 (이벤트 핸들러용)
+        async function matchVendorByProductOnChange() {
             const productName = document.getElementById('product_name').value;
-            const vendorSelect = document.getElementById('vendor_id');
-            const matchBadge = document.getElementById('vendor-match-badge');
-            
-            if (!productName) {
-                vendorSelect.value = '';
-                matchBadge.style.display = 'none';
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/vendors/match', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_name: productName })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.vendor) {
-                    vendorSelect.value = data.vendor.id;
-                    matchBadge.style.display = 'inline-block';
-                    console.log('✅ 수배업체 자동 매칭:', data.vendor.vendor_name);
-                } else {
-                    vendorSelect.value = '';
-                    matchBadge.style.display = 'none';
-                    console.log('⚠️ 매칭되는 수배업체 없음');
-                }
-            } catch (error) {
-                console.error('❌ 수배업체 매칭 실패:', error);
+            if (productName && productName.trim() !== '') {
+                await matchVendorByProduct(productName);
             }
         }
 
@@ -1177,31 +1150,7 @@
                 }
             });
 
-            // 수배업체 자동 매칭
-            let suggestedVendor = null;
-            if (formData.product_name) {
-                try {
-                    const matchResponse = await fetch('/api/vendors/match', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            product_name: formData.product_name
-                        })
-                    });
-                    
-                    if (matchResponse.ok) {
-                        const matchData = await matchResponse.json();
-                        if (matchData.success && matchData.matches.length > 0) {
-                            suggestedVendor = matchData.matches[0]; // 첫 번째 매칭 업체 선택
-                            console.log('수배업체 자동 매칭:', suggestedVendor);
-                        }
-                    }
-                } catch (error) {
-                    console.error('수배업체 매칭 실패:', error);
-                }
-            }
+            // ✅ 수배업체는 파싱 미리보기에서 이미 선택됨 (중복 매칭 제거)
 
             // 필드명을 DB 스키마에 맞게 매핑
             const mappedData = {
@@ -1243,25 +1192,24 @@
                 const result = await response.json();
                 
                 if (result.success || response.ok) {
+                    // ✅ 저장 결과에 따라 메시지 표시
                     let successMessage = '✅ 예약이 저장되었습니다.';
+                    let redirectPage = '/admin/reservations'; // 기본: 예약관리
                     
-                    // 🏢 수배업체 매칭 정보 표시
-                    if (result.auto_assignment && result.auto_assignment.created) {
-                        successMessage += `\n\n🎯 수배업체 자동 매칭:\n📍 ${result.auto_assignment.vendor}`;
-                        successMessage += '\n\n수배관리 페이지로 이동합니다...';
-                    } else if (suggestedVendor) {
-                        successMessage += `\n\n🎯 수배업체 자동 매칭:\n📍 ${suggestedVendor.vendor_name}\n📧 ${suggestedVendor.email}\n👤 ${suggestedVendor.contact_person || '담당자 미등록'}`;
-                        
-                        // 수배업체 매칭 알림 표시
-                        showRuleNotification(`🏢 수배업체 매칭: ${suggestedVendor.vendor_name} (키워드: ${suggestedVendor.matched_keyword})`);
+                    // vendor_id가 있으면 수배관리로, 없으면 예약관리로
+                    if (formData.vendor_id && formData.vendor_id !== '') {
+                        successMessage += '\n\n🎯 수배서가 생성되었습니다.\n수배관리 페이지로 이동합니다...';
+                        redirectPage = '/admin/assignments';
+                    } else {
+                        successMessage += '\n\n⚠️ 수배업체 미지정\n예약관리 페이지로 이동합니다.';
                     }
                     
                     alert(successMessage);
                     clearForm();
                     
-                    // 수배관리 페이지로 리다이렉트
+                    // 해당 페이지로 리다이렉트
                     setTimeout(() => {
-                        window.location.href = '/admin/assignments';
+                        window.location.href = redirectPage;
                     }, 1000);
                 } else {
                     alert('저장 실패: ' + (result.message || '알 수 없는 오류'));
@@ -1358,11 +1306,14 @@
             }
         }
 
-        // 수배업체 자동 매칭 함수
+        // 파싱 시 수배업체 자동 매칭 (파싱 미리보기용)
         async function matchVendorByProduct(productName) {
             if (!productName || productName.trim() === '') {
                 return;
             }
+            
+            const vendorSelect = document.getElementById('vendor_id');
+            const matchBadge = document.getElementById('vendor-match-badge');
             
             try {
                 console.log(`🔍 수배업체 매칭 시도: "${productName}"`);
@@ -1379,30 +1330,32 @@
                 
                 const result = await response.json();
                 
-                if (result.success && result.matched) {
+                if (result.success && result.vendor) {
                     const vendor = result.vendor;
-                    const matchType = vendor.match_type === 'exact' ? '정확히 일치' : '키워드 포함';
+                    
+                    // 수배업체 선택
+                    vendorSelect.value = vendor.id;
+                    matchBadge.style.display = 'inline-block';
                     
                     console.log(`✅ 수배업체 매칭 성공: ${vendor.vendor_name}`);
                     
                     // 매칭 결과 알림 표시
                     showRuleNotification(
-                        `🎯 수배업체 자동 매칭: ${vendor.vendor_name} (${matchType}: "${vendor.matched_keyword}")`
+                        `🎯 수배업체 자동 매칭: ${vendor.vendor_name} (키워드: "${result.matched_keyword}")`
                     );
                     
-                    // 대안 업체가 있는 경우 추가 정보 표시
-                    if (result.alternatives && result.alternatives.length > 0) {
-                        const altNames = result.alternatives.map(alt => alt.vendor_name).join(', ');
-                        console.log(`📋 대안 수배업체: ${altNames}`);
-                    }
-                    
-                } else if (result.success && !result.matched) {
-                    console.log(`❌ 매칭되는 수배업체 없음: "${productName}"`);
+                } else {
+                    // 매칭 실패
+                    vendorSelect.value = '';
+                    matchBadge.style.display = 'none';
+                    console.log(`⚠️ 매칭되는 수배업체 없음: "${productName}"`);
                     showRuleNotification(`❓ "${productName}" 상품에 매칭되는 수배업체가 없습니다.`);
                 }
                 
             } catch (error) {
-                console.error('수배업체 매칭 오류:', error);
+                console.error('❌ 수배업체 매칭 오류:', error);
+                vendorSelect.value = '';
+                matchBadge.style.display = 'none';
             }
         }
 
