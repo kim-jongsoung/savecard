@@ -1,0 +1,60 @@
+# ==============================================
+# SMTP 이메일 설정 가이드
+# ==============================================
+# 
+# 이 설정을 .env 파일이나 Railway 환경변수에 추가하세요
+#
+# ==============================================
+
+# SMTP 서버 설정
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+
+# 서버 Base URL
+BASE_URL=https://www.guamsavecard.com
+
+# OpenAI API Key (AI 문구 생성용)
+OPENAI_API_KEY=your-openai-api-key
+
+# ==============================================
+# Gmail 사용 시 설정 방법
+# ==============================================
+# 
+# 1. Gmail 2단계 인증 활성화
+# 2. "앱 비밀번호" 생성
+#    - Google 계정 관리 > 보안 > 2단계 인증 > 앱 비밀번호
+#    - "메일" 앱, "기타 기기" 선택
+#    - 생성된 16자리 비밀번호를 SMTP_PASS에 입력
+#
+# ==============================================
+# 다른 SMTP 서버 예시
+# ==============================================
+#
+# Naver:
+# SMTP_HOST=smtp.naver.com
+# SMTP_PORT=587
+# SMTP_SECURE=false
+#
+# Daum:
+# SMTP_HOST=smtp.daum.net
+# SMTP_PORT=465
+# SMTP_SECURE=true
+#
+# Office 365:
+# SMTP_HOST=smtp.office365.com
+# SMTP_PORT=587
+# SMTP_SECURE=false
+#
+# ==============================================
+# Railway 배포 시
+# ==============================================
+#
+# Railway 대시보드에서:
+# Settings > Variables > Add Variable
+#
+# 위의 환경변수들을 하나씩 추가하세요
+#
+# ==============================================

@@ -7575,22 +7575,66 @@ app.post('/api/assignments/:reservationId/save', requireAuth, async (req, res) =
     }
 });
 
-// 수배서 전송 API
+// 수배서 전송 API (이메일 발송 포함)
 app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) => {
     try {
         const { reservationId } = req.params;
-        console.log('📤 수배서 전송 요청:', reservationId);
+        const { sendEmail } = req.body; // 이메일 발송 여부
         
-        // 수배서 조회
-        const assignment = await pool.query(`
-            SELECT * FROM assignments WHERE reservation_id = $1
-        `, [reservationId]);
+        console.log('📤 수배서 전송 요청:', reservationId, '이메일 발송:', sendEmail);
         
-        if (assignment.rows.length === 0) {
+        // 수배서와 예약 정보 함께 조회
+        const query = `
+            SELECT 
+                a.*,
+                r.reservation_number,
+                r.product_name,
+                r.korean_name as customer_name,
+                r.usage_date,
+                r.people_adult as adult_count,
+                r.people_child as child_count,
+                v.email as vendor_email,
+                v.vendor_name
+            FROM assignments a
+            JOIN reservations r ON a.reservation_id = r.id
+            LEFT JOIN vendors v ON a.vendor_id = v.id
+            WHERE a.reservation_id = $1
+        `;
+        
+        const result = await pool.query(query, [reservationId]);
+        
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: '수배서를 찾을 수 없습니다'
             });
+        }
+        
+        const assignmentData = result.rows[0];
+        
+        // 이메일 발송 (선택적)
+        let emailResult = null;
+        if (sendEmail && assignmentData.vendor_email) {
+            const { sendAssignmentEmail } = require('./utils/emailSender');
+            
+            emailResult = await sendAssignmentEmail(
+                {
+                    assignment_token: assignmentData.assignment_token,
+                    reservation_number: assignmentData.reservation_number,
+                    product_name: assignmentData.product_name,
+                    customer_name: assignmentData.customer_name,
+                    usage_date: assignmentData.usage_date,
+                    adult_count: assignmentData.adult_count,
+                    child_count: assignmentData.child_count
+                },
+                assignmentData.vendor_email
+            );
+            
+            if (emailResult.success) {
+                console.log('✅ 이메일 발송 완료:', assignmentData.vendor_email);
+            } else {
+                console.error('❌ 이메일 발송 실패:', emailResult.error);
+            }
         }
         
         // 전송 시간 업데이트
@@ -7600,9 +7644,29 @@ app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) =
             WHERE reservation_id = $1
         `, [reservationId]);
         
+        // 히스토리 기록
+        const adminName = req.session.adminName || req.session.adminUsername || '시스템';
+        await logHistory(
+            reservationId,
+            '수배',
+            '전송',
+            adminName,
+            `수배서가 ${assignmentData.vendor_name || '수배업체'}에게 전송되었습니다.${emailResult && emailResult.success ? ' (이메일 발송 완료)' : ''}`,
+            null,
+            {
+                vendor_email: assignmentData.vendor_email,
+                email_sent: emailResult ? emailResult.success : false,
+                assignment_link: emailResult ? emailResult.assignmentLink : null
+            }
+        );
+        
         res.json({
             success: true,
-            message: '수배서가 전송되었습니다'
+            message: emailResult && emailResult.success 
+                ? '수배서가 전송되었으며 이메일이 발송되었습니다' 
+                : '수배서가 전송되었습니다',
+            emailSent: emailResult ? emailResult.success : false,
+            recipientEmail: assignmentData.vendor_email
         });
         
     } catch (error) {

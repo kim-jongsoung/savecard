@@ -541,8 +541,8 @@
                                 <button class="btn btn-outline-primary" onclick="previewAssignment()">
                                     <i class="bi bi-eye me-1"></i>수배서 미리보기
                                 </button>
-                                <button class="btn btn-outline-success" onclick="sendAssignment()">
-                                    <i class="bi bi-send me-1"></i>수배서 전송
+                                <button class="btn btn-success" onclick="sendAssignmentWithEmail()">
+                                    <i class="bi bi-envelope me-1"></i>이메일로 수배서 전송
                                 </button>
                                 <button class="btn btn-outline-info" onclick="copyAssignmentLink()">
                                     <i class="bi bi-link-45deg me-1"></i>링크 복사 (카톡 전송용)
@@ -1205,11 +1205,59 @@
             showAlert('수배서 수정 기능은 준비 중입니다.', 'info');
         }
 
-        // 수배서 전송
-        function sendAssignment() {
-            showAlert('수배서가 전송되었습니다.', 'success');
+        // 수배서 전송 (이메일 포함)
+        async function sendAssignmentWithEmail() {
+            const reservation = window.currentReservation;
+            if (!reservation) {
+                alert('예약 정보를 찾을 수 없습니다.');
+                return;
+            }
+            
+            // 수배서 생성 여부 확인
+            if (!reservation.assignment_token) {
+                alert('수배서를 먼저 생성해주세요.');
+                return;
+            }
+            
+            // 확인 메시지
+            const vendorEmail = reservation.vendor_email || '미등록';
+            const confirmMessage = `수배업체 이메일로 수배서를 전송하시겠습니까?\n\n수신자: ${vendorEmail}\n\n• AI가 정중한 이메일 문구를 자동 생성합니다\n• 수배서 링크가 포함됩니다\n• 이메일 발송 후 전송 상태가 업데이트됩니다`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/assignments/${reservation.id}/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sendEmail: true
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.emailSent) {
+                        alert(`✅ 수배서가 이메일로 전송되었습니다!\n\n수신자: ${result.recipientEmail}\n\n수배업체가 이메일을 확인하면 열람 통계에서 확인할 수 있습니다.`);
+                    } else {
+                        alert(`⚠️ ${result.message}\n\n이메일이 발송되지 않았습니다. 수배업체 이메일을 확인해주세요.`);
+                    }
+                    
+                    // 목록 새로고침
+                    loadReservations();
+                } else {
+                    alert('수배서 전송 실패: ' + result.message);
+                }
+                
+            } catch (error) {
+                console.error('수배서 전송 오류:', error);
+                alert('수배서 전송 중 오류가 발생했습니다: ' + error.message);
+            }
         }
-
 
         // 수배서 다운로드
         function downloadAssignment() {
