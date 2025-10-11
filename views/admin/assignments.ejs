@@ -1213,15 +1213,28 @@
                 return;
             }
             
+            console.log('📧 수배서 이메일 전송 시작');
+            console.log('📋 예약 정보:', reservation);
+            console.log('📧 vendor_email:', reservation.vendor_email);
+            console.log('🏢 vendor_name:', reservation.vendor_name);
+            console.log('🆔 vendor_id:', reservation.vendor_id);
+            
             // 수배서 생성 여부 확인
             if (!reservation.assignment_token) {
                 alert('수배서를 먼저 생성해주세요.');
                 return;
             }
             
+            // 수배업체 이메일 확인
+            const vendorEmail = reservation.vendor_email || '';
+            
+            if (!vendorEmail || vendorEmail.trim() === '') {
+                alert(`❌ 수배업체 이메일이 등록되어 있지 않습니다.\n\n수배업체: ${reservation.vendor_name || '미지정'}\n\n[설정 > 수배업체 관리]에서 이메일을 등록해주세요.`);
+                return;
+            }
+            
             // 확인 메시지
-            const vendorEmail = reservation.vendor_email || '미등록';
-            const confirmMessage = `수배업체 이메일로 수배서를 전송하시겠습니까?\n\n수신자: ${vendorEmail}\n\n• AI가 정중한 이메일 문구를 자동 생성합니다\n• 수배서 링크가 포함됩니다\n• 이메일 발송 후 전송 상태가 업데이트됩니다`;
+            const confirmMessage = `수배업체 이메일로 수배서를 전송하시겠습니까?\n\n수신자: ${vendorEmail}\n업체명: ${reservation.vendor_name || '미지정'}\n\n• AI가 정중한 이메일 문구를 자동 생성합니다\n• 수배서 링크가 포함됩니다\n• 이메일 발송 후 전송 상태가 업데이트됩니다`;
             
             if (!confirm(confirmMessage)) {
                 return;
@@ -1243,12 +1256,11 @@
                 if (result.success) {
                     if (result.emailSent) {
                         alert(`✅ 수배서가 이메일로 전송되었습니다!\n\n수신자: ${result.recipientEmail}\n\n수배업체가 이메일을 확인하면 열람 통계에서 확인할 수 있습니다.`);
+                        // 목록 새로고침
+                        loadAssignments(currentPage);
                     } else {
                         alert(`⚠️ ${result.message}\n\n이메일이 발송되지 않았습니다. 수배업체 이메일을 확인해주세요.`);
                     }
-                    
-                    // 목록 새로고침
-                    loadReservations();
                 } else {
                     alert('수배서 전송 실패: ' + result.message);
                 }
