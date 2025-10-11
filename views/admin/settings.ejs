@@ -130,6 +130,11 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="staff-tab" data-bs-toggle="pill" data-bs-target="#staff" type="button" role="tab">
+                        <i class="fas fa-users me-2"></i>직원 계정 관리
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="notifications-tab" data-bs-toggle="pill" data-bs-target="#notifications" type="button" role="tab">
                         <i class="fas fa-bell me-2"></i>알림 설정
                     </button>
@@ -167,6 +172,34 @@
                                 <span class="visually-hidden">로딩중...</span>
                             </div>
                             <p class="mt-3 text-muted">수배업체 목록을 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 직원 계정 관리 탭 -->
+            <div class="tab-pane fade" id="staff" role="tabpanel">
+                <div class="settings-content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4><i class="fas fa-users me-2"></i>직원 계정 관리</h4>
+                            <p class="text-muted mb-0">시스템에 접근할 수 있는 직원 계정을 관리합니다.</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openStaffModal()">
+                            <i class="fas fa-plus me-2"></i>직원 등록
+                        </button>
+                    </div>
+
+                    <!-- 알림 영역 -->
+                    <div id="staffAlertArea"></div>
+
+                    <!-- 직원 목록 -->
+                    <div id="staffList">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">로딩중...</span>
+                            </div>
+                            <p class="mt-3 text-muted">직원 목록을 불러오는 중...</p>
                         </div>
                     </div>
                 </div>
@@ -319,14 +352,83 @@
         </div>
     </div>
 
+    <!-- 직원 등록/수정 모달 -->
+    <div class="modal fade" id="staffModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="staffModalTitle">직원 등록</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="staffForm">
+                        <input type="hidden" id="staffId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">아이디 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="staff_username" required>
+                            <div class="form-text">로그인 시 사용할 아이디</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">비밀번호 <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="staff_password">
+                            <div class="form-text" id="staffPasswordHelp">수정 시에는 변경할 경우에만 입력</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">이름 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="staff_full_name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">이메일</label>
+                            <input type="email" class="form-control" id="staff_email">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">전화번호</label>
+                            <input type="tel" class="form-control" id="staff_phone">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">권한</label>
+                            <select class="form-select" id="staff_role">
+                                <option value="staff">일반 직원</option>
+                                <option value="manager">매니저</option>
+                                <option value="admin">관리자</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="staff_is_active" checked>
+                            <label class="form-check-label" for="staff_is_active">
+                                계정 활성화
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="saveStaff()">
+                        <i class="fas fa-save me-1"></i>저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let vendors = [];
         let editingVendorId = null;
+        let staffList = [];
+        let editingStaffId = null;
 
-        // 페이지 로드시 수배업체 목록 가져오기
+        // 페이지 로드시 수배업체 및 직원 목록 가져오기
         document.addEventListener('DOMContentLoaded', function() {
             loadVendors();
+            loadStaff();
         });
 
         // 수배업체 목록 로드
@@ -619,8 +721,8 @@
         }
 
         // 알림 표시
-        function showAlert(type, message) {
-            const alertArea = document.getElementById('alertArea');
+        function showAlert(type, message, targetArea = 'alertArea') {
+            const alertArea = document.getElementById(targetArea);
             const alertId = 'alert-' + Date.now();
             
             alertArea.innerHTML = `
@@ -638,6 +740,231 @@
                     bootstrap.Alert.getOrCreateInstance(alert).close();
                 }
             }, 5000);
+        }
+
+        // ==================== 직원 관리 기능 ====================
+
+        // 직원 목록 로드
+        async function loadStaff() {
+            try {
+                const response = await fetch('/api/admin-users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    staffList = data.users;
+                    renderStaff();
+                } else {
+                    showAlert('danger', '직원 목록을 불러오는데 실패했습니다.', 'staffAlertArea');
+                }
+            } catch (error) {
+                console.error('직원 목록 로드 실패:', error);
+                showAlert('danger', '직원 목록을 불러오는데 실패했습니다.', 'staffAlertArea');
+            }
+        }
+
+        // 직원 목록 렌더링
+        function renderStaff() {
+            const staffListEl = document.getElementById('staffList');
+            
+            if (staffList.length === 0) {
+                staffListEl.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">등록된 직원이 없습니다</h5>
+                        <p class="text-muted">첫 번째 직원을 등록해보세요.</p>
+                        <button class="btn btn-primary" onclick="openStaffModal()">
+                            <i class="fas fa-plus me-2"></i>직원 등록
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            const getRoleBadge = (role) => {
+                const roles = {
+                    'admin': { class: 'danger', text: '관리자' },
+                    'manager': { class: 'warning', text: '매니저' },
+                    'staff': { class: 'info', text: '일반직원' }
+                };
+                const roleInfo = roles[role] || roles['staff'];
+                return `<span class="badge bg-${roleInfo.class}">${roleInfo.text}</span>`;
+            };
+
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '-';
+                return new Date(dateStr).toLocaleString('ko-KR');
+            };
+
+            staffListEl.innerHTML = staffList.map(staff => `
+                <div class="vendor-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-3">${staff.full_name}</h5>
+                                ${getRoleBadge(staff.role)}
+                                <span class="vendor-status ms-2 ${staff.is_active ? 'vendor-active' : 'vendor-inactive'}">
+                                    ${staff.is_active ? '활성' : '비활성'}
+                                </span>
+                            </div>
+                            <div class="text-muted mb-2">
+                                <i class="fas fa-user me-1"></i>아이디: ${staff.username}
+                                ${staff.email ? `<i class="fas fa-envelope ms-3 me-1"></i>${staff.email}` : ''}
+                                ${staff.phone ? `<i class="fas fa-phone ms-3 me-1"></i>${staff.phone}` : ''}
+                            </div>
+                            <div class="text-muted small">
+                                <i class="fas fa-calendar me-1"></i>등록일: ${formatDate(staff.created_at)}
+                                ${staff.last_login ? `<i class="fas fa-clock ms-3 me-1"></i>마지막 로그인: ${formatDate(staff.last_login)}` : ''}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-outline-primary btn-sm me-2" onclick="editStaff(${staff.id})">
+                                <i class="fas fa-edit me-1"></i>수정
+                            </button>
+                            ${staff.username !== 'admin' ? `
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteStaff(${staff.id}, '${staff.full_name}')">
+                                    <i class="fas fa-trash me-1"></i>삭제
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 직원 등록 모달 열기
+        function openStaffModal(staffId = null) {
+            editingStaffId = staffId;
+            const modal = new bootstrap.Modal(document.getElementById('staffModal'));
+            const title = document.getElementById('staffModalTitle');
+            const passwordHelp = document.getElementById('staffPasswordHelp');
+            const passwordInput = document.getElementById('staff_password');
+            const usernameInput = document.getElementById('staff_username');
+            
+            if (staffId) {
+                title.textContent = '직원 수정';
+                passwordHelp.style.display = 'block';
+                passwordInput.removeAttribute('required');
+                usernameInput.setAttribute('readonly', true);
+                loadStaffForEdit(staffId);
+            } else {
+                title.textContent = '직원 등록';
+                passwordHelp.style.display = 'none';
+                passwordInput.setAttribute('required', true);
+                usernameInput.removeAttribute('readonly');
+                document.getElementById('staffForm').reset();
+                document.getElementById('staffId').value = '';
+                document.getElementById('staff_is_active').checked = true;
+            }
+            
+            modal.show();
+        }
+
+        // 직원 정보 로드 (수정용)
+        async function loadStaffForEdit(staffId) {
+            const staff = staffList.find(s => s.id === staffId);
+            if (staff) {
+                document.getElementById('staffId').value = staff.id;
+                document.getElementById('staff_username').value = staff.username;
+                document.getElementById('staff_full_name').value = staff.full_name;
+                document.getElementById('staff_email').value = staff.email || '';
+                document.getElementById('staff_phone').value = staff.phone || '';
+                document.getElementById('staff_role').value = staff.role;
+                document.getElementById('staff_is_active').checked = staff.is_active;
+            }
+        }
+
+        // 직원 저장
+        async function saveStaff() {
+            const staffId = document.getElementById('staffId').value;
+            const username = document.getElementById('staff_username').value.trim();
+            const password = document.getElementById('staff_password').value;
+            const full_name = document.getElementById('staff_full_name').value.trim();
+            const email = document.getElementById('staff_email').value.trim();
+            const phone = document.getElementById('staff_phone').value.trim();
+            const role = document.getElementById('staff_role').value;
+            const is_active = document.getElementById('staff_is_active').checked;
+
+            // 필수 필드 검증
+            if (!username || !full_name) {
+                showAlert('danger', '아이디와 이름은 필수입니다.', 'staffAlertArea');
+                return;
+            }
+
+            if (!staffId && !password) {
+                showAlert('danger', '비밀번호는 필수입니다.', 'staffAlertArea');
+                return;
+            }
+
+            const staffData = {
+                username,
+                full_name,
+                email,
+                phone,
+                role,
+                is_active
+            };
+
+            if (password) {
+                staffData.password = password;
+            }
+
+            try {
+                const url = staffId ? `/api/admin-users/${staffId}` : '/api/admin-users';
+                const method = staffId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(staffData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', data.message, 'staffAlertArea');
+                    bootstrap.Modal.getInstance(document.getElementById('staffModal')).hide();
+                    loadStaff();
+                } else {
+                    showAlert('danger', data.message, 'staffAlertArea');
+                }
+                
+            } catch (error) {
+                console.error('직원 저장 실패:', error);
+                showAlert('danger', '직원 저장에 실패했습니다.', 'staffAlertArea');
+            }
+        }
+
+        // 직원 수정
+        function editStaff(staffId) {
+            openStaffModal(staffId);
+        }
+
+        // 직원 삭제
+        async function deleteStaff(staffId, staffName) {
+            if (!confirm(`'${staffName}' 직원을 정말 삭제하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin-users/${staffId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('success', data.message, 'staffAlertArea');
+                    loadStaff();
+                } else {
+                    showAlert('danger', data.message, 'staffAlertArea');
+                }
+                
+            } catch (error) {
+                console.error('직원 삭제 실패:', error);
+                showAlert('danger', '직원 삭제에 실패했습니다.', 'staffAlertArea');
+            }
         }
     </script>
 </body>

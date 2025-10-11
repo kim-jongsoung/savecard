@@ -370,6 +370,47 @@ async function initializeDatabase() {
           console.log('⚠️ reservation_logs 테이블 생성/마이그레이션 중 오류:', logError.message);
         }
         
+        // admin_users 테이블 생성 (직원 계정 관리)
+        try {
+          console.log('👥 관리자 계정 테이블 생성 시작...');
+          
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS admin_users (
+              id SERIAL PRIMARY KEY,
+              username VARCHAR(50) NOT NULL UNIQUE,
+              password_hash VARCHAR(255) NOT NULL,
+              full_name VARCHAR(100) NOT NULL,
+              email VARCHAR(100),
+              phone VARCHAR(20),
+              role VARCHAR(20) DEFAULT 'staff',
+              is_active BOOLEAN DEFAULT true,
+              last_login TIMESTAMP,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          console.log('✅ admin_users 테이블 생성 완료');
+          
+          // 기본 관리자 계정 생성 (없는 경우)
+          const checkAdmin = await pool.query(
+            'SELECT * FROM admin_users WHERE username = $1',
+            ['admin']
+          );
+          
+          if (checkAdmin.rows.length === 0) {
+            const bcrypt = require('bcrypt');
+            const defaultPassword = await bcrypt.hash('admin1234', 10);
+            await pool.query(`
+              INSERT INTO admin_users (username, password_hash, full_name, role)
+              VALUES ($1, $2, $3, $4)
+            `, ['admin', defaultPassword, '기본 관리자', 'admin']);
+            console.log('✅ 기본 관리자 계정 생성 완료 (admin / admin1234)');
+          }
+          
+        } catch (adminError) {
+          console.log('⚠️ admin_users 테이블 생성 중 오류:', adminError.message);
+        }
+        
         // 기존 테이블에 누락된 컬럼 추가
         await migrateReservationsSchema();
         
@@ -8767,6 +8808,210 @@ app.post('/api/vendors/match', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '수배업체 매칭 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// ==================== 관리자 직원 계정 관리 API ====================
+
+// 직원 목록 조회
+app.get('/api/admin-users', requireAuth, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, username, full_name, email, phone, role, is_active, last_login, created_at
+            FROM admin_users
+            ORDER BY created_at DESC
+        `);
+        
+        res.json({
+            success: true,
+            users: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 직원 목록 조회 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '직원 목록 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 직원 등록
+app.post('/api/admin-users', requireAuth, async (req, res) => {
+    try {
+        const { username, password, full_name, email, phone, role } = req.body;
+        
+        // 필수 필드 검증
+        if (!username || !password || !full_name) {
+            return res.status(400).json({
+                success: false,
+                message: '아이디, 비밀번호, 이름은 필수입니다.'
+            });
+        }
+        
+        // 중복 아이디 체크
+        const checkUser = await pool.query(
+            'SELECT * FROM admin_users WHERE username = $1',
+            [username]
+        );
+        
+        if (checkUser.rows.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: '이미 사용 중인 아이디입니다.'
+            });
+        }
+        
+        // 비밀번호 해시
+        const bcrypt = require('bcrypt');
+        const password_hash = await bcrypt.hash(password, 10);
+        
+        // 직원 등록
+        const result = await pool.query(`
+            INSERT INTO admin_users (username, password_hash, full_name, email, phone, role)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, username, full_name, email, phone, role, is_active, created_at
+        `, [username, password_hash, full_name, email || null, phone || null, role || 'staff']);
+        
+        console.log('✅ 직원 등록 완료:', username);
+        
+        res.json({
+            success: true,
+            message: '직원이 등록되었습니다.',
+            user: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 직원 등록 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '직원 등록 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 직원 수정
+app.put('/api/admin-users/:id', requireAuth, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { full_name, email, phone, role, is_active, password } = req.body;
+        
+        // 업데이트할 필드 동적 생성
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+        
+        if (full_name !== undefined) {
+            updates.push(`full_name = $${paramIndex++}`);
+            values.push(full_name);
+        }
+        if (email !== undefined) {
+            updates.push(`email = $${paramIndex++}`);
+            values.push(email || null);
+        }
+        if (phone !== undefined) {
+            updates.push(`phone = $${paramIndex++}`);
+            values.push(phone || null);
+        }
+        if (role !== undefined) {
+            updates.push(`role = $${paramIndex++}`);
+            values.push(role);
+        }
+        if (is_active !== undefined) {
+            updates.push(`is_active = $${paramIndex++}`);
+            values.push(is_active);
+        }
+        
+        // 비밀번호 변경 (선택사항)
+        if (password && password.trim() !== '') {
+            const bcrypt = require('bcrypt');
+            const password_hash = await bcrypt.hash(password, 10);
+            updates.push(`password_hash = $${paramIndex++}`);
+            values.push(password_hash);
+        }
+        
+        if (updates.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '수정할 내용이 없습니다.'
+            });
+        }
+        
+        updates.push(`updated_at = NOW()`);
+        values.push(userId);
+        
+        const query = `
+            UPDATE admin_users 
+            SET ${updates.join(', ')}
+            WHERE id = $${paramIndex}
+            RETURNING id, username, full_name, email, phone, role, is_active, updated_at
+        `;
+        
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '직원을 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log('✅ 직원 정보 수정 완료:', result.rows[0].username);
+        
+        res.json({
+            success: true,
+            message: '직원 정보가 수정되었습니다.',
+            user: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 직원 수정 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '직원 수정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 직원 삭제
+app.delete('/api/admin-users/:id', requireAuth, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        // admin 계정은 삭제 불가
+        const checkAdmin = await pool.query(
+            'SELECT username FROM admin_users WHERE id = $1',
+            [userId]
+        );
+        
+        if (checkAdmin.rows.length > 0 && checkAdmin.rows[0].username === 'admin') {
+            return res.status(400).json({
+                success: false,
+                message: '기본 관리자 계정은 삭제할 수 없습니다.'
+            });
+        }
+        
+        const result = await pool.query(
+            'DELETE FROM admin_users WHERE id = $1 RETURNING username',
+            [userId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '직원을 찾을 수 없습니다.'
+            });
+        }
+        
+        console.log('✅ 직원 삭제 완료:', result.rows[0].username);
+        
+        res.json({
+            success: true,
+            message: '직원이 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('❌ 직원 삭제 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '직원 삭제 중 오류가 발생했습니다: ' + error.message
         });
     }
 });
