@@ -398,7 +398,7 @@ async function initializeDatabase() {
           );
           
           if (checkAdmin.rows.length === 0) {
-            const bcrypt = require('bcrypt');
+            const bcrypt = require('bcryptjs');
             const defaultPassword = await bcrypt.hash('admin1234', 10);
             await pool.query(`
               INSERT INTO admin_users (username, password_hash, full_name, role)
@@ -8227,7 +8227,7 @@ app.post('/api/vendors', requireAuth, async (req, res) => {
         }
         
         // 비밀번호 해싱
-        const bcrypt = require('bcrypt');
+        const bcrypt = require('bcryptjs');
         const password_hash = await bcrypt.hash(password, 10);
         
         // 수배업체 등록
@@ -8302,7 +8302,7 @@ app.put('/api/vendors/:vendorId', requireAuth, async (req, res) => {
         
         // 비밀번호 변경 여부 확인
         if (password && password.trim() !== '') {
-            const bcrypt = require('bcrypt');
+            const bcrypt = require('bcryptjs');
             const password_hash = await bcrypt.hash(password, 10);
             
             updateQuery = `
@@ -8863,7 +8863,7 @@ app.post('/api/admin-users', requireAuth, async (req, res) => {
         }
         
         // 비밀번호 해시
-        const bcrypt = require('bcrypt');
+        const bcrypt = require('bcryptjs');
         const password_hash = await bcrypt.hash(password, 10);
         
         // 직원 등록
@@ -8923,7 +8923,7 @@ app.put('/api/admin-users/:id', requireAuth, async (req, res) => {
         
         // 비밀번호 변경 (선택사항)
         if (password && password.trim() !== '') {
-            const bcrypt = require('bcrypt');
+            const bcrypt = require('bcryptjs');
             const password_hash = await bcrypt.hash(password, 10);
             updates.push(`password_hash = $${paramIndex++}`);
             values.push(password_hash);
