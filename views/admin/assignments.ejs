@@ -480,7 +480,7 @@
                 <div class="modal-body">
                     <div class="card">
                         <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 상태</h6>
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 정보</h6>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
@@ -489,9 +489,9 @@
                                     <div class="fw-bold" id="assignment-number">-</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">수배 상태</label>
-                                    <div id="assignment-status">
-                                        <span class="badge bg-warning">대기중</span>
+                                    <label class="form-label">이메일 전송 상태</label>
+                                    <div id="assignment-email-status">
+                                        <span class="badge bg-secondary">미전송</span>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -2639,16 +2639,25 @@
                         console.error('❌ assignment-platform 요소를 찾을 수 없습니다');
                     }
                     
-                    // 열람 현황 표시
+                    // 이메일 전송 상태 표시
+                    const emailStatusElement = document.getElementById('assignment-email-status');
+                    if (emailStatusElement) {
+                        if (assignment.sent_at) {
+                            const sentTime = formatDateTime(assignment.sent_at);
+                            emailStatusElement.innerHTML = `<span class="badge bg-success"><i class="bi bi-envelope-check me-1"></i>전송됨</span><br><small class="text-muted">${sentTime}</small>`;
+                        } else {
+                            emailStatusElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-envelope-x me-1"></i>미전송</span>';
+                        }
+                    }
+                    
+                    // 열람 현황 표시 (이메일/카톡 링크 열람 여부)
                     const viewsElement = document.getElementById('assignment-views');
                     if (viewsElement) {
                         if (assignment.viewed_at) {
                             const viewedTime = formatDateTime(assignment.viewed_at);
-                            viewsElement.innerHTML = `<span class="badge bg-success"><i class="bi bi-eye me-1"></i>열람됨</span><br><small class="text-muted">${viewedTime}</small>`;
-                        } else if (assignment.sent_at) {
-                            viewsElement.innerHTML = '<span class="badge bg-warning"><i class="bi bi-clock me-1"></i>전송됨 (미열람)</span>';
+                            viewsElement.innerHTML = `<span class="badge bg-primary"><i class="bi bi-eye-fill me-1"></i>열람</span><br><small class="text-muted">${viewedTime}</small>`;
                         } else {
-                            viewsElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-dash-circle me-1"></i>미전송</span>';
+                            viewsElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-eye-slash me-1"></i>미열람</span>';
                         }
                     }
                     
@@ -2665,10 +2674,12 @@
                     const notesElement = document.getElementById('assignment-notes');
                     if (notesElement) notesElement.textContent = assignment.notes || '-';
                     
-                    // 수배 상태 배지
+                    // 기존 수배 상태 요소가 있다면 업데이트 (하위 호환성)
                     const statusElement = document.getElementById('assignment-status');
-                    const statusBadge = getAssignmentStatusBadge(assignment.status);
-                    statusElement.innerHTML = statusBadge;
+                    if (statusElement) {
+                        const statusBadge = getAssignmentStatusBadge(assignment.status);
+                        statusElement.innerHTML = statusBadge;
+                    }
                     
                     // 링크 상태
                     const linkStatusElement = document.getElementById('assignment-link-status');
@@ -2688,16 +2699,46 @@
                     document.getElementById('assignment-number').textContent = '미생성';
                     document.getElementById('assignment-vendor').textContent = '미지정';
                     document.getElementById('assignment-created').textContent = '-';
-                    document.getElementById('assignment-sent').textContent = '-';
-                    document.getElementById('assignment-viewed').textContent = '-';
-                    document.getElementById('assignment-responded').textContent = '-';
-                    document.getElementById('assignment-notes').textContent = '-';
+                    
+                    // 이메일 전송 상태
+                    const emailStatusElement = document.getElementById('assignment-email-status');
+                    if (emailStatusElement) {
+                        emailStatusElement.innerHTML = '<span class="badge bg-secondary">미전송</span>';
+                    }
+                    
+                    // 열람 현황
+                    const viewsElement = document.getElementById('assignment-views');
+                    if (viewsElement) {
+                        viewsElement.innerHTML = '<span class="badge bg-secondary">미열람</span>';
+                    }
+                    
+                    // 기존 필드들 (하위 호환성)
+                    const sentElement = document.getElementById('assignment-sent');
+                    if (sentElement) sentElement.textContent = '-';
+                    
+                    const viewedElement = document.getElementById('assignment-viewed');
+                    if (viewedElement) viewedElement.textContent = '-';
+                    
+                    const respondedElement = document.getElementById('assignment-responded');
+                    if (respondedElement) respondedElement.textContent = '-';
+                    
+                    const notesElement = document.getElementById('assignment-notes');
+                    if (notesElement) notesElement.textContent = '-';
                     
                     const statusElement = document.getElementById('assignment-status');
-                    statusElement.innerHTML = '<span class="badge bg-secondary">미생성</span>';
+                    if (statusElement) {
+                        statusElement.innerHTML = '<span class="badge bg-secondary">미생성</span>';
+                    }
                     
-                    document.getElementById('assignment-link-status').innerHTML = '<span class="text-muted">미생성</span>';
-                    document.getElementById('assignmentLinkGroup').style.display = 'none';
+                    const linkStatusElement = document.getElementById('assignment-link-status');
+                    if (linkStatusElement) {
+                        linkStatusElement.innerHTML = '<span class="text-muted">미생성</span>';
+                    }
+                    
+                    const linkGroupElement = document.getElementById('assignmentLinkGroup');
+                    if (linkGroupElement) {
+                        linkGroupElement.style.display = 'none';
+                    }
                 }
                 
             } catch (error) {
