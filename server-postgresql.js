@@ -314,6 +314,43 @@ async function initializeDatabase() {
         `);
         console.log('✅ reservations 테이블 강제 생성 완료');
         
+        // 수배서 열람 추적 테이블 생성
+        try {
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS assignment_views (
+              id SERIAL PRIMARY KEY,
+              assignment_token VARCHAR(255) NOT NULL,
+              reservation_id INTEGER,
+              viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              ip_address VARCHAR(50),
+              country VARCHAR(100),
+              city VARCHAR(100),
+              user_agent TEXT,
+              device_type VARCHAR(50),
+              browser VARCHAR(50),
+              os VARCHAR(50),
+              screen_size VARCHAR(20),
+              referrer TEXT,
+              view_duration INTEGER,
+              FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE
+            )
+          `);
+          console.log('✅ assignment_views 테이블 생성 완료');
+          
+          // 인덱스 추가
+          await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_assignment_views_token 
+            ON assignment_views(assignment_token)
+          `);
+          await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_assignment_views_reservation 
+            ON assignment_views(reservation_id)
+          `);
+          console.log('✅ assignment_views 인덱스 생성 완료');
+        } catch (error) {
+          console.log('⚠️ assignment_views 테이블 생성 실패:', error.message);
+        }
+        
         // 수배업체 관련 테이블 생성
         try {
           console.log('🏢 수배업체 테이블 생성 시작...');
@@ -7977,7 +8014,7 @@ app.post('/assignment/:token/confirm', async (req, res) => {
 app.post('/assignment/:token/view', async (req, res) => {
     try {
         const { token } = req.params;
-        const { viewed_at, user_agent, screen_size } = req.body;
+        const { viewed_at, user_agent, screen_size, referrer, device_type, browser, os } = req.body;
         
         console.log('='.repeat(60));
         console.log('👁️ 수배서 열람 추적 API 호출!');
@@ -7985,6 +8022,14 @@ app.post('/assignment/:token/view', async (req, res) => {
         console.log('시간:', viewed_at);
         console.log('User Agent:', user_agent);
         console.log('='.repeat(60));
+        
+        // IP 주소 추출
+        const ip_address = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                          req.headers['x-real-ip'] || 
+                          req.connection.remoteAddress || 
+                          req.socket.remoteAddress;
+        
+        console.log('🌐 IP 주소:', ip_address);
         
         // 수배서 조회
         const assignmentQuery = 'SELECT id, reservation_id, viewed_at, status FROM assignments WHERE assignment_token = $1';
@@ -7997,6 +8042,58 @@ app.post('/assignment/:token/view', async (req, res) => {
         }
         
         const assignment = assignmentResult.rows[0];
+        
+        // IP 기반 위치 정보 조회 (ipapi.co 사용 - 무료, 빠름)
+        let country = null;
+        let city = null;
+        
+        try {
+            // 로컬 IP는 스킵
+            if (ip_address && !ip_address.startsWith('::') && !ip_address.startsWith('127.') && !ip_address.startsWith('192.168.')) {
+                const axios = require('axios');
+                const geoResponse = await axios.get(`https://ipapi.co/${ip_address}/json/`, {
+                    timeout: 3000
+                });
+                
+                if (geoResponse.data) {
+                    country = geoResponse.data.country_name || null;
+                    city = geoResponse.data.city || null;
+                    console.log('📍 위치 정보:', country, city);
+                }
+            } else {
+                console.log('⚠️ 로컬 IP 주소 - 위치 정보 조회 스킵');
+                country = '로컬';
+                city = '테스트';
+            }
+        } catch (geoError) {
+            console.error('⚠️ 위치 정보 조회 실패:', geoError.message);
+        }
+        
+        // 열람 이력 저장 (모든 열람 기록)
+        try {
+            await pool.query(`
+                INSERT INTO assignment_views (
+                    assignment_token, reservation_id, viewed_at,
+                    ip_address, country, city, user_agent,
+                    device_type, browser, os, screen_size, referrer
+                ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            `, [
+                token, 
+                assignment.reservation_id, 
+                ip_address, 
+                country, 
+                city, 
+                user_agent,
+                device_type || 'Unknown',
+                browser || 'Unknown',
+                os || 'Unknown',
+                screen_size || 'Unknown',
+                referrer || 'Direct'
+            ]);
+            console.log('✅ 열람 이력 저장 완료');
+        } catch (viewError) {
+            console.error('❌ 열람 이력 저장 실패:', viewError);
+        }
         
         // 첫 열람인 경우에만 viewed_at 업데이트 및 상태 변경
         if (!assignment.viewed_at) {
@@ -8080,6 +8177,122 @@ app.post('/assignment/:token/view', async (req, res) => {
     } catch (error) {
         console.error('❌ 수배서 열람 기록 오류:', error);
         res.status(500).json({ success: false, message: '열람 기록 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
+// 수배서 열람 통계 조회 API
+app.get('/api/assignment/:token/views', requireAuth, async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        // 전체 열람 통계
+        const statsQuery = `
+            SELECT 
+                COUNT(*) as total_views,
+                COUNT(DISTINCT ip_address) as unique_visitors,
+                MIN(viewed_at) as first_viewed,
+                MAX(viewed_at) as last_viewed,
+                COUNT(DISTINCT country) as countries_count
+            FROM assignment_views
+            WHERE assignment_token = $1
+        `;
+        
+        // 상세 열람 이력
+        const detailsQuery = `
+            SELECT 
+                id, viewed_at, ip_address, country, city,
+                user_agent, device_type, browser, os, screen_size, referrer
+            FROM assignment_views
+            WHERE assignment_token = $1
+            ORDER BY viewed_at DESC
+        `;
+        
+        // 국가별 집계
+        const countryQuery = `
+            SELECT 
+                country, 
+                COUNT(*) as view_count,
+                MAX(viewed_at) as last_viewed
+            FROM assignment_views
+            WHERE assignment_token = $1 AND country IS NOT NULL
+            GROUP BY country
+            ORDER BY view_count DESC
+        `;
+        
+        const [statsResult, detailsResult, countryResult] = await Promise.all([
+            pool.query(statsQuery, [token]),
+            pool.query(detailsQuery, [token]),
+            pool.query(countryQuery, [token])
+        ]);
+        
+        res.json({
+            success: true,
+            stats: statsResult.rows[0],
+            details: detailsResult.rows,
+            by_country: countryResult.rows
+        });
+        
+    } catch (error) {
+        console.error('❌ 열람 통계 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '열람 통계 조회 중 오류가 발생했습니다: ' + error.message 
+        });
+    }
+});
+
+// 예약별 수배서 열람 통계 조회 API
+app.get('/api/reservations/:id/assignment-views', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // 해당 예약의 수배서 토큰 조회
+        const tokenQuery = `
+            SELECT assignment_token 
+            FROM assignments 
+            WHERE reservation_id = $1
+            ORDER BY assigned_at DESC
+            LIMIT 1
+        `;
+        const tokenResult = await pool.query(tokenQuery, [id]);
+        
+        if (tokenResult.rows.length === 0) {
+            return res.json({
+                success: true,
+                has_assignment: false,
+                stats: null
+            });
+        }
+        
+        const token = tokenResult.rows[0].assignment_token;
+        
+        // 열람 통계 조회
+        const statsQuery = `
+            SELECT 
+                COUNT(*) as total_views,
+                COUNT(DISTINCT ip_address) as unique_visitors,
+                MIN(viewed_at) as first_viewed,
+                MAX(viewed_at) as last_viewed,
+                STRING_AGG(DISTINCT country, ', ') as countries
+            FROM assignment_views
+            WHERE assignment_token = $1
+        `;
+        
+        const statsResult = await pool.query(statsQuery, [token]);
+        
+        res.json({
+            success: true,
+            has_assignment: true,
+            assignment_token: token,
+            stats: statsResult.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 열람 통계 조회 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '열람 통계 조회 중 오류가 발생했습니다: ' + error.message 
+        });
     }
 });
 

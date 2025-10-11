@@ -555,7 +555,35 @@
             }
         }
         
-        // 열람 추적 기능
+        // 디바이스 정보 추출 함수
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let device_type = 'Desktop';
+            let browser = 'Unknown';
+            let os = 'Unknown';
+            
+            // 디바이스 타입 감지
+            if (/mobile/i.test(ua)) device_type = 'Mobile';
+            else if (/tablet|ipad/i.test(ua)) device_type = 'Tablet';
+            
+            // 브라우저 감지
+            if (ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') === -1) browser = 'Chrome';
+            else if (ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') === -1) browser = 'Safari';
+            else if (ua.indexOf('Firefox') > -1) browser = 'Firefox';
+            else if (ua.indexOf('Edg') > -1) browser = 'Edge';
+            else if (ua.indexOf('MSIE') > -1 || ua.indexOf('Trident') > -1) browser = 'IE';
+            
+            // OS 감지
+            if (ua.indexOf('Windows') > -1) os = 'Windows';
+            else if (ua.indexOf('Mac') > -1) os = 'MacOS';
+            else if (ua.indexOf('Linux') > -1) os = 'Linux';
+            else if (ua.indexOf('Android') > -1) os = 'Android';
+            else if (ua.indexOf('iOS') > -1 || ua.indexOf('iPhone') > -1 || ua.indexOf('iPad') > -1) os = 'iOS';
+            
+            return { device_type, browser, os };
+        }
+        
+        // 열람 추적 기능 (강화 버전)
         window.addEventListener('load', function() {
             // 미리보기가 아닐 때만 열람 기록
             const isPreviewMode = <%= isPreview ? 'true' : 'false' %>;
@@ -568,14 +596,26 @@
                 console.log('📊 수배서 열람 기록 시작...');
                 console.log('📊 API URL:', `/assignment/${assignmentToken}/view`);
                 
+                // 디바이스 정보 수집
+                const deviceInfo = getDeviceInfo();
+                console.log('📱 디바이스 정보:', deviceInfo);
+                
+                const trackingData = {
+                    viewed_at: new Date().toISOString(),
+                    user_agent: navigator.userAgent,
+                    screen_size: `${window.screen.width}x${window.screen.height}`,
+                    device_type: deviceInfo.device_type,
+                    browser: deviceInfo.browser,
+                    os: deviceInfo.os,
+                    referrer: document.referrer || 'Direct'
+                };
+                
+                console.log('📊 추적 데이터:', trackingData);
+                
                 fetch(`/assignment/${assignmentToken}/view`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        viewed_at: new Date().toISOString(),
-                        user_agent: navigator.userAgent,
-                        screen_size: `${window.screen.width}x${window.screen.height}`
-                    })
+                    body: JSON.stringify(trackingData)
                 })
                 .then(response => {
                     console.log('📊 API 응답 상태:', response.status);
