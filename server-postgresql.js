@@ -87,6 +87,94 @@ function requireAuth(req, res, next) {
     }
 }
 
+// 관리자 로그인 페이지 (GET)
+app.get('/admin/login', (req, res) => {
+    if (req.session.adminId) {
+        return res.redirect('/admin/dashboard');
+    }
+    res.render('admin/login', {
+        title: '관리자 로그인',
+        error: null
+    });
+});
+
+// 관리자 로그인 처리 (POST)
+app.post('/admin/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        
+        if (!username || !password) {
+            return res.status(400).json({
+                success: false,
+                message: '아이디와 비밀번호를 입력해주세요.'
+            });
+        }
+        
+        // admin_users 테이블에서 사용자 조회
+        const result = await pool.query(
+            'SELECT * FROM admin_users WHERE username = $1 AND is_active = true',
+            [username]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(401).json({
+                success: false,
+                message: '아이디 또는 비밀번호가 올바르지 않습니다.'
+            });
+        }
+        
+        const user = result.rows[0];
+        
+        // 비밀번호 확인
+        const bcrypt = require('bcryptjs');
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: '아이디 또는 비밀번호가 올바르지 않습니다.'
+            });
+        }
+        
+        // 로그인 성공 - 세션 설정
+        req.session.adminId = user.id;
+        req.session.adminUsername = user.username;
+        req.session.adminName = user.full_name;
+        req.session.adminRole = user.role;
+        
+        // 마지막 로그인 시간 업데이트
+        await pool.query(
+            'UPDATE admin_users SET last_login = NOW() WHERE id = $1',
+            [user.id]
+        );
+        
+        console.log(`✅ 관리자 로그인 성공: ${user.username} (${user.full_name})`);
+        
+        res.json({
+            success: true,
+            message: '로그인되었습니다.',
+            redirect: '/admin/dashboard'
+        });
+        
+    } catch (error) {
+        console.error('❌ 관리자 로그인 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '로그인 처리 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 관리자 로그아웃
+app.get('/admin/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('로그아웃 오류:', err);
+        }
+        res.redirect('/admin/login');
+    });
+});
+
 // 예약 테이블 스키마 마이그레이션
 async function migrateReservationsSchema() {
   try {
