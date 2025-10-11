@@ -375,6 +375,56 @@ async function checkDatabase(req, res, next) {
 // 모든 라우트에 데이터베이스 체크 적용
 app.use(checkDatabase);
 
+// ============================================
+// 📜 업무 히스토리 헬퍼 함수
+// ============================================
+/**
+ * 업무 히스토리 기록 함수
+ * @param {number} reservationId - 예약 ID
+ * @param {string} category - 카테고리 (예약/수배/바우처/정산/시스템)
+ * @param {string} action - 액션 (create/update/send/confirm 등)
+ * @param {string} changedBy - 작업자
+ * @param {string} description - 서술형 설명
+ * @param {object} changes - 변경사항 객체
+ * @param {object} metadata - 추가 메타데이터
+ */
+async function logHistory(reservationId, category, action, changedBy, description, changes = null, metadata = null) {
+    try {
+        // reservation_logs 테이블 확인 및 생성
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS reservation_logs (
+                id SERIAL PRIMARY KEY,
+                reservation_id INTEGER NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                action VARCHAR(100) NOT NULL,
+                changed_by VARCHAR(100),
+                description TEXT,
+                changes JSONB,
+                metadata JSONB,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        
+        await pool.query(`
+            INSERT INTO reservation_logs (
+                reservation_id, category, action, changed_by, description, changes, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+            reservationId,
+            category,
+            action,
+            changedBy,
+            description,
+            changes ? JSON.stringify(changes) : null,
+            metadata ? JSON.stringify(metadata) : null
+        ]);
+        
+        console.log(`✅ 히스토리 기록: [${category}] ${description}`);
+    } catch (error) {
+        console.error('❌ 히스토리 기록 실패:', error);
+    }
+}
+
 // 관리자 라우트 연결 (로그인/로그아웃만)
 const adminRoutes = require('./routes/admin');
 app.use('/admin', adminRoutes);
@@ -4949,20 +4999,21 @@ app.post('/api/register-reservation', async (req, res) => {
                 const autoAssignment = await createAutoAssignment(reservationId, parsedData.product_name);
                 
                 // 예약 생성 히스토리 저장
-                try {
-                    await pool.query(`
-                        INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details)
-                        VALUES ($1, $2, $3, $4, $5)
-                    `, [
-                        reservationId,
-                        'create',
-                        '예약생성',
-                        '시스템',
-                        `새 예약이 생성되었습니다: ${parsedData.korean_name} - ${parsedData.product_name}`
-                    ]);
-                } catch (logError) {
-                    console.error('❌ 예약 생성 히스토리 저장 실패:', logError);
-                }
+                await logHistory(
+                    reservationId,
+                    '예약',
+                    '생성',
+                    '시스템 (인박스)',
+                    `새로운 예약이 등록되었습니다. 고객명: ${parsedData.korean_name || '-'}, 상품: ${parsedData.product_name || '-'}, 이용일: ${parsedData.usage_date || '-'}`,
+                    null,
+                    {
+                        channel: parsedData.channel || '웹',
+                        platform: parsedData.platform_name || 'NOL',
+                        reservation_number: parsedData.reservation_number,
+                        auto_assignment: autoAssignment ? true : false,
+                        vendor_name: autoAssignment?.vendor_name
+                    }
+                );
                 
                 res.json({
                     success: true,
@@ -7817,22 +7868,22 @@ app.post('/assignment/:token/view', async (req, res) => {
             }
             
             // 4. 업무 히스토리에 열람 기록
-            try {
-                await pool.query(`
-                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details, created_at)
-                    VALUES ($1, $2, $3, $4, $5, NOW())
-                `, [
-                    assignment.reservation_id,
-                    '수배서 열람',
-                    'info',
-                    'vendor',
-                    `수배업체가 수배서를 열람했습니다. 상태: 수배중으로 변경 (${user_agent || 'Unknown'}, ${screen_size || 'Unknown'})`
-                ]);
-                
-                console.log('✅ 수배서 첫 열람 기록 완료 + 히스토리 저장');
-            } catch (logError) {
-                console.error('⚠️ 히스토리 기록 실패:', logError);
-            }
+            await logHistory(
+                assignment.reservation_id,
+                '수배',
+                '열람',
+                `수배업체 (${assignment.vendor_name || '현지업체'})`,
+                `수배업체가 수배서를 처음 열람했습니다. 예약 상태가 자동으로 "수배중"으로 변경되었습니다. 수배업체의 확정 응답을 대기하고 있습니다.`,
+                { payment_status: { from: 'pending', to: 'in_progress' } },
+                {
+                    vendor_name: assignment.vendor_name,
+                    assignment_token: assignment_token,
+                    user_agent: user_agent || 'Unknown',
+                    screen_size: screen_size || 'Unknown',
+                    ip_address: ip_address || 'Unknown',
+                    first_view: true
+                }
+            );
             
             console.log('='.repeat(60));
             console.log('✅ 모든 처리 완료! 응답 전송');
@@ -9258,17 +9309,37 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
             }
             
             if (Object.keys(changesObj).length > 0) {
-                await pool.query(`
-                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                `, [
+                // 변경 항목 서술형 문장 생성
+                const changeDescriptions = Object.entries(changesObj).map(([key, value]) => {
+                    const fieldNames = {
+                        korean_name: '고객명',
+                        english_name: '영문명',
+                        phone: '연락처',
+                        email: '이메일',
+                        product_name: '상품명',
+                        usage_date: '이용일',
+                        usage_time: '이용시간',
+                        people_adult: '성인 인원',
+                        people_child: '아동 인원',
+                        package_type: '패키지 옵션',
+                        memo: '특별요청'
+                    };
+                    const fieldName = fieldNames[key] || key;
+                    return `${fieldName}: "${value.from}" → "${value.to}"`;
+                }).join(', ');
+                
+                await logHistory(
                     reservationId,
-                    '예약 정보 수정',
-                    'success',
+                    '예약',
+                    '정보수정',
                     req.session?.username || '관리자',
-                    JSON.stringify(changesObj),
-                    `${Object.keys(changesObj).length}개 항목 수정됨`
-                ]);
+                    `예약 정보가 수정되었습니다. 변경된 항목: ${changeDescriptions}`,
+                    changesObj,
+                    {
+                        total_changes: Object.keys(changesObj).length,
+                        reservation_number: result.rows[0].reservation_number
+                    }
+                );
                 console.log('✅ 변경 이력 저장 완료:', Object.keys(changesObj));
             } else {
                 console.log('ℹ️ 변경된 항목이 없습니다.');
@@ -9334,22 +9405,29 @@ app.patch('/api/reservations/:id/status', requireAuth, async (req, res) => {
         
         console.log('✅ 예약 상태 변경 완료:', oldStatus, '→', normalizedStatus);
         
-        // 변경 이력 저장
-        try {
-            await pool.query(`
-                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
-                VALUES ($1, $2, $3, $4, $5, $6)
-            `, [
-                reservationId,
-                '예약 상태 변경',
-                'success',
-                req.session?.username || '관리자',
-                JSON.stringify({ payment_status: { from: oldStatus, to: normalizedStatus } }),
-                reason || '상태 변경'
-            ]);
-        } catch (logError) {
-            console.error('⚠️ 상태 변경 이력 저장 실패:', logError);
-        }
+        // 상태 변경 이력 저장
+        const statusNames = {
+            'pending': '대기중',
+            'in_progress': '수배중',
+            'confirmed': '확정',
+            'voucher_sent': '바우처전송완료',
+            'settlement_completed': '정산완료',
+            'cancelled': '취소'
+        };
+        
+        await logHistory(
+            reservationId,
+            '예약',
+            '상태변경',
+            req.session?.username || '관리자',
+            `예약 상태가 변경되었습니다. ${statusNames[oldStatus] || oldStatus} → ${statusNames[normalizedStatus] || normalizedStatus}. ${reason ? `사유: ${reason}` : ''}`,
+            { payment_status: { from: oldStatus, to: normalizedStatus } },
+            { 
+                reason: reason || null,
+                old_status_kr: statusNames[oldStatus] || oldStatus,
+                new_status_kr: statusNames[normalizedStatus] || normalizedStatus
+            }
+        );
         
         res.json({
             success: true,
@@ -9431,24 +9509,32 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
         }
         
         // 변경 이력 저장
-        try {
-            await pool.query(`
-                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
-                VALUES ($1, $2, $3, $4, $5, $6)
-            `, [
-                reservationId,
-                '컨펌번호 저장 및 확정',
-                'success',
-                req.session?.username || '관리자',
-                JSON.stringify({ 
-                    confirmation_number: { from: oldConfirmationNumber || '(없음)', to: confirmation_number },
-                    payment_status: { from: oldStatus, to: 'confirmed' }
-                }),
-                `예약이 확정되었습니다. 컨펌번호: ${confirmation_number}`
-            ]);
-        } catch (logError) {
-            console.error('⚠️ 컨펌번호 저장 이력 실패:', logError);
-        }
+        const statusNames = {
+            'pending': '대기중',
+            'in_progress': '수배중',
+            'confirmed': '확정',
+            'voucher_sent': '바우처전송완료',
+            'settlement_completed': '정산완료',
+            'cancelled': '취소'
+        };
+        
+        await logHistory(
+            reservationId,
+            '수배',
+            '확정',
+            req.session?.username || '관리자',
+            `예약이 확정되었습니다. 컨펌번호 "${confirmation_number}"가 발급되었으며, 예약 상태가 ${statusNames[oldStatus] || oldStatus}에서 확정으로 변경되었습니다.`,
+            { 
+                confirmation_number: { from: oldConfirmationNumber || '(없음)', to: confirmation_number },
+                payment_status: { from: oldStatus, to: 'confirmed' }
+            },
+            {
+                confirmation_number: confirmation_number,
+                vendor_id: vendor_id || null,
+                old_status: oldStatus,
+                new_status: 'confirmed'
+            }
+        );
         
         res.json({
             success: true,
@@ -9472,15 +9558,16 @@ app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
         
         console.log('📜 예약 히스토리 조회:', reservationId);
         
-        // reservation_logs 테이블에서 히스토리 조회
+        // reservation_logs 테이블에서 히스토리 조회 (개선된 스키마)
         const result = await pool.query(`
             SELECT 
                 id,
-                action as action_type,
-                type as action_type_kr,
+                category,
+                action,
                 changed_by,
+                description,
                 changes,
-                details as description,
+                metadata,
                 created_at
             FROM reservation_logs
             WHERE reservation_id = $1
@@ -9552,40 +9639,33 @@ app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) =
             console.log(`✅ 예약 상태 변경: ${oldStatus} → in_progress`);
         }
         
-        // 히스토리 저장 (항상 기록)
-        try {
-            // reservation_logs 테이블 확인 및 생성
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS reservation_logs (
-                    id SERIAL PRIMARY KEY,
-                    reservation_id INTEGER NOT NULL,
-                    action VARCHAR(100) NOT NULL,
-                    type VARCHAR(50) NOT NULL,
-                    changed_by VARCHAR(100),
-                    changes JSONB,
-                    details TEXT,
-                    created_at TIMESTAMP DEFAULT NOW()
-                )
-            `);
-            
-            await pool.query(`
-                INSERT INTO reservation_logs (reservation_id, action, type, changed_by, changes, details)
-                VALUES ($1, $2, $3, $4, $5, $6)
-            `, [
-                reservationId,
-                '수배서 전송',
-                'success',
-                req.session?.username || '관리자',
-                JSON.stringify({ 
-                    payment_status: { from: oldStatus, to: 'in_progress' },
-                    assignment_status: { from: 'pending', to: 'sent' }
-                }),
-                '수배서가 현지업체로 전송되었습니다.'
-            ]);
-            console.log('✅ 수배서 전송 히스토리 저장 완료');
-        } catch (logError) {
-            console.error('⚠️ 히스토리 저장 실패:', logError);
-        }
+        // 히스토리 저장
+        const statusNames = {
+            'pending': '대기중',
+            'in_progress': '수배중',
+            'confirmed': '확정',
+            'voucher_sent': '바우처전송완료',
+            'settlement_completed': '정산완료'
+        };
+        
+        const vendorInfo = assignmentResult.rows.length > 0 ? assignmentResult.rows[0].vendor_name || '현지업체' : '현지업체';
+        
+        await logHistory(
+            reservationId,
+            '수배',
+            '전송',
+            req.session?.username || '관리자',
+            `수배서가 ${vendorInfo}에 전송되었습니다. ${oldStatus !== 'confirmed' && oldStatus !== 'voucher_sent' ? `예약 상태가 ${statusNames[oldStatus] || oldStatus}에서 수배중으로 변경되었습니다.` : '현지업체의 확인을 기다리고 있습니다.'}`,
+            { 
+                payment_status: oldStatus !== 'confirmed' && oldStatus !== 'voucher_sent' ? { from: oldStatus, to: 'in_progress' } : null,
+                assignment_status: { from: 'pending', to: 'sent' }
+            },
+            {
+                vendor_name: vendorInfo,
+                assignment_id: assignmentResult.rows.length > 0 ? assignmentResult.rows[0].id : null,
+                sent_at: new Date().toISOString()
+            }
+        );
         
         res.json({
             success: true,
@@ -9626,6 +9706,20 @@ app.post('/api/reservations/:id/memo', requireAuth, async (req, res) => {
         }
         
         console.log('✅ 예약 메모 저장 완료');
+        
+        // 메모 저장 히스토리 기록
+        await logHistory(
+            reservationId,
+            '예약',
+            '메모저장',
+            req.session?.username || '관리자',
+            `특별 요청사항이 ${memo ? '추가/수정' : '삭제'}되었습니다.${memo ? ` 내용: "${memo.length > 50 ? memo.substring(0, 50) + '...' : memo}"` : ''}`,
+            null,
+            {
+                memo_length: memo ? memo.length : 0,
+                has_memo: memo ? true : false
+            }
+        );
         
         res.json({
             success: true,
@@ -9931,20 +10025,20 @@ app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
             console.log(`✅ 새 바우처 생성: ${voucher_token}, 세이브카드: ${generated_savecard_code}`);
             
             // 바우처 생성 히스토리 저장
-            try {
-                await pool.query(`
-                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details)
-                    VALUES ($1, $2, $3, $4, $5)
-                `, [
-                    id,
-                    'voucher_created',
-                    '바우처생성',
-                    req.session.user?.name || '관리자',
-                    `바우처 토큰: ${voucher_token}, 세이브카드: ${generated_savecard_code}`
-                ]);
-            } catch (logError) {
-                console.error('❌ 바우처 생성 히스토리 저장 실패:', logError);
-            }
+            await logHistory(
+                id,
+                '바우처',
+                '생성',
+                req.session?.username || '관리자',
+                `바우처가 생성되었습니다. 바우처 토큰: ${voucher_token}, 세이브카드 코드: ${generated_savecard_code}. 고객이 이 바우처로 현지에서 서비스를 이용할 수 있습니다.`,
+                null,
+                {
+                    voucher_token: voucher_token,
+                    savecard_code: generated_savecard_code,
+                    auto_generate: auto_generate || false,
+                    voucher_link: `/voucher/${voucher_token}`
+                }
+            );
         }
 
         // 예약 상태를 '바우처전송완료'로 변경 (자동 생성이 아닌 경우)
@@ -9955,20 +10049,19 @@ app.post('/api/reservations/:id/voucher', requireAuth, async (req, res) => {
             );
             
             // 바우처 전송 히스토리 저장
-            try {
-                await pool.query(`
-                    INSERT INTO reservation_logs (reservation_id, action, type, changed_by, details)
-                    VALUES ($1, $2, $3, $4, $5)
-                `, [
-                    id,
-                    'voucher_sent',
-                    '바우처전송',
-                    req.session.user?.name || '관리자',
-                    '바우처가 고객에게 전송되었습니다'
-                ]);
-            } catch (logError) {
-                console.error('❌ 바우처 전송 히스토리 저장 실패:', logError);
-            }
+            await logHistory(
+                id,
+                '바우처',
+                '전송',
+                req.session?.username || '관리자',
+                `바우처가 고객에게 전송되었습니다. 예약 상태가 "바우처전송완료"로 변경되었으며, 고객이 바우처 링크를 통해 예약 정보를 확인할 수 있습니다.`,
+                { payment_status: { from: 'confirmed', to: 'voucher_sent' } },
+                {
+                    voucher_token: voucher_token,
+                    sent_method: '시스템',
+                    voucher_link: `/voucher/${voucher_token}`
+                }
+            );
         }
 
         console.log(`🎫 바우처 링크: ${req.protocol}://${req.get('host')}/voucher/${voucher_token}`);
@@ -10052,10 +10145,50 @@ app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
 
         console.log(`💰 정산 이관: 예약 ID ${id}`);
 
+        // 기존 상태 조회
+        const oldReservation = await pool.query(
+            'SELECT payment_status, korean_name, product_name FROM reservations WHERE id = $1',
+            [id]
+        );
+        
+        if (oldReservation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const oldStatus = oldReservation.rows[0].payment_status;
+        const customerName = oldReservation.rows[0].korean_name;
+        const productName = oldReservation.rows[0].product_name;
+
         // 예약 상태를 '정산완료'로 변경 (수배관리에서 제외)
         await pool.query(
             'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
             ['settlement_completed', id]
+        );
+
+        // 정산 이관 히스토리 저장
+        const statusNames = {
+            'pending': '대기중',
+            'in_progress': '수배중',
+            'confirmed': '확정',
+            'voucher_sent': '바우처전송완료',
+            'settlement_completed': '정산완료'
+        };
+        
+        await logHistory(
+            id,
+            '정산',
+            '이관',
+            req.session?.username || '관리자',
+            `예약이 정산관리로 이관되었습니다. 고객명: ${customerName || '-'}, 상품: ${productName || '-'}. 이전 상태: ${statusNames[oldStatus] || oldStatus}. 수배관리 화면에서 제외되며, 정산 프로세스가 시작됩니다.`,
+            { payment_status: { from: oldStatus, to: 'settlement_completed' } },
+            {
+                customer_name: customerName,
+                product_name: productName,
+                transferred_at: new Date().toISOString()
+            }
         );
 
         console.log(`✅ 정산 이관 완료: 예약 ID ${id}`);

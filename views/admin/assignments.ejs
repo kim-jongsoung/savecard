@@ -793,16 +793,49 @@
 
     <!-- 히스토리 로그 모달 -->
     <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>작업 히스토리</h5>
+                <div class="modal-header bg-light">
+                    <div>
+                        <h5 class="modal-title mb-1">
+                            <i class="bi bi-clock-history me-2 text-primary"></i>업무 히스토리 타임라인
+                        </h5>
+                        <p class="text-muted small mb-0">모든 작업 이력을 시간순으로 확인할 수 있습니다</p>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- 카테고리 범례 -->
+                    <div class="mb-4 p-3 bg-light rounded">
+                        <div class="small fw-bold mb-2">📌 카테고리 안내</div>
+                        <div class="d-flex flex-wrap gap-3">
+                            <span class="badge" style="background-color: #6366f1">
+                                <i class="bi bi-calendar-check me-1"></i>예약
+                            </span>
+                            <span class="badge" style="background-color: #0891b2">
+                                <i class="bi bi-truck me-1"></i>수배
+                            </span>
+                            <span class="badge" style="background-color: #059669">
+                                <i class="bi bi-ticket-perforated me-1"></i>바우처
+                            </span>
+                            <span class="badge" style="background-color: #dc2626">
+                                <i class="bi bi-cash-coin me-1"></i>정산
+                            </span>
+                            <span class="badge" style="background-color: #64748b">
+                                <i class="bi bi-gear me-1"></i>시스템
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- 히스토리 리스트 -->
                     <div id="historyList">
                         <!-- 히스토리 항목들이 여기에 표시됩니다 -->
                     </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>닫기
+                    </button>
                 </div>
             </div>
         </div>
@@ -2080,38 +2113,20 @@
                             minute: '2-digit'
                         });
                         
-                        // 액션 타입에 따른 아이콘 및 색상
-                        let icon = 'bi-clock';
-                        let badgeClass = 'bg-secondary';
+                        // 카테고리별 아이콘 및 색상 (새로운 스키마)
+                        const categoryConfig = {
+                            '예약': { icon: 'bi-calendar-check', color: '#6366f1', bgColor: '#eef2ff', borderColor: '#c7d2fe' },
+                            '수배': { icon: 'bi-truck', color: '#0891b2', bgColor: '#cffafe', borderColor: '#67e8f9' },
+                            '바우처': { icon: 'bi-ticket-perforated', color: '#059669', bgColor: '#d1fae5', borderColor: '#6ee7b7' },
+                            '정산': { icon: 'bi-cash-coin', color: '#dc2626', bgColor: '#fee2e2', borderColor: '#fca5a5' },
+                            '시스템': { icon: 'bi-gear', color: '#64748b', bgColor: '#f1f5f9', borderColor: '#cbd5e1' }
+                        };
                         
-                        if (item.action_type === 'create') {
-                            icon = 'bi-plus-circle';
-                            badgeClass = 'bg-success';
-                        } else if (item.action_type === 'update') {
-                            icon = 'bi-pencil-square';
-                            badgeClass = 'bg-warning';
-                        } else if (item.action_type === 'status_change') {
-                            icon = 'bi-arrow-left-right';
-                            badgeClass = 'bg-info';
-                        } else if (item.action_type === 'assignment_sent') {
-                            icon = 'bi-send';
-                            badgeClass = 'bg-primary';
-                        } else if (item.action_type === 'voucher_created') {
-                            icon = 'bi-ticket-perforated';
-                            badgeClass = 'bg-success';
-                        } else if (item.action_type === 'voucher_sent') {
-                            icon = 'bi-send-check';
-                            badgeClass = 'bg-primary';
-                        } else if (item.action_type === 'voucher_viewed') {
-                            icon = 'bi-eye-fill';
-                            badgeClass = 'bg-info';
-                        } else if (item.action_type === 'voucher') {
-                            icon = 'bi-ticket-perforated';
-                            badgeClass = 'bg-success';
-                        } else if (item.action_type === 'confirmation_saved') {
-                            icon = 'bi-key-fill';
-                            badgeClass = 'bg-warning';
-                        }
+                        const category = item.category || '시스템';
+                        const config = categoryConfig[category] || categoryConfig['시스템'];
+                        
+                        // 액션별 텍스트
+                        const actionText = item.action || '-';
                         
                         // changes 안전하게 파싱
                         let changesHTML = '';
@@ -2120,30 +2135,70 @@
                                 const changesObj = typeof item.changes === 'string' ? JSON.parse(item.changes) : item.changes;
                                 const entries = Object.entries(changesObj).map(([key, value]) => {
                                     if (value && value.from !== undefined && value.to !== undefined) {
-                                        return `<div>• ${key}: ${value.from} → ${value.to}</div>`;
+                                        return `
+                                            <div class="d-flex align-items-center gap-2 small mb-1">
+                                                <span class="badge bg-light text-dark">${value.from}</span>
+                                                <i class="bi bi-arrow-right" style="color: ${config.color}"></i>
+                                                <span class="badge" style="background-color: ${config.color}">${value.to}</span>
+                                            </div>
+                                        `;
                                     }
                                     return '';
                                 }).filter(html => html !== '').join('');
                                 
                                 if (entries) {
-                                    changesHTML = `<div class="small text-muted">${entries}</div>`;
+                                    changesHTML = `
+                                        <div class="mt-2 p-2 rounded" style="background-color: ${config.bgColor}">
+                                            <div class="small fw-bold mb-2" style="color: ${config.color}">📋 변경 내역</div>
+                                            ${entries}
+                                        </div>
+                                    `;
                                 }
                             } catch (e) {
                                 console.error('변경사항 파싱 오류:', e, item.changes);
                             }
                         }
                         
+                        // 메타데이터 표시
+                        let metadataHTML = '';
+                        if (item.metadata) {
+                            try {
+                                const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+                                const metaEntries = Object.entries(metadata)
+                                    .filter(([key, value]) => value && key !== 'reservation_number')
+                                    .map(([key, value]) => `<span class="badge bg-light text-dark me-1">${key}: ${value}</span>`)
+                                    .join('');
+                                
+                                if (metaEntries) {
+                                    metadataHTML = `<div class="mt-2">${metaEntries}</div>`;
+                                }
+                            } catch (e) {
+                                console.error('메타데이터 파싱 오류:', e);
+                            }
+                        }
+                        
                         return `
-                            <div class="border-start border-3 border-${badgeClass.replace('bg-', '')} ps-3 mb-3 pb-2">
-                                <div class="d-flex align-items-center mb-1">
-                                    <i class="bi ${icon} me-2"></i>
-                                    <span class="badge ${badgeClass} me-2">${item.action_type_kr || item.action_type}</span>
-                                    <small class="text-muted">${dateStr}</small>
+                            <div class="mb-3 p-3 rounded" style="background-color: ${config.bgColor}; border-left: 4px solid ${config.color}">
+                                <div class="d-flex align-items-start justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center justify-content-center" 
+                                             style="width: 32px; height: 32px; background-color: white; border-radius: 50%; border: 2px solid ${config.borderColor}">
+                                            <i class="bi ${config.icon}" style="color: ${config.color}; font-size: 14px;"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold" style="color: ${config.color}">${category} · ${actionText}</div>
+                                            <div class="small text-muted">
+                                                <i class="bi bi-person-circle me-1"></i>${item.changed_by || '시스템'}
+                                                <i class="bi bi-clock ms-2 me-1"></i>${dateStr}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="mb-1">
-                                    <strong>${item.description || ''}</strong>
+                                <div class="ms-5">
+                                    <div class="mb-1" style="line-height: 1.6;">${item.description || '상세 정보 없음'}</div>
+                                    ${changesHTML}
+                                    ${metadataHTML}
                                 </div>
-                                ${changesHTML}
                             </div>
                         `;
                     }).join('');
