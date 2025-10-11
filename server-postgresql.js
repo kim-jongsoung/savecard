@@ -5096,6 +5096,12 @@ app.post('/api/register-reservation', async (req, res) => {
         if (dbMode === 'postgresql') {
             // 로그인한 담당자 정보 가져오기
             const assignedBy = req.session.adminName || req.session.adminUsername || '시스템 (인박스)';
+            console.log('👤 담당자 정보:', {
+                adminName: req.session.adminName,
+                adminUsername: req.session.adminUsername,
+                adminId: req.session.adminId,
+                assignedBy: assignedBy
+            });
             
             const insertQuery = `
                 INSERT INTO reservations (
