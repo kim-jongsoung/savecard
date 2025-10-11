@@ -2117,8 +2117,22 @@
 
         // 열람 통계 로드 함수
         async function loadViewStats() {
+            console.log('📊 열람 통계 로드 시작');
+            console.log('  - window.currentReservation:', window.currentReservation);
+            
             const reservation = window.currentReservation;
-            if (!reservation || !reservation.assignment_token) {
+            if (!reservation) {
+                console.error('❌ 예약 정보 없음');
+                document.getElementById('view-stats-content').innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> 예약 정보가 없습니다.
+                    </div>
+                `;
+                return;
+            }
+            
+            if (!reservation.assignment_token) {
+                console.error('❌ assignment_token 없음');
                 document.getElementById('view-stats-content').innerHTML = `
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle"></i> 수배서가 생성되지 않았습니다.
@@ -2128,6 +2142,7 @@
             }
             
             const token = reservation.assignment_token;
+            console.log('✅ token:', token);
             
             try {
                 document.getElementById('view-stats-content').innerHTML = `
@@ -2609,7 +2624,7 @@
                 
                 const result = await response.json();
                 
-                console.log('🔍 API 응늵 데이터:', result);
+                console.log('🔍 API 응답 데이터:', result);
                 
                 if (result.success && result.assignment) {
                     const assignment = result.assignment;
@@ -2618,7 +2633,8 @@
                         id: assignment.id,
                         sent_at: assignment.sent_at,
                         viewed_at: assignment.viewed_at,
-                        vendor_name: assignment.vendor_name
+                        vendor_name: assignment.vendor_name,
+                        assignment_token: assignment.assignment_token
                     });
                     
                     // 수배서 상태 정보
@@ -2669,40 +2685,18 @@
                         }
                     }
                     
-                    // 기존 필드들 (하위호환성 유지)
-                    const sentElement = document.getElementById('assignment-sent');
-                    if (sentElement) sentElement.textContent = formatDateTime(assignment.sent_at) || '미전송';
-                    
-                    const viewedElement = document.getElementById('assignment-viewed');
-                    if (viewedElement) viewedElement.textContent = formatDateTime(assignment.viewed_at) || '미확인';
-                    
-                    const respondedElement = document.getElementById('assignment-responded');
-                    if (respondedElement) respondedElement.textContent = formatDateTime(assignment.responded_at) || '미응답';
-                    
-                    const notesElement = document.getElementById('assignment-notes');
-                    if (notesElement) notesElement.textContent = assignment.notes || '-';
-                    
-                    // 기존 수배 상태 요소가 있다면 업데이트 (하위 호환성)
-                    const statusElement = document.getElementById('assignment-status');
-                    if (statusElement) {
-                        const statusBadge = getAssignmentStatusBadge(assignment.status);
-                        statusElement.innerHTML = statusBadge;
-                    }
-                    
-                    // 링크 상태
-                    const linkStatusElement = document.getElementById('assignment-link-status');
-                    if (assignment.assignment_token) {
-                        linkStatusElement.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>생성됨</span>';
-                        // 링크 필드에 URL 표시
-                        const assignmentUrl = `https://www.guamsavecard.com/assignment/${assignment.assignment_token}`;
-                        document.getElementById('assignmentLinkUrl').value = assignmentUrl;
-                        document.getElementById('assignmentLinkGroup').style.display = 'flex';
+                    // assignment_token 저장 (다른 함수에서 사용)
+                    if (window.currentReservation) {
+                        window.currentReservation.assignment_token = assignment.assignment_token;
+                        console.log('✅ assignment_token 저장됨:', assignment.assignment_token);
                     } else {
-                        linkStatusElement.innerHTML = '<span class="text-muted">미생성</span>';
-                        document.getElementById('assignmentLinkGroup').style.display = 'none';
+                        console.error('❌ window.currentReservation이 없음');
                     }
+                    
+                    console.log('✅ 수배서 정보 로드 완료');
                     
                 } else {
+                    console.log('⚠️ 수배서 없음');
                     // 수배서가 없는 경우
                     document.getElementById('assignment-number').textContent = '미생성';
                     document.getElementById('assignment-vendor').textContent = '미지정';
@@ -2711,47 +2705,21 @@
                     // 이메일 전송 상태
                     const emailStatusElement = document.getElementById('assignment-email-status');
                     if (emailStatusElement) {
-                        emailStatusElement.innerHTML = '<span class="badge bg-secondary">미전송</span>';
+                        emailStatusElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-envelope-x me-1"></i>미전송</span>';
                     }
                     
                     // 열람 현황
                     const viewsElement = document.getElementById('assignment-views');
                     if (viewsElement) {
-                        viewsElement.innerHTML = '<span class="badge bg-secondary">미열람</span>';
-                    }
-                    
-                    // 기존 필드들 (하위 호환성)
-                    const sentElement = document.getElementById('assignment-sent');
-                    if (sentElement) sentElement.textContent = '-';
-                    
-                    const viewedElement = document.getElementById('assignment-viewed');
-                    if (viewedElement) viewedElement.textContent = '-';
-                    
-                    const respondedElement = document.getElementById('assignment-responded');
-                    if (respondedElement) respondedElement.textContent = '-';
-                    
-                    const notesElement = document.getElementById('assignment-notes');
-                    if (notesElement) notesElement.textContent = '-';
-                    
-                    const statusElement = document.getElementById('assignment-status');
-                    if (statusElement) {
-                        statusElement.innerHTML = '<span class="badge bg-secondary">미생성</span>';
-                    }
-                    
-                    const linkStatusElement = document.getElementById('assignment-link-status');
-                    if (linkStatusElement) {
-                        linkStatusElement.innerHTML = '<span class="text-muted">미생성</span>';
-                    }
-                    
-                    const linkGroupElement = document.getElementById('assignmentLinkGroup');
-                    if (linkGroupElement) {
-                        linkGroupElement.style.display = 'none';
+                        viewsElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-eye-slash me-1"></i>미열람</span>';
                     }
                 }
                 
             } catch (error) {
-                console.error('수배서 정보 로드 오류:', error);
-                showAlert('수배서 정보를 불러오는데 실패했습니다.', 'danger');
+                console.error('❌ 수배서 정보 로드 오류:', error);
+                console.error('  - 오류 상세:', error.message);
+                console.error('  - 오류 스택:', error.stack);
+                showAlert('수배서 정보를 불러오는데 실패했습니다: ' + error.message, 'danger');
             }
         }
         
