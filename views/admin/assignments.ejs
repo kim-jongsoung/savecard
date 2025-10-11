@@ -960,9 +960,9 @@
                 const isUsageDatePassed = usageDate && usageDate < today;
                 const passedClass = isUsageDatePassed ? 'bg-light-gray' : '';
                 
-                // 수정중 상태는 빨간 테두리 + 주황 배경
-                const revisionClass = isInRevision ? 'border-danger border-3' : (isNewReservation ? 'border-danger border-2' : '');
-                const revisionBg = isInRevision ? 'style="background-color: #fff5f5;"' : '';
+                // 수정중 상태는 노란 테두리 + 연한 노랑 배경
+                const revisionClass = isInRevision ? 'border-warning border-3' : (isNewReservation ? 'border-danger border-2' : '');
+                const revisionBg = isInRevision ? 'style="background-color: #fffbf0;"' : '';
                 
                 // 예약일시
                 const createdAt = reservation.created_at ? formatDate(reservation.created_at) : '-';
@@ -3106,7 +3106,13 @@
             }
             
             // 중요한 변경사항이 있고 현재 상태가 수배중이면 '수정중(예약변경)' 상태로 변경
-            if (hasImportantChanges && (currentReservation.payment_status === 'in_progress' || currentReservation.payment_status === 'confirmed')) {
+            // 단, 사용자가 명시적으로 취소/환불 상태를 선택한 경우는 제외
+            const userSelectedStatus = document.getElementById('edit-payment-status').value;
+            const isExplicitStatusChange = userSelectedStatus === 'cancelled' || userSelectedStatus === 'refunded';
+            
+            if (hasImportantChanges && 
+                (currentReservation.payment_status === 'in_progress' || currentReservation.payment_status === 'confirmed') &&
+                !isExplicitStatusChange) {
                 formData.payment_status = 'in_revision';
                 console.log('⚠️ 중요 변경사항 감지 - 상태를 "수정중(예약변경)"으로 변경');
             }
