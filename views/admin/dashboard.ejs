@@ -12,6 +12,14 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
+        /* PC 화면에서 가로폭 1200px 고정 */
+        @media (min-width: 1200px) {
+            .container-fluid {
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+        }
+        
         .navbar {
             background: linear-gradient(45deg, #667eea, #764ba2) !important;
         }
