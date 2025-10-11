@@ -9284,47 +9284,88 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         try {
             const changesObj = {};
             
-            // 각 필드별로 변경 전/후 비교
-            if (formData.korean_name !== undefined && formData.korean_name !== oldData.korean_name) {
-                changesObj.korean_name = { from: oldData.korean_name || '(없음)', to: formData.korean_name || '(없음)' };
+            // 각 필드별로 변경 전/후 비교 (null과 빈 문자열 정규화)
+            if (formData.korean_name !== undefined) {
+                const oldValue = oldData.korean_name || null;
+                const newValue = formData.korean_name || null;
+                if (oldValue !== newValue) {
+                    changesObj.korean_name = { from: oldData.korean_name || '(없음)', to: formData.korean_name || '(없음)' };
+                }
             }
             
             if (formData.english_name !== undefined) {
                 const oldEnglishName = `${oldData.english_last_name || ''} ${oldData.english_first_name || ''}`.trim();
-                if (formData.english_name !== oldEnglishName) {
-                    changesObj.english_name = { from: oldEnglishName || '(없음)', to: formData.english_name || '(없음)' };
+                const newEnglishName = (formData.english_name || '').trim();
+                if (oldEnglishName !== newEnglishName) {
+                    changesObj.english_name = { from: oldEnglishName || '(없음)', to: newEnglishName || '(없음)' };
                 }
             }
             
-            if (formData.phone !== undefined && formData.phone !== oldData.phone) {
-                changesObj.phone = { from: oldData.phone || '(없음)', to: formData.phone || '(없음)' };
+            if (formData.phone !== undefined) {
+                const oldValue = oldData.phone || null;
+                const newValue = formData.phone || null;
+                if (oldValue !== newValue) {
+                    changesObj.phone = { from: oldData.phone || '(없음)', to: formData.phone || '(없음)' };
+                }
             }
             
-            if (formData.email !== undefined && formData.email !== oldData.email) {
-                changesObj.email = { from: oldData.email || '(없음)', to: formData.email || '(없음)' };
+            if (formData.email !== undefined) {
+                const oldValue = oldData.email || null;
+                const newValue = formData.email || null;
+                if (oldValue !== newValue) {
+                    changesObj.email = { from: oldData.email || '(없음)', to: formData.email || '(없음)' };
+                }
             }
             
-            if (formData.product_name !== undefined && formData.product_name !== oldData.product_name) {
-                changesObj.product_name = { from: oldData.product_name || '(없음)', to: formData.product_name || '(없음)' };
+            if (formData.product_name !== undefined) {
+                const oldValue = oldData.product_name || null;
+                const newValue = formData.product_name || null;
+                if (oldValue !== newValue) {
+                    changesObj.product_name = { from: oldData.product_name || '(없음)', to: formData.product_name || '(없음)' };
+                }
             }
             
-            if (formData.usage_date !== undefined && formData.usage_date !== oldData.usage_date) {
-                changesObj.usage_date = { 
-                    from: oldData.usage_date ? new Date(oldData.usage_date).toLocaleDateString('ko-KR') : '(없음)', 
-                    to: formData.usage_date ? new Date(formData.usage_date).toLocaleDateString('ko-KR') : '(없음)' 
-                };
+            if (formData.usage_date !== undefined) {
+                // 날짜를 문자열 형식(YYYY-MM-DD)으로 정규화해서 비교
+                const oldDateStr = oldData.usage_date ? new Date(oldData.usage_date).toISOString().split('T')[0] : null;
+                const newDateStr = formData.usage_date ? new Date(formData.usage_date).toISOString().split('T')[0] : null;
+                
+                if (oldDateStr !== newDateStr) {
+                    changesObj.usage_date = { 
+                        from: oldData.usage_date ? new Date(oldData.usage_date).toLocaleDateString('ko-KR') : '(없음)', 
+                        to: formData.usage_date ? new Date(formData.usage_date).toLocaleDateString('ko-KR') : '(없음)' 
+                    };
+                }
             }
             
-            if (formData.usage_time !== undefined && formData.usage_time !== oldData.usage_time) {
-                changesObj.usage_time = { from: oldData.usage_time || '(없음)', to: formData.usage_time || '(없음)' };
+            if (formData.usage_time !== undefined) {
+                // 시간 문자열 정규화 (빈 문자열과 null 통일)
+                const oldTimeStr = oldData.usage_time || null;
+                const newTimeStr = formData.usage_time === '' ? null : (formData.usage_time || null);
+                
+                if (oldTimeStr !== newTimeStr) {
+                    changesObj.usage_time = { from: oldData.usage_time || '(없음)', to: formData.usage_time || '(없음)' };
+                }
             }
             
-            if (formData.people_adult !== undefined && formData.people_adult !== oldData.people_adult) {
-                changesObj.people_adult = { from: oldData.people_adult || 0, to: formData.people_adult || 0 };
+            if (formData.people_adult !== undefined) {
+                // 숫자로 정규화해서 비교
+                const oldAdult = parseInt(oldData.people_adult) || 0;
+                const newAdult = parseInt(formData.people_adult) || 0;
+                
+                if (oldAdult !== newAdult) {
+                    changesObj.people_adult = { from: oldAdult, to: newAdult };
+                }
             }
             
-            if (formData.people_child !== undefined && formData.people_child !== oldData.people_child) {
-                changesObj.people_child = { from: oldData.people_child || 0, to: formData.people_child || 0 };
+            if (formData.people_child !== undefined) {
+                // 숫자로 정규화해서 비교
+                const oldChild = parseInt(oldData.people_child) || 0;
+                const newChild = parseInt(formData.people_child) || 0;
+                
+                if (oldChild !== newChild) {
+                    changesObj.people_child = { from: oldChild, to: newChild };
+                }
             }
             
             if (Object.keys(changesObj).length > 0) {
