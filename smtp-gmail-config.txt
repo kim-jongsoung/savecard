@@ -1,0 +1,17 @@
+# Gmail SMTP 설정 가이드
+# railsql.env 파일에 아래 내용으로 변경
+
+# Gmail SMTP 설정
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=앱비밀번호16자리
+
+# Gmail 앱 비밀번호 생성 방법:
+# 1. Google 계정 관리 (https://myaccount.google.com)
+# 2. 보안 > 2단계 인증 활성화
+# 3. 보안 > 앱 비밀번호 
+# 4. "메일" 앱, "기타 기기" 선택
+# 5. "괌세이브카드" 입력
+# 6. 생성된 16자리 비밀번호를 SMTP_PASS에 입력
