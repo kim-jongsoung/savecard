@@ -8203,15 +8203,19 @@ app.post('/assignment/:token/view', async (req, res) => {
                 assignment.reservation_id,
                 '수배',
                 '열람',
-                `수배업체 (${assignment.vendor_name || '현지업체'})`,
+                '수배업체',
                 `수배업체가 수배서를 처음 열람했습니다. 예약 상태가 자동으로 "수배중"으로 변경되었습니다. 수배업체의 확정 응답을 대기하고 있습니다.`,
                 { payment_status: { from: 'pending', to: 'in_progress' } },
                 {
-                    vendor_name: assignment.vendor_name,
-                    assignment_token: assignment_token,
+                    assignment_token: token,
                     user_agent: user_agent || 'Unknown',
                     screen_size: screen_size || 'Unknown',
                     ip_address: ip_address || 'Unknown',
+                    country: country || 'Unknown',
+                    city: city || 'Unknown',
+                    device_type: device_type || 'Unknown',
+                    browser: browser || 'Unknown',
+                    os: os || 'Unknown',
                     first_view: true
                 }
             );
