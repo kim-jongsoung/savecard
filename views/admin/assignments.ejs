@@ -478,79 +478,86 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- 수배서 관리 (위로 이동) -->
                     <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 정보</h6>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>수배서 관리</h6>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshAssignmentInfo()">
+                                <i class="bi bi-arrow-clockwise"></i> 새로고침
+                            </button>
                         </div>
                         <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">수배서 번호</label>
-                                    <div class="fw-bold" id="assignment-number">-</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">이메일 전송 상태</label>
-                                    <div id="assignment-email-status">
-                                        <span class="badge bg-secondary">미전송</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">예약업체 (플랫폼)</label>
-                                    <div id="assignment-platform" class="fw-bold text-primary">-</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">수배업체</label>
-                                    <div id="assignment-vendor">-</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">생성일시</label>
-                                    <div id="assignment-created">-</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">열람 현황</label>
-                                    <div id="assignment-views">
-                                        <span class="badge bg-secondary">미열람</span>
-                                    </div>
-                                </div>
+                            <div class="btn-group w-100 mb-2" role="group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="previewAssignment()">
+                                    <i class="bi bi-eye me-1"></i>미리보기
+                                </button>
+                                <button class="btn btn-sm btn-success" onclick="sendAssignmentWithEmail()">
+                                    <i class="bi bi-envelope me-1"></i>이메일 전송
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="copyAssignmentLink()">
+                                    <i class="bi bi-link-45deg me-1"></i>링크 복사
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <!-- 열람 통계 상세 -->
-                    <div class="card mt-3">
+                    
+                    <!-- 수배서 정보 -->
+                    <div class="card mt-2">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>수배서 정보</h6>
+                        </div>
+                        <div class="card-body p-2">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <td width="30%" class="text-muted">수배서 번호</td>
+                                        <td class="fw-bold" id="assignment-number">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">예약업체</td>
+                                        <td class="text-primary fw-bold" id="assignment-platform">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">수배업체</td>
+                                        <td id="assignment-vendor">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">생성일시</td>
+                                        <td id="assignment-created">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">이메일 전송</td>
+                                        <td id="assignment-email-status">
+                                            <span class="badge bg-secondary">미전송</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">열람 현황</td>
+                                        <td id="assignment-views">
+                                            <span class="badge bg-secondary">미열람</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 열람 통계 (아래로 이동) -->
+                    <div class="card mt-2">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>열람 통계</h6>
                             <button class="btn btn-sm btn-outline-primary" onclick="loadViewStats()">
                                 <i class="bi bi-arrow-clockwise"></i>
                             </button>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-2">
                             <div id="view-stats-content">
-                                <div class="text-center text-muted">
-                                    <i class="bi bi-hourglass-split"></i> 통계 조회를 클릭하세요
+                                <div class="text-center text-muted py-2">
+                                    <small><i class="bi bi-hourglass-split"></i> 조회 버튼을 클릭하세요</small>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>수배서 관리</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-outline-primary" onclick="previewAssignment()">
-                                    <i class="bi bi-eye me-1"></i>수배서 미리보기
-                                </button>
-                                <button class="btn btn-success" onclick="sendAssignmentWithEmail()">
-                                    <i class="bi bi-envelope me-1"></i>이메일로 수배서 전송
-                                </button>
-                                <button class="btn btn-outline-info" onclick="copyAssignmentLink()">
-                                    <i class="bi bi-link-45deg me-1"></i>링크 복사 (카톡 전송용)
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
                 </div>
             </div>
         </div>
@@ -1258,6 +1265,12 @@
                         alert(`✅ 수배서가 이메일로 전송되었습니다!\n\n수신자: ${result.recipientEmail}\n\n수배업체가 이메일을 확인하면 열람 통계에서 확인할 수 있습니다.`);
                         // 목록 새로고침
                         loadAssignments(currentPage);
+                        // 모달 정보 새로고침
+                        if (window.currentReservationId) {
+                            setTimeout(() => {
+                                loadAssignmentDetails(window.currentReservationId);
+                            }, 500);
+                        }
                     } else {
                         alert(`⚠️ ${result.message}\n\n이메일이 발송되지 않았습니다. 수배업체 이메일을 확인해주세요.`);
                     }
@@ -2081,43 +2094,25 @@
             window.currentReservationId = reservationId;
             window.currentReservation = reservation;
             
-            // 수배서 정보 표시 (안전하게 요소 확인)
-            const assignmentNumberEl = document.getElementById('assignment-number');
-            if (assignmentNumberEl) {
-                assignmentNumberEl.textContent = reservation.assignment_id || reservation.id || '-';
-            }
-            
-            const assignmentVendorEl = document.getElementById('assignment-vendor');
-            if (assignmentVendorEl) {
-                assignmentVendorEl.textContent = reservation.vendor_name || '미지정';
-            }
-            
-            const assignmentCreatedEl = document.getElementById('assignment-created');
-            if (assignmentCreatedEl) {
-                assignmentCreatedEl.textContent = reservation.assigned_at ? formatDateTime(reservation.assigned_at) : '-';
-            }
-            
-            const assignmentStatusEl = document.getElementById('assignment-status');
-            if (assignmentStatusEl) {
-                if (reservation.assignment_status) {
-                    const statusBadge = getAssignmentStatusBadge(reservation.assignment_status);
-                    assignmentStatusEl.innerHTML = statusBadge;
-                } else {
-                    assignmentStatusEl.innerHTML = '<span class="badge bg-secondary">미생성</span>';
-                }
-            }
-            
-            // 예약업체 (플랫폼) 표시
-            const assignmentPlatformEl = document.getElementById('assignment-platform');
-            if (assignmentPlatformEl) {
-                assignmentPlatformEl.textContent = reservation.platform_name || '-';
-            }
-            
+            // 모달 표시
             const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
             modal.show();
             
-            // ⚠️ 자동 새로고침 비활성화 (중복 로드 문제 발생으로 제거)
-            // 필요시 수동으로 모달 재열람하여 최신 정보 확인
+            // 수배서 정보 로드
+            loadAssignmentDetails(reservationId);
+        }
+        
+        // 수배서 정보 새로고침 함수
+        function refreshAssignmentInfo() {
+            const reservationId = window.currentReservationId;
+            if (!reservationId) {
+                showAlert('예약 정보가 없습니다.', 'warning');
+                return;
+            }
+            
+            console.log('🔄 수배서 정보 새로고침:', reservationId);
+            loadAssignmentDetails(reservationId);
+            showAlert('정보가 새로고침되었습니다.', 'success');
         }
 
         // 열람 통계 로드 함수
@@ -2614,8 +2609,17 @@
                 
                 const result = await response.json();
                 
+                console.log('🔍 API 응늵 데이터:', result);
+                
                 if (result.success && result.assignment) {
                     const assignment = result.assignment;
+                    
+                    console.log('📊 수배서 데이터:', {
+                        id: assignment.id,
+                        sent_at: assignment.sent_at,
+                        viewed_at: assignment.viewed_at,
+                        vendor_name: assignment.vendor_name
+                    });
                     
                     // 수배서 상태 정보
                     document.getElementById('assignment-number').textContent = assignment.id || '-';
@@ -2644,9 +2648,11 @@
                     if (emailStatusElement) {
                         if (assignment.sent_at) {
                             const sentTime = formatDateTime(assignment.sent_at);
-                            emailStatusElement.innerHTML = `<span class="badge bg-success"><i class="bi bi-envelope-check me-1"></i>전송됨</span><br><small class="text-muted">${sentTime}</small>`;
+                            emailStatusElement.innerHTML = `<span class="badge bg-success"><i class="bi bi-envelope-check me-1"></i>전송됨</span> <small class="text-muted">${sentTime}</small>`;
+                            console.log('✅ 이메일 전송됨:', sentTime);
                         } else {
                             emailStatusElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-envelope-x me-1"></i>미전송</span>';
+                            console.log('❌ 이메일 미전송');
                         }
                     }
                     
@@ -2655,9 +2661,11 @@
                     if (viewsElement) {
                         if (assignment.viewed_at) {
                             const viewedTime = formatDateTime(assignment.viewed_at);
-                            viewsElement.innerHTML = `<span class="badge bg-primary"><i class="bi bi-eye-fill me-1"></i>열람</span><br><small class="text-muted">${viewedTime}</small>`;
+                            viewsElement.innerHTML = `<span class="badge bg-primary"><i class="bi bi-eye-fill me-1"></i>열람</span> <small class="text-muted">${viewedTime}</small>`;
+                            console.log('✅ 열람됨:', viewedTime);
                         } else {
                             viewsElement.innerHTML = '<span class="badge bg-secondary"><i class="bi bi-eye-slash me-1"></i>미열람</span>';
+                            console.log('❌ 미열람');
                         }
                     }
                     
