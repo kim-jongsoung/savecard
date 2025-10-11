@@ -14,7 +14,17 @@
             display: flex;
             flex-direction: column;
         }
-        main { flex: 1; }
+        main { 
+            flex: 1;
+        }
+        
+        /* PC 화면에서 가로폭 1300px 고정 */
+        @media (min-width: 1400px) {
+            .container-fluid {
+                max-width: 1300px;
+                margin: 0 auto;
+            }
+        }
         .page-header { position: sticky; top: 0; z-index: 10; background:#fff; border-bottom:1px solid #eee; }
         .status-badge { font-weight:600; }
         .row-card { background:#fff; border:1px solid #ececf1; border-radius:12px; padding:14px 16px; margin-bottom:10px; display:flex; align-items:center; gap:12px; cursor:pointer; transition: all 0.2s ease; }
