@@ -5469,6 +5469,14 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                 reservationData.reservation_number = `AUTO_${timestamp}_${random}`;
             }
 
+            // 로그인한 담당자 정보 가져오기
+            const assignedBy = req.session.adminName || req.session.adminUsername || '시스템';
+            console.log('👤 인박스 담당자 정보:', {
+                adminName: req.session.adminName,
+                adminUsername: req.session.adminUsername,
+                assignedBy: assignedBy
+            });
+
             const insertQuery = `
                 INSERT INTO reservations (
                     reservation_number, confirmation_number, channel, platform_name,
@@ -5476,10 +5484,10 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                     korean_name, english_first_name, english_last_name, email, phone, kakao_id,
                     people_adult, people_child, people_infant, adult_unit_price, child_unit_price,
                     usage_date, usage_time, reservation_datetime, payment_status,
-                    memo, created_at, updated_at
+                    memo, assigned_to, created_at, updated_at
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()
+                    $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW()
                 ) RETURNING id, reservation_number
             `;
             
@@ -5508,7 +5516,8 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                 reservationData.usage_time || null,
                 reservationData.reservation_datetime || null,
                 reservationData.payment_status || 'pending', // 인박스에서 설정한 상태 유지, 기본값은 대기중
-                reservationData.memo || null
+                reservationData.memo || null,
+                assignedBy
             ];
 
             const result = await pool.query(insertQuery, values);
