@@ -9609,6 +9609,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                     r.*,
                     CONCAT(r.english_last_name, ' ', r.english_first_name) as english_name,
                     a.id as assignment_id,
+                    a.vendor_id,
                     a.vendor_name,
                     a.vendor_contact,
                     a.assignment_token,
@@ -9621,9 +9622,12 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                     a.confirmation_number,
                     a.voucher_token,
                     a.rejection_reason,
+                    v.email as vendor_email,
+                    v.phone as vendor_phone,
                     COUNT(*) OVER() as total_count
                 FROM reservations r
                 LEFT JOIN assignments a ON r.id = a.reservation_id
+                LEFT JOIN vendors v ON a.vendor_id = v.id
                 ${whereClause}
                 ORDER BY 
                     CASE r.payment_status
