@@ -12465,7 +12465,19 @@ async function startServer() {
                     };
                     
                     await transporter.sendMail(mailOptions);
+                    
+                    console.log('✅ 이메일 전송 완료:', reservation.vendor_email);
                 }
+                
+                // assignments 테이블의 sent_at 업데이트
+                await pool.query(`
+                    UPDATE assignments 
+                    SET sent_at = NOW(), 
+                        updated_at = NOW()
+                    WHERE reservation_id = $1
+                `, [reservationId]);
+                
+                console.log('✅ assignments.sent_at 업데이트 완료');
                 
                 // 전송 로그 기록
                 await pool.query(`
