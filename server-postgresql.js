@@ -6805,7 +6805,10 @@ app.post('/api/assignments', requireAuth, async (req, res) => {
 app.get('/assignment/:token', async (req, res) => {
     try {
         const { token } = req.params;
+        const isPreview = req.query.preview === 'true' || req.query.preview === '1';
+        
         console.log('🔍 수배서 페이지 요청:', token);
+        console.log('🔍 미리보기 모드:', isPreview);
         console.log('🔍 요청 시간:', new Date().toISOString());
         console.log('🔍 DB 연결 상태:', pool ? 'OK' : 'NULL');
 
@@ -6946,7 +6949,7 @@ app.get('/assignment/:token', async (req, res) => {
         res.render('assignment', {
             assignment: safeAssignment,
             title: `수배서 - ${safeAssignment.reservation_number}`,
-            isPreview: false,
+            isPreview: isPreview,
             formatDate: (date) => {
                 try {
                     if (!date) return '-';
@@ -8253,6 +8256,8 @@ app.get('/api/assignment/:token/views', requireAuth, async (req, res) => {
     try {
         const { token } = req.params;
         
+        console.log('📊 열람 통계 조회 요청:', token);
+        
         // 전체 열람 통계
         const statsQuery = `
             SELECT 
@@ -8293,12 +8298,22 @@ app.get('/api/assignment/:token/views', requireAuth, async (req, res) => {
             pool.query(countryQuery, [token])
         ]);
         
-        res.json({
+        const responseData = {
             success: true,
             stats: statsResult.rows[0],
             details: detailsResult.rows,
             by_country: countryResult.rows
+        };
+        
+        console.log('✅ 열람 통계 조회 결과:', {
+            total_views: statsResult.rows[0]?.total_views,
+            unique_visitors: statsResult.rows[0]?.unique_visitors,
+            first_viewed: statsResult.rows[0]?.first_viewed,
+            details_count: detailsResult.rows.length,
+            countries: countryResult.rows.length
         });
+        
+        res.json(responseData);
         
     } catch (error) {
         console.error('❌ 열람 통계 조회 오류:', error);
