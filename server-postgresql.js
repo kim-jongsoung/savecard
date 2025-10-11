@@ -307,9 +307,9 @@ async function initializeDatabase() {
           console.log('⚠️ 수배업체 테이블 생성 중 오류:', vendorError.message);
         }
         
-        // reservation_logs 테이블 생성 (업무 히스토리)
+        // reservation_logs 테이블 생성 및 마이그레이션 (업무 히스토리)
         try {
-          console.log('📜 업무 히스토리 테이블 생성 시작...');
+          console.log('📜 업무 히스토리 테이블 생성/마이그레이션 시작...');
           
           await pool.query(`
             CREATE TABLE IF NOT EXISTS reservation_logs (
@@ -325,15 +325,49 @@ async function initializeDatabase() {
           `);
           console.log('✅ reservation_logs 테이블 생성 완료');
           
+          // 새로운 스키마 컬럼 추가
+          await pool.query(`
+            ALTER TABLE reservation_logs 
+            ADD COLUMN IF NOT EXISTS category VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS description TEXT,
+            ADD COLUMN IF NOT EXISTS metadata JSONB
+          `);
+          console.log('✅ reservation_logs 새 컬럼 추가 완료 (category, description, metadata)');
+          
+          // 기존 데이터 마이그레이션: details -> description
+          await pool.query(`
+            UPDATE reservation_logs 
+            SET description = details 
+            WHERE description IS NULL AND details IS NOT NULL
+          `);
+          
+          // 기존 데이터에 기본 category 설정
+          await pool.query(`
+            UPDATE reservation_logs 
+            SET category = CASE 
+              WHEN action LIKE '%바우처%' OR action LIKE '%voucher%' THEN '바우처'
+              WHEN action LIKE '%수배%' OR action LIKE '%assignment%' THEN '수배'
+              WHEN action LIKE '%정산%' OR action LIKE '%settlement%' THEN '정산'
+              WHEN action LIKE '%예약%' OR action LIKE '%reservation%' THEN '예약'
+              ELSE '시스템'
+            END
+            WHERE category IS NULL
+          `);
+          console.log('✅ 기존 히스토리 데이터 마이그레이션 완료');
+          
           // 인덱스 생성
           await pool.query(`
             CREATE INDEX IF NOT EXISTS idx_reservation_logs_reservation_id 
             ON reservation_logs(reservation_id)
           `);
+          await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_reservation_logs_category 
+            ON reservation_logs(category)
+          `);
           console.log('✅ reservation_logs 인덱스 생성 완료');
           
         } catch (logError) {
-          console.log('⚠️ reservation_logs 테이블 생성 중 오류:', logError.message);
+          console.log('⚠️ reservation_logs 테이블 생성/마이그레이션 중 오류:', logError.message);
         }
         
         // 기존 테이블에 누락된 컬럼 추가
@@ -390,21 +424,6 @@ app.use(checkDatabase);
  */
 async function logHistory(reservationId, category, action, changedBy, description, changes = null, metadata = null) {
     try {
-        // reservation_logs 테이블 확인 및 생성
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS reservation_logs (
-                id SERIAL PRIMARY KEY,
-                reservation_id INTEGER NOT NULL,
-                category VARCHAR(50) NOT NULL,
-                action VARCHAR(100) NOT NULL,
-                changed_by VARCHAR(100),
-                description TEXT,
-                changes JSONB,
-                metadata JSONB,
-                created_at TIMESTAMP DEFAULT NOW()
-            )
-        `);
-        
         await pool.query(`
             INSERT INTO reservation_logs (
                 reservation_id, category, action, changed_by, description, changes, metadata
