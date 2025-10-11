@@ -44,6 +44,11 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             border-color: #9ca3af;
         }
+        .row-card-selected {
+            border: 3px solid #0d6efd !important;
+            background: #f0f7ff !important;
+            box-shadow: 0 4px 16px rgba(13, 110, 253, 0.25) !important;
+        }
         .row-main { display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1; }
         .row-main > .chip { background:#f1f3f5; border-radius:999px; padding:4px 10px; font-size:0.9rem; }
         .row-main .dim { color:#6c757d; }
@@ -1020,7 +1025,7 @@
                 const customerDisplay = `고객:${truncate(reservation.korean_name || '-', 3)}`;
                 
                 return `
-                    <article class="row-card table-like ${revisionClass} ${passedClass}" ${revisionBg}>
+                    <article class="row-card table-like ${revisionClass} ${passedClass}" data-reservation-id="${reservation.id}" ${revisionBg}>
                         <div class="d-flex align-items-center mb-2">
                             <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge">${statusText}</span>
                             ${statusBadges}
@@ -2033,8 +2038,25 @@
             }).format(amount);
         }
 
+        // 선택된 예약 강조 표시 함수
+        function highlightSelectedReservation(reservationId) {
+            // 모든 예약 카드의 선택 클래스 제거
+            document.querySelectorAll('.row-card').forEach(card => {
+                card.classList.remove('row-card-selected');
+            });
+            
+            // 현재 선택된 예약 카드에 클래스 추가
+            const selectedCard = document.querySelector(`.row-card[data-reservation-id="${reservationId}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('row-card-selected');
+                console.log('✅ 예약 강조 표시:', reservationId);
+            }
+        }
+        
         // 1. 예약변경 모달 열기
         function openReservationEditModal(reservationId) {
+            highlightSelectedReservation(reservationId);
+            
             const reservation = getReservationData(reservationId);
             if (!reservation) return;
             
@@ -2093,6 +2115,9 @@
             
             window.currentReservationId = reservationId;
             window.currentReservation = reservation;
+            
+            // 선택된 예약 강조 표시
+            highlightSelectedReservation(reservationId);
             
             // 모달 표시
             const modal = new bootstrap.Modal(document.getElementById('assignmentManageModal'));
@@ -2319,6 +2344,8 @@
 
         // 3. 상태관리 모달 열기
         function openStatusManageModal(reservationId) {
+            highlightSelectedReservation(reservationId);
+            
             const reservation = getReservationData(reservationId);
             if (!reservation) return;
             
@@ -2336,6 +2363,8 @@
 
         // 4. 바우처관리 모달 열기
         function openVoucherManageModal(reservationId) {
+            highlightSelectedReservation(reservationId);
+            
             const reservation = getReservationData(reservationId);
             if (!reservation) return;
             
@@ -2350,6 +2379,8 @@
 
         // 5. 정산이관 모달 열기
         function openSettlementModal(reservationId) {
+            highlightSelectedReservation(reservationId);
+            
             const reservation = getReservationData(reservationId);
             if (!reservation) return;
             
@@ -2370,6 +2401,8 @@
         
         // 6. 업무히스토리 모달 열기
         async function openHistoryModal(reservationId) {
+            highlightSelectedReservation(reservationId);
+            
             const reservation = getReservationData(reservationId);
             if (!reservation) return;
             
