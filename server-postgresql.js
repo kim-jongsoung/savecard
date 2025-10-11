@@ -203,7 +203,8 @@ async function migrateReservationsSchema() {
       { name: 'total_amount', type: 'DECIMAL(12,2)', default: 'NULL' },
       { name: 'adult_unit_price', type: 'DECIMAL(10,2)', default: '0' },
       { name: 'child_unit_price', type: 'DECIMAL(10,2)', default: '0' },
-      { name: 'payment_status', type: 'VARCHAR(20)', default: "'대기'" }
+      { name: 'payment_status', type: 'VARCHAR(20)', default: "'대기'" },
+      { name: 'assigned_to', type: 'VARCHAR(100)', default: 'NULL' }
     ];
     
     for (const column of columnsToAdd) {
@@ -306,6 +307,7 @@ async function initializeDatabase() {
             
             -- 기타
             memo TEXT,
+            assigned_to VARCHAR(100),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
@@ -5092,6 +5094,9 @@ app.post('/api/register-reservation', async (req, res) => {
         
         // 데이터베이스에 저장
         if (dbMode === 'postgresql') {
+            // 로그인한 담당자 정보 가져오기
+            const assignedBy = req.session.adminName || req.session.adminUsername || '시스템 (인박스)';
+            
             const insertQuery = `
                 INSERT INTO reservations (
                     reservation_number, channel, platform_name, product_name,
@@ -5100,11 +5105,11 @@ app.post('/api/register-reservation', async (req, res) => {
                     usage_date, usage_time, guest_count,
                     people_adult, people_child, people_infant,
                     package_type, total_amount, adult_unit_price, child_unit_price,
-                    payment_status, code_issued, memo
+                    payment_status, code_issued, memo, assigned_to
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                    $21, $22, $23
+                    $21, $22, $23, $24
                 ) RETURNING *
             `;
             
@@ -5131,7 +5136,8 @@ app.post('/api/register-reservation', async (req, res) => {
                 parsedData.child_unit_price,
                 parsedData.payment_status || '대기',
                 parsedData.code_issued || false,
-                parsedData.memo
+                parsedData.memo,
+                assignedBy
             ];
             
             try {
@@ -5151,13 +5157,14 @@ app.post('/api/register-reservation', async (req, res) => {
                     reservationId,
                     '예약',
                     '생성',
-                    '시스템 (인박스)',
+                    assignedBy,
                     `새로운 예약이 등록되었습니다. 고객명: ${parsedData.korean_name || '-'}, 상품: ${parsedData.product_name || '-'}, 이용일: ${parsedData.usage_date || '-'}`,
                     null,
                     {
                         channel: parsedData.channel || '웹',
                         platform: parsedData.platform_name || 'NOL',
                         reservation_number: parsedData.reservation_number,
+                        assigned_to: assignedBy,
                         auto_assignment: autoAssignment ? true : false,
                         vendor_name: autoAssignment?.vendor_name
                     }

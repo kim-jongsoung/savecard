@@ -989,7 +989,7 @@
                 };
                 
                 // 담당자 표시 (담당:000 형식)
-                const managerDisplay = reservation.manager_name ? `담당:${truncate(reservation.manager_name, 3)}` : '담당:미지정';
+                const managerDisplay = reservation.assigned_to ? `담당:${truncate(reservation.assigned_to, 3)}` : '담당:미지정';
                 const customerDisplay = `고객:${truncate(reservation.korean_name || '-', 3)}`;
                 
                 return `
@@ -1003,7 +1003,7 @@
                             <div style="display: grid; grid-template-columns: 120px 180px 100px 1fr; gap: 12px; align-items: center;">
                                 <div style="width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" title="${reservation.platform_name || '-'}"><strong>${truncate(reservation.platform_name || '-', 8)}</strong></div>
                                 <div style="width: 180px; text-align: left; white-space: nowrap;" class="dim">예약일 ${createdAt}</div>
-                                <div style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="dim" title="${reservation.manager_name || '담당자 미지정'}">${managerDisplay}</div>
+                                <div style="width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="dim" title="${reservation.assigned_to || '담당자 미지정'}">${managerDisplay}</div>
                                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="chip" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 20)}</div>
                             </div>
                             <div style="display: grid; grid-template-columns: 120px 180px 100px 1fr; gap: 12px; align-items: center;">
