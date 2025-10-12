@@ -2716,13 +2716,14 @@
                     const modal = bootstrap.Modal.getInstance(document.getElementById('statusManageModal'));
                     if (modal) modal.hide();
                     
-                    // 목록 새로고침
+                    // 목록 새로고침 후 바우처 모달 열기
                     await loadAssignments(currentPage);
                     
-                    // 바우처 모달 자동 열기
+                    // 새로고침된 데이터로 바우처 모달 자동 열기
                     setTimeout(() => {
-                        openVoucherManageModal(reservationId);
-                    }, 500);
+                        // 바우처 토큰을 직접 전달
+                        openVoucherManageModalWithToken(reservationId, result.voucher_token);
+                    }, 800);
                     
                 } else {
                     showAlert('확정 처리 실패: ' + result.message, 'danger');
@@ -2784,6 +2785,67 @@
             modal.show();
         }
         
+        // 바우처 토큰과 함께 모달 열기 (확정 후 사용)
+        async function openVoucherManageModalWithToken(reservationId, voucherToken) {
+            highlightSelectedReservation(reservationId);
+            
+            const reservation = getReservationData(reservationId);
+            if (!reservation) {
+                console.warn('예약 데이터를 찾을 수 없습니다. 토큰으로 진행합니다.');
+            }
+            
+            window.currentReservationId = reservationId;
+            window.currentVoucherToken = voucherToken;
+            
+            // 바우처 정보 로드 (토큰 직접 전달)
+            await loadVoucherDataWithToken(reservationId, voucherToken);
+            
+            const modal = new bootstrap.Modal(document.getElementById('voucherManageModal'));
+            modal.show();
+        }
+        
+        // 바우처 데이터 로드 (토큰 직접 전달)
+        async function loadVoucherDataWithToken(reservationId, voucherToken) {
+            try {
+                const reservation = getReservationData(reservationId);
+                
+                // 바우처 요약 정보
+                if (reservation) {
+                    const summary = `${reservation.korean_name}님 - ${reservation.product_name}`;
+                    document.getElementById('voucher-summary').textContent = summary;
+                    
+                    // 이메일 수신자 자동 입력
+                    if (reservation.email) {
+                        document.getElementById('email-recipient').value = reservation.email;
+                    }
+                }
+                
+                // 바우처 링크 (토큰 사용)
+                if (voucherToken) {
+                    const voucherUrl = `${window.location.origin}/voucher/${voucherToken}`;
+                    document.getElementById('voucher-link-url').value = voucherUrl;
+                    
+                    // 미리보기 로드
+                    console.log('🎫 바우처 미리보기 로드:', voucherToken);
+                    await loadVoucherPreview(voucherToken);
+                    
+                    // 전송 기록 로드
+                    loadSendHistory(reservationId);
+                } else {
+                    document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
+                    document.getElementById('voucher-preview-content').innerHTML = `
+                        <div class="text-center text-warning">
+                            <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem;"></i>
+                            <p>바우처 토큰이 없습니다.</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ 바우처 데이터 로드 오류:', error);
+            }
+        }
+        
         // 바우처 데이터 로드
         async function loadVoucherData(reservationId) {
             try {
@@ -2819,22 +2881,38 @@
         
         // 바우처 미리보기 로드
         async function loadVoucherPreview(voucherToken) {
+            const previewEl = document.getElementById('voucher-preview-content');
+            
             try {
+                console.log('📥 미리보기 요청:', `/api/vouchers/${voucherToken}/preview`);
+                
                 const response = await fetch(`/api/vouchers/${voucherToken}/preview`);
                 const data = await response.json();
                 
+                console.log('📦 미리보기 응답:', data);
+                
                 if (data.success) {
-                    document.getElementById('voucher-preview-content').innerHTML = data.html;
+                    previewEl.innerHTML = data.html;
+                    console.log('✅ 바우처 미리보기 로드 완료');
                 } else {
-                    document.getElementById('voucher-preview-content').innerHTML = `
+                    previewEl.innerHTML = `
                         <div class="text-center text-danger">
                             <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem;"></i>
                             <p>미리보기를 불러올 수 없습니다.</p>
+                            <p class="small text-muted">${data.message || ''}</p>
                         </div>
                     `;
+                    console.error('❌ 미리보기 실패:', data.message);
                 }
             } catch (error) {
                 console.error('❌ 미리보기 로드 오류:', error);
+                previewEl.innerHTML = `
+                    <div class="text-center text-danger">
+                        <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem;"></i>
+                        <p>미리보기를 불러올 수 없습니다.</p>
+                        <p class="small text-muted">${error.message}</p>
+                    </div>
+                `;
             }
         }
         
