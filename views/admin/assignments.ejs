@@ -567,63 +567,77 @@
         </div>
     </div>
 
-    <!-- 3. 상태관리 모달 -->
+    <!-- 3. 상태관리 모달 (확정 방식 선택) -->
     <div class="modal fade" id="statusManageModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>상태관리</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-check-circle-fill me-2"></i>예약 확정하기</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>현재 상태</h6>
+                    <!-- 현재 상태 표시 -->
+                    <div class="alert alert-info d-flex align-items-center mb-4">
+                        <i class="bi bi-info-circle me-2" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <strong>현재 상태:</strong> <span id="current-status-display" class="ms-2">로딩중...</span>
                         </div>
-                        <div class="card-body">
-                            <div class="text-center">
-                                <div id="current-status-display">
-                                    <span class="badge bg-secondary fs-6">상태 로딩중</span>
+                    </div>
+
+                    <!-- 확정 방식 선택 -->
+                    <h6 class="mb-3"><i class="bi bi-list-check me-2"></i>확정 방식 선택</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-primary cursor-pointer confirmation-method-card" onclick="selectConfirmationMethod(1)" data-method="1">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-key-fill text-primary" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2 mb-0">컨펌번호 등록</h6>
+                                    <small class="text-muted">수배업체 회신 번호</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-success cursor-pointer confirmation-method-card" onclick="selectConfirmationMethod(2)" data-method="2">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-qr-code text-success" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2 mb-0">QR코드 등록</h6>
+                                    <small class="text-muted">수배업체 제공 QR</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-warning cursor-pointer confirmation-method-card" onclick="selectConfirmationMethod(3)" data-method="3">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-ticket-perforated-fill text-warning" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2 mb-0">바우처 등록</h6>
+                                    <small class="text-muted">수배업체 제공 바우처</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-danger cursor-pointer confirmation-method-card" onclick="selectConfirmationMethod(4)" data-method="4">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-check-circle-fill text-danger" style="font-size: 2rem;"></i>
+                                    <h6 class="mt-2 mb-0">즉시 확정</h6>
+                                    <small class="text-muted">회신 불필요</small>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i>상태 변경</h6>
-                        </div>
-                        <div class="card-body">
+
+                    <!-- 입력 폼 (방식별로 동적 표시) -->
+                    <div id="confirmation-input-area" style="display: none;">
+                        <hr class="my-4">
+                        
+                        <!-- 방식 1: 컨펌번호 -->
+                        <div id="method-1-form" class="confirmation-form" style="display: none;">
+                            <h6 class="mb-3"><i class="bi bi-key me-2"></i>컨펌번호 입력</h6>
                             <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">새 상태</label>
-                                    <select class="form-select" id="new-status-select">
-                                        <option value="">상태 선택</option>
-                                        <option value="pending">대기중</option>
-                                        <option value="in_progress">수배중</option>
-                                        <option value="confirmed">확정완료</option>
-                                        <option value="voucher_sent">바우처전송</option>
-                                        <option value="cancelled">취소</option>
-                                        <option value="refunded">환불</option>
-                                    </select>
+                                <div class="col-md-8">
+                                    <label class="form-label">컨펌번호 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-lg" id="confirmation-number" placeholder="예: CONF123456">
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">변경 사유</label>
-                                    <input type="text" class="form-control" id="status-change-reason" placeholder="변경 사유 (선택사항)">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-key me-2"></i>컨펌번호 관리</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-2">
-                                <div class="col-8">
-                                    <label class="form-label">컨펌번호</label>
-                                    <input type="text" class="form-control" id="confirmation-number" placeholder="컨펌번호 입력">
-                                </div>
-                                <div class="col-4">
+                                <div class="col-md-4">
                                     <label class="form-label">&nbsp;</label>
                                     <button class="btn btn-outline-secondary w-100" onclick="generateConfirmationNumber()">
                                         <i class="bi bi-arrow-clockwise me-1"></i>자동생성
@@ -631,21 +645,73 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- 방식 2: QR코드 -->
+                        <div id="method-2-form" class="confirmation-form" style="display: none;">
+                            <h6 class="mb-3"><i class="bi bi-qr-code me-2"></i>QR코드 정보 입력</h6>
+                            <div class="mb-3">
+                                <label class="form-label">QR코드 URL 또는 텍스트 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-lg" id="qr-code-data" placeholder="QR코드 URL 또는 데이터 입력">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">QR코드 이미지 업로드 (선택)</label>
+                                <input type="file" class="form-control" id="qr-code-image" accept="image/*">
+                            </div>
+                        </div>
+
+                        <!-- 방식 3: 바우처 -->
+                        <div id="method-3-form" class="confirmation-form" style="display: none;">
+                            <h6 class="mb-3"><i class="bi bi-ticket-perforated me-2"></i>수배업체 바우처 업로드</h6>
+                            <div class="mb-3">
+                                <label class="form-label">바우처 파일 <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control form-control-lg" id="vendor-voucher-file" accept=".pdf,.jpg,.jpeg,.png">
+                                <div class="form-text">PDF, JPG, PNG 파일만 업로드 가능</div>
+                            </div>
+                        </div>
+
+                        <!-- 방식 4: 즉시 확정 -->
+                        <div id="method-4-form" class="confirmation-form" style="display: none;">
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>즉시 확정</strong>: 수배업체 회신 없이 바로 확정됩니다. 바우처가 자동 생성됩니다.
+                            </div>
+                        </div>
+
+                        <!-- 공통: 메모 -->
+                        <div class="mt-3">
+                            <label class="form-label">확정 메모 (선택)</label>
+                            <textarea class="form-control" id="confirmation-memo" rows="2" placeholder="확정 관련 메모사항"></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button class="btn btn-success" onclick="changeReservationStatus()">
-                        <i class="bi bi-check me-1"></i>상태 변경
-                    </button>
-                    <button class="btn btn-primary" onclick="saveConfirmationNumber()">
-                        <i class="bi bi-key me-1"></i>컨펌번호 저장
+                    <button class="btn btn-primary btn-lg" id="confirm-button" onclick="processConfirmation()" style="display: none;">
+                        <i class="bi bi-check-circle-fill me-2"></i>확정 완료 및 바우처 생성
                     </button>
                 </div>
-                
             </div>
         </div>
     </div>
+    
+    <style>
+        .confirmation-method-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .confirmation-method-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .confirmation-method-card.selected {
+            background-color: #f0f7ff;
+            border-width: 3px !important;
+            box-shadow: 0 4px 16px rgba(13, 110, 253, 0.3);
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+    </style>
 
     <!-- 4. 바우처관리 모달 -->
     <div class="modal fade" id="voucherManageModal" tabindex="-1" aria-hidden="true">
@@ -2416,6 +2482,9 @@
         }
 
         // 3. 상태관리 모달 열기
+        // 확정 방식 선택 전역 변수
+        let selectedConfirmationMethod = null;
+        
         function openStatusManageModal(reservationId) {
             highlightSelectedReservation(reservationId);
             
@@ -2424,14 +2493,202 @@
             
             window.currentReservationId = reservationId;
             
+            // 초기화
+            selectedConfirmationMethod = null;
+            document.getElementById('confirmation-input-area').style.display = 'none';
+            document.getElementById('confirm-button').style.display = 'none';
+            document.querySelectorAll('.confirmation-method-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelectorAll('.confirmation-form').forEach(form => {
+                form.style.display = 'none';
+            });
+            
             // 현재 상태 표시
             const statusText = getReservationStatusText(reservation.payment_status);
             const statusClass = getBootstrapStatusClass(reservation.payment_status);
             document.getElementById('current-status-display').innerHTML = 
-                `<span class="badge bg-${statusClass} fs-6">${statusText}</span>`;
+                `<span class="badge bg-${statusClass}">${statusText}</span>`;
             
             const modal = new bootstrap.Modal(document.getElementById('statusManageModal'));
             modal.show();
+        }
+        
+        // 확정 방식 선택
+        function selectConfirmationMethod(method) {
+            selectedConfirmationMethod = method;
+            
+            // 모든 카드 선택 해제
+            document.querySelectorAll('.confirmation-method-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // 선택된 카드 강조
+            document.querySelector(`.confirmation-method-card[data-method="${method}"]`).classList.add('selected');
+            
+            // 모든 폼 숨기기
+            document.querySelectorAll('.confirmation-form').forEach(form => {
+                form.style.display = 'none';
+            });
+            
+            // 입력 영역 표시
+            document.getElementById('confirmation-input-area').style.display = 'block';
+            
+            // 선택된 방식의 폼 표시
+            document.getElementById(`method-${method}-form`).style.display = 'block';
+            
+            // 확정 버튼 표시
+            document.getElementById('confirm-button').style.display = 'inline-block';
+            
+            console.log('✅ 확정 방식 선택:', method);
+        }
+        
+        // 컨펌번호 자동생성
+        function generateConfirmationNumber() {
+            const prefix = 'CONF';
+            const timestamp = Date.now().toString().slice(-8);
+            const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+            const confirmNumber = `${prefix}${timestamp}${random}`;
+            
+            document.getElementById('confirmation-number').value = confirmNumber;
+            showAlert('컨펌번호가 생성되었습니다: ' + confirmNumber, 'success');
+        }
+        
+        // 확정 처리 (메인 함수)
+        async function processConfirmation() {
+            if (!selectedConfirmationMethod) {
+                showAlert('확정 방식을 선택해주세요.', 'warning');
+                return;
+            }
+            
+            const reservationId = window.currentReservationId;
+            const memo = document.getElementById('confirmation-memo').value;
+            
+            let confirmationData = {
+                method: selectedConfirmationMethod,
+                memo: memo
+            };
+            
+            // 방식별 데이터 수집 및 검증
+            switch(selectedConfirmationMethod) {
+                case 1: // 컨펌번호
+                    const confirmNumber = document.getElementById('confirmation-number').value.trim();
+                    if (!confirmNumber) {
+                        showAlert('컨펌번호를 입력해주세요.', 'warning');
+                        return;
+                    }
+                    confirmationData.confirmation_number = confirmNumber;
+                    break;
+                    
+                case 2: // QR코드
+                    const qrData = document.getElementById('qr-code-data').value.trim();
+                    if (!qrData) {
+                        showAlert('QR코드 정보를 입력해주세요.', 'warning');
+                        return;
+                    }
+                    confirmationData.qr_code_data = qrData;
+                    
+                    // QR 이미지 파일 (선택)
+                    const qrImageFile = document.getElementById('qr-code-image').files[0];
+                    if (qrImageFile) {
+                        confirmationData.qr_image = qrImageFile;
+                    }
+                    break;
+                    
+                case 3: // 바우처 업로드
+                    const voucherFile = document.getElementById('vendor-voucher-file').files[0];
+                    if (!voucherFile) {
+                        showAlert('바우처 파일을 업로드해주세요.', 'warning');
+                        return;
+                    }
+                    confirmationData.vendor_voucher = voucherFile;
+                    break;
+                    
+                case 4: // 즉시 확정
+                    // 추가 데이터 불필요
+                    break;
+            }
+            
+            try {
+                console.log('📤 확정 처리 시작:', confirmationData);
+                
+                // FormData 생성 (파일 업로드 지원)
+                const formData = new FormData();
+                formData.append('method', selectedConfirmationMethod);
+                formData.append('memo', memo);
+                
+                if (confirmationData.confirmation_number) {
+                    formData.append('confirmation_number', confirmationData.confirmation_number);
+                }
+                if (confirmationData.qr_code_data) {
+                    formData.append('qr_code_data', confirmationData.qr_code_data);
+                }
+                if (confirmationData.qr_image) {
+                    formData.append('qr_image', confirmationData.qr_image);
+                }
+                if (confirmationData.vendor_voucher) {
+                    formData.append('vendor_voucher', confirmationData.vendor_voucher);
+                }
+                
+                // 서버로 확정 요청
+                const response = await fetch(`/api/reservations/${reservationId}/confirm`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 예약이 확정되었습니다! 바우처를 생성합니다...', 'success');
+                    
+                    // 모달 닫기
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('statusManageModal'));
+                    if (modal) modal.hide();
+                    
+                    // 바우처 자동 생성
+                    await autoGenerateVoucher(reservationId);
+                    
+                } else {
+                    showAlert('확정 처리 실패: ' + result.message, 'danger');
+                }
+                
+            } catch (error) {
+                console.error('❌ 확정 처리 오류:', error);
+                showAlert('확정 처리 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 바우처 자동 생성 및 모달 열기
+        async function autoGenerateVoucher(reservationId) {
+            try {
+                console.log('🎫 바우처 자동 생성 시작:', reservationId);
+                
+                const response = await fetch(`/api/vouchers/auto-generate/${reservationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 바우처가 생성되었습니다!', 'success');
+                    
+                    // 목록 새로고침
+                    await loadAssignments(currentPage);
+                    
+                    // 바우처 모달 자동 열기
+                    setTimeout(() => {
+                        openVoucherManageModal(reservationId);
+                    }, 500);
+                    
+                } else {
+                    showAlert('바우처 생성 실패: ' + result.message, 'warning');
+                }
+                
+            } catch (error) {
+                console.error('❌ 바우처 자동 생성 오류:', error);
+                showAlert('바우처 생성 중 오류가 발생했습니다.', 'danger');
+            }
         }
 
         // 4. 바우처관리 모달 열기
