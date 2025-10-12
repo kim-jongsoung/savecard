@@ -10009,6 +10009,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                     a.rejection_reason,
                     v.email as vendor_email,
                     v.phone as vendor_phone,
+                    (SELECT MAX(viewed_at) FROM voucher_views WHERE reservation_id = r.id) as voucher_viewed_at,
                     COUNT(*) OVER() as total_count
                 FROM reservations r
                 LEFT JOIN assignments a ON r.id = a.reservation_id
