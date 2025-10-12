@@ -12706,11 +12706,10 @@ app.get('/voucher/:token', async (req, res) => {
         
         console.log(`🎫 바우처 페이지 요청: ${token}`);
         
-        // 바우처 정보 조회 (새로운 시스템에 맞게 수정)
+        // 바우처 정보 조회 (reservations.voucher_token 기준)
         const voucherQuery = `
             SELECT 
                 r.*,
-                a.voucher_token,
                 a.confirmation_number,
                 a.vendor_name,
                 a.vendor_contact,
@@ -12723,7 +12722,7 @@ app.get('/voucher/:token', async (req, res) => {
                 a.savecard_code
             FROM reservations r
             LEFT JOIN assignments a ON r.id = a.reservation_id
-            WHERE a.voucher_token = $1
+            WHERE r.voucher_token = $1
         `;
         
         console.log(`🔍 바우처 쿼리 실행: ${token}`);
@@ -12736,14 +12735,14 @@ app.get('/voucher/:token', async (req, res) => {
             // 디버깅: 최근 바우처 토큰들 조회
             try {
                 const debugQuery = `
-                    SELECT voucher_token, reservation_id, created_at 
-                    FROM assignments 
+                    SELECT voucher_token, id as reservation_id, created_at 
+                    FROM reservations 
                     WHERE voucher_token IS NOT NULL 
                     ORDER BY created_at DESC 
                     LIMIT 5
                 `;
                 const debugResult = await pool.query(debugQuery);
-                console.log('🔍 최근 바우처 토큰들:', debugResult.rows);
+                console.log('🔍 최근 바우처 토큰들 (reservations):', debugResult.rows);
             } catch (debugError) {
                 console.error('디버그 쿼리 오류:', debugError);
             }
@@ -12759,8 +12758,8 @@ app.get('/voucher/:token', async (req, res) => {
         // 바우처 조회 기록 남기기
         try {
             await pool.query(
-                'UPDATE assignments SET viewed_at = NOW() WHERE voucher_token = $1 AND viewed_at IS NULL',
-                [token]
+                'UPDATE assignments SET viewed_at = NOW() WHERE reservation_id = $1 AND viewed_at IS NULL',
+                [data.id]
             );
         } catch (viewError) {
             console.error('바우처 조회 기록 오류:', viewError);
@@ -12768,7 +12767,7 @@ app.get('/voucher/:token', async (req, res) => {
         
         // 바우처 객체 구성
         const voucher = {
-            voucher_token: data.voucher_token,
+            voucher_token: token,
             savecard_code: data.savecard_code || null,
             created_at: data.voucher_created_at,
             sent_at: data.voucher_sent_at,
