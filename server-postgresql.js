@@ -7,6 +7,7 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+const multer = require('multer');
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
@@ -10449,21 +10450,39 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
 
 // 예약 확정 API (4가지 방식)
 app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
-    const multer = require('multer');
-    const path = require('path');
+    // uploads 폴더 확인 및 생성
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log('📁 uploads 폴더 생성:', uploadDir);
+    }
     
     // 파일명을 예약 ID + 타임스탬프로 고유하게 생성
     const storage = multer.diskStorage({
         destination: function (req, file, cb) {
-            cb(null, 'uploads/');
+            cb(null, uploadDir);
         },
         filename: function (req, file, cb) {
             const uniqueName = `reservation_${req.params.id}_${Date.now()}${path.extname(file.originalname)}`;
+            console.log('📝 파일명 생성:', uniqueName);
             cb(null, uniqueName);
         }
     });
     
-    const upload = multer({ storage: storage });
+    const upload = multer({ 
+        storage: storage,
+        limits: {
+            fileSize: 10 * 1024 * 1024 // 10MB 제한
+        },
+        fileFilter: function (req, file, cb) {
+            console.log('📎 파일 업로드 시도:', {
+                fieldname: file.fieldname,
+                originalname: file.originalname,
+                mimetype: file.mimetype
+            });
+            cb(null, true);
+        }
+    });
     
     upload.fields([
         { name: 'qr_image', maxCount: 1 },
@@ -10471,7 +10490,10 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
     ])(req, res, async (err) => {
         if (err) {
             console.error('❌ 파일 업로드 오류:', err);
-            return res.status(500).json({ success: false, message: '파일 업로드 오류' });
+            return res.status(500).json({ 
+                success: false, 
+                message: '파일 업로드 오류: ' + (err.message || '알 수 없는 오류')
+            });
         }
         
         try {
