@@ -12632,6 +12632,47 @@ app.post('/api/assignments/:id/send', requireAuth, async (req, res) => {
     }
 });
 
+// 업체 바우처 파일 다운로드 API
+app.get('/api/vouchers/download/:filename', async (req, res) => {
+    try {
+        const { filename } = req.params;
+        const filePath = path.join(__dirname, 'uploads', filename);
+        
+        console.log('📥 업체 바우처 다운로드 요청:', filename);
+        
+        // 파일 존재 확인
+        if (!fs.existsSync(filePath)) {
+            console.error('❌ 파일을 찾을 수 없습니다:', filePath);
+            return res.status(404).json({
+                success: false,
+                message: '파일을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 파일 다운로드
+        res.download(filePath, filename, (err) => {
+            if (err) {
+                console.error('❌ 파일 다운로드 오류:', err);
+                if (!res.headersSent) {
+                    res.status(500).json({
+                        success: false,
+                        message: '파일 다운로드 중 오류가 발생했습니다.'
+                    });
+                }
+            } else {
+                console.log('✅ 파일 다운로드 완료:', filename);
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ 다운로드 API 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '파일 다운로드 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 바우처 페이지 라우트
 app.get('/voucher/:token', async (req, res) => {
     try {

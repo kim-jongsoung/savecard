@@ -402,21 +402,26 @@
         <% if (vendor_voucher_path) { %>
         <div class="section">
             <div class="section-title">🎫 업체 발급 바우처</div>
-            <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <p style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">
+            <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #667eea;">
+                <div style="margin-bottom: 15px; font-size: 48px;">
+                    📄
+                </div>
+                <p style="font-size: 14px; color: #495057; margin-bottom: 15px; font-weight: 600;">
                     제공업체가 발급한 공식 바우처
                 </p>
-                <% 
-                    const voucherExt = vendor_voucher_path.split('.').pop().toLowerCase();
-                    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(voucherExt);
-                %>
-                <% if (isImage) { %>
-                    <img src="/<%= vendor_voucher_path %>" alt="Vendor Voucher" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <% } else { %>
-                    <a href="/<%= vendor_voucher_path %>" target="_blank" style="display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">
-                        📄 바우처 파일 보기
-                    </a>
-                <% } %>
+                <p style="font-size: 12px; color: #6c757d; margin-bottom: 20px;">
+                    이용 시 반드시 제시하거나 출력하여 지참해주세요
+                </p>
+                <a href="/api/vouchers/download/<%= vendor_voucher_path.split('/').pop() %>" 
+                   download
+                   style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;"
+                   onmouseover="this.style.transform='translateY(-2px)'"
+                   onmouseout="this.style.transform='translateY(0)'">
+                    📥 업체 바우처 다운로드
+                </a>
+                <p style="font-size: 11px; color: #868e96; margin-top: 12px;">
+                    파일명: <%= vendor_voucher_path.split('/').pop() %>
+                </p>
             </div>
         </div>
         <% } %>
