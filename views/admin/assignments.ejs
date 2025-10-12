@@ -2380,185 +2380,79 @@
         }
 
         // 열람 통계 로드 함수
+        // 수배서 열람 통계 로드 (바우처와 동일한 형식)
         async function loadViewStats() {
-            console.log('📊 열람 통계 로드 시작');
-            console.log('  - window.currentReservation:', window.currentReservation);
+            const statsEl = document.getElementById('view-stats-content');
             
-            const reservation = window.currentReservation;
-            if (!reservation) {
-                console.error('❌ 예약 정보 없음');
-                document.getElementById('view-stats-content').innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> 예약 정보가 없습니다.
-                    </div>
-                `;
+            if (!window.currentReservationId) {
+                statsEl.innerHTML = '<p class="text-muted mb-0">예약 정보가 없습니다.</p>';
                 return;
             }
-            
-            if (!reservation.assignment_token) {
-                console.error('❌ assignment_token 없음');
-                document.getElementById('view-stats-content').innerHTML = `
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> 수배서가 생성되지 않았습니다.
-                    </div>
-                `;
-                return;
-            }
-            
-            const token = reservation.assignment_token;
-            console.log('✅ token:', token);
             
             try {
-                document.getElementById('view-stats-content').innerHTML = `
-                    <div class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">로딩중...</span>
-                        </div>
-                    </div>
-                `;
+                statsEl.innerHTML = '<p class="text-muted mb-0">통계를 불러오는 중...</p>';
                 
-                const response = await fetch(`/api/assignment/${token}/views`);
+                // 수배서 열람 기록 조회
+                const response = await fetch(`/api/assignments/view-stats/${window.currentReservationId}`);
                 const data = await response.json();
                 
-                console.log('📊 API 응답:', data);
-                
-                if (!data.success) {
-                    throw new Error(data.message);
-                }
-                
-                const stats = data.stats;
-                const details = data.details;
-                const byCountry = data.by_country;
-                
-                let html = '';
-                
-                // 요약 통계
-                html += `
-                    <div class="row text-center mb-3">
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <h3 class="mb-0 text-primary">${stats.total_views || 0}</h3>
-                                <small class="text-muted">총 열람</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <h3 class="mb-0 text-success">${stats.unique_visitors || 0}</h3>
-                                <small class="text-muted">순 방문자</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <h3 class="mb-0 text-info">${stats.countries_count || 0}</h3>
-                                <small class="text-muted">국가수</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="border rounded p-2">
-                                <h3 class="mb-0 text-warning">${stats.first_viewed ? '✓' : '-'}</h3>
-                                <small class="text-muted">열람여부</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // 첫 열람 및 최근 열람
-                if (stats.first_viewed) {
-                    html += `
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <strong>첫 열람:</strong><br>
-                                <small>${new Date(stats.first_viewed).toLocaleString('ko-KR')}</small>
-                            </div>
-                            <div class="col-6">
-                                <strong>최근 열람:</strong><br>
-                                <small>${new Date(stats.last_viewed).toLocaleString('ko-KR')}</small>
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                // 국가별 열람
-                if (byCountry && byCountry.length > 0) {
-                    html += `
-                        <div class="mb-3">
-                            <strong>국가별 열람:</strong>
-                            <ul class="list-group list-group-flush mt-2">
-                    `;
-                    byCountry.forEach(c => {
+                if (data.success) {
+                    const { views, total_views, first_viewed, last_viewed } = data;
+                    
+                    let html = '';
+                    
+                    if (total_views > 0) {
                         html += `
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                🌐 ${c.country || '알 수 없음'}
-                                <span class="badge bg-primary rounded-pill">${c.view_count}</span>
-                            </li>
-                        `;
-                    });
-                    html += `
-                            </ul>
-                        </div>
-                    `;
-                }
-                
-                // 상세 이력
-                if (details && details.length > 0) {
-                    html += `
-                        <div class="mb-3">
-                            <strong>열람 이력 (최근 10개):</strong>
-                            <div class="table-responsive mt-2" style="max-height: 300px; overflow-y: auto;">
-                                <table class="table table-sm">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>시간</th>
-                                            <th>위치</th>
-                                            <th>기기</th>
-                                            <th>브라우저</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                    `;
-                    details.slice(0, 10).forEach(view => {
-                        html += `
-                            <tr>
-                                <td><small>${new Date(view.viewed_at).toLocaleString('ko-KR', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})}</small></td>
-                                <td><small>${view.city || '-'}, ${view.country || '-'}</small></td>
-                                <td><small>${view.device_type || '-'}</small></td>
-                                <td><small>${view.browser || '-'}</small></td>
-                            </tr>
-                        `;
-                    });
-                    html += `
-                                    </tbody>
-                                </table>
+                            <div class="mb-3">
+                                <div class="row text-center mb-2">
+                                    <div class="col-4">
+                                        <div class="badge bg-primary w-100">총 열람수</div>
+                                        <h4 class="mt-2 mb-0">${total_views}</h4>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="badge bg-success w-100">첫 열람</div>
+                                        <div class="small mt-2">${new Date(first_viewed).toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="badge bg-info w-100">최근 열람</div>
+                                        <div class="small mt-2">${new Date(last_viewed).toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    `;
+                            
+                            <div class="border-top pt-2">
+                                <strong class="small">📊 열람 내역</strong>
+                                <div class="mt-2">
+                                    ${views.map(v => `
+                                        <div class="small mb-2 pb-2 border-bottom">
+                                            <div><i class="bi bi-calendar"></i> ${new Date(v.viewed_at).toLocaleString('ko-KR')}</div>
+                                            <div class="text-muted">
+                                                ${v.device_type === 'mobile' ? '📱' : '💻'} ${v.device_type || 'unknown'} 
+                                                | ${v.browser || 'unknown browser'}
+                                            </div>
+                                            ${v.ip_address ? `<div class="text-muted small">IP: ${v.ip_address}</div>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html = `
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-eye-slash" style="font-size: 2rem;"></i>
+                                <p class="mt-2 mb-0">아직 열람 기록이 없습니다</p>
+                                <p class="small mb-0">수배업체가 수배서 링크를 열면 자동으로 기록됩니다</p>
+                            </div>
+                        `;
+                    }
+                    
+                    statsEl.innerHTML = html;
+                } else {
+                    statsEl.innerHTML = '<p class="text-warning mb-0">통계를 불러올 수 없습니다.</p>';
                 }
-                
-                if (!stats.first_viewed) {
-                    html = `
-                        <div class="alert alert-info mb-0">
-                            <h6 class="alert-heading"><i class="bi bi-info-circle"></i> 아직 열람되지 않았습니다</h6>
-                            <hr>
-                            <p class="mb-0"><small>
-                                <strong>⚠️ 참고:</strong><br>
-                                • 수배업체가 이메일/카톡 링크를 클릭하면 자동으로 기록됩니다.<br>
-                                • <strong>"미리보기" 기능은 추적되지 않습니다.</strong><br>
-                                • 실제 수배업체가 링크를 열람해야 통계가 기록됩니다.
-                            </small></p>
-                        </div>
-                    `;
-                }
-                
-                document.getElementById('view-stats-content').innerHTML = html;
-                
             } catch (error) {
-                console.error('❌ 열람 통계 로드 오류:', error);
-                console.error('  - 오류 상세:', error.message);
-                document.getElementById('view-stats-content').innerHTML = `
-                    <div class="alert alert-danger mb-0">
-                        <i class="bi bi-exclamation-triangle"></i> 통계 로드 실패: ${error.message}
-                    </div>
-                `;
+                console.error('❌ 수배서 열람 통계 로드 오류:', error);
+                statsEl.innerHTML = '<p class="text-danger mb-0">통계 로드 중 오류가 발생했습니다.</p>';
             }
         }
 
