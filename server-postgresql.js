@@ -12866,8 +12866,7 @@ app.get('/voucher/:token', async (req, res) => {
                 a.response_at,
                 a.created_at as voucher_created_at,
                 a.sent_at as voucher_sent_at,
-                a.viewed_at as voucher_viewed_at,
-                a.savecard_code
+                a.viewed_at as voucher_viewed_at
             FROM reservations r
             LEFT JOIN assignments a ON r.id = a.reservation_id
             WHERE r.voucher_token = $1
@@ -12897,7 +12896,8 @@ app.get('/voucher/:token', async (req, res) => {
             
             return res.status(404).render('error', {
                 title: '바우처를 찾을 수 없습니다',
-                message: `바우처 토큰 "${token}"을 찾을 수 없습니다. 링크를 다시 확인해주세요.`
+                message: `바우처 토큰 "${token}"을 찾을 수 없습니다. 링크를 다시 확인해주세요.`,
+                error: { status: 404 }
             });
         }
         
@@ -12918,7 +12918,8 @@ app.get('/voucher/:token', async (req, res) => {
                 message: `이 예약은 취소되었습니다.<br><br>
                     <strong>예약번호:</strong> ${data.reservation_number}<br>
                     <strong>예약자명:</strong> ${data.korean_name}<br><br>
-                    문의사항이 있으시면 고객센터로 연락해주세요.`
+                    문의사항이 있으시면 고객센터로 연락해주세요.`,
+                error: { status: 410 }
             });
         }
         
@@ -13013,15 +13014,16 @@ app.get('/voucher/:token', async (req, res) => {
         const elapsed = Date.now() - startTime;
         console.log(`✅ 바우처 페이지 렌더링 완료 (${elapsed}ms)`);
         
-    } catch (error) {
+    } catch (err) {
         const elapsed = Date.now() - startTime;
-        console.error(`❌ 바우처 페이지 오류 (${elapsed}ms):`, error);
-        console.error('스택 트레이스:', error.stack);
+        console.error(`❌ 바우처 페이지 오류 (${elapsed}ms):`, err);
+        console.error('스택 트레이스:', err.stack);
         
         if (!res.headersSent) {
             res.status(500).render('error', {
                 title: '서버 오류',
-                message: '바우처를 불러오는 중 오류가 발생했습니다: ' + error.message
+                message: '바우처를 불러오는 중 오류가 발생했습니다: ' + err.message,
+                error: { status: 500, stack: err.stack }
             });
         }
     }
