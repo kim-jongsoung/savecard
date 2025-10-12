@@ -10284,6 +10284,274 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
     }
 });
 
+// 예약 확정 API (4가지 방식)
+app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
+    const multer = require('multer');
+    const upload = multer({ dest: 'uploads/' });
+    
+    upload.fields([
+        { name: 'qr_image', maxCount: 1 },
+        { name: 'vendor_voucher', maxCount: 1 }
+    ])(req, res, async (err) => {
+        if (err) {
+            console.error('❌ 파일 업로드 오류:', err);
+            return res.status(500).json({ success: false, message: '파일 업로드 오류' });
+        }
+        
+        try {
+            const reservationId = req.params.id;
+            const { method, confirmation_number, qr_code_data, memo } = req.body;
+            
+            console.log('✅ 예약 확정 요청:', {
+                reservationId,
+                method,
+                confirmation_number,
+                qr_code_data,
+                memo
+            });
+            
+            // 예약 정보 조회
+            const reservationResult = await pool.query(
+                'SELECT * FROM reservations WHERE id = $1',
+                [reservationId]
+            );
+            
+            if (reservationResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: '예약을 찾을 수 없습니다.'
+                });
+            }
+            
+            const reservation = reservationResult.rows[0];
+            const adminName = req.session.adminName || req.session.adminUsername || '시스템';
+            
+            // 확정 방식별 처리
+            let confirmationData = {
+                method: parseInt(method),
+                memo: memo || null
+            };
+            
+            switch(parseInt(method)) {
+                case 1: // 컨펌번호
+                    if (!confirmation_number) {
+                        return res.status(400).json({
+                            success: false,
+                            message: '컨펌번호를 입력해주세요.'
+                        });
+                    }
+                    confirmationData.confirmation_number = confirmation_number;
+                    
+                    // assignments 테이블 업데이트
+                    await pool.query(`
+                        UPDATE assignments 
+                        SET confirmation_number = $1, 
+                            response_at = NOW(),
+                            updated_at = NOW()
+                        WHERE reservation_id = $2
+                    `, [confirmation_number, reservationId]);
+                    
+                    break;
+                    
+                case 2: // QR코드
+                    if (!qr_code_data) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'QR코드 정보를 입력해주세요.'
+                        });
+                    }
+                    confirmationData.qr_code_data = qr_code_data;
+                    
+                    // QR 이미지 파일 경로 (업로드된 경우)
+                    if (req.files && req.files['qr_image']) {
+                        confirmationData.qr_image_path = req.files['qr_image'][0].path;
+                    }
+                    
+                    // QR 정보 저장
+                    await pool.query(`
+                        UPDATE reservations 
+                        SET qr_code_data = $1,
+                            qr_image_path = $2,
+                            updated_at = NOW()
+                        WHERE id = $3
+                    `, [qr_code_data, confirmationData.qr_image_path || null, reservationId]);
+                    
+                    break;
+                    
+                case 3: // 바우처 업로드
+                    if (!req.files || !req.files['vendor_voucher']) {
+                        return res.status(400).json({
+                            success: false,
+                            message: '바우처 파일을 업로드해주세요.'
+                        });
+                    }
+                    confirmationData.vendor_voucher_path = req.files['vendor_voucher'][0].path;
+                    
+                    // 수배업체 바우처 경로 저장
+                    await pool.query(`
+                        UPDATE reservations 
+                        SET vendor_voucher_path = $1,
+                            updated_at = NOW()
+                        WHERE id = $2
+                    `, [confirmationData.vendor_voucher_path, reservationId]);
+                    
+                    break;
+                    
+                case 4: // 즉시 확정
+                    // 추가 데이터 불필요
+                    console.log('💫 즉시 확정 - 회신 불필요');
+                    break;
+                    
+                default:
+                    return res.status(400).json({
+                        success: false,
+                        message: '유효하지 않은 확정 방식입니다.'
+                    });
+            }
+            
+            // 예약 상태를 '확정완료'로 변경
+            await pool.query(`
+                UPDATE reservations 
+                SET payment_status = 'confirmed',
+                    updated_at = NOW()
+                WHERE id = $1
+            `, [reservationId]);
+            
+            // 히스토리 기록
+            const methodNames = {
+                1: '컨펌번호 등록',
+                2: 'QR코드 등록',
+                3: '바우처 업로드',
+                4: '즉시 확정'
+            };
+            
+            await logHistory(
+                reservationId,
+                '상태변경',
+                '확정완료',
+                adminName,
+                `예약이 확정되었습니다. (방식: ${methodNames[parseInt(method)]})${memo ? ' - ' + memo : ''}`,
+                { payment_status: { from: reservation.payment_status, to: 'confirmed' } },
+                { 
+                    confirmation_method: parseInt(method),
+                    ...confirmationData
+                }
+            );
+            
+            console.log('✅ 예약 확정 완료:', reservationId);
+            
+            res.json({
+                success: true,
+                message: '예약이 확정되었습니다.',
+                reservation_id: reservationId,
+                method: parseInt(method)
+            });
+            
+        } catch (error) {
+            console.error('❌ 예약 확정 오류:', error);
+            res.status(500).json({
+                success: false,
+                message: '예약 확정 중 오류가 발생했습니다: ' + error.message
+            });
+        }
+    });
+});
+
+// 바우처 자동 생성 API
+app.post('/api/vouchers/auto-generate/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.reservationId;
+        
+        console.log('🎫 바우처 자동 생성 요청:', reservationId);
+        
+        // 예약 정보 조회
+        const reservationResult = await pool.query(`
+            SELECT r.*, a.confirmation_number, a.vendor_name,
+                   r.qr_code_data, r.vendor_voucher_path
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE r.id = $1
+        `, [reservationId]);
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = reservationResult.rows[0];
+        
+        // 바우처 토큰 생성 (없으면)
+        let voucherToken = reservation.voucher_token;
+        if (!voucherToken) {
+            voucherToken = crypto.randomBytes(32).toString('hex');
+            
+            await pool.query(`
+                UPDATE reservations 
+                SET voucher_token = $1, updated_at = NOW()
+                WHERE id = $2
+            `, [voucherToken, reservationId]);
+        }
+        
+        // 바우처 정보 구성 (AI 생성 대신 기본 정보 사용)
+        const voucherData = {
+            voucher_token: voucherToken,
+            reservation_number: reservation.reservation_number,
+            confirmation_number: reservation.confirmation_number || '-',
+            product_name: reservation.product_name,
+            package_type: reservation.package_type,
+            usage_date: reservation.usage_date,
+            usage_time: reservation.usage_time,
+            customer_name: reservation.korean_name,
+            people_adult: reservation.people_adult || 0,
+            people_child: reservation.people_child || 0,
+            people_infant: reservation.people_infant || 0,
+            vendor_name: reservation.vendor_name || '-',
+            qr_code_data: reservation.qr_code_data,
+            vendor_voucher_path: reservation.vendor_voucher_path,
+            created_at: new Date()
+        };
+        
+        // 바우처 생성 완료 상태 업데이트
+        await pool.query(`
+            UPDATE reservations 
+            SET voucher_sent_at = NOW(),
+                updated_at = NOW()
+            WHERE id = $1
+        `, [reservationId]);
+        
+        // 히스토리 기록
+        const adminName = req.session.adminName || req.session.adminUsername || '시스템';
+        await logHistory(
+            reservationId,
+            '바우처',
+            '생성',
+            adminName,
+            `바우처가 자동 생성되었습니다.`,
+            null,
+            { voucher_token: voucherToken }
+        );
+        
+        console.log('✅ 바우처 자동 생성 완료:', voucherToken);
+        
+        res.json({
+            success: true,
+            message: '바우처가 생성되었습니다.',
+            voucher_token: voucherToken,
+            voucher_url: `${req.protocol}://${req.get('host')}/voucher/${voucherToken}`,
+            voucher_data: voucherData
+        });
+        
+    } catch (error) {
+        console.error('❌ 바우처 자동 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '바우처 생성 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 예약 상태 변경 API
 app.patch('/api/reservations/:id/status', requireAuth, async (req, res) => {
     try {
@@ -10364,7 +10632,8 @@ app.patch('/api/reservations/:id/status', requireAuth, async (req, res) => {
     }
 });
 
-// 컨펌번호 저장 API
+// 컨펌번호 저장 API (구버전 - 사용 안함, 새로운 4가지 방식 확정 API로 대체됨)
+/*
 app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
     try {
         const reservationId = req.params.id;
@@ -10470,6 +10739,7 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
         });
     }
 });
+*/
 
 // 예약 히스토리 조회 API (실제 데이터베이스 조회)
 app.get('/api/reservations/:id/history', requireAuth, async (req, res) => {
