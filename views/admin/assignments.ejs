@@ -1057,11 +1057,12 @@
                             ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.8rem; padding: 5px 10px;">📋 정산대기</span>' : ''}
                         </div>
                         <div class="row-main" style="flex-direction: column; gap: 10px;">
-                            <!-- 윗줄: 수배서번호 / 예약일(날짜) / 출발일(날짜) / 고객이름(담당자) -->
+                            <!-- 윗줄: 시스템번호(업체번호) / 예약일 / 출발일 / 고객명(담당자) -->
                             <div style="display: flex; gap: 20px; align-items: center;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
-                                    <i class="bi bi-file-text" style="color: #6c757d;"></i>
-                                    <span style="font-size: 0.95rem; color: #495057; font-weight: 500;">${reservation.reservation_number || '-'}</span>
+                                    <i class="bi bi-hash" style="color: #1a73e8;"></i>
+                                    <span style="font-size: 1rem; color: #212529; font-weight: 700;">${reservation.id}</span>
+                                    <span style="font-size: 0.8rem; color: #6c757d;">(${truncate(reservation.reservation_number || '-', 12)})</span>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 6px;">
                                     <i class="bi bi-calendar-check" style="color: #6c757d;"></i>
@@ -1076,12 +1077,14 @@
                                     <span style="font-size: 0.85rem; color: #6c757d;">(${reservation.assigned_to || '미지정'})</span>
                                 </div>
                             </div>
-                            <!-- 아랫줄: 업체명 / 상품명(7자) / 수배업체명 -->
-                            <div style="display: flex; gap: 16px; align-items: center; font-size: 0.9rem;">
-                                <div style="color: #495057; font-weight: 500; min-width: 80px;">${truncate(reservation.platform_name || '-', 8)}</div>
-                                <div style="color: #6c757d;">|</div>
-                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #6c757d; max-width: 150px;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 7)}</div>
-                                <div style="color: #6c757d;">|</div>
+                            <!-- 아랫줄: 업체명 / 상품명(10자) / 패키지명(6자) / 수배업체 / PAX -->
+                            <div style="display: flex; gap: 12px; align-items: center; font-size: 0.9rem;">
+                                <div style="color: #495057; font-weight: 500; min-width: 70px;">${truncate(reservation.platform_name || '-', 8)}</div>
+                                <div style="color: #d1d5db;">|</div>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #6c757d; max-width: 180px;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 10)}</div>
+                                <div style="color: #d1d5db;">|</div>
+                                <div style="color: #6c757d; min-width: 70px;" title="${reservation.package_name || '-'}">${truncate(reservation.package_name || '-', 6)}</div>
+                                <div style="color: #d1d5db;">|</div>
                                 <div style="color: #6c757d;">${truncate(reservation.vendor_name || '미지정', 10)}</div>
                                 <div style="margin-left: auto; color: #495057; font-weight: 500;">${pax}</div>
                             </div>
