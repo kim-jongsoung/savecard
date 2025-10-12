@@ -14,9 +14,22 @@ const RAG_DIR = path.join(__dirname, '..', 'rag', 'products');
  */
 async function findProductGuide(productName) {
     try {
+        // RAG 디렉토리 존재 확인 및 생성
+        try {
+            await fs.access(RAG_DIR);
+        } catch {
+            console.log('📁 RAG 디렉토리 생성:', RAG_DIR);
+            await fs.mkdir(RAG_DIR, { recursive: true });
+        }
+        
         // RAG 디렉토리의 모든 파일 읽기
         const files = await fs.readdir(RAG_DIR);
         const txtFiles = files.filter(f => f.endsWith('.txt'));
+        
+        if (txtFiles.length === 0) {
+            console.log('⚠️ RAG 파일 없음 - 기본 템플릿 사용');
+            return null;
+        }
         
         console.log(`🔍 RAG 파일 검색: ${productName}`);
         
@@ -31,7 +44,7 @@ async function findProductGuide(productName) {
                 const registeredName = match[1].trim();
                 
                 // 유사도 검사 (간단한 포함 여부)
-                if (productName.includes(registeredName) || registeredName.includes(productName)) {
+                if (productName && (productName.includes(registeredName) || registeredName.includes(productName))) {
                     console.log(`✅ 매칭된 가이드: ${file}`);
                     return { file, content };
                 }

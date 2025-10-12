@@ -10557,6 +10557,8 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
     try {
         const { voucherToken } = req.params;
         
+        console.log('🎫 바우처 미리보기 요청:', voucherToken);
+        
         // 바우처 정보 조회
         const result = await pool.query(`
             SELECT r.*, a.confirmation_number, a.vendor_name, a.vendor_contact
@@ -10574,9 +10576,15 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
         
         const reservation = result.rows[0];
         
-        // RAG 기반 이용방법 생성
-        const { generateVoucherInstructions } = require('./utils/rag-voucher');
-        const usage_instructions = await generateVoucherInstructions(reservation);
+        // RAG 기반 이용방법 생성 (에러 발생 시 기본 값 사용)
+        let usage_instructions = null;
+        try {
+            const { generateVoucherInstructions } = require('./utils/rag-voucher');
+            usage_instructions = await generateVoucherInstructions(reservation);
+        } catch (ragError) {
+            console.error('⚠️ RAG 이용방법 생성 실패, 기본 템플릿 사용:', ragError.message);
+            usage_instructions = null; // 템플릿에서 null 체크
+        }
         
         // 템플릿 렌더링
         const html = await new Promise((resolve, reject) => {
@@ -10599,8 +10607,12 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
                     });
                 }
             }, (err, html) => {
-                if (err) reject(err);
-                else resolve(html);
+                if (err) {
+                    console.error('❌ 템플릿 렌더링 오류:', err);
+                    reject(err);
+                } else {
+                    resolve(html);
+                }
             });
         });
         
@@ -10610,7 +10622,7 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
         console.error('❌ 바우처 미리보기 오류:', error);
         res.status(500).json({
             success: false,
-            message: '바우처 미리보기 생성 중 오류가 발생했습니다.'
+            message: '바우처 미리보기 생성 중 오류가 발생했습니다: ' + error.message
         });
     }
 });
@@ -10843,6 +10855,8 @@ app.get('/voucher/:voucherToken', async (req, res) => {
     try {
         const { voucherToken } = req.params;
         
+        console.log('🎫 바우처 열람:', voucherToken);
+        
         // 바우처 정보 조회
         const result = await pool.query(`
             SELECT r.*, a.confirmation_number, a.vendor_name, a.vendor_contact
@@ -10857,25 +10871,36 @@ app.get('/voucher/:voucherToken', async (req, res) => {
         
         const reservation = result.rows[0];
         
-        // 열람 기록 저장
-        const userAgent = req.headers['user-agent'] || '';
-        const deviceType = userAgent.match(/Mobile|Android|iPhone/) ? 'mobile' : 'desktop';
+        // 열람 기록 저장 (테이블이 없어도 계속 진행)
+        try {
+            const userAgent = req.headers['user-agent'] || '';
+            const deviceType = userAgent.match(/Mobile|Android|iPhone/) ? 'mobile' : 'desktop';
+            
+            await pool.query(`
+                INSERT INTO voucher_views (
+                    voucher_token, reservation_id, ip_address, user_agent, device_type
+                ) VALUES ($1, $2, $3, $4, $5)
+            `, [
+                voucherToken,
+                reservation.id,
+                req.ip || req.connection.remoteAddress,
+                userAgent,
+                deviceType
+            ]);
+        } catch (viewError) {
+            console.error('⚠️ 열람 기록 저장 실패 (테이블 없음?):', viewError.message);
+            // 에러가 발생해도 바우처는 표시
+        }
         
-        await pool.query(`
-            INSERT INTO voucher_views (
-                voucher_token, reservation_id, ip_address, user_agent, device_type
-            ) VALUES ($1, $2, $3, $4, $5)
-        `, [
-            voucherToken,
-            reservation.id,
-            req.ip || req.connection.remoteAddress,
-            userAgent,
-            deviceType
-        ]);
-        
-        // RAG 기반 이용방법 생성
-        const { generateVoucherInstructions } = require('./utils/rag-voucher');
-        const usage_instructions = await generateVoucherInstructions(reservation);
+        // RAG 기반 이용방법 생성 (에러 발생 시 기본 값 사용)
+        let usage_instructions = null;
+        try {
+            const { generateVoucherInstructions } = require('./utils/rag-voucher');
+            usage_instructions = await generateVoucherInstructions(reservation);
+        } catch (ragError) {
+            console.error('⚠️ RAG 이용방법 생성 실패:', ragError.message);
+            usage_instructions = null;
+        }
         
         // 템플릿 렌더링
         res.render('voucher-template', {
@@ -10900,7 +10925,7 @@ app.get('/voucher/:voucherToken', async (req, res) => {
         
     } catch (error) {
         console.error('❌ 바우처 표시 오류:', error);
-        res.status(500).send('바우처를 불러올 수 없습니다.');
+        res.status(500).send('바우처를 불러올 수 없습니다: ' + error.message);
     }
 });
 

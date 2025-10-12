@@ -321,7 +321,12 @@
             </div>
             <div class="info-row">
                 <div class="info-label">예약자명</div>
-                <div class="info-value"><%= reservation.korean_name %> (<%= reservation.english_name || '-' %>)</div>
+                <div class="info-value">
+                    <%= reservation.korean_name %> 
+                    <% if (reservation.english_last_name || reservation.english_first_name) { %>
+                        (<%= (reservation.english_last_name || '') %> <%= (reservation.english_first_name || '') %>)
+                    <% } %>
+                </div>
             </div>
             <div class="info-row">
                 <div class="info-label">상품명</div>
