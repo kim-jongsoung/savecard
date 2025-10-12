@@ -1077,13 +1077,13 @@
                                     <span style="font-size: 0.85rem; color: #6c757d;">(${reservation.assigned_to || '미지정'})</span>
                                 </div>
                             </div>
-                            <!-- 아랫줄: 업체명 / 상품명(10자) / 패키지명(6자) / 수배업체 / PAX -->
+                            <!-- 아랫줄: 업체명 / 상품명(10자) / 패키지타입(6자) / 수배업체 / PAX -->
                             <div style="display: flex; gap: 12px; align-items: center; font-size: 0.9rem;">
                                 <div style="color: #495057; font-weight: 500; min-width: 70px;">${truncate(reservation.platform_name || '-', 8)}</div>
                                 <div style="color: #d1d5db;">|</div>
                                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #6c757d; max-width: 180px;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 10)}</div>
                                 <div style="color: #d1d5db;">|</div>
-                                <div style="color: #6c757d; min-width: 70px;" title="${reservation.package_name || '-'}">${truncate(reservation.package_name || '-', 6)}</div>
+                                <div style="color: #6c757d; min-width: 70px;" title="${reservation.package_type || '-'}">${truncate(reservation.package_type || '-', 6)}</div>
                                 <div style="color: #d1d5db;">|</div>
                                 <div style="color: #6c757d;">${truncate(reservation.vendor_name || '미지정', 10)}</div>
                                 <div style="margin-left: auto; color: #495057; font-weight: 500;">${pax}</div>
