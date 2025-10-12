@@ -12889,15 +12889,30 @@ app.get('/api/vouchers/view-stats/:reservationId', requireAuth, async (req, res)
         
         const voucherToken = tokenResult.rows[0].voucher_token;
         
+        // browser, os 컬럼 존재 여부 확인
+        const columnsCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'voucher_views' 
+            AND column_name IN ('browser', 'os')
+        `);
+        
+        const hasBrowser = columnsCheck.rows.some(r => r.column_name === 'browser');
+        const hasOs = columnsCheck.rows.some(r => r.column_name === 'os');
+        
+        // 동적 쿼리 생성
+        const selectFields = [
+            'viewed_at',
+            'ip_address',
+            'user_agent',
+            'device_type',
+            hasBrowser ? 'browser' : 'NULL as browser',
+            hasOs ? 'os' : 'NULL as os'
+        ].join(', ');
+        
         // 열람 기록 조회
         const viewsResult = await pool.query(`
-            SELECT 
-                viewed_at,
-                ip_address,
-                user_agent,
-                device_type,
-                browser,
-                os
+            SELECT ${selectFields}
             FROM voucher_views
             WHERE voucher_token = $1
             ORDER BY viewed_at DESC
@@ -13037,23 +13052,45 @@ app.get('/voucher/:token', async (req, res) => {
                 `);
                 
                 if (tableExists.rows[0].exists) {
+                    // browser, os 컬럼 존재 여부 확인
+                    const columnsCheck = await pool.query(`
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'voucher_views' 
+                        AND column_name IN ('browser', 'os')
+                    `);
+                    
+                    const hasBrowser = columnsCheck.rows.some(r => r.column_name === 'browser');
+                    const hasOs = columnsCheck.rows.some(r => r.column_name === 'os');
+                    
+                    // 동적 INSERT 쿼리 생성
+                    const columns = ['voucher_token', 'reservation_id', 'ip_address', 'user_agent', 'device_type'];
+                    const values = [token, data.id, ipAddress, userAgent, deviceType];
+                    let paramIndex = 6;
+                    
+                    if (hasBrowser) {
+                        columns.push('browser');
+                        values.push(browser);
+                        paramIndex++;
+                    }
+                    if (hasOs) {
+                        columns.push('os');
+                        values.push(os);
+                        paramIndex++;
+                    }
+                    
+                    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+                    
                     await pool.query(`
-                        INSERT INTO voucher_views (
-                            voucher_token, 
-                            reservation_id, 
-                            ip_address, 
-                            user_agent, 
-                            device_type, 
-                            browser, 
-                            os
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                    `, [token, data.id, ipAddress, userAgent, deviceType, browser, os]);
+                        INSERT INTO voucher_views (${columns.join(', ')})
+                        VALUES (${placeholders})
+                    `, values);
                     
                     console.log('✅ 바우처 열람 기록 저장:', {
                         token: token.substring(0, 10) + '...',
                         device: deviceType,
-                        browser,
-                        os
+                        browser: hasBrowser ? browser : 'N/A',
+                        os: hasOs ? os : 'N/A'
                     });
                 }
                 
