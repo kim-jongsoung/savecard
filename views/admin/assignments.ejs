@@ -2355,6 +2355,8 @@
             window.currentReservationId = reservationId;
             window.currentReservation = reservation;
             
+            console.log('🔓 수배서 모달 열기 - 예약 ID:', reservationId);
+            
             // 선택된 예약 강조 표시
             highlightSelectedReservation(reservationId);
             
@@ -2364,6 +2366,9 @@
             
             // 수배서 정보 로드
             loadAssignmentDetails(reservationId);
+            
+            // 열람 통계 자동 로드
+            loadViewStats();
         }
         
         // 수배서 정보 새로고침 함수
