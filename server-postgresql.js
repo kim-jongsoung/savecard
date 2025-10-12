@@ -12910,67 +12910,67 @@ app.get('/voucher/:token', async (req, res) => {
         
         const data = result.rows[0];
         
-        // 바우처 조회 기록 남기기 (voucher_views 테이블)
-        try {
-            // User-Agent 파싱 (간단한 버전)
-            const userAgent = req.headers['user-agent'] || '';
-            const deviceType = /mobile/i.test(userAgent) ? 'mobile' : 
-                             /tablet/i.test(userAgent) ? 'tablet' : 'desktop';
-            const browser = userAgent.includes('Chrome') ? 'Chrome' :
-                          userAgent.includes('Firefox') ? 'Firefox' :
-                          userAgent.includes('Safari') ? 'Safari' : 'Other';
-            const os = userAgent.includes('Windows') ? 'Windows' :
-                     userAgent.includes('Mac') ? 'macOS' :
-                     userAgent.includes('Android') ? 'Android' :
-                     userAgent.includes('iOS') ? 'iOS' : 'Other';
-            
-            // IP 주소 가져오기
-            const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-                            req.headers['x-real-ip'] || 
-                            req.connection.remoteAddress || 
-                            req.socket.remoteAddress;
-            
-            // voucher_views 테이블 존재 확인 후 기록
-            const tableExists = await pool.query(`
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'voucher_views'
-                );
-            `);
-            
-            if (tableExists.rows[0].exists) {
-                await pool.query(`
-                    INSERT INTO voucher_views (
-                        voucher_token, 
-                        reservation_id, 
-                        ip_address, 
-                        user_agent, 
-                        device_type, 
-                        browser, 
-                        os
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                `, [token, data.id, ipAddress, userAgent, deviceType, browser, os]);
+        // 바우처 조회 기록 남기기 (비동기 - 페이지 로딩 블로킹 방지)
+        // await 없이 실행만 시키고 결과를 기다리지 않음
+        (async () => {
+            try {
+                // User-Agent 파싱
+                const userAgent = req.headers['user-agent'] || '';
+                const deviceType = /mobile/i.test(userAgent) ? 'mobile' : 
+                                 /tablet/i.test(userAgent) ? 'tablet' : 'desktop';
+                const browser = userAgent.includes('Chrome') ? 'Chrome' :
+                              userAgent.includes('Firefox') ? 'Firefox' :
+                              userAgent.includes('Safari') ? 'Safari' : 'Other';
+                const os = userAgent.includes('Windows') ? 'Windows' :
+                         userAgent.includes('Mac') ? 'macOS' :
+                         userAgent.includes('Android') ? 'Android' :
+                         userAgent.includes('iOS') ? 'iOS' : 'Other';
                 
-                console.log('✅ 바우처 열람 기록 저장:', {
-                    token: token.substring(0, 10) + '...',
-                    device: deviceType,
-                    browser,
-                    os
-                });
-            } else {
-                console.log('⚠️ voucher_views 테이블이 없습니다. 기록 생략');
+                // IP 주소 가져오기
+                const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                                req.headers['x-real-ip'] || 
+                                req.connection.remoteAddress || 
+                                req.socket.remoteAddress;
+                
+                // voucher_views 테이블 존재 확인 후 기록
+                const tableExists = await pool.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name = 'voucher_views'
+                    );
+                `);
+                
+                if (tableExists.rows[0].exists) {
+                    await pool.query(`
+                        INSERT INTO voucher_views (
+                            voucher_token, 
+                            reservation_id, 
+                            ip_address, 
+                            user_agent, 
+                            device_type, 
+                            browser, 
+                            os
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    `, [token, data.id, ipAddress, userAgent, deviceType, browser, os]);
+                    
+                    console.log('✅ 바우처 열람 기록 저장:', {
+                        token: token.substring(0, 10) + '...',
+                        device: deviceType,
+                        browser,
+                        os
+                    });
+                }
+                
+                // assignments 테이블 viewed_at 업데이트
+                await pool.query(
+                    'UPDATE assignments SET viewed_at = NOW() WHERE reservation_id = $1 AND viewed_at IS NULL',
+                    [data.id]
+                );
+            } catch (viewError) {
+                console.error('❌ 바우처 조회 기록 오류:', viewError);
             }
-            
-            // assignments 테이블 viewed_at 업데이트 (기존 방식 유지)
-            await pool.query(
-                'UPDATE assignments SET viewed_at = NOW() WHERE reservation_id = $1 AND viewed_at IS NULL',
-                [data.id]
-            );
-        } catch (viewError) {
-            console.error('❌ 바우처 조회 기록 오류:', viewError);
-            // 에러가 발생해도 페이지는 정상 표시
-        }
+        })();
         
         // voucher-template.ejs 렌더링
         res.render('voucher-template', {
