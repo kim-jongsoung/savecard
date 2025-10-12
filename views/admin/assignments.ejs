@@ -2421,13 +2421,13 @@
                             </div>
                             
                             <div class="border-top pt-2">
-                                <strong class="small">📊 열람 내역</strong>
+                                <strong class="small">📊 열람 내역 (최근 10개)</strong>
                                 <div class="mt-2">
-                                    ${views.map(v => `
+                                    ${views.slice(0, 10).map(v => `
                                         <div class="small mb-2 pb-2 border-bottom">
                                             <div><i class="bi bi-calendar"></i> ${new Date(v.viewed_at).toLocaleString('ko-KR')}</div>
                                             <div class="text-muted">
-                                                ${v.device_type === 'mobile' ? '📱' : '💻'} ${v.device_type || 'unknown'} 
+                                                ${(v.device_type || '').toLowerCase().includes('mobile') ? '📱' : '💻'} ${v.device_type || 'unknown'} 
                                                 | ${v.browser || 'unknown browser'}
                                             </div>
                                             ${v.ip_address ? `<div class="text-muted small">IP: ${v.ip_address}</div>` : ''}
@@ -2895,13 +2895,13 @@
                             </div>
                             
                             <div class="border-top pt-2">
-                                <strong class="small">📊 열람 내역</strong>
+                                <strong class="small">📊 열람 내역 (최근 10개)</strong>
                                 <div class="mt-2">
-                                    ${views.map(v => `
+                                    ${views.slice(0, 10).map(v => `
                                         <div class="small mb-2 pb-2 border-bottom">
                                             <div><i class="bi bi-calendar"></i> ${new Date(v.viewed_at).toLocaleString('ko-KR')}</div>
                                             <div class="text-muted">
-                                                ${v.device_type === 'mobile' ? '📱' : '💻'} ${v.device_type || 'unknown'} 
+                                                ${(v.device_type || '').toLowerCase().includes('mobile') ? '📱' : '💻'} ${v.device_type || 'unknown'} 
                                                 | ${v.browser || 'unknown browser'}
                                             </div>
                                             ${v.ip_address ? `<div class="text-muted small">IP: ${v.ip_address}</div>` : ''}
