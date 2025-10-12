@@ -7,7 +7,11 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
+
+// nodemailer 명시적 로드 (Railway 배포용)
 const nodemailer = require('nodemailer');
+console.log('📧 nodemailer 모듈 로드:', typeof nodemailer, typeof nodemailer.createTransporter);
+
 // 간단하고 확실한 환경변수 처리
 // 로컬에서는 railsql.env 파일 사용, 배포환경에서는 기본 .env 사용
 const fs = require('fs');
