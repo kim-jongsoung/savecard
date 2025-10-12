@@ -13045,6 +13045,71 @@ app.get('/api/assignments/view-stats/:reservationId', requireAuth, async (req, r
     }
 });
 
+// 🔍 진단 API: assignment_views 데이터 분석
+app.get('/api/debug/assignment-views', requireAuth, async (req, res) => {
+    try {
+        // 1. assignment_views 테이블의 token 분포
+        const tokenDistribution = await pool.query(`
+            SELECT 
+                COALESCE(LEFT(assignment_token, 30), 'NULL') as token_prefix,
+                COUNT(*) as view_count
+            FROM assignment_views
+            GROUP BY assignment_token
+            ORDER BY view_count DESC
+            LIMIT 20
+        `);
+        
+        // 2. NULL token 개수
+        const nullCount = await pool.query(`
+            SELECT COUNT(*) as count FROM assignment_views WHERE assignment_token IS NULL
+        `);
+        
+        // 3. assignments 테이블의 최근 토큰들
+        const recentAssignments = await pool.query(`
+            SELECT 
+                id,
+                reservation_id,
+                LEFT(assignment_token, 30) as token_prefix,
+                vendor_name,
+                created_at
+            FROM assignments
+            ORDER BY created_at DESC
+            LIMIT 10
+        `);
+        
+        // 4. 특정 예약들의 토큰과 뷰 개수
+        const sampleData = await pool.query(`
+            SELECT 
+                a.reservation_id,
+                LEFT(a.assignment_token, 30) as token_prefix,
+                a.vendor_name,
+                COUNT(av.id) as view_count
+            FROM assignments a
+            LEFT JOIN assignment_views av ON av.assignment_token = a.assignment_token
+            GROUP BY a.reservation_id, a.assignment_token, a.vendor_name
+            ORDER BY a.reservation_id DESC
+            LIMIT 10
+        `);
+        
+        res.json({
+            success: true,
+            analysis: {
+                token_distribution: tokenDistribution.rows,
+                null_token_count: nullCount.rows[0].count,
+                recent_assignments: recentAssignments.rows,
+                sample_data: sampleData.rows
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ 진단 API 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 // 바우처 페이지 라우트
 app.get('/voucher/:token', async (req, res) => {
     const startTime = Date.now();
