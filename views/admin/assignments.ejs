@@ -781,11 +781,11 @@
                                     <div class="row g-3">
                                         <!-- 1. 이메일 전송 -->
                                         <div class="col-md-6">
-                                            <div class="card border-primary h-100 voucher-send-card" onclick="openEmailSendForm()">
+                                            <div class="card border-primary h-100 voucher-send-card" onclick="sendVoucherEmailWithAI()">
                                                 <div class="card-body text-center">
                                                     <i class="bi bi-envelope-fill text-primary" style="font-size: 2.5rem;"></i>
                                                     <h6 class="mt-2 mb-1">이메일 전송</h6>
-                                                    <p class="small text-muted mb-0">고객 이메일로 발송</p>
+                                                    <p class="small text-muted mb-0">🤖 AI 자동 작성 + 발송</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -2984,6 +2984,82 @@
             navigator.clipboard.writeText(message).then(() => {
                 showAlert('✅ 메시지가 복사되었습니다!\n카카오톡으로 전송하세요.', 'success');
             });
+        }
+        
+        // AI로 이메일 자동 작성 + 즉시 전송
+        async function sendVoucherEmailWithAI() {
+            const reservation = getReservationData(window.currentReservationId);
+            
+            // 이메일 주소 확인
+            if (!reservation.email) {
+                showAlert('고객 이메일 주소가 없습니다. 예약 정보를 확인해주세요.', 'warning');
+                return;
+            }
+            
+            if (!confirm(`${reservation.email}로 바우처를 전송하시겠습니까?\n\nAI가 자동으로 전문적인 이메일을 작성하여 발송합니다.`)) {
+                return;
+            }
+            
+            try {
+                showAlert('🤖 AI가 이메일을 작성하고 있습니다...', 'info');
+                
+                const voucherUrl = document.getElementById('voucher-link-url').value;
+                
+                // 1단계: AI로 이메일 내용 생성
+                console.log('🤖 AI 이메일 생성 중...');
+                const aiResponse = await fetch('/api/vouchers/generate-email-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reservation_id: window.currentReservationId,
+                        customer_name: reservation.korean_name,
+                        product_name: reservation.product_name,
+                        usage_date: reservation.usage_date,
+                        usage_time: reservation.usage_time,
+                        platform_name: reservation.platform_name,
+                        people_adult: reservation.people_adult,
+                        people_child: reservation.people_child,
+                        voucher_url: voucherUrl
+                    })
+                });
+                
+                const aiResult = await aiResponse.json();
+                
+                if (!aiResult.success) {
+                    showAlert('AI 생성 실패: ' + aiResult.message, 'danger');
+                    return;
+                }
+                
+                console.log('✅ AI 이메일 생성 완료');
+                showAlert('📧 이메일을 발송하고 있습니다...', 'info');
+                
+                // 2단계: 생성된 내용으로 이메일 전송
+                const sendResponse = await fetch(`/api/vouchers/send-email/${window.currentReservationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient: reservation.email,
+                        subject: aiResult.subject,
+                        message: aiResult.message,
+                        voucher_token: window.currentVoucherToken
+                    })
+                });
+                
+                const sendResult = await sendResponse.json();
+                
+                if (sendResult.success) {
+                    showAlert(`✅ ${reservation.email}로 바우처가 전송되었습니다!`, 'success');
+                    
+                    // 전송 기록 새로고침
+                    loadSendHistory(window.currentReservationId);
+                } else {
+                    showAlert('이메일 전송 실패: ' + sendResult.message, 'danger');
+                }
+                
+            } catch (error) {
+                console.error('❌ 이메일 전송 오류:', error);
+                showAlert('이메일 전송 중 오류가 발생했습니다.', 'danger');
+            }
         }
         
         // 이메일 전송 폼 열기

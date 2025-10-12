@@ -10901,7 +10901,7 @@ JSON 형식으로 응답해주세요:
     }
 });
 
-// 바우처 이메일 전송 API
+// 바우처 이메일 전송 API (SMTP 실제 전송)
 app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res) => {
     try {
         const { reservationId } = req.params;
@@ -10909,8 +10909,112 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
         
         console.log('📧 바우처 이메일 전송:', reservationId, recipient);
         
-        // TODO: 실제 이메일 전송 로직 (nodemailer 등)
-        // const emailSent = await sendEmail({...});
+        // 예약 정보 조회
+        const reservationResult = await pool.query(
+            'SELECT * FROM reservations WHERE id = $1',
+            [reservationId]
+        );
+        
+        if (reservationResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = reservationResult.rows[0];
+        const voucherUrl = `${req.protocol}://${req.get('host')}/voucher/${voucher_token}`;
+        
+        // SMTP 이메일 전송
+        if (process.env.SMTP_HOST) {
+            const nodemailer = require('nodemailer');
+            
+            const transporter = nodemailer.createTransporter({
+                host: process.env.SMTP_HOST,
+                port: process.env.SMTP_PORT || 587,
+                secure: false,
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS
+                }
+            });
+            
+            const mailOptions = {
+                from: process.env.SMTP_FROM || 'noreply@guamsavecard.com',
+                to: recipient,
+                subject: subject || `[괌세이브] 예약 바우처 - ${reservation.product_name}`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
+                            <h1 style="margin: 0;">🎫 예약 바우처</h1>
+                        </div>
+                        
+                        <div style="padding: 30px; background: #f9f9f9;">
+                            ${message ? `<div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; white-space: pre-wrap;">${message}</div>` : ''}
+                            
+                            <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                                <h2 style="color: #667eea; margin-top: 0;">📋 예약 정보</h2>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">예약번호:</td>
+                                        <td style="padding: 8px 0; font-weight: bold;">${reservation.reservation_number}</td>
+                                    </tr>
+                                    ${reservation.platform_name ? `
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">예약 플랫폼:</td>
+                                        <td style="padding: 8px 0;"><span style="background: #f0f4ff; color: #667eea; padding: 4px 10px; border-radius: 4px; font-size: 12px;">${reservation.platform_name}</span></td>
+                                    </tr>
+                                    ` : ''}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">예약자명:</td>
+                                        <td style="padding: 8px 0; font-weight: bold;">${reservation.korean_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">상품명:</td>
+                                        <td style="padding: 8px 0; font-weight: bold;">${reservation.product_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">이용일:</td>
+                                        <td style="padding: 8px 0; font-weight: bold; color: #667eea;">${reservation.usage_date}</td>
+                                    </tr>
+                                    ${reservation.usage_time ? `
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">이용시간:</td>
+                                        <td style="padding: 8px 0;">${reservation.usage_time}</td>
+                                    </tr>
+                                    ` : ''}
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #666;">인원:</td>
+                                        <td style="padding: 8px 0;">성인 ${reservation.people_adult || 0}명${reservation.people_child > 0 ? `, 아동 ${reservation.people_child}명` : ''}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${voucherUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+                                    🎫 바우처 확인하기
+                                </a>
+                            </div>
+                            
+                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+                                <strong>⚠️ 유의사항:</strong><br>
+                                - 이용 시 반드시 바우처를 제시해주세요<br>
+                                - 예약 시간 15-20분 전 도착을 권장합니다<br>
+                                - 문의사항은 언제든 연락주세요
+                            </div>
+                        </div>
+                        
+                        <div style="background: #333; color: #999; padding: 20px; text-align: center; font-size: 12px;">
+                            <p style="margin: 5px 0;">괌세이브카드 예약관리시스템</p>
+                            <p style="margin: 5px 0;">즐거운 괌 여행 되세요! 🌴</p>
+                        </div>
+                    </div>
+                `
+            };
+            
+            await transporter.sendMail(mailOptions);
+            console.log('✅ 이메일 SMTP 전송 완료:', recipient);
+        }
         
         // 전송 기록 저장
         await pool.query(`

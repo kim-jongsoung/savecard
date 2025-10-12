@@ -393,14 +393,45 @@ async function createTables() {
     `);
     console.log('✅ 통합 reservations 테이블 생성 완료');
 
-    console.log('✅ 모든 테이블이 성공적으로 생성되었습니다!');
-    
+    console.log('✅ reservations 테이블 생성 완료');
+
+    // 바우처 전송 기록 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS voucher_sends (
+        id SERIAL PRIMARY KEY,
+        reservation_id INTEGER NOT NULL,
+        voucher_token VARCHAR(100),
+        send_method VARCHAR(20) NOT NULL,
+        recipient VARCHAR(255),
+        subject VARCHAR(255),
+        message TEXT,
+        sent_by VARCHAR(100),
+        status VARCHAR(20) DEFAULT 'sent',
+        sent_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ voucher_sends 테이블 생성 완료');
+
+    // 바우처 열람 기록 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS voucher_views (
+        id SERIAL PRIMARY KEY,
+        voucher_token VARCHAR(100) NOT NULL,
+        reservation_id INTEGER,
+        ip_address VARCHAR(50),
+        user_agent TEXT,
+        device_type VARCHAR(20),
+        viewed_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('✅ voucher_views 테이블 생성 완료');
+
   } catch (err) {
     console.error('❌ 테이블 생성 실패:', err.message);
     throw err;
   } finally {
     client.release();
-  }
 }
 
 // 기존 JSON 데이터를 PostgreSQL로 마이그레이션
