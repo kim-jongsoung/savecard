@@ -12699,6 +12699,89 @@ app.get('/api/vouchers/download/:filename', async (req, res) => {
     }
 });
 
+// 바우처 전송 기록 추가 API
+app.post('/api/vouchers/send-history', requireAuth, async (req, res) => {
+    try {
+        const { 
+            reservation_id, 
+            voucher_token, 
+            send_method, 
+            recipient, 
+            subject, 
+            message 
+        } = req.body;
+        
+        console.log('📤 바우처 전송 기록 추가:', {
+            reservation_id,
+            send_method,
+            recipient
+        });
+        
+        // voucher_sends 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'voucher_sends'
+            );
+        `);
+        
+        if (!tableCheck.rows[0].exists) {
+            console.log('⚠️ voucher_sends 테이블이 없습니다.');
+            return res.json({
+                success: true,
+                message: '전송 기록 테이블이 없습니다. (기능 비활성화)',
+                id: null
+            });
+        }
+        
+        // 전송 기록 저장
+        const insertQuery = `
+            INSERT INTO voucher_sends (
+                reservation_id,
+                voucher_token,
+                send_method,
+                recipient,
+                subject,
+                message,
+                status,
+                sent_by,
+                sent_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            RETURNING id, sent_at
+        `;
+        
+        const adminName = req.session.adminName || req.session.adminUsername || '관리자';
+        
+        const result = await pool.query(insertQuery, [
+            reservation_id,
+            voucher_token,
+            send_method,
+            recipient,
+            subject || null,
+            message || null,
+            'sent',
+            adminName
+        ]);
+        
+        console.log('✅ 바우처 전송 기록 저장 완료:', result.rows[0]);
+        
+        res.json({
+            success: true,
+            message: '전송 기록이 저장되었습니다.',
+            id: result.rows[0].id,
+            sent_at: result.rows[0].sent_at
+        });
+        
+    } catch (error) {
+        console.error('❌ 바우처 전송 기록 추가 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '전송 기록 추가 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 바우처 전송 기록 조회 API
 app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, res) => {
     try {
@@ -12706,12 +12789,60 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
         
         console.log('📋 바우처 전송 기록 조회:', reservationId);
         
-        // 전송 기록 조회 (향후 구현 - 현재는 빈 배열 반환)
-        // TODO: voucher_send_history 테이블 생성 후 구현
+        // voucher_sends 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'voucher_sends'
+            );
+        `);
+        
+        if (!tableCheck.rows[0].exists) {
+            console.log('⚠️ voucher_sends 테이블이 없습니다. 빈 배열 반환');
+            return res.json({
+                success: true,
+                history: [],
+                stats: {
+                    total_sends: 0,
+                    total_views: 0,
+                    view_rate: 0
+                }
+            });
+        }
+        
+        // 전송 기록 조회
+        const historyQuery = `
+            SELECT 
+                id,
+                send_method,
+                recipient,
+                subject,
+                status,
+                sent_at,
+                viewed_at,
+                sent_by,
+                error_message
+            FROM voucher_sends
+            WHERE reservation_id = $1
+            ORDER BY sent_at DESC
+        `;
+        
+        const historyResult = await pool.query(historyQuery, [reservationId]);
+        
+        // 통계 계산
+        const stats = {
+            total_sends: historyResult.rows.length,
+            total_views: historyResult.rows.filter(r => r.viewed_at).length,
+            view_rate: historyResult.rows.length > 0 
+                ? Math.round((historyResult.rows.filter(r => r.viewed_at).length / historyResult.rows.length) * 100)
+                : 0
+        };
         
         res.json({
             success: true,
-            history: []  // 빈 배열 반환 (에러 방지)
+            history: historyResult.rows,
+            stats
         });
         
     } catch (error) {
@@ -12779,14 +12910,66 @@ app.get('/voucher/:token', async (req, res) => {
         
         const data = result.rows[0];
         
-        // 바우처 조회 기록 남기기
+        // 바우처 조회 기록 남기기 (voucher_views 테이블)
         try {
+            // User-Agent 파싱 (간단한 버전)
+            const userAgent = req.headers['user-agent'] || '';
+            const deviceType = /mobile/i.test(userAgent) ? 'mobile' : 
+                             /tablet/i.test(userAgent) ? 'tablet' : 'desktop';
+            const browser = userAgent.includes('Chrome') ? 'Chrome' :
+                          userAgent.includes('Firefox') ? 'Firefox' :
+                          userAgent.includes('Safari') ? 'Safari' : 'Other';
+            const os = userAgent.includes('Windows') ? 'Windows' :
+                     userAgent.includes('Mac') ? 'macOS' :
+                     userAgent.includes('Android') ? 'Android' :
+                     userAgent.includes('iOS') ? 'iOS' : 'Other';
+            
+            // IP 주소 가져오기
+            const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+                            req.headers['x-real-ip'] || 
+                            req.connection.remoteAddress || 
+                            req.socket.remoteAddress;
+            
+            // voucher_views 테이블 존재 확인 후 기록
+            const tableExists = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'voucher_views'
+                );
+            `);
+            
+            if (tableExists.rows[0].exists) {
+                await pool.query(`
+                    INSERT INTO voucher_views (
+                        voucher_token, 
+                        reservation_id, 
+                        ip_address, 
+                        user_agent, 
+                        device_type, 
+                        browser, 
+                        os
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `, [token, data.id, ipAddress, userAgent, deviceType, browser, os]);
+                
+                console.log('✅ 바우처 열람 기록 저장:', {
+                    token: token.substring(0, 10) + '...',
+                    device: deviceType,
+                    browser,
+                    os
+                });
+            } else {
+                console.log('⚠️ voucher_views 테이블이 없습니다. 기록 생략');
+            }
+            
+            // assignments 테이블 viewed_at 업데이트 (기존 방식 유지)
             await pool.query(
                 'UPDATE assignments SET viewed_at = NOW() WHERE reservation_id = $1 AND viewed_at IS NULL',
                 [data.id]
             );
         } catch (viewError) {
-            console.error('바우처 조회 기록 오류:', viewError);
+            console.error('❌ 바우처 조회 기록 오류:', viewError);
+            // 에러가 발생해도 페이지는 정상 표시
         }
         
         // voucher-template.ejs 렌더링
