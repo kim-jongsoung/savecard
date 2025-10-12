@@ -2737,6 +2737,153 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
     }
 });
 
+// ==================== RAG 가이드 관리 라우트 ====================
+
+// RAG 관리 페이지
+app.get('/admin/rag-manager', requireAuth, (req, res) => {
+    res.render('admin/rag-manager', {
+        title: 'RAG 상품 가이드 관리',
+        adminUsername: req.session.adminUsername || 'admin'
+    });
+});
+
+// RAG 가이드 목록 조회
+app.get('/api/rag/guides', requireAuth, async (req, res) => {
+    try {
+        const { listProductGuides } = require('./utils/rag-voucher');
+        const guides = await listProductGuides();
+        
+        res.json({
+            success: true,
+            guides
+        });
+    } catch (error) {
+        console.error('❌ RAG 가이드 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '가이드 목록 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// RAG 가이드 상세 조회
+app.get('/api/rag/guides/:filename', requireAuth, async (req, res) => {
+    try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const { filename } = req.params;
+        
+        const RAG_DIR = path.join(__dirname, 'rag', 'products');
+        const filePath = path.join(RAG_DIR, filename);
+        
+        const content = await fs.readFile(filePath, 'utf-8');
+        
+        res.json({
+            success: true,
+            content
+        });
+    } catch (error) {
+        console.error('❌ RAG 가이드 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '가이드 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// RAG 가이드 생성
+app.post('/api/rag/guides', requireAuth, async (req, res) => {
+    try {
+        const { productName, content } = req.body;
+        
+        if (!productName || !content) {
+            return res.status(400).json({
+                success: false,
+                message: '상품명과 내용을 입력해주세요.'
+            });
+        }
+        
+        const { registerProductGuide } = require('./utils/rag-voucher');
+        const result = await registerProductGuide(productName, content);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                message: '가이드가 등록되었습니다.',
+                file: result.file
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: '가이드 등록 실패: ' + result.error
+            });
+        }
+    } catch (error) {
+        console.error('❌ RAG 가이드 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '가이드 생성 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// RAG 가이드 수정
+app.put('/api/rag/guides', requireAuth, async (req, res) => {
+    try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const { productName, content, existingFile } = req.body;
+        
+        if (!productName || !content || !existingFile) {
+            return res.status(400).json({
+                success: false,
+                message: '필수 정보가 누락되었습니다.'
+            });
+        }
+        
+        const RAG_DIR = path.join(__dirname, 'rag', 'products');
+        const filePath = path.join(RAG_DIR, existingFile);
+        
+        // 파일 덮어쓰기
+        await fs.writeFile(filePath, content, 'utf-8');
+        
+        res.json({
+            success: true,
+            message: '가이드가 수정되었습니다.'
+        });
+    } catch (error) {
+        console.error('❌ RAG 가이드 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '가이드 수정 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// RAG 가이드 삭제
+app.delete('/api/rag/guides/:filename', requireAuth, async (req, res) => {
+    try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const { filename } = req.params;
+        
+        const RAG_DIR = path.join(__dirname, 'rag', 'products');
+        const filePath = path.join(RAG_DIR, filename);
+        
+        await fs.unlink(filePath);
+        
+        res.json({
+            success: true,
+            message: '가이드가 삭제되었습니다.'
+        });
+    } catch (error) {
+        console.error('❌ RAG 가이드 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '가이드 삭제 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
 
 // 여행사 생성
 app.post('/admin/agencies', requireAuth, async (req, res) => {
