@@ -12985,6 +12985,7 @@ app.get('/api/assignments/view-stats/:reservationId', requireAuth, async (req, r
         }
         
         const assignmentToken = tokenResult.rows[0].assignment_token;
+        console.log(`📊 예약 ID ${reservationId}의 assignment_token: ${assignmentToken ? assignmentToken.substring(0, 20) + '...' : 'NULL'}`);
         
         // browser, os 컬럼 존재 여부 확인
         const columnsCheck = await pool.query(`
@@ -13019,6 +13020,13 @@ app.get('/api/assignments/view-stats/:reservationId', requireAuth, async (req, r
         const total_views = views.length;
         const first_viewed = total_views > 0 ? views[views.length - 1].viewed_at : null;
         const last_viewed = total_views > 0 ? views[0].viewed_at : null;
+        
+        console.log(`📊 예약 ID ${reservationId}의 열람 통계: 총 ${total_views}개`);
+        if (views.length > 0) {
+            console.log(`   - 첫 열람: ${first_viewed}`);
+            console.log(`   - 최근 열람: ${last_viewed}`);
+            console.log(`   - 샘플 IP: ${views[0].ip_address}`);
+        }
         
         res.json({
             success: true,
