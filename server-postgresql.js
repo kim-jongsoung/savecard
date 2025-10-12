@@ -11128,20 +11128,37 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
             response: sendResult.response
         });
         
-        // 전송 기록 저장
-        await pool.query(`
-            INSERT INTO voucher_sends (
-                reservation_id, voucher_token, send_method, recipient, subject, message,
-                sent_by, status
-            ) VALUES ($1, $2, 'email', $3, $4, $5, $6, 'sent')
-        `, [
-            reservationId,
-            voucher_token,
-            recipient,
-            subject || '[괌세이브] 예약 바우처',
-            message,
-            req.session.adminName || req.session.adminUsername
-        ]);
+        // 전송 기록 저장 (테이블 존재 확인 후)
+        try {
+            const tableExists = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'voucher_sends'
+                );
+            `);
+            
+            if (tableExists.rows[0].exists) {
+                await pool.query(`
+                    INSERT INTO voucher_sends (
+                        reservation_id, voucher_token, send_method, recipient, subject, message,
+                        sent_by, status
+                    ) VALUES ($1, $2, 'email', $3, $4, $5, $6, 'sent')
+                `, [
+                    reservationId,
+                    voucher_token,
+                    recipient,
+                    subject || '[괌세이브] 예약 바우처',
+                    message,
+                    req.session.adminName || req.session.adminUsername
+                ]);
+                console.log('✅ 전송 기록 저장 완료');
+            } else {
+                console.warn('⚠️ voucher_sends 테이블이 없습니다. 전송은 성공했지만 기록은 저장되지 않습니다.');
+            }
+        } catch (historyError) {
+            console.error('⚠️ 전송 기록 저장 실패 (이메일은 전송됨):', historyError.message);
+        }
         
         res.json({
             success: true,
@@ -11187,18 +11204,35 @@ app.post('/api/vouchers/send-kakao/:reservationId', requireAuth, async (req, res
         // TODO: 카카오 알림톡 API 연동
         // const kakakoSent = await sendKakaoAlimtalk({...});
         
-        // 전송 기록 저장
-        await pool.query(`
-            INSERT INTO voucher_sends (
-                reservation_id, voucher_token, send_method, recipient,
-                sent_by, status
-            ) VALUES ($1, $2, 'kakao', $3, $4, 'sent')
-        `, [
-            reservationId,
-            voucher_token,
-            reservation.phone || reservation.kakao_id,
-            req.session.adminName || req.session.adminUsername
-        ]);
+        // 전송 기록 저장 (테이블 존재 확인 후)
+        try {
+            const tableExists = await pool.query(`
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'voucher_sends'
+                );
+            `);
+            
+            if (tableExists.rows[0].exists) {
+                await pool.query(`
+                    INSERT INTO voucher_sends (
+                        reservation_id, voucher_token, send_method, recipient,
+                        sent_by, status
+                    ) VALUES ($1, $2, 'kakao', $3, $4, 'sent')
+                `, [
+                    reservationId,
+                    voucher_token,
+                    reservation.phone || reservation.kakao_id,
+                    req.session.adminName || req.session.adminUsername
+                ]);
+                console.log('✅ 카카오 전송 기록 저장 완료');
+            } else {
+                console.warn('⚠️ voucher_sends 테이블이 없습니다.');
+            }
+        } catch (historyError) {
+            console.error('⚠️ 전송 기록 저장 실패:', historyError.message);
+        }
         
         res.json({
             success: true,
