@@ -10556,13 +10556,21 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                     });
             }
             
-            // 예약 상태를 '확정완료'로 변경
+            // 바우처 토큰 생성 (없으면)
+            let voucherToken = reservation.voucher_token;
+            if (!voucherToken) {
+                voucherToken = crypto.randomBytes(32).toString('hex');
+                console.log('🎫 바우처 토큰 생성:', voucherToken);
+            }
+            
+            // 예약 상태를 '확정완료'로 변경 + 바우처 토큰 저장
             await pool.query(`
                 UPDATE reservations 
                 SET payment_status = 'confirmed',
+                    voucher_token = $2,
                     updated_at = NOW()
                 WHERE id = $1
-            `, [reservationId]);
+            `, [reservationId, voucherToken]);
             
             // 히스토리 기록
             const methodNames = {
@@ -10581,17 +10589,20 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                 { payment_status: { from: reservation.payment_status, to: 'confirmed' } },
                 { 
                     confirmation_method: parseInt(method),
+                    voucher_token: voucherToken,
                     ...confirmationData
                 }
             );
             
-            console.log('✅ 예약 확정 완료:', reservationId);
+            console.log('✅ 예약 확정 완료:', reservationId, '| 바우처 토큰:', voucherToken);
             
             res.json({
                 success: true,
                 message: '예약이 확정되었습니다.',
                 reservation_id: reservationId,
-                method: parseInt(method)
+                method: parseInt(method),
+                voucher_token: voucherToken,
+                voucher_url: `${req.protocol}://${req.get('host')}/voucher/${voucherToken}`
             });
             
         } catch (error) {

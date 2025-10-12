@@ -2705,14 +2705,24 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showAlert('✅ 예약이 확정되었습니다! 바우처를 생성합니다...', 'success');
+                    showAlert('✅ 예약이 확정되었습니다! 바우처가 생성되었습니다.', 'success');
+                    
+                    console.log('🎫 바우처 정보:', {
+                        token: result.voucher_token,
+                        url: result.voucher_url
+                    });
                     
                     // 모달 닫기
                     const modal = bootstrap.Modal.getInstance(document.getElementById('statusManageModal'));
                     if (modal) modal.hide();
                     
-                    // 바우처 자동 생성
-                    await autoGenerateVoucher(reservationId);
+                    // 목록 새로고침
+                    await loadAssignments(currentPage);
+                    
+                    // 바우처 모달 자동 열기
+                    setTimeout(() => {
+                        openVoucherManageModal(reservationId);
+                    }, 500);
                     
                 } else {
                     showAlert('확정 처리 실패: ' + result.message, 'danger');
