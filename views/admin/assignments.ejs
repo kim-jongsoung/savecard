@@ -856,14 +856,17 @@
                                 </div>
                             </div>
 
-                            <!-- 전송 기록 -->
+                            <!-- 바우처 열람 통계 -->
                             <div class="card mt-3">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>전송 기록</h6>
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="bi bi-graph-up me-2"></i>바우처 열람 통계</h6>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadVoucherViewStats()">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
                                 </div>
                                 <div class="card-body">
-                                    <div id="send-history-list" class="small">
-                                        <p class="text-muted mb-0">전송 기록이 없습니다.</p>
+                                    <div id="voucher-view-stats" class="small">
+                                        <p class="text-muted mb-0">통계를 불러오는 중...</p>
                                     </div>
                                 </div>
                             </div>
@@ -2863,8 +2866,8 @@
                     console.log('🎫 바우처 미리보기 로드:', voucherToken);
                     await loadVoucherPreview(voucherToken);
                     
-                    // 전송 기록 로드
-                    loadSendHistory(reservationId);
+                    // 바우처 열람 통계 로드
+                    loadVoucherViewStats();
                 } else {
                     console.error('❌ 바우처 토큰이 없습니다. reservation 객체:', reservation);
                     document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
@@ -2903,8 +2906,8 @@
                     // 미리보기 로드
                     loadVoucherPreview(reservation.voucher_token);
                     
-                    // 전송 기록 로드
-                    loadSendHistory(reservationId);
+                    // 바우처 열람 통계 로드
+                    loadVoucherViewStats();
                 } else {
                     console.warn('⚠️ voucher_token이 없습니다.');
                     document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
@@ -2957,29 +2960,79 @@
             }
         }
         
-        // 전송 기록 로드
-        async function loadSendHistory(reservationId) {
+        // 바우처 열람 통계 로드
+        async function loadVoucherViewStats() {
+            const statsEl = document.getElementById('voucher-view-stats');
+            
+            if (!window.currentReservationId || !window.currentVoucherToken) {
+                statsEl.innerHTML = '<p class="text-muted mb-0">바우처 정보가 없습니다.</p>';
+                return;
+            }
+            
             try {
-                const response = await fetch(`/api/vouchers/send-history/${reservationId}`);
+                statsEl.innerHTML = '<p class="text-muted mb-0">통계를 불러오는 중...</p>';
+                
+                // 바우처 열람 기록 조회
+                const response = await fetch(`/api/vouchers/view-stats/${window.currentReservationId}`);
                 const data = await response.json();
                 
-                if (data.success && data.history.length > 0) {
-                    const html = data.history.map(h => `
-                        <div class="d-flex align-items-center mb-2 pb-2 border-bottom">
-                            <i class="bi bi-${getMethodIcon(h.method)} me-2"></i>
-                            <div class="flex-fill">
-                                <strong>${h.method_name}</strong> - ${h.recipient || ''}
-                                <div class="text-muted small">${formatDateTime(h.sent_at)}</div>
+                if (data.success) {
+                    const { views, total_views, first_viewed, last_viewed } = data;
+                    
+                    let html = '';
+                    
+                    if (total_views > 0) {
+                        html += `
+                            <div class="mb-3">
+                                <div class="row text-center mb-2">
+                                    <div class="col-4">
+                                        <div class="badge bg-primary w-100">총 열람수</div>
+                                        <h4 class="mt-2 mb-0">${total_views}</h4>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="badge bg-success w-100">첫 열람</div>
+                                        <div class="small mt-2">${new Date(first_viewed).toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="badge bg-info w-100">최근 열람</div>
+                                        <div class="small mt-2">${new Date(last_viewed).toLocaleString('ko-KR', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="badge bg-${h.status === 'success' ? 'success' : 'danger'}">${h.status === 'success' ? '성공' : '실패'}</span>
-                        </div>
-                    `).join('');
-                    document.getElementById('send-history-list').innerHTML = html;
+                            
+                            <div class="border-top pt-2">
+                                <strong class="small">📊 열람 내역</strong>
+                                <div class="mt-2">
+                                    ${views.map(v => `
+                                        <div class="small mb-2 pb-2 border-bottom">
+                                            <div><i class="bi bi-calendar"></i> ${new Date(v.viewed_at).toLocaleString('ko-KR')}</div>
+                                            <div class="text-muted">
+                                                ${v.device_type === 'mobile' ? '📱' : '💻'} ${v.device_type || 'unknown'} 
+                                                | ${v.browser || 'unknown browser'}
+                                            </div>
+                                            ${v.ip_address ? `<div class="text-muted small">IP: ${v.ip_address}</div>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html = `
+                            <div class="text-center text-muted py-3">
+                                <i class="bi bi-eye-slash" style="font-size: 2rem;"></i>
+                                <p class="mt-2 mb-0">아직 열람 기록이 없습니다</p>
+                                <p class="small mb-0">고객이 바우처 링크를 열면 자동으로 기록됩니다</p>
+                            </div>
+                        `;
+                    }
+                    
+                    statsEl.innerHTML = html;
                 } else {
-                    document.getElementById('send-history-list').innerHTML = '<p class="text-muted mb-0">전송 기록이 없습니다.</p>';
+                    statsEl.innerHTML = '<p class="text-warning mb-0">통계를 불러올 수 없습니다.</p>';
                 }
             } catch (error) {
-                console.error('❌ 전송 기록 로드 오류:', error);
+                console.error('❌ 바우처 열람 통계 로드 오류:', error);
+                statsEl.innerHTML = '<p class="text-danger mb-0">통계 로드 중 오류가 발생했습니다.</p>';
             }
         }
         
@@ -3085,8 +3138,10 @@
                 if (sendResult.success) {
                     showAlert(`✅ ${reservation.email}로 바우처가 전송되었습니다!`, 'success');
                     
-                    // 전송 기록 새로고침
-                    loadSendHistory(window.currentReservationId);
+                    // 히스토리 새로고침
+                    if (window.currentReservationId) {
+                        await loadAllHistory(window.currentReservationId);
+                    }
                 } else {
                     showAlert('이메일 전송 실패: ' + sendResult.message, 'danger');
                 }
@@ -3189,7 +3244,7 @@
                 if (result.success) {
                     showAlert('✅ 이메일이 전송되었습니다!', 'success');
                     closeEmailSendForm();
-                    loadSendHistory(window.currentReservationId);
+                    // 히스토리에 자동 기록됨
                 } else {
                     showAlert('이메일 전송 실패: ' + result.message, 'danger');
                 }
@@ -3216,7 +3271,7 @@
                 
                 if (result.success) {
                     showAlert('✅ 카카오 알림톡이 전송되었습니다!', 'success');
-                    loadSendHistory(window.currentReservationId);
+                    // 히스토리에 자동 기록됨
                 } else {
                     showAlert('알림톡 전송 실패: ' + result.message, 'warning');
                 }
@@ -3243,7 +3298,7 @@
                 
                 if (result.success) {
                     showAlert('✅ 문자 메시지가 전송되었습니다!', 'success');
-                    loadSendHistory(window.currentReservationId);
+                    // 히스토리에 자동 기록됨
                 } else {
                     showAlert('SMS 전송 실패: ' + result.message, 'warning');
                 }

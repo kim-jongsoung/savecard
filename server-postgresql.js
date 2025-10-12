@@ -12845,6 +12845,86 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
     }
 });
 
+// 바우처 열람 통계 API
+app.get('/api/vouchers/view-stats/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        
+        console.log('📊 바우처 열람 통계 조회:', reservationId);
+        
+        // voucher_views 테이블 존재 확인
+        const tableCheck = await pool.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'voucher_views'
+            );
+        `);
+        
+        if (!tableCheck.rows[0].exists) {
+            console.log('⚠️ voucher_views 테이블이 없습니다. 빈 결과 반환');
+            return res.json({
+                success: true,
+                views: [],
+                total_views: 0,
+                first_viewed: null,
+                last_viewed: null
+            });
+        }
+        
+        // 바우처 토큰 가져오기
+        const tokenResult = await pool.query(`
+            SELECT voucher_token FROM reservations WHERE id = $1
+        `, [reservationId]);
+        
+        if (tokenResult.rows.length === 0 || !tokenResult.rows[0].voucher_token) {
+            return res.json({
+                success: true,
+                views: [],
+                total_views: 0,
+                first_viewed: null,
+                last_viewed: null
+            });
+        }
+        
+        const voucherToken = tokenResult.rows[0].voucher_token;
+        
+        // 열람 기록 조회
+        const viewsResult = await pool.query(`
+            SELECT 
+                viewed_at,
+                ip_address,
+                user_agent,
+                device_type,
+                browser,
+                os
+            FROM voucher_views
+            WHERE voucher_token = $1
+            ORDER BY viewed_at DESC
+        `, [voucherToken]);
+        
+        const views = viewsResult.rows;
+        const total_views = views.length;
+        const first_viewed = total_views > 0 ? views[views.length - 1].viewed_at : null;
+        const last_viewed = total_views > 0 ? views[0].viewed_at : null;
+        
+        res.json({
+            success: true,
+            views,
+            total_views,
+            first_viewed,
+            last_viewed
+        });
+        
+    } catch (error) {
+        console.error('❌ 바우처 열람 통계 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '열람 통계 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 바우처 페이지 라우트
 app.get('/voucher/:token', async (req, res) => {
     const startTime = Date.now();
