@@ -786,6 +786,9 @@
                                                     <i class="bi bi-envelope-fill text-primary" style="font-size: 2.5rem;"></i>
                                                     <h6 class="mt-2 mb-1">이메일 전송</h6>
                                                     <p class="small text-muted mb-0">🤖 AI 자동 작성 + 발송</p>
+                                                    <p class="small text-success mb-0" id="email-last-sent" style="display: none;">
+                                                        <i class="bi bi-check-circle"></i> <span></span>
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -797,6 +800,9 @@
                                                     <i class="bi bi-link-45deg text-success" style="font-size: 2.5rem;"></i>
                                                     <h6 class="mt-2 mb-1">링크 복사</h6>
                                                     <p class="small text-muted mb-0">카카오톡으로 직접 전송</p>
+                                                    <p class="small text-success mb-0" id="kakao-last-sent" style="display: none;">
+                                                        <i class="bi bi-check-circle"></i> <span></span>
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -808,6 +814,9 @@
                                                     <i class="bi bi-chat-dots-fill text-warning" style="font-size: 2.5rem;"></i>
                                                     <h6 class="mt-2 mb-1">카카오 알림톡</h6>
                                                     <p class="small text-muted mb-0">자동 발송 (API 연동)</p>
+                                                    <p class="small text-success mb-0" id="alimtalk-last-sent" style="display: none;">
+                                                        <i class="bi bi-check-circle"></i> <span></span>
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -819,6 +828,9 @@
                                                     <i class="bi bi-phone-fill text-danger" style="font-size: 2.5rem;"></i>
                                                     <h6 class="mt-2 mb-1">문자 메시지</h6>
                                                     <p class="small text-muted mb-0">SMS 발송</p>
+                                                    <p class="small text-success mb-0" id="sms-last-sent" style="display: none;">
+                                                        <i class="bi bi-check-circle"></i> <span></span>
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -2807,6 +2819,9 @@
                     
                     // 바우처 열람 통계 로드
                     loadVoucherViewStats();
+                    
+                    // 바우처 전송 기록 로드
+                    loadVoucherSendTimes(reservationId);
                 } else {
                     console.warn('⚠️ voucher_token이 없습니다.');
                     document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
@@ -2935,6 +2950,55 @@
             }
         }
         
+        // 바우처 전송 기록 로드 (각 방식별 최근 전송 시간 표시)
+        async function loadVoucherSendTimes(reservationId) {
+            try {
+                const response = await fetch(`/api/vouchers/send-history/${reservationId}`);
+                const data = await response.json();
+                
+                if (data.success && data.history) {
+                    // 각 전송 방식별로 최근 기록 찾기
+                    const methods = {
+                        email: data.history.find(h => h.method === 'email'),
+                        kakao: data.history.find(h => h.method === 'kakao'),
+                        alimtalk: data.history.find(h => h.method === 'alimtalk'),
+                        sms: data.history.find(h => h.method === 'sms')
+                    };
+                    
+                    // 각 방식별로 전송 시간 표시
+                    updateSendTime('email', methods.email);
+                    updateSendTime('kakao', methods.kakao);
+                    updateSendTime('alimtalk', methods.alimtalk);
+                    updateSendTime('sms', methods.sms);
+                }
+            } catch (error) {
+                console.error('❌ 전송 기록 로드 오류:', error);
+            }
+        }
+        
+        // 전송 시간 업데이트
+        function updateSendTime(method, record) {
+            const elementId = method === 'kakao' ? 'kakao-last-sent' : `${method}-last-sent`;
+            const element = document.getElementById(elementId);
+            
+            if (!element) return;
+            
+            if (record && record.sent_at) {
+                const sentDate = new Date(record.sent_at);
+                const formatted = sentDate.toLocaleString('ko-KR', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                element.querySelector('span').textContent = `최근 전송: ${formatted}`;
+                element.style.display = 'block';
+            } else {
+                element.style.display = 'none';
+            }
+        }
+        
         function getMethodIcon(method) {
             const icons = {
                 'email': 'envelope-fill',
@@ -2970,6 +3034,8 @@
             
             navigator.clipboard.writeText(message).then(() => {
                 showAlert('✅ 메시지가 복사되었습니다!\n카카오톡으로 전송하세요.', 'success');
+                // 전송 시간 업데이트
+                updateSendTime('kakao', { sent_at: new Date().toISOString() });
             });
         }
         
@@ -3036,6 +3102,9 @@
                 
                 if (sendResult.success) {
                     showAlert(`✅ ${reservation.email}로 바우처가 전송되었습니다!`, 'success');
+                    
+                    // 전송 시간 업데이트
+                    updateSendTime('email', { sent_at: new Date().toISOString() });
                     
                     // 히스토리 새로고침
                     if (window.currentReservationId) {
