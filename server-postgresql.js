@@ -10831,6 +10831,15 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
         
         const reservation = result.rows[0];
         
+        // 예약 취소 여부 확인
+        if (reservation.payment_status === 'cancelled') {
+            return res.status(410).json({
+                success: false,
+                message: '이 예약은 취소되어 바우처가 무효화되었습니다.',
+                cancelled: true
+            });
+        }
+        
         // RAG 기반 이용방법 생성 (에러 발생 시 기본 값 사용)
         let usage_instructions = null;
         try {
@@ -12946,6 +12955,18 @@ app.get('/voucher/:token', async (req, res) => {
         }
         
         const data = result.rows[0];
+        
+        // 예약 취소 여부 확인
+        if (data.payment_status === 'cancelled') {
+            console.log(`❌ 취소된 예약의 바우처 접근 시도: ${data.id}`);
+            return res.status(410).render('error', {
+                title: '바우처가 무효화되었습니다',
+                message: `이 예약은 취소되었습니다.<br><br>
+                    <strong>예약번호:</strong> ${data.reservation_number}<br>
+                    <strong>예약자명:</strong> ${data.korean_name}<br><br>
+                    문의사항이 있으시면 고객센터로 연락해주세요.`
+            });
+        }
         
         // 바우처 조회 기록 남기기 (비동기 - 페이지 로딩 블로킹 방지)
         // await 없이 실행만 시키고 결과를 기다리지 않음
