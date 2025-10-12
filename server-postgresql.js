@@ -12967,9 +12967,11 @@ app.get('/api/assignments/view-stats/:reservationId', requireAuth, async (req, r
             });
         }
         
-        // assignment_token 가져오기
+        // assignment_token 가져오기 (assignments 테이블에서)
         const tokenResult = await pool.query(`
-            SELECT assignment_token FROM reservations WHERE id = $1
+            SELECT a.assignment_token 
+            FROM assignments a
+            WHERE a.reservation_id = $1
         `, [reservationId]);
         
         if (tokenResult.rows.length === 0 || !tokenResult.rows[0].assignment_token) {
