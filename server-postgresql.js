@@ -8159,7 +8159,59 @@ app.post('/assignment/:token/view', async (req, res) => {
             ]);
             console.log('✅ 열람 이력 저장 완료');
         } catch (viewError) {
-            console.error('❌ 열람 이력 저장 실패:', viewError);
+            console.error('❌ 열람 이력 저장 실패:', viewError.message);
+            
+            // 테이블이 없는 경우 자동 생성
+            if (viewError.code === '42P01') { // undefined_table
+                console.log('⚠️ assignment_views 테이블이 없습니다. 자동 생성 시도...');
+                try {
+                    await pool.query(`
+                        CREATE TABLE IF NOT EXISTS assignment_views (
+                            id SERIAL PRIMARY KEY,
+                            assignment_token VARCHAR(255) NOT NULL,
+                            reservation_id INTEGER,
+                            viewed_at TIMESTAMP DEFAULT NOW(),
+                            ip_address VARCHAR(100),
+                            country VARCHAR(100),
+                            city VARCHAR(100),
+                            user_agent TEXT,
+                            device_type VARCHAR(50),
+                            browser VARCHAR(50),
+                            os VARCHAR(50),
+                            screen_size VARCHAR(50),
+                            referrer TEXT,
+                            created_at TIMESTAMP DEFAULT NOW()
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_assignment_views_token ON assignment_views(assignment_token);
+                        CREATE INDEX IF NOT EXISTS idx_assignment_views_reservation ON assignment_views(reservation_id);
+                    `);
+                    console.log('✅ assignment_views 테이블 생성 완료! 다시 저장 시도...');
+                    
+                    // 다시 저장 시도
+                    await pool.query(`
+                        INSERT INTO assignment_views (
+                            assignment_token, reservation_id, viewed_at,
+                            ip_address, country, city, user_agent,
+                            device_type, browser, os, screen_size, referrer
+                        ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    `, [
+                        token, 
+                        assignment.reservation_id, 
+                        ip_address, 
+                        country, 
+                        city, 
+                        user_agent,
+                        device_type || 'Unknown',
+                        browser || 'Unknown',
+                        os || 'Unknown',
+                        screen_size || 'Unknown',
+                        referrer || 'Direct'
+                    ]);
+                    console.log('✅ 열람 이력 저장 재시도 성공!');
+                } catch (createError) {
+                    console.error('❌ 테이블 생성 실패:', createError.message);
+                }
+            }
         }
         
         // 첫 열람인 경우에만 viewed_at 업데이트 및 상태 변경
@@ -8167,18 +8219,50 @@ app.post('/assignment/:token/view', async (req, res) => {
             console.log('🆕 첫 열람! 업데이트 시작...');
             
             // 1. 수배서 viewed_at 업데이트 및 상태를 'sent'로 변경 (아직 draft인 경우)
-            const updateResult = await pool.query(`
-                UPDATE assignments 
-                SET viewed_at = NOW(), 
-                    updated_at = NOW(),
-                    status = CASE 
-                        WHEN status = 'draft' THEN 'sent'
-                        ELSE status 
-                    END
-                WHERE assignment_token = $1
-                RETURNING id, viewed_at, status
-            `, [token]);
-            console.log('✅ 수배서 업데이트 완료:', updateResult.rows[0]);
+            try {
+                const updateResult = await pool.query(`
+                    UPDATE assignments 
+                    SET viewed_at = NOW(), 
+                        updated_at = NOW(),
+                        status = CASE 
+                            WHEN status = 'draft' THEN 'sent'
+                            ELSE status 
+                        END
+                    WHERE assignment_token = $1
+                    RETURNING id, viewed_at, status
+                `, [token]);
+                console.log('✅ 수배서 업데이트 완료:', updateResult.rows[0]);
+            } catch (updateError) {
+                console.error('❌ 수배서 업데이트 실패:', updateError.message);
+                
+                // viewed_at 컬럼이 없는 경우 자동 추가
+                if (updateError.code === '42703') { // undefined_column
+                    console.log('⚠️ assignments.viewed_at 컬럼이 없습니다. 자동 추가 시도...');
+                    try {
+                        await pool.query(`
+                            ALTER TABLE assignments 
+                            ADD COLUMN IF NOT EXISTS viewed_at TIMESTAMP;
+                        `);
+                        console.log('✅ viewed_at 컬럼 추가 완료! 다시 업데이트 시도...');
+                        
+                        // 다시 업데이트 시도
+                        const retryResult = await pool.query(`
+                            UPDATE assignments 
+                            SET viewed_at = NOW(), 
+                                updated_at = NOW(),
+                                status = CASE 
+                                    WHEN status = 'draft' THEN 'sent'
+                                    ELSE status 
+                                END
+                            WHERE assignment_token = $1
+                            RETURNING id, viewed_at, status
+                        `, [token]);
+                        console.log('✅ 수배서 업데이트 재시도 성공:', retryResult.rows[0]);
+                    } catch (alterError) {
+                        console.error('❌ 컬럼 추가 실패:', alterError.message);
+                    }
+                }
+            }
             
             // 2. 예약 현재 상태 확인
             const currentReservation = await pool.query(`
