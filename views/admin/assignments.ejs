@@ -18,12 +18,17 @@
             flex: 1;
         }
         
-        /* PC 화면에서 가로폭 1200px 고정 */
-        @media (min-width: 1200px) {
-            .container-fluid {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
+        /* PC 화면에서 가로폭 1400px 고정 (더 넓은 화면 대응) */
+        .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* 예약 카드 최대 폭 제한 (정렬 유지) */
+        .row-card {
+            max-width: 1360px;
+            margin-left: auto;
+            margin-right: auto;
         }
         .page-header { position: sticky; top: 0; z-index: 10; background:#fff; border-bottom:1px solid #eee; }
         .status-badge { font-weight:600; }
