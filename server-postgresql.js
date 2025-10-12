@@ -351,6 +351,31 @@ async function initializeDatabase() {
           console.log('⚠️ assignment_views 테이블 생성 실패:', error.message);
         }
         
+        // ✅ assignments 테이블에 viewed_at 컬럼 추가 (핵심!)
+        try {
+          console.log('🔧 assignments 테이블에 viewed_at 컬럼 확인 중...');
+          
+          const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'assignments' 
+            AND column_name = 'viewed_at'
+          `);
+          
+          if (columnCheck.rows.length === 0) {
+            console.log('⚠️ assignments.viewed_at 컬럼이 없습니다. 추가 중...');
+            await pool.query(`
+              ALTER TABLE assignments 
+              ADD COLUMN viewed_at TIMESTAMP
+            `);
+            console.log('✅ assignments.viewed_at 컬럼 추가 완료!');
+          } else {
+            console.log('✅ assignments.viewed_at 컬럼이 이미 존재합니다');
+          }
+        } catch (error) {
+          console.log('⚠️ assignments.viewed_at 컬럼 추가 실패:', error.message);
+        }
+        
         // 수배업체 관련 테이블 생성
         try {
           console.log('🏢 수배업체 테이블 생성 시작...');
