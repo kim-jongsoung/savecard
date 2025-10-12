@@ -150,6 +150,31 @@ async function ensureAllColumns() {
       ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP
     `);
 
+    // reservations - 바우처 관련 컬럼
+    try {
+      await client.query(`
+        ALTER TABLE reservations
+        ADD COLUMN IF NOT EXISTS voucher_token VARCHAR(100) UNIQUE,
+        ADD COLUMN IF NOT EXISTS qr_code_data TEXT,
+        ADD COLUMN IF NOT EXISTS qr_image_path VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS vendor_voucher_path VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS voucher_sent_at TIMESTAMP
+      `);
+      
+      // 인덱스 생성
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_reservations_voucher_token 
+        ON reservations(voucher_token)
+      `);
+      
+      console.log('✅ reservations 테이블 바우처 컬럼 추가 완료');
+    } catch (err) {
+      // reservations 테이블이 없으면 무시
+      if (err.code !== '42P01') { // 42P01 = undefined_table
+        console.warn('⚠️ reservations 컬럼 추가 경고:', err.message);
+      }
+    }
+
     console.log('🛠️ 모든 테이블 컬럼 보정 완료');
   } catch (err) {
     console.warn('⚠️ 컬럼 보정 중 경고:', err.message);
