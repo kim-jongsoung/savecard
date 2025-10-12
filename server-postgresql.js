@@ -10791,6 +10791,116 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
     }
 });
 
+// AI로 이메일 내용 생성 API
+app.post('/api/vouchers/generate-email-ai', requireAuth, async (req, res) => {
+    try {
+        const { 
+            customer_name, 
+            product_name, 
+            usage_date, 
+            usage_time,
+            platform_name,
+            people_adult,
+            people_child,
+            voucher_url
+        } = req.body;
+        
+        console.log('🤖 AI 이메일 생성 요청:', customer_name, product_name);
+        
+        // OpenAI API 호출
+        const OpenAI = require('openai');
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+        
+        // 날짜 포맷팅
+        const formattedDate = usage_date ? new Date(usage_date).toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long'
+        }) : '';
+        
+        // 인원 정보
+        const peopleInfo = `성인 ${people_adult || 0}명${people_child > 0 ? `, 아동 ${people_child}명` : ''}`;
+        
+        // AI 프롬프트
+        const prompt = `당신은 괌 여행 예약 전문가이자 전문적인 고객 서비스 담당자입니다.
+
+다음 예약 정보를 바탕으로 고객에게 보낼 예약 바우처 이메일을 작성해주세요:
+
+**예약 정보:**
+- 고객명: ${customer_name}
+- 예약 플랫폼: ${platform_name || '온라인'}
+- 상품명: ${product_name}
+- 이용일: ${formattedDate}
+- 이용시간: ${usage_time || '예약 시 확인'}
+- 인원: ${peopleInfo}
+- 바우처 링크: ${voucher_url}
+
+**작성 가이드:**
+1. 제목: 간결하고 명확하게 (예: [괌세이브] ${product_name} 예약 확정 - ${formattedDate})
+2. 본문 구성:
+   - 친절한 인사말
+   - 예약 확정 안내
+   - 주요 예약 정보 요약 (상품명, 이용일시, 인원)
+   - 바우처 링크 안내 (이용 시 반드시 제시)
+   - 유의사항 (현지 날씨, 준비물, 도착 시간 등)
+   - 문의 안내
+   - 마무리 인사
+
+**톤앤매너:**
+- 전문적이면서도 따뜻한 톤
+- 과도한 이모지 사용 금지 (최소한으로)
+- 명확하고 읽기 쉬운 문장
+- 중요한 정보는 굵게 또는 구분하여 표시
+
+**최신 상황 반영:**
+- 괌의 현재 계절과 날씨 고려
+- 코로나 이후 여행 트렌드 반영
+- 최근 괌 여행 주의사항 포함
+
+JSON 형식으로 응답해주세요:
+{
+  "subject": "이메일 제목",
+  "message": "이메일 본문 (줄바꿈은 \\n으로)"
+}`;
+
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'system',
+                    content: '당신은 괌 여행 예약 전문가이자 고객 서비스 담당자입니다. 전문적이고 따뜻한 톤으로 정확한 정보를 제공합니다.'
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.7
+        });
+        
+        const aiResponse = JSON.parse(completion.choices[0].message.content);
+        
+        console.log('✅ AI 이메일 생성 완료');
+        
+        res.json({
+            success: true,
+            subject: aiResponse.subject,
+            message: aiResponse.message
+        });
+        
+    } catch (error) {
+        console.error('❌ AI 이메일 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: 'AI 이메일 생성 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 바우처 이메일 전송 API
 app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res) => {
     try {

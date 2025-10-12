@@ -827,7 +827,12 @@
                                     <!-- 이메일 전송 폼 (숨김) -->
                                     <div id="email-send-form" class="mt-3" style="display: none;">
                                         <hr>
-                                        <h6 class="mb-3"><i class="bi bi-envelope me-2"></i>이메일 전송</h6>
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0"><i class="bi bi-envelope me-2"></i>이메일 전송</h6>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="generateEmailWithAI()" id="ai-generate-btn">
+                                                <i class="bi bi-stars me-1"></i>AI로 작성
+                                            </button>
+                                        </div>
                                         <div class="mb-3">
                                             <label class="form-label">받는 사람 <span class="text-danger">*</span></label>
                                             <input type="email" class="form-control" id="email-recipient" placeholder="customer@example.com">
@@ -837,8 +842,9 @@
                                             <input type="text" class="form-control" id="email-subject" value="[괌세이브] 예약 바우처">
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">추가 메시지 (선택)</label>
-                                            <textarea class="form-control" id="email-message" rows="3" placeholder="고객님께 전달할 메시지를 입력하세요."></textarea>
+                                            <label class="form-label">메시지</label>
+                                            <textarea class="form-control" id="email-message" rows="5" placeholder="고객님께 전달할 메시지를 입력하세요."></textarea>
+                                            <div class="form-text">💡 AI로 작성 버튼을 클릭하면 자동으로 전문적인 메시지가 생성됩니다.</div>
                                         </div>
                                         <div class="d-flex gap-2">
                                             <button class="btn btn-primary flex-fill" onclick="sendVoucherEmail()">
@@ -2988,6 +2994,60 @@
         // 이메일 전송 폼 닫기
         function closeEmailSendForm() {
             document.getElementById('email-send-form').style.display = 'none';
+        }
+        
+        // AI로 이메일 내용 생성
+        async function generateEmailWithAI() {
+            const btn = document.getElementById('ai-generate-btn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                // 버튼 로딩 상태
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>AI 생성 중...';
+                
+                const reservation = getReservationData(window.currentReservationId);
+                const voucherUrl = document.getElementById('voucher-link-url').value;
+                
+                console.log('🤖 AI 이메일 생성 요청...');
+                
+                const response = await fetch('/api/vouchers/generate-email-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reservation_id: window.currentReservationId,
+                        customer_name: reservation.korean_name,
+                        product_name: reservation.product_name,
+                        usage_date: reservation.usage_date,
+                        usage_time: reservation.usage_time,
+                        platform_name: reservation.platform_name,
+                        people_adult: reservation.people_adult,
+                        people_child: reservation.people_child,
+                        voucher_url: voucherUrl
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 생성된 내용으로 폼 채우기
+                    document.getElementById('email-subject').value = result.subject;
+                    document.getElementById('email-message').value = result.message;
+                    
+                    showAlert('✨ AI가 전문적인 이메일을 작성했습니다!', 'success');
+                    console.log('✅ AI 이메일 생성 완료');
+                } else {
+                    showAlert('AI 생성 실패: ' + result.message, 'danger');
+                }
+                
+            } catch (error) {
+                console.error('❌ AI 생성 오류:', error);
+                showAlert('AI 생성 중 오류가 발생했습니다.', 'danger');
+            } finally {
+                // 버튼 원상복구
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
         
         // 이메일 전송
