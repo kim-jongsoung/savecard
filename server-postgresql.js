@@ -12699,6 +12699,30 @@ app.get('/api/vouchers/download/:filename', async (req, res) => {
     }
 });
 
+// 바우처 전송 기록 조회 API
+app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        
+        console.log('📋 바우처 전송 기록 조회:', reservationId);
+        
+        // 전송 기록 조회 (향후 구현 - 현재는 빈 배열 반환)
+        // TODO: voucher_send_history 테이블 생성 후 구현
+        
+        res.json({
+            success: true,
+            history: []  // 빈 배열 반환 (에러 방지)
+        });
+        
+    } catch (error) {
+        console.error('❌ 바우처 전송 기록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '전송 기록 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 바우처 페이지 라우트
 app.get('/voucher/:token', async (req, res) => {
     try {
