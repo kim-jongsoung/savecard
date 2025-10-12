@@ -18,17 +18,10 @@
             flex: 1;
         }
         
-        /* PC 화면에서 가로폭 1400px 고정 (더 넓은 화면 대응) */
+        /* PC 화면에서 가로폭 1200px 고정 */
         .container-fluid {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-        }
-        
-        /* 예약 카드 최대 폭 제한 (정렬 유지) */
-        .row-card {
-            max-width: 1360px;
-            margin-left: auto;
-            margin-right: auto;
         }
         .page-header { position: sticky; top: 0; z-index: 10; background:#fff; border-bottom:1px solid #eee; }
         .status-badge { font-weight:600; }
@@ -1063,34 +1056,32 @@
                             ${statusBadges}
                             ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.8rem; padding: 5px 10px;">📋 정산대기</span>' : ''}
                         </div>
-                        <div class="row-main" style="flex-direction: column; gap: 12px;">
-                            <div style="display: grid; grid-template-columns: 130px 200px 110px 1fr; gap: 16px; align-items: center;">
-                                <div style="width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" title="${reservation.platform_name || '-'}">
-                                    <strong style="font-size: 1.05rem; color: #212529;">${truncate(reservation.platform_name || '-', 8)}</strong>
+                        <div class="row-main" style="flex-direction: column; gap: 10px;">
+                            <div style="display: grid; grid-template-columns: 100px 50px 120px 50px 100px 40px 80px 1fr; gap: 8px; align-items: center;">
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.platform_name || '-'}">
+                                    <strong style="font-size: 1rem; color: #212529;">${truncate(reservation.platform_name || '-', 7)}</strong>
                                 </div>
-                                <div style="width: 200px; text-align: left; white-space: nowrap; font-size: 0.9rem; display: flex; align-items: center;">
-                                    <span class="dim" style="width: 45px; flex-shrink: 0;">예약일</span>
-                                    <span style="font-weight: 500; color: #495057;">${createdAt}</span>
-                                </div>
-                                <div style="width: 110px; white-space: nowrap; text-align: left; font-size: 0.9rem; display: flex; align-items: center;">
-                                    <span class="dim" style="width: 35px; flex-shrink: 0;">담당</span>
-                                    <span class="dim" style="overflow: hidden; text-overflow: ellipsis;" title="${reservation.assigned_to || '담당자 미지정'}">${reservation.assigned_to ? truncate(reservation.assigned_to, 3) : '미지정'}</span>
-                                </div>
-                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" class="chip" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 25)}</div>
+                                <div style="font-size: 0.85rem; color: #6c757d;">예약일</div>
+                                <div style="font-size: 0.9rem; font-weight: 500; color: #495057; white-space: nowrap;">${createdAt}</div>
+                                <div style="font-size: 0.85rem; color: #6c757d;">담당</div>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; color: #6c757d;" title="${reservation.assigned_to || '미지정'}">${truncate(reservation.assigned_to || '미지정', 6)}</div>
+                                <div></div>
+                                <div></div>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" class="chip" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 30)}</div>
                             </div>
-                            <div style="display: grid; grid-template-columns: 130px 200px 110px 1fr; gap: 16px; align-items: center;">
-                                <div style="width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-size: 0.9rem;" class="dim" title="${reservation.vendor_name || '수배업체 미지정'}">
-                                    ${truncate(reservation.vendor_name || '미지정', 10)}
+                            <div style="display: grid; grid-template-columns: 100px 50px 120px 50px 100px 40px 80px 1fr; gap: 8px; align-items: center;">
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; color: #6c757d;" title="${reservation.vendor_name || '미지정'}">
+                                    ${truncate(reservation.vendor_name || '미지정', 7)}
                                 </div>
-                                <div style="width: 200px; text-align: left; white-space: nowrap; font-size: 0.9rem; display: flex; align-items: center;">
-                                    <span class="dim" style="width: 45px; flex-shrink: 0;">이용일</span>
-                                    <span style="font-weight: 500; color: #495057;">${formatDate(reservation.usage_date) || '-'}</span>
+                                <div style="font-size: 0.85rem; color: #6c757d;">이용일</div>
+                                <div style="font-size: 0.9rem; font-weight: 500; color: #495057; white-space: nowrap;">${formatDate(reservation.usage_date) || '-'}</div>
+                                <div style="font-size: 0.85rem; color: #212529; font-weight: 600;">고객</div>
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${reservation.korean_name || '-'}">
+                                    <strong style="font-size: 0.95rem; color: #212529;">${truncate(reservation.korean_name || '-', 6)}</strong>
                                 </div>
-                                <div style="width: 110px; white-space: nowrap; text-align: left; display: flex; align-items: center;">
-                                    <span style="width: 35px; flex-shrink: 0; font-size: 1rem; color: #212529; font-weight: 600;">고객</span>
-                                    <strong style="font-size: 1rem; color: #212529; overflow: hidden; text-overflow: ellipsis;" title="${reservation.korean_name || '-'}">${truncate(reservation.korean_name || '-', 3)}</strong>
-                                </div>
-                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-size: 0.95rem; color: #495057;">${pax}</div>
+                                <div style="font-size: 0.85rem; color: #6c757d;">PAX</div>
+                                <div style="font-size: 0.9rem; color: #495057; font-weight: 500;">${pax}</div>
+                                <div></div>
                             </div>
                         </div>
                         <div class="btn-group btn-group-sm ms-auto" role="group">
