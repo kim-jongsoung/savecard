@@ -10818,11 +10818,12 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
         const html = await new Promise((resolve, reject) => {
             res.app.render('voucher-template', {
                 reservation,
-                confirmation_number: reservation.confirmation_number,
-                qr_code_data: reservation.qr_code_data,
-                qr_image_path: reservation.qr_image_path,
-                vendor_name: reservation.vendor_name,
-                vendor_contact: reservation.vendor_contact,
+                confirmation_number: reservation.confirmation_number || null,
+                qr_code_data: reservation.qr_code_data || null,
+                qr_image_path: reservation.qr_image_path || null,
+                vendor_voucher_path: reservation.vendor_voucher_path || null,
+                vendor_name: reservation.vendor_name || null,
+                vendor_contact: reservation.vendor_contact || null,
                 usage_instructions,
                 voucher_token: voucherToken,
                 formatDate: (date) => {
@@ -12732,7 +12733,13 @@ app.get('/voucher/:token', async (req, res) => {
         res.render('voucher', {
             title: `바우처 - ${reservation.korean_name}`,
             voucher,
-            reservation
+            reservation,
+            confirmation_number: data.confirmation_number || null,
+            qr_code_data: data.qr_code_data || null,
+            qr_image_path: data.qr_image_path || null,
+            vendor_voucher_path: data.vendor_voucher_path || null,
+            vendor_contact: data.vendor_contact || null,
+            usage_instructions: null  // AI 생성 이용방법 (필요시 추가)
         });
         
     } catch (error) {
