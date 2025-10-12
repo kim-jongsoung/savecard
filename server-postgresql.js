@@ -12765,47 +12765,26 @@ app.get('/voucher/:token', async (req, res) => {
             console.error('바우처 조회 기록 오류:', viewError);
         }
         
-        // 바우처 객체 구성
-        const voucher = {
-            voucher_token: token,
-            savecard_code: data.savecard_code || null,
-            created_at: data.voucher_created_at,
-            sent_at: data.voucher_sent_at,
-            viewed_at: data.voucher_viewed_at,
-            status: data.voucher_sent_at ? (data.voucher_viewed_at ? 'viewed' : 'sent') : 'created'
-        };
-        
-        // 예약 객체 구성 (새로운 필드명에 맞게 수정)
-        const reservation = {
-            id: data.id,
-            reservation_number: data.reservation_number,
-            korean_name: data.korean_name,
-            english_name: data.english_name,
-            phone: data.phone,
-            email: data.email,
-            product_name: data.product_name,
-            package_type: data.package_type,
-            usage_date: data.usage_date,
-            usage_time: data.usage_time,
-            people_adult: data.people_adult,
-            people_child: data.people_child,
-            people_infant: data.people_infant,
-            memo: data.memo,
-            platform_name: data.platform_name,
-            vendor_name: data.vendor_name,
-            total_price: data.total_price
-        };
-        
-        res.render('voucher', {
-            title: `바우처 - ${reservation.korean_name}`,
-            voucher,
-            reservation,
+        // voucher-template.ejs 렌더링
+        res.render('voucher-template', {
+            reservation: data,  // 전체 data 객체 전달
             confirmation_number: data.confirmation_number || null,
             qr_code_data: data.qr_code_data || null,
             qr_image_path: data.qr_image_path || null,
             vendor_voucher_path: data.vendor_voucher_path || null,
+            vendor_name: data.vendor_name || null,
             vendor_contact: data.vendor_contact || null,
-            usage_instructions: null  // AI 생성 이용방법 (필요시 추가)
+            usage_instructions: null,  // AI 생성 이용방법 (필요시 추가)
+            voucher_token: token,
+            formatDate: (date) => {
+                if (!date) return '-';
+                return new Date(date).toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short'
+                });
+            }
         });
         
     } catch (error) {
