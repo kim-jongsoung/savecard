@@ -8,9 +8,12 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 
-// nodemailer 명시적 로드 (Railway 배포용)
+// nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
-console.log('📧 nodemailer 모듈 로드:', typeof nodemailer, typeof nodemailer.createTransporter);
+console.log('📧 nodemailer v6.9.15 로드:', typeof nodemailer, typeof nodemailer.createTransporter);
+if (!nodemailer.createTransporter) {
+    console.error('❌❌❌ nodemailer.createTransporter가 없습니다! nodemailer 객체:', Object.keys(nodemailer));
+}
 
 // 간단하고 확실한 환경변수 처리
 // 로컬에서는 railsql.env 파일 사용, 배포환경에서는 기본 .env 사용
