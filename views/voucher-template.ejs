@@ -369,7 +369,7 @@
         </div>
         
         <!-- 컨펌번호 (있는 경우) -->
-        <% if (confirmation_number) { %>
+        <% if (typeof confirmation_number !== 'undefined' && confirmation_number) { %>
         <div class="confirmation-box">
             <div class="label">CONFIRMATION NUMBER</div>
             <div class="number"><%= confirmation_number %></div>
@@ -380,10 +380,10 @@
         <% } %>
         
         <!-- QR 코드 (있는 경우) -->
-        <% if (qr_code_data || qr_image_path) { %>
+        <% if ((typeof qr_code_data !== 'undefined' && qr_code_data) || (typeof qr_image_path !== 'undefined' && qr_image_path)) { %>
         <div class="qr-box">
             <p style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">입장 QR 코드</p>
-            <% if (qr_image_path) { %>
+            <% if (typeof qr_image_path !== 'undefined' && qr_image_path) { %>
                 <img src="/<%= qr_image_path %>" alt="QR Code" style="max-width: 300px; height: auto;">
             <% } else { %>
                 <div id="qrcode"></div>
@@ -399,7 +399,7 @@
         <% } %>
         
         <!-- 업체 바우처 (있는 경우) -->
-        <% if (vendor_voucher_path) { %>
+        <% if (typeof vendor_voucher_path !== 'undefined' && vendor_voucher_path) { %>
         <div class="section">
             <div class="section-title">🎫 업체 발급 바우처</div>
             <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px; border: 2px dashed #667eea;">
