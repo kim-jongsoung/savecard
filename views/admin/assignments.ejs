@@ -715,109 +715,175 @@
 
     <!-- 4. 바우처관리 모달 -->
     <div class="modal fade" id="voucherManageModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-ticket-perforated me-2"></i>바우처관리</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-ticket-perforated-fill me-2"></i>바우처 생성 완료</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>바우처 상태</h6>
+                    <!-- 바우처 정보 요약 -->
+                    <div class="alert alert-success d-flex align-items-center mb-4">
+                        <i class="bi bi-check-circle-fill me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <h6 class="mb-1">바우처가 생성되었습니다!</h6>
+                            <p class="mb-0 small" id="voucher-summary">고객님께 바우처를 전송해주세요.</p>
                         </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">생성일시</label>
-                                    <div id="voucher-created-at">-</div>
+                    </div>
+
+                    <div class="row">
+                        <!-- 왼쪽: 바우처 미리보기 -->
+                        <div class="col-md-5">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-eye me-2"></i>바우처 미리보기</h6>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">전송일시</label>
-                                    <div id="voucher-sent-at">-</div>
+                                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                                    <div id="voucher-preview-content" class="border rounded p-3 bg-white">
+                                        <div class="text-center text-muted">
+                                            <i class="bi bi-hourglass-split mb-2" style="font-size: 2rem;"></i>
+                                            <p>바우처 로딩중...</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">확인일시</label>
-                                    <div id="voucher-viewed-at">-</div>
+                                <div class="card-footer bg-light">
+                                    <button class="btn btn-outline-primary btn-sm w-100" onclick="openVoucherPreview()">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>새 창에서 열기
+                                    </button>
                                 </div>
-                                <div class="col-12 text-center">
-                                    <div id="voucher-status-badge">
-                                        <span class="badge bg-secondary">미생성</span>
+                            </div>
+                        </div>
+
+                        <!-- 오른쪽: 전송 옵션 -->
+                        <div class="col-md-7">
+                            <!-- 바우처 링크 -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="bi bi-link-45deg me-2"></i>바우처 링크</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control" id="voucher-link-url" readonly>
+                                        <button class="btn btn-outline-secondary" onclick="copyVoucherLink()">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">고객이 이 링크를 클릭하면 바우처를 확인할 수 있습니다.</small>
+                                </div>
+                            </div>
+
+                            <!-- 전송 방법 선택 -->
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-send me-2"></i>바우처 전송하기</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <!-- 1. 이메일 전송 -->
+                                        <div class="col-md-6">
+                                            <div class="card border-primary h-100 voucher-send-card" onclick="openEmailSendForm()">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-envelope-fill text-primary" style="font-size: 2.5rem;"></i>
+                                                    <h6 class="mt-2 mb-1">이메일 전송</h6>
+                                                    <p class="small text-muted mb-0">고객 이메일로 발송</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 2. 링크 복사 -->
+                                        <div class="col-md-6">
+                                            <div class="card border-success h-100 voucher-send-card" onclick="copyVoucherLinkForKakao()">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-link-45deg text-success" style="font-size: 2.5rem;"></i>
+                                                    <h6 class="mt-2 mb-1">링크 복사</h6>
+                                                    <p class="small text-muted mb-0">카카오톡으로 직접 전송</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 3. 카카오 알림톡 -->
+                                        <div class="col-md-6">
+                                            <div class="card border-warning h-100 voucher-send-card" onclick="sendKakaoAlimtalk()">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-chat-dots-fill text-warning" style="font-size: 2.5rem;"></i>
+                                                    <h6 class="mt-2 mb-1">카카오 알림톡</h6>
+                                                    <p class="small text-muted mb-0">자동 발송 (API 연동)</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 4. 문자 메시지 -->
+                                        <div class="col-md-6">
+                                            <div class="card border-danger h-100 voucher-send-card" onclick="sendSMS()">
+                                                <div class="card-body text-center">
+                                                    <i class="bi bi-phone-fill text-danger" style="font-size: 2.5rem;"></i>
+                                                    <h6 class="mt-2 mb-1">문자 메시지</h6>
+                                                    <p class="small text-muted mb-0">SMS 발송</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 이메일 전송 폼 (숨김) -->
+                                    <div id="email-send-form" class="mt-3" style="display: none;">
+                                        <hr>
+                                        <h6 class="mb-3"><i class="bi bi-envelope me-2"></i>이메일 전송</h6>
+                                        <div class="mb-3">
+                                            <label class="form-label">받는 사람 <span class="text-danger">*</span></label>
+                                            <input type="email" class="form-control" id="email-recipient" placeholder="customer@example.com">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">제목</label>
+                                            <input type="text" class="form-control" id="email-subject" value="[괌세이브] 예약 바우처">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">추가 메시지 (선택)</label>
+                                            <textarea class="form-control" id="email-message" rows="3" placeholder="고객님께 전달할 메시지를 입력하세요."></textarea>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-primary flex-fill" onclick="sendVoucherEmail()">
+                                                <i class="bi bi-send-fill me-1"></i>전송하기
+                                            </button>
+                                            <button class="btn btn-outline-secondary" onclick="closeEmailSendForm()">취소</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 전송 기록 -->
+                            <div class="card mt-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>전송 기록</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="send-history-list" class="small">
+                                        <p class="text-muted mb-0">전송 기록이 없습니다.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 바우처 링크 -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-link me-2"></i>바우처 링크</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="input-group" id="voucherLinkGroup" style="display: none;">
-                                <input type="text" class="form-control" id="voucherLinkUrl" readonly>
-                                <button class="btn btn-outline-secondary" onclick="copyVoucherLink()">
-                                    <i class="bi bi-clipboard me-1"></i>복사
-                                </button>
-                            </div>
-                            <div class="text-muted" id="voucherLinkPlaceholder">
-                                바우처를 생성하면 링크가 표시됩니다.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 괌세이브카드 발급 -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-credit-card me-2"></i>괌세이브카드 발급</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-2">
-                                <div class="col-8">
-                                    <label class="form-label">발급 코드</label>
-                                    <input type="text" class="form-control" id="savecard-code" placeholder="자동 생성됩니다">
-                                </div>
-                                <div class="col-4">
-                                    <label class="form-label">&nbsp;</label>
-                                    <button class="btn btn-outline-primary w-100" onclick="generateSavecardCode()">
-                                        <i class="bi bi-arrow-clockwise me-1"></i>재생성
-                                    </button>
-                                </div>
-                                <div class="col-12">
-                                    <button class="btn btn-outline-success w-100" onclick="copySavecardInfo()">
-                                        <i class="bi bi-clipboard me-1"></i>발급정보 복사
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 바우처 관리 버튼들 -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h6 class="mb-0"><i class="bi bi-gear me-2"></i>바우처 관리</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <button class="btn btn-primary w-100" onclick="generateVoucher()">
-                                        <i class="bi bi-plus-circle me-1"></i>바우처 생성
-                                    </button>
-                                </div>
-                                <div class="col-md-6">
-                                    <button class="btn btn-outline-info w-100" onclick="previewVoucher()">
-                                        <i class="bi bi-eye me-1"></i>미리보기
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button class="btn btn-outline-primary" onclick="regenerateVoucher()">
+                        <i class="bi bi-arrow-clockwise me-1"></i>바우처 재생성
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <style>
+        .voucher-send-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .voucher-send-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+    </style>
 
     <!-- 5. 정산이관 모달 -->
     <div class="modal fade" id="settlementModal" tabindex="-1" aria-hidden="true">
@@ -2692,19 +2758,263 @@
         }
 
         // 4. 바우처관리 모달 열기
-        function openVoucherManageModal(reservationId) {
+        async function openVoucherManageModal(reservationId) {
             highlightSelectedReservation(reservationId);
             
             const reservation = getReservationData(reservationId);
             if (!reservation) return;
             
             window.currentReservationId = reservationId;
+            window.currentVoucherToken = reservation.voucher_token;
             
-            // 바우처 상태 확인 및 표시
-            checkVoucherStatus(reservationId);
+            // 바우처 정보 로드
+            await loadVoucherData(reservationId);
             
             const modal = new bootstrap.Modal(document.getElementById('voucherManageModal'));
             modal.show();
+        }
+        
+        // 바우처 데이터 로드
+        async function loadVoucherData(reservationId) {
+            try {
+                const reservation = getReservationData(reservationId);
+                
+                // 바우처 요약 정보
+                const summary = `${reservation.korean_name}님 - ${reservation.product_name}`;
+                document.getElementById('voucher-summary').textContent = summary;
+                
+                // 바우처 링크
+                if (reservation.voucher_token) {
+                    const voucherUrl = `${window.location.origin}/voucher/${reservation.voucher_token}`;
+                    document.getElementById('voucher-link-url').value = voucherUrl;
+                    
+                    // 미리보기 로드
+                    loadVoucherPreview(reservation.voucher_token);
+                    
+                    // 전송 기록 로드
+                    loadSendHistory(reservationId);
+                } else {
+                    document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
+                }
+                
+                // 이메일 수신자 자동 입력
+                if (reservation.email) {
+                    document.getElementById('email-recipient').value = reservation.email;
+                }
+                
+            } catch (error) {
+                console.error('❌ 바우처 데이터 로드 오류:', error);
+            }
+        }
+        
+        // 바우처 미리보기 로드
+        async function loadVoucherPreview(voucherToken) {
+            try {
+                const response = await fetch(`/api/vouchers/${voucherToken}/preview`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('voucher-preview-content').innerHTML = data.html;
+                } else {
+                    document.getElementById('voucher-preview-content').innerHTML = `
+                        <div class="text-center text-danger">
+                            <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem;"></i>
+                            <p>미리보기를 불러올 수 없습니다.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ 미리보기 로드 오류:', error);
+            }
+        }
+        
+        // 전송 기록 로드
+        async function loadSendHistory(reservationId) {
+            try {
+                const response = await fetch(`/api/vouchers/send-history/${reservationId}`);
+                const data = await response.json();
+                
+                if (data.success && data.history.length > 0) {
+                    const html = data.history.map(h => `
+                        <div class="d-flex align-items-center mb-2 pb-2 border-bottom">
+                            <i class="bi bi-${getMethodIcon(h.method)} me-2"></i>
+                            <div class="flex-fill">
+                                <strong>${h.method_name}</strong> - ${h.recipient || ''}
+                                <div class="text-muted small">${formatDateTime(h.sent_at)}</div>
+                            </div>
+                            <span class="badge bg-${h.status === 'success' ? 'success' : 'danger'}">${h.status === 'success' ? '성공' : '실패'}</span>
+                        </div>
+                    `).join('');
+                    document.getElementById('send-history-list').innerHTML = html;
+                } else {
+                    document.getElementById('send-history-list').innerHTML = '<p class="text-muted mb-0">전송 기록이 없습니다.</p>';
+                }
+            } catch (error) {
+                console.error('❌ 전송 기록 로드 오류:', error);
+            }
+        }
+        
+        function getMethodIcon(method) {
+            const icons = {
+                'email': 'envelope-fill',
+                'kakao': 'chat-dots-fill',
+                'sms': 'phone-fill',
+                'link': 'link-45deg'
+            };
+            return icons[method] || 'info-circle';
+        }
+        
+        // 바우처 링크 복사
+        function copyVoucherLink() {
+            const linkInput = document.getElementById('voucher-link-url');
+            linkInput.select();
+            document.execCommand('copy');
+            showAlert('✅ 링크가 복사되었습니다!', 'success');
+        }
+        
+        // 카카오톡용 링크 복사
+        function copyVoucherLinkForKakao() {
+            const reservation = getReservationData(window.currentReservationId);
+            const link = document.getElementById('voucher-link-url').value;
+            
+            const message = `[괌세이브] 예약 바우처\n\n${reservation.korean_name}님, 안녕하세요!\n예약하신 ${reservation.product_name}의 바우처를 전송드립니다.\n\n바우처 확인: ${link}\n\n감사합니다.`;
+            
+            navigator.clipboard.writeText(message).then(() => {
+                showAlert('✅ 메시지가 복사되었습니다!\n카카오톡으로 전송하세요.', 'success');
+            });
+        }
+        
+        // 이메일 전송 폼 열기
+        function openEmailSendForm() {
+            document.getElementById('email-send-form').style.display = 'block';
+        }
+        
+        // 이메일 전송 폼 닫기
+        function closeEmailSendForm() {
+            document.getElementById('email-send-form').style.display = 'none';
+        }
+        
+        // 이메일 전송
+        async function sendVoucherEmail() {
+            const recipient = document.getElementById('email-recipient').value.trim();
+            const subject = document.getElementById('email-subject').value.trim();
+            const message = document.getElementById('email-message').value.trim();
+            
+            if (!recipient) {
+                showAlert('받는 사람 이메일을 입력해주세요.', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/vouchers/send-email/${window.currentReservationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient,
+                        subject,
+                        message,
+                        voucher_token: window.currentVoucherToken
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 이메일이 전송되었습니다!', 'success');
+                    closeEmailSendForm();
+                    loadSendHistory(window.currentReservationId);
+                } else {
+                    showAlert('이메일 전송 실패: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('❌ 이메일 전송 오류:', error);
+                showAlert('이메일 전송 중 오류가 발생했습니다.', 'danger');
+            }
+        }
+        
+        // 카카오 알림톡 전송
+        async function sendKakaoAlimtalk() {
+            if (!confirm('카카오 알림톡을 전송하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/api/vouchers/send-kakao/${window.currentReservationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        voucher_token: window.currentVoucherToken
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 카카오 알림톡이 전송되었습니다!', 'success');
+                    loadSendHistory(window.currentReservationId);
+                } else {
+                    showAlert('알림톡 전송 실패: ' + result.message, 'warning');
+                }
+            } catch (error) {
+                console.error('❌ 알림톡 전송 오류:', error);
+                showAlert('알림톡 API 연동이 필요합니다.', 'info');
+            }
+        }
+        
+        // SMS 전송
+        async function sendSMS() {
+            if (!confirm('문자 메시지를 전송하시겠습니까?')) return;
+            
+            try {
+                const response = await fetch(`/api/vouchers/send-sms/${window.currentReservationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        voucher_token: window.currentVoucherToken
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 문자 메시지가 전송되었습니다!', 'success');
+                    loadSendHistory(window.currentReservationId);
+                } else {
+                    showAlert('SMS 전송 실패: ' + result.message, 'warning');
+                }
+            } catch (error) {
+                console.error('❌ SMS 전송 오류:', error);
+                showAlert('SMS API 연동이 필요합니다.', 'info');
+            }
+        }
+        
+        // 바우처 미리보기 새 창
+        function openVoucherPreview() {
+            const voucherUrl = document.getElementById('voucher-link-url').value;
+            window.open(voucherUrl, '_blank');
+        }
+        
+        // 바우처 재생성
+        async function regenerateVoucher() {
+            if (!confirm('바우처를 재생성하시겠습니까?\n기존 바우처 링크는 무효화됩니다.')) return;
+            
+            try {
+                const response = await fetch(`/api/vouchers/regenerate/${window.currentReservationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 바우처가 재생성되었습니다!', 'success');
+                    window.currentVoucherToken = result.voucher_token;
+                    await loadVoucherData(window.currentReservationId);
+                } else {
+                    showAlert('바우처 재생성 실패: ' + result.message, 'danger');
+                }
+            } catch (error) {
+                console.error('❌ 바우처 재생성 오류:', error);
+                showAlert('바우처 재생성 중 오류가 발생했습니다.', 'danger');
+            }
         }
 
         // 5. 정산이관 모달 열기
