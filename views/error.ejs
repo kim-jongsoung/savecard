@@ -49,6 +49,8 @@
             text-decoration: none;
             display: inline-block;
             margin-top: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
         
         .btn-home:hover {
@@ -72,9 +74,9 @@
         <h2><%= title %></h2>
         <p class="text-muted mb-4"><%- message %></p>
         
-        <a href="/" class="btn-home">
-            <i class="fas fa-home me-2"></i>메인 페이지로 돌아가기
-        </a>
+        <button onclick="window.close()" class="btn-home">
+            <i class="fas fa-times me-2"></i>창 닫기
+        </button>
     </div>
 </body>
 </html>
