@@ -3254,27 +3254,49 @@
         }
         
         // 바우처 미리보기 새 창
-        function openVoucherPreview() {
-            const voucherUrl = document.getElementById('voucher-link-url').value;
-            
-            console.log('🔗 바우처 새 창 열기 시도:', voucherUrl);
-            
-            // 유효성 검사
-            if (!voucherUrl || voucherUrl === '바우처가 생성되지 않았습니다.' || !voucherUrl.startsWith('http')) {
-                showAlert('❌ 유효한 바우처 링크가 없습니다. 먼저 바우처를 생성해주세요.', 'warning');
-                console.error('❌ 유효하지 않은 바우처 URL:', voucherUrl);
+        async function openVoucherPreview() {
+            // 바우처 토큰 가져오기
+            if (!window.currentVoucherToken) {
+                showAlert('❌ 바우처 토큰이 없습니다.', 'warning');
                 return;
             }
             
-            console.log('✅ 새 창 열기:', voucherUrl);
-            const newWindow = window.open(voucherUrl, '_blank');
+            const voucherToken = window.currentVoucherToken;
+            console.log('🔗 바우처 새 창 열기:', voucherToken);
             
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                // 팝업이 차단된 경우
-                showAlert('⚠️ 팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.', 'warning');
-                console.warn('⚠️ 팝업 차단됨');
-            } else {
-                console.log('✅ 새 창 열림 성공');
+            try {
+                // 미리보기 API 호출 (모달과 동일)
+                const response = await fetch(`/api/vouchers/${voucherToken}/preview`);
+                const data = await response.json();
+                
+                if (data.cancelled) {
+                    // 취소된 예약
+                    showAlert('⚠️ 이 예약은 취소되어 바우처가 무효화되었습니다.', 'warning');
+                    return;
+                }
+                
+                if (!data.success) {
+                    showAlert('❌ ' + data.message, 'danger');
+                    return;
+                }
+                
+                // 새 창 열기
+                const newWindow = window.open('', '_blank');
+                
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    showAlert('⚠️ 팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.', 'warning');
+                    return;
+                }
+                
+                // 미리보기 HTML을 새 창에 쓰기
+                newWindow.document.write(data.html);
+                newWindow.document.close();
+                
+                console.log('✅ 새 창에 바우처 표시 완료');
+                
+            } catch (error) {
+                console.error('❌ 바우처 새 창 열기 오류:', error);
+                showAlert('바우처 새 창 열기 중 오류가 발생했습니다.', 'danger');
             }
         }
         
