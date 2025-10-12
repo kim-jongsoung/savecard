@@ -7018,15 +7018,15 @@ app.get('/assignment/:token', async (req, res) => {
                         // 테이블 없으면 자동 생성 (이미 POST /view에 로직 있음)
                     }
                     
-                    // 3. 예약 상태 업데이트 (수배 완료 상태로 변경)
+                    // 3. 예약 상태를 '수배중(현지수배)'으로 변경
                     try {
                         await pool.query(`
                             UPDATE reservations 
-                            SET assignment_status = '수배중',
+                            SET payment_status = 'in_progress',
                                 updated_at = NOW()
-                            WHERE id = $1 AND (assignment_status IS NULL OR assignment_status = '미수배')
+                            WHERE id = $1 AND payment_status = 'pending'
                         `, [assignment.reservation_id]);
-                        console.log('✅ 예약 상태 업데이트 완료: 수배중');
+                        console.log('✅ 예약 상태 변경: 대기중 → 수배중 (열람)');
                     } catch (statusError) {
                         console.log('⚠️ 예약 상태 업데이트 실패:', statusError.message);
                     }
@@ -7745,12 +7745,20 @@ app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) =
             }
         }
         
-        // 전송 시간 업데이트
+        // 전송 시간 업데이트 및 예약 상태 변경
         await pool.query(`
             UPDATE assignments 
             SET sent_at = NOW(), status = 'sent'
             WHERE reservation_id = $1
         `, [reservationId]);
+        
+        // ✅ 예약 상태를 '수배중(현지수배)'으로 변경
+        await pool.query(`
+            UPDATE reservations 
+            SET payment_status = 'in_progress', updated_at = NOW()
+            WHERE id = $1 AND payment_status = 'pending'
+        `, [reservationId]);
+        console.log('✅ 예약 상태 변경: 대기중 → 수배중 (이메일 전송)');
         
         // 히스토리 기록
         const adminName = req.session.adminName || req.session.adminUsername || '시스템';
@@ -8381,19 +8389,19 @@ app.post('/assignment/:token/view', async (req, res) => {
             `, [assignment.reservation_id]);
             console.log('🔍 현재 예약 상태:', currentReservation.rows[0]);
             
-            // 3. 예약 상태를 '수배중(in_progress)'으로 변경
+            // 3. 예약 상태를 '대기중 → 수배중'으로 변경
             const reservationUpdateResult = await pool.query(`
                 UPDATE reservations 
                 SET payment_status = 'in_progress',
                     updated_at = NOW()
-                WHERE id = $1 AND payment_status IN ('pending', 'confirmed')
+                WHERE id = $1 AND payment_status = 'pending'
                 RETURNING id, payment_status
             `, [assignment.reservation_id]);
             
             if (reservationUpdateResult.rows.length > 0) {
-                console.log('✅ 예약 상태 변경 성공:', reservationUpdateResult.rows[0]);
+                console.log('✅ 예약 상태 변경: 대기중 → 수배중 (JavaScript 열람)');
             } else {
-                console.log('⚠️ 예약 상태 변경 실패 - 현재 상태가 pending 또는 confirmed가 아님');
+                console.log('ℹ️ 예약 상태 변경 안 함 (이미 수배중 또는 확정 상태)');
             }
             
             // 4. 업무 히스토리에 열람 기록
