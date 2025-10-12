@@ -991,12 +991,17 @@
                     statusBadges += '<span class="badge bg-danger ms-2" style="font-size: 0.75rem;"><i class="bi bi-star-fill me-1"></i>신규</span>';
                 }
                 
-                // 수배서 열람 상황
+                // 수배서 열람 상황 (수배 방식 구분)
                 if (reservation.assignment_token) {
                     if (reservation.viewed_at) {
-                        statusBadges += '<span class="badge bg-info ms-2" style="font-size: 0.75rem;"><i class="bi bi-file-text-fill me-1"></i>수배서열람</span>';
+                        // ✅ 열람됨
+                        statusBadges += '<span class="badge bg-success ms-2" style="font-size: 0.75rem;"><i class="bi bi-check-circle-fill me-1"></i>열람</span>';
                     } else if (reservation.sent_at) {
-                        statusBadges += '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;"><i class="bi bi-file-text me-1"></i>수배서미열람</span>';
+                        // 📧 이메일 전송 (미열람)
+                        statusBadges += '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;"><i class="bi bi-envelope me-1"></i>이메일전송</span>';
+                    } else {
+                        // 🔗 링크만 생성 (카톡 전달용, 미열람)
+                        statusBadges += '<span class="badge bg-secondary ms-2" style="font-size: 0.75rem;"><i class="bi bi-link-45deg me-1"></i>링크생성</span>';
                     }
                 }
                 
