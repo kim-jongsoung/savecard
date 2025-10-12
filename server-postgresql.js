@@ -12855,8 +12855,18 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
             });
         }
         
-        // 전송 기록 조회
-        const historyQuery = `
+        // viewed_at 컬럼 존재 확인
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'voucher_sends' 
+            AND column_name = 'viewed_at'
+        `);
+        
+        const hasViewedAt = columnCheck.rows.length > 0;
+        
+        // 전송 기록 조회 (viewed_at 컬럼 조건부 포함)
+        const historyQuery = hasViewedAt ? `
             SELECT 
                 id,
                 send_method,
@@ -12865,6 +12875,20 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
                 status,
                 sent_at,
                 viewed_at,
+                sent_by,
+                error_message
+            FROM voucher_sends
+            WHERE reservation_id = $1
+            ORDER BY sent_at DESC
+        ` : `
+            SELECT 
+                id,
+                send_method,
+                recipient,
+                subject,
+                status,
+                sent_at,
+                NULL as viewed_at,
                 sent_by,
                 error_message
             FROM voucher_sends

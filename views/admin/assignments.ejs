@@ -872,9 +872,6 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-                    <button class="btn btn-outline-primary" onclick="regenerateVoucher()">
-                        <i class="bi bi-arrow-clockwise me-1"></i>바우처 재생성
-                    </button>
                 </div>
             </div>
         </div>
@@ -3281,30 +3278,7 @@
             }
         }
         
-        // 바우처 재생성
-        async function regenerateVoucher() {
-            if (!confirm('바우처를 재생성하시겠습니까?\n기존 바우처 링크는 무효화됩니다.')) return;
-            
-            try {
-                const response = await fetch(`/api/vouchers/regenerate/${window.currentReservationId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('✅ 바우처가 재생성되었습니다!', 'success');
-                    window.currentVoucherToken = result.voucher_token;
-                    await loadVoucherData(window.currentReservationId);
-                } else {
-                    showAlert('바우처 재생성 실패: ' + result.message, 'danger');
-                }
-            } catch (error) {
-                console.error('❌ 바우처 재생성 오류:', error);
-                showAlert('바우처 재생성 중 오류가 발생했습니다.', 'danger');
-            }
-        }
+        // 바우처 재생성 기능 제거됨 (예약 취소 시 자동 무효화)
 
         // 5. 정산이관 모달 열기
         function openSettlementModal(reservationId) {
