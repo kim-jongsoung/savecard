@@ -12856,10 +12856,12 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
 
 // 바우처 페이지 라우트
 app.get('/voucher/:token', async (req, res) => {
+    const startTime = Date.now();
     try {
         const { token } = req.params;
         
-        console.log(`🎫 바우처 페이지 요청: ${token}`);
+        console.log(`🎫 바우처 페이지 요청: ${token.substring(0, 20)}...`);
+        console.log(`📊 요청 시간: ${new Date().toISOString()}`);
         
         // 바우처 정보 조회 (reservations.voucher_token 기준)
         const voucherQuery = `
@@ -12972,6 +12974,8 @@ app.get('/voucher/:token', async (req, res) => {
             }
         })();
         
+        console.log(`📄 템플릿 렌더링 시작 - 예약ID: ${data.id}, 고객: ${data.korean_name}`);
+        
         // voucher-template.ejs 렌더링
         res.render('voucher-template', {
             reservation: data,  // 전체 data 객체 전달
@@ -12994,12 +12998,20 @@ app.get('/voucher/:token', async (req, res) => {
             }
         });
         
+        const elapsed = Date.now() - startTime;
+        console.log(`✅ 바우처 페이지 렌더링 완료 (${elapsed}ms)`);
+        
     } catch (error) {
-        console.error('바우처 페이지 오류:', error);
-        res.status(500).render('error', {
-            title: '서버 오류',
-            message: '바우처를 불러오는 중 오류가 발생했습니다.'
-        });
+        const elapsed = Date.now() - startTime;
+        console.error(`❌ 바우처 페이지 오류 (${elapsed}ms):`, error);
+        console.error('스택 트레이스:', error.stack);
+        
+        if (!res.headersSent) {
+            res.status(500).render('error', {
+                title: '서버 오류',
+                message: '바우처를 불러오는 중 오류가 발생했습니다: ' + error.message
+            });
+        }
     }
 });
 
