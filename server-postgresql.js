@@ -10925,19 +10925,38 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
         const reservation = reservationResult.rows[0];
         const voucherUrl = `${req.protocol}://${req.get('host')}/voucher/${voucher_token}`;
         
-        // SMTP 이메일 전송
-        if (process.env.SMTP_HOST) {
-            const transporter = nodemailer.createTransporter({
-                host: process.env.SMTP_HOST,
-                port: process.env.SMTP_PORT || 587,
-                secure: false,
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS
-                }
+        // SMTP 설정 확인
+        if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+            console.error('❌ SMTP 설정이 없습니다:', {
+                SMTP_HOST: process.env.SMTP_HOST,
+                SMTP_USER: process.env.SMTP_USER,
+                SMTP_PASS: process.env.SMTP_PASS ? '설정됨' : '없음'
             });
-            
-            const mailOptions = {
+            return res.status(500).json({
+                success: false,
+                message: 'SMTP 이메일 설정이 완료되지 않았습니다. 관리자에게 문의하세요.'
+            });
+        }
+        
+        // SMTP 이메일 전송
+        console.log('📧 이메일 전송 시작:', {
+            to: recipient,
+            from: process.env.SMTP_FROM,
+            smtp_host: process.env.SMTP_HOST,
+            smtp_user: process.env.SMTP_USER
+        });
+        
+        const transporter = nodemailer.createTransporter({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT || 587,
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+        
+        const mailOptions = {
                 from: process.env.SMTP_FROM || 'noreply@guamsavecard.com',
                 to: recipient,
                 subject: subject || `[괌세이브] 예약 바우처 - ${reservation.product_name}`,
@@ -11008,11 +11027,14 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
                         </div>
                     </div>
                 `
-            };
-            
-            await transporter.sendMail(mailOptions);
-            console.log('✅ 이메일 SMTP 전송 완료:', recipient);
-        }
+        };
+        
+        const sendResult = await transporter.sendMail(mailOptions);
+        console.log('✅ 이메일 SMTP 전송 완료:', {
+            recipient: recipient,
+            messageId: sendResult.messageId,
+            response: sendResult.response
+        });
         
         // 전송 기록 저장
         await pool.query(`
@@ -11035,7 +11057,12 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
         });
         
     } catch (error) {
-        console.error('❌ 이메일 전송 오류:', error);
+        console.error('❌ 이메일 전송 오류 상세:', {
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            stack: error.stack
+        });
         res.status(500).json({
             success: false,
             message: '이메일 전송 중 오류가 발생했습니다: ' + error.message
@@ -12716,6 +12743,26 @@ async function startServer() {
             console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
             console.log(`관리자 페이지: http://localhost:${PORT}/admin`);
             console.log(`카드 페이지: http://localhost:${PORT}/card`);
+            
+            // SMTP 설정 확인
+            console.log('\n📧 SMTP 이메일 설정 상태:');
+            console.log('  - SMTP_HOST:', process.env.SMTP_HOST || '❌ 설정 안됨');
+            console.log('  - SMTP_PORT:', process.env.SMTP_PORT || '587 (기본값)');
+            console.log('  - SMTP_USER:', process.env.SMTP_USER || '❌ 설정 안됨');
+            console.log('  - SMTP_PASS:', process.env.SMTP_PASS ? '✅ 설정됨' : '❌ 설정 안됨');
+            console.log('  - SMTP_FROM:', process.env.SMTP_FROM || 'noreply@guamsavecard.com (기본값)');
+            
+            if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+                console.log('\n⚠️  경고: SMTP 설정이 완료되지 않아 이메일 전송이 불가능합니다!');
+                console.log('   Railway 환경변수에 다음을 설정하세요:');
+                console.log('   - SMTP_HOST=smtp.gmail.com');
+                console.log('   - SMTP_PORT=587');
+                console.log('   - SMTP_USER=your-email@gmail.com');
+                console.log('   - SMTP_PASS=your-app-password');
+                console.log('   - SMTP_FROM=noreply@guamsavecard.com\n');
+            } else {
+                console.log('✅ SMTP 설정 완료! 이메일 전송 가능합니다.\n');
+            }
         });
         
         // 서버 시작 후 데이터베이스 초기화 (비동기)
