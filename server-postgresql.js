@@ -7,7 +7,7 @@ const QRCode = require('qrcode');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
-// nodemailer 제거됨
+const nodemailer = require('nodemailer');
 // 간단하고 확실한 환경변수 처리
 // 로컬에서는 railsql.env 파일 사용, 배포환경에서는 기본 .env 사용
 const fs = require('fs');
@@ -10927,8 +10927,6 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
         
         // SMTP 이메일 전송
         if (process.env.SMTP_HOST) {
-            const nodemailer = require('nodemailer');
-            
             const transporter = nodemailer.createTransporter({
                 host: process.env.SMTP_HOST,
                 port: process.env.SMTP_PORT || 587,
@@ -13670,8 +13668,6 @@ async function startServer() {
                 
                 // 메일 전송 (nodemailer 설정이 있다면)
                 if (process.env.SMTP_HOST) {
-                    const nodemailer = require('nodemailer');
-                    
                     const transporter = nodemailer.createTransporter({
                         host: process.env.SMTP_HOST,
                         port: process.env.SMTP_PORT || 587,
