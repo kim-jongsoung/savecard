@@ -6964,9 +6964,89 @@ app.get('/assignment/:token', async (req, res) => {
         console.log('  - customer_name:', safeAssignment.customer_name);
         console.log('  - product_name:', safeAssignment.product_name);
 
-        // ⚠️ 조회 시간 기록은 클라이언트 사이드 API에서 처리 (POST /assignment/:token/view)
-        // 이유: 히스토리 기록 및 상태 변경을 함께 처리하기 위함
-        console.log('ℹ️ 열람 기록은 클라이언트 API에서 처리됩니다');
+        // ✅ 첫 열람 기록 (GET 요청 자체에서 처리 - JavaScript 없이도 작동!)
+        // 미리보기가 아니고 아직 열람되지 않은 경우에만 기록
+        if (!isPreview && !assignment.viewed_at) {
+            console.log('🆕 첫 열람 감지! 서버 사이드에서 viewed_at 업데이트...');
+            
+            try {
+                // IP 주소 추출
+                const ip_address = req.headers['x-forwarded-for']?.split(',')[0].trim() 
+                    || req.headers['x-real-ip'] 
+                    || req.connection.remoteAddress 
+                    || req.socket.remoteAddress 
+                    || 'Unknown';
+                
+                const user_agent = req.headers['user-agent'] || 'Unknown';
+                
+                console.log('📍 IP:', ip_address);
+                console.log('📱 User-Agent:', user_agent);
+                
+                // 1. assignments.viewed_at 업데이트 및 상태 변경
+                const updateResult = await pool.query(`
+                    UPDATE assignments 
+                    SET viewed_at = NOW(), 
+                        updated_at = NOW(),
+                        status = CASE 
+                            WHEN status = 'draft' THEN 'sent'
+                            ELSE status 
+                        END
+                    WHERE assignment_token = $1 AND viewed_at IS NULL
+                    RETURNING id, viewed_at, status
+                `, [token]);
+                
+                if (updateResult.rows.length > 0) {
+                    console.log('✅ 수배서 viewed_at 업데이트 성공:', updateResult.rows[0]);
+                    
+                    // 2. assignment_views 테이블에 기본 열람 이력 저장
+                    try {
+                        await pool.query(`
+                            INSERT INTO assignment_views (
+                                assignment_token, reservation_id, viewed_at,
+                                ip_address, user_agent, referrer
+                            ) VALUES ($1, $2, NOW(), $3, $4, $5)
+                        `, [
+                            token,
+                            assignment.reservation_id,
+                            ip_address,
+                            user_agent,
+                            req.headers.referer || 'Direct'
+                        ]);
+                        console.log('✅ 기본 열람 이력 저장 완료 (서버 사이드)');
+                    } catch (viewError) {
+                        console.log('⚠️ 열람 이력 저장 실패 (서버 사이드):', viewError.message);
+                        // 테이블 없으면 자동 생성 (이미 POST /view에 로직 있음)
+                    }
+                    
+                    // 3. 예약 상태 업데이트 (수배 완료 상태로 변경)
+                    try {
+                        await pool.query(`
+                            UPDATE reservations 
+                            SET assignment_status = '수배중',
+                                updated_at = NOW()
+                            WHERE id = $1 AND (assignment_status IS NULL OR assignment_status = '미수배')
+                        `, [assignment.reservation_id]);
+                        console.log('✅ 예약 상태 업데이트 완료: 수배중');
+                    } catch (statusError) {
+                        console.log('⚠️ 예약 상태 업데이트 실패:', statusError.message);
+                    }
+                } else {
+                    console.log('ℹ️ 이미 열람된 수배서이거나 업데이트 실패');
+                }
+            } catch (error) {
+                console.error('❌ 첫 열람 기록 처리 실패:', error.message);
+                // 에러가 나도 페이지는 표시되어야 함
+            }
+        } else {
+            if (isPreview) {
+                console.log('ℹ️ 미리보기 모드 - 열람 기록 안 함');
+            } else {
+                console.log('ℹ️ 이미 열람된 수배서 (viewed_at:', assignment.viewed_at, ')');
+            }
+        }
+        
+        // ℹ️ JavaScript는 부가 정보(디바이스, 브라우저, OS 등)만 수집
+        console.log('ℹ️ JavaScript는 디바이스/브라우저 상세 정보만 수집합니다');
 
         console.log('🔍 템플릿 렌더링 시작');
 
@@ -8102,17 +8182,17 @@ app.post('/assignment/:token/confirm', async (req, res) => {
     }
 });
 
-// 수배서 열람 추적 API
+// 수배서 열람 추적 API (JavaScript에서 부가 정보 전송용)
 app.post('/assignment/:token/view', async (req, res) => {
     try {
         const { token } = req.params;
         const { viewed_at, user_agent, screen_size, referrer, device_type, browser, os } = req.body;
         
         console.log('='.repeat(60));
-        console.log('👁️ 수배서 열람 추적 API 호출!');
+        console.log('📱 수배서 열람 추적 API 호출 (JavaScript - 부가 정보)');
         console.log('토큰:', token);
-        console.log('시간:', viewed_at);
-        console.log('User Agent:', user_agent);
+        console.log('디바이스:', device_type, '/', browser, '/', os);
+        console.log('화면:', screen_size);
         console.log('='.repeat(60));
         
         // IP 주소 추출
@@ -8161,7 +8241,7 @@ app.post('/assignment/:token/view', async (req, res) => {
             console.error('⚠️ 위치 정보 조회 실패:', geoError.message);
         }
         
-        // 열람 이력 저장 (모든 열람 기록)
+        // 열람 이력 저장 (JavaScript에서 보낸 상세 디바이스 정보 포함)
         try {
             await pool.query(`
                 INSERT INTO assignment_views (
@@ -8182,7 +8262,7 @@ app.post('/assignment/:token/view', async (req, res) => {
                 screen_size || 'Unknown',
                 referrer || 'Direct'
             ]);
-            console.log('✅ 열람 이력 저장 완료');
+            console.log('✅ JavaScript 상세 열람 이력 저장 완료 (디바이스/브라우저 정보 포함)');
         } catch (viewError) {
             console.error('❌ 열람 이력 저장 실패:', viewError.message);
             
@@ -8240,8 +8320,9 @@ app.post('/assignment/:token/view', async (req, res) => {
         }
         
         // 첫 열람인 경우에만 viewed_at 업데이트 및 상태 변경
+        // (GET 요청보다 JavaScript가 먼저 실행된 경우에만 해당)
         if (!assignment.viewed_at) {
-            console.log('🆕 첫 열람! 업데이트 시작...');
+            console.log('🆕 첫 열람! JavaScript가 GET보다 먼저 도착 - 업데이트 시작...');
             
             // 1. 수배서 viewed_at 업데이트 및 상태를 'sent'로 변경 (아직 draft인 경우)
             try {
@@ -8253,10 +8334,15 @@ app.post('/assignment/:token/view', async (req, res) => {
                             WHEN status = 'draft' THEN 'sent'
                             ELSE status 
                         END
-                    WHERE assignment_token = $1
+                    WHERE assignment_token = $1 AND viewed_at IS NULL
                     RETURNING id, viewed_at, status
                 `, [token]);
-                console.log('✅ 수배서 업데이트 완료:', updateResult.rows[0]);
+                
+                if (updateResult.rows.length > 0) {
+                    console.log('✅ 수배서 viewed_at 업데이트 완료 (JavaScript가 먼저 도착):', updateResult.rows[0]);
+                } else {
+                    console.log('ℹ️ GET 요청에서 이미 viewed_at 업데이트됨');
+                }
             } catch (updateError) {
                 console.error('❌ 수배서 업데이트 실패:', updateError.message);
                 
@@ -8344,12 +8430,14 @@ app.post('/assignment/:token/view', async (req, res) => {
                 viewed_at: updateResult.rows[0].viewed_at
             });
         } else {
-            console.log('ℹ️ 이미 열람된 수배서 (viewed_at:', assignment.viewed_at, ')');
+            console.log('ℹ️ GET 요청에서 이미 viewed_at 처리됨 (viewed_at:', assignment.viewed_at, ')');
+            console.log('ℹ️ JavaScript는 디바이스/브라우저 상세 정보만 추가로 저장했습니다');
             console.log('='.repeat(60));
             res.json({ 
                 success: true, 
-                message: '이미 열람된 수배서입니다.',
+                message: '열람 기록이 저장되었습니다. (부가 정보)',
                 first_view: false,
+                device_info_added: true,
                 viewed_at: assignment.viewed_at
             });
         }
