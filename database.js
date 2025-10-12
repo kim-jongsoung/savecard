@@ -432,6 +432,7 @@ async function createTables() {
     throw err;
   } finally {
     client.release();
+  }
 }
 
 // 기존 JSON 데이터를 PostgreSQL로 마이그레이션
