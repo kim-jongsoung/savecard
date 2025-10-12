@@ -991,12 +991,21 @@
                     statusBadges += '<span class="badge bg-danger ms-2" style="font-size: 0.75rem;"><i class="bi bi-star-fill me-1"></i>신규</span>';
                 }
                 
-                // 열람 상황 (수배중 상태일 때 열람/미열람으로 구분)
+                // 수배서 열람 상황
+                if (reservation.assignment_token) {
+                    if (reservation.viewed_at) {
+                        statusBadges += '<span class="badge bg-info ms-2" style="font-size: 0.75rem;"><i class="bi bi-file-text-fill me-1"></i>수배서열람</span>';
+                    } else if (reservation.sent_at) {
+                        statusBadges += '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;"><i class="bi bi-file-text me-1"></i>수배서미열람</span>';
+                    }
+                }
+                
+                // 바우처 열람 상황
                 if (reservation.voucher_token) {
                     if (reservation.voucher_viewed_at) {
-                        statusBadges += '<span class="badge bg-success ms-2" style="font-size: 0.75rem;"><i class="bi bi-eye-fill me-1"></i>열람</span>';
+                        statusBadges += '<span class="badge bg-success ms-2" style="font-size: 0.75rem;"><i class="bi bi-eye-fill me-1"></i>바우처열람</span>';
                     } else if (reservation.voucher_sent_at) {
-                        statusBadges += '<span class="badge bg-secondary ms-2" style="font-size: 0.75rem;"><i class="bi bi-eye-slash me-1"></i>미열람</span>';
+                        statusBadges += '<span class="badge bg-secondary ms-2" style="font-size: 0.75rem;"><i class="bi bi-eye-slash me-1"></i>바우처미열람</span>';
                     }
                 }
                 
