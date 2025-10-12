@@ -907,6 +907,9 @@
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
             loadAssignments();
+            
+            // ✅ 모든 모달에 닫힘 이벤트 리스너 추가 (자동 새로고침)
+            setupModalRefreshListeners();
         });
 
         // 수배 목록 로드
@@ -930,6 +933,15 @@
                     window.reservations = data.data.assignments;
                     
                     renderAssignments(data.data.assignments);
+                    
+                    // ✅ 마지막 작업한 예약 강조 (새로고침 후에도 유지)
+                    setTimeout(() => {
+                        const lastWorkingId = localStorage.getItem('lastWorkingReservation');
+                        if (lastWorkingId) {
+                            highlightSelectedReservation(lastWorkingId);
+                            console.log('✅ 마지막 작업 예약 강조:', lastWorkingId);
+                        }
+                    }, 100);
                 } else {
                     console.error('API 오류:', data.message);
                     showAlert('데이터를 불러오는데 실패했습니다: ' + data.message, 'danger');
@@ -2064,7 +2076,36 @@
             if (selectedCard) {
                 selectedCard.classList.add('row-card-selected');
                 console.log('✅ 예약 강조 표시:', reservationId);
+                
+                // ✅ localStorage에 저장 (새로고침 후에도 유지)
+                localStorage.setItem('lastWorkingReservation', reservationId);
             }
+        }
+        
+        // ✅ 모달 닫힘 시 자동 새로고침 설정
+        function setupModalRefreshListeners() {
+            const modalIds = [
+                'assignmentManageModal',
+                'statusManageModal', 
+                'voucherManageModal',
+                'settlementModal',
+                'reservationEditModal',
+                'historyModal',
+                'assignmentViewModal',
+                'voucherViewModal'
+            ];
+            
+            modalIds.forEach(modalId => {
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    modalElement.addEventListener('hidden.bs.modal', function() {
+                        console.log('🔄 모달 닫힘 - 새로고침:', modalId);
+                        loadAssignments(currentPage);
+                    });
+                }
+            });
+            
+            console.log('✅ 모달 새로고침 리스너 설정 완료');
         }
         
         // 1. 예약변경 모달 열기
