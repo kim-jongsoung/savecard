@@ -10,9 +10,11 @@ const cors = require('cors');
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
-console.log('📧 nodemailer v6.9.15 로드:', typeof nodemailer, typeof nodemailer.createTransporter);
-if (!nodemailer.createTransporter) {
-    console.error('❌❌❌ nodemailer.createTransporter가 없습니다! nodemailer 객체:', Object.keys(nodemailer));
+console.log('📧 nodemailer v6.9.15 로드:', typeof nodemailer, typeof nodemailer.createTransport);
+if (!nodemailer.createTransport) {
+    console.error('❌❌❌ nodemailer.createTransport가 없습니다! nodemailer 객체:', Object.keys(nodemailer));
+} else {
+    console.log('✅ nodemailer.createTransport 함수 정상 로드');
 }
 
 // 간단하고 확실한 환경변수 처리
@@ -10953,7 +10955,7 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
             smtp_user: process.env.SMTP_USER
         });
         
-        const transporter = nodemailer.createTransporter({
+        const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: process.env.SMTP_PORT || 587,
             secure: false,
@@ -13722,7 +13724,7 @@ async function startServer() {
                 
                 // 메일 전송 (nodemailer 설정이 있다면)
                 if (process.env.SMTP_HOST) {
-                    const transporter = nodemailer.createTransporter({
+                    const transporter = nodemailer.createTransport({
                         host: process.env.SMTP_HOST,
                         port: process.env.SMTP_PORT || 587,
                         secure: false,
