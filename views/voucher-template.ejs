@@ -319,6 +319,16 @@
                 <div class="info-label">예약번호</div>
                 <div class="info-value"><%= reservation.reservation_number %></div>
             </div>
+            <% if (reservation.platform_name) { %>
+            <div class="info-row">
+                <div class="info-label">예약 업체</div>
+                <div class="info-value">
+                    <span class="badge" style="background: #f0f4ff; color: #667eea; font-size: 12px; padding: 4px 10px;">
+                        <%= reservation.platform_name %>
+                    </span>
+                </div>
+            </div>
+            <% } %>
             <div class="info-row">
                 <div class="info-label">예약자명</div>
                 <div class="info-value">
