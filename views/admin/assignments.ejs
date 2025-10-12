@@ -2859,6 +2859,9 @@
                     const voucherUrl = `${window.location.origin}/voucher/${voucherToken}`;
                     document.getElementById('voucher-link-url').value = voucherUrl;
                     
+                    console.log('✅ 바우처 URL 설정:', voucherUrl);
+                    console.log('📋 입력 필드 값:', document.getElementById('voucher-link-url').value);
+                    
                     // 미리보기 로드
                     console.log('🎫 바우처 미리보기 로드:', voucherToken);
                     await loadVoucherPreview(voucherToken);
@@ -2866,11 +2869,13 @@
                     // 전송 기록 로드
                     loadSendHistory(reservationId);
                 } else {
+                    console.error('❌ 바우처 토큰이 없습니다. reservation 객체:', reservation);
                     document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
                     document.getElementById('voucher-preview-content').innerHTML = `
                         <div class="text-center text-warning">
                             <i class="bi bi-exclamation-triangle mb-2" style="font-size: 2rem;"></i>
                             <p>바우처 토큰이 없습니다.</p>
+                            <p class="small text-muted">예약을 확정하면 바우처가 자동 생성됩니다.</p>
                         </div>
                     `;
                 }
@@ -2884,6 +2889,8 @@
         async function loadVoucherData(reservationId) {
             try {
                 const reservation = getReservationData(reservationId);
+                console.log('📋 loadVoucherData - reservation:', reservation);
+                console.log('🎫 voucher_token:', reservation?.voucher_token);
                 
                 // 바우처 요약 정보
                 const summary = `${reservation.korean_name}님 - ${reservation.product_name}`;
@@ -2894,12 +2901,15 @@
                     const voucherUrl = `${window.location.origin}/voucher/${reservation.voucher_token}`;
                     document.getElementById('voucher-link-url').value = voucherUrl;
                     
+                    console.log('✅ 바우처 URL 설정 (loadVoucherData):', voucherUrl);
+                    
                     // 미리보기 로드
                     loadVoucherPreview(reservation.voucher_token);
                     
                     // 전송 기록 로드
                     loadSendHistory(reservationId);
                 } else {
+                    console.warn('⚠️ voucher_token이 없습니다.');
                     document.getElementById('voucher-link-url').value = '바우처가 생성되지 않았습니다.';
                 }
                 
@@ -3249,7 +3259,26 @@
         // 바우처 미리보기 새 창
         function openVoucherPreview() {
             const voucherUrl = document.getElementById('voucher-link-url').value;
-            window.open(voucherUrl, '_blank');
+            
+            console.log('🔗 바우처 새 창 열기 시도:', voucherUrl);
+            
+            // 유효성 검사
+            if (!voucherUrl || voucherUrl === '바우처가 생성되지 않았습니다.' || !voucherUrl.startsWith('http')) {
+                showAlert('❌ 유효한 바우처 링크가 없습니다. 먼저 바우처를 생성해주세요.', 'warning');
+                console.error('❌ 유효하지 않은 바우처 URL:', voucherUrl);
+                return;
+            }
+            
+            console.log('✅ 새 창 열기:', voucherUrl);
+            const newWindow = window.open(voucherUrl, '_blank');
+            
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                // 팝업이 차단된 경우
+                showAlert('⚠️ 팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.', 'warning');
+                console.warn('⚠️ 팝업 차단됨');
+            } else {
+                console.log('✅ 새 창 열림 성공');
+            }
         }
         
         // 바우처 재생성
