@@ -56,6 +56,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use('/pa', express.static('pa'));
+app.use('/uploads', express.static('uploads')); // 업로드된 파일 정적 서빙
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -10449,7 +10450,20 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
 // 예약 확정 API (4가지 방식)
 app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
     const multer = require('multer');
-    const upload = multer({ dest: 'uploads/' });
+    const path = require('path');
+    
+    // 파일명을 예약 ID + 타임스탬프로 고유하게 생성
+    const storage = multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, 'uploads/');
+        },
+        filename: function (req, file, cb) {
+            const uniqueName = `reservation_${req.params.id}_${Date.now()}${path.extname(file.originalname)}`;
+            cb(null, uniqueName);
+        }
+    });
+    
+    const upload = multer({ storage: storage });
     
     upload.fields([
         { name: 'qr_image', maxCount: 1 },
@@ -10487,6 +10501,25 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
             
             const reservation = reservationResult.rows[0];
             const adminName = req.session.adminName || req.session.adminUsername || '시스템';
+            
+            console.log('🔄 확정 방식:', parseInt(method), '| 기존 데이터 초기화 시작');
+            
+            // 🔑 중요: 새로운 방식으로 확정 시 다른 방식의 데이터를 모두 초기화
+            await pool.query(`
+                UPDATE reservations 
+                SET qr_code_data = NULL,
+                    qr_image_path = NULL,
+                    vendor_voucher_path = NULL
+                WHERE id = $1
+            `, [reservationId]);
+            
+            await pool.query(`
+                UPDATE assignments 
+                SET confirmation_number = NULL
+                WHERE reservation_id = $1
+            `, [reservationId]);
+            
+            console.log('✅ 이전 확정 데이터 초기화 완료');
             
             // 확정 방식별 처리
             let confirmationData = {
@@ -10526,7 +10559,15 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                     
                     // QR 이미지 파일 경로 (업로드된 경우)
                     if (req.files && req.files['qr_image']) {
-                        confirmationData.qr_image_path = req.files['qr_image'][0].path;
+                        const qrImagePath = req.files['qr_image'][0].path;
+                        const qrImageFilename = req.files['qr_image'][0].filename;
+                        confirmationData.qr_image_path = qrImagePath;
+                        
+                        console.log('📸 QR 이미지 업로드:', {
+                            path: qrImagePath,
+                            filename: qrImageFilename,
+                            originalname: req.files['qr_image'][0].originalname
+                        });
                     }
                     
                     // QR 정보 저장
@@ -10538,6 +10579,8 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                         WHERE id = $3
                     `, [qr_code_data, confirmationData.qr_image_path || null, reservationId]);
                     
+                    console.log('✅ QR 정보 저장 완료:', { qr_code_data, qr_image_path: confirmationData.qr_image_path });
+                    
                     break;
                     
                 case 3: // 바우처 업로드
@@ -10547,7 +10590,17 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                             message: '바우처 파일을 업로드해주세요.'
                         });
                     }
-                    confirmationData.vendor_voucher_path = req.files['vendor_voucher'][0].path;
+                    
+                    const voucherPath = req.files['vendor_voucher'][0].path;
+                    const voucherFilename = req.files['vendor_voucher'][0].filename;
+                    confirmationData.vendor_voucher_path = voucherPath;
+                    confirmationData.vendor_voucher_filename = voucherFilename;
+                    
+                    console.log('📄 바우처 파일 업로드:', {
+                        path: voucherPath,
+                        filename: voucherFilename,
+                        originalname: req.files['vendor_voucher'][0].originalname
+                    });
                     
                     // 수배업체 바우처 경로 저장
                     await pool.query(`
@@ -10555,7 +10608,9 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
                         SET vendor_voucher_path = $1,
                             updated_at = NOW()
                         WHERE id = $2
-                    `, [confirmationData.vendor_voucher_path, reservationId]);
+                    `, [voucherPath, reservationId]);
+                    
+                    console.log('✅ 바우처 파일 저장 완료:', { path: voucherPath });
                     
                     break;
                     

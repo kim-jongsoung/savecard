@@ -384,7 +384,7 @@
         <div class="qr-box">
             <p style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">입장 QR 코드</p>
             <% if (qr_image_path) { %>
-                <img src="/uploads/<%= qr_image_path %>" alt="QR Code">
+                <img src="/<%= qr_image_path %>" alt="QR Code" style="max-width: 300px; height: auto;">
             <% } else { %>
                 <div id="qrcode"></div>
                 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
@@ -395,6 +395,29 @@
                     document.getElementById('qrcode').innerHTML = qr.createImgTag(4);
                 </script>
             <% } %>
+        </div>
+        <% } %>
+        
+        <!-- 업체 바우처 (있는 경우) -->
+        <% if (vendor_voucher_path) { %>
+        <div class="section">
+            <div class="section-title">🎫 업체 발급 바우처</div>
+            <div style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <p style="font-size: 12px; color: #6c757d; margin-bottom: 10px;">
+                    제공업체가 발급한 공식 바우처
+                </p>
+                <% 
+                    const voucherExt = vendor_voucher_path.split('.').pop().toLowerCase();
+                    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(voucherExt);
+                %>
+                <% if (isImage) { %>
+                    <img src="/<%= vendor_voucher_path %>" alt="Vendor Voucher" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <% } else { %>
+                    <a href="/<%= vendor_voucher_path %>" target="_blank" style="display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-weight: 600;">
+                        📄 바우처 파일 보기
+                    </a>
+                <% } %>
+            </div>
         </div>
         <% } %>
         

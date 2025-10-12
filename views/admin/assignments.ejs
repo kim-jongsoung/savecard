@@ -1047,6 +1047,34 @@
             
             // ✅ 모든 모달에 닫힘 이벤트 리스너 추가 (자동 새로고침)
             setupModalRefreshListeners();
+            
+            // ✅ 예약확정 모달 초기화 이벤트
+            const statusManageModal = document.getElementById('statusManageModal');
+            if (statusManageModal) {
+                statusManageModal.addEventListener('show.bs.modal', function() {
+                    console.log('🔄 예약확정 모달 열림 - 폼 초기화');
+                    
+                    // 확정 방식 선택 초기화
+                    selectedConfirmationMethod = null;
+                    document.querySelectorAll('.confirmation-method-card').forEach(card => {
+                        card.classList.remove('selected');
+                    });
+                    
+                    // 입력 필드 초기화
+                    document.getElementById('confirmation-number').value = '';
+                    document.getElementById('qr-code-data').value = '';
+                    document.getElementById('qr-code-image').value = '';
+                    document.getElementById('vendor-voucher-file').value = '';
+                    document.getElementById('confirmation-memo').value = '';
+                    
+                    // 폼 숨기기
+                    document.querySelectorAll('.confirmation-form').forEach(form => {
+                        form.style.display = 'none';
+                    });
+                    document.getElementById('confirmation-input-area').style.display = 'none';
+                    document.getElementById('confirm-button').style.display = 'none';
+                });
+            }
         });
 
         // 수배 목록 로드
