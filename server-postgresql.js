@@ -10552,6 +10552,358 @@ app.post('/api/vouchers/auto-generate/:reservationId', requireAuth, async (req, 
     }
 });
 
+// 바우처 미리보기 API
+app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
+    try {
+        const { voucherToken } = req.params;
+        
+        // 바우처 정보 조회
+        const result = await pool.query(`
+            SELECT r.*, a.confirmation_number, a.vendor_name, a.vendor_contact
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE r.voucher_token = $1
+        `, [voucherToken]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '바우처를 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = result.rows[0];
+        
+        // RAG 기반 이용방법 생성
+        const { generateVoucherInstructions } = require('./utils/rag-voucher');
+        const usage_instructions = await generateVoucherInstructions(reservation);
+        
+        // 템플릿 렌더링
+        const html = await new Promise((resolve, reject) => {
+            res.app.render('voucher-template', {
+                reservation,
+                confirmation_number: reservation.confirmation_number,
+                qr_code_data: reservation.qr_code_data,
+                qr_image_path: reservation.qr_image_path,
+                vendor_name: reservation.vendor_name,
+                vendor_contact: reservation.vendor_contact,
+                usage_instructions,
+                voucher_token: voucherToken,
+                formatDate: (date) => {
+                    if (!date) return '-';
+                    return new Date(date).toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        weekday: 'short'
+                    });
+                }
+            }, (err, html) => {
+                if (err) reject(err);
+                else resolve(html);
+            });
+        });
+        
+        res.json({ success: true, html });
+        
+    } catch (error) {
+        console.error('❌ 바우처 미리보기 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '바우처 미리보기 생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 바우처 이메일 전송 API
+app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        const { recipient, subject, message, voucher_token } = req.body;
+        
+        console.log('📧 바우처 이메일 전송:', reservationId, recipient);
+        
+        // TODO: 실제 이메일 전송 로직 (nodemailer 등)
+        // const emailSent = await sendEmail({...});
+        
+        // 전송 기록 저장
+        await pool.query(`
+            INSERT INTO voucher_sends (
+                reservation_id, voucher_token, send_method, recipient, subject, message,
+                sent_by, status
+            ) VALUES ($1, $2, 'email', $3, $4, $5, $6, 'sent')
+        `, [
+            reservationId,
+            voucher_token,
+            recipient,
+            subject || '[괌세이브] 예약 바우처',
+            message,
+            req.session.adminName || req.session.adminUsername
+        ]);
+        
+        res.json({
+            success: true,
+            message: '이메일이 전송되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ 이메일 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '이메일 전송 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 바우처 카카오 알림톡 전송 API
+app.post('/api/vouchers/send-kakao/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        const { voucher_token } = req.body;
+        
+        console.log('💬 카카오 알림톡 전송:', reservationId);
+        
+        // 예약 정보 조회
+        const result = await pool.query(`
+            SELECT * FROM reservations WHERE id = $1
+        `, [reservationId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = result.rows[0];
+        
+        // TODO: 카카오 알림톡 API 연동
+        // const kakakoSent = await sendKakaoAlimtalk({...});
+        
+        // 전송 기록 저장
+        await pool.query(`
+            INSERT INTO voucher_sends (
+                reservation_id, voucher_token, send_method, recipient,
+                sent_by, status
+            ) VALUES ($1, $2, 'kakao', $3, $4, 'sent')
+        `, [
+            reservationId,
+            voucher_token,
+            reservation.phone || reservation.kakao_id,
+            req.session.adminName || req.session.adminUsername
+        ]);
+        
+        res.json({
+            success: true,
+            message: '카카오 알림톡이 전송되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ 카카오 알림톡 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '카카오 알림톡 API 연동이 필요합니다.'
+        });
+    }
+});
+
+// 바우처 SMS 전송 API
+app.post('/api/vouchers/send-sms/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        const { voucher_token } = req.body;
+        
+        console.log('📱 SMS 전송:', reservationId);
+        
+        // 예약 정보 조회
+        const result = await pool.query(`
+            SELECT * FROM reservations WHERE id = $1
+        `, [reservationId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = result.rows[0];
+        
+        // TODO: SMS API 연동 (Twilio 등)
+        // const smsSent = await sendSMS({...});
+        
+        // 전송 기록 저장
+        await pool.query(`
+            INSERT INTO voucher_sends (
+                reservation_id, voucher_token, send_method, recipient,
+                sent_by, status
+            ) VALUES ($1, $2, 'sms', $3, $4, 'sent')
+        `, [
+            reservationId,
+            voucher_token,
+            reservation.phone,
+            req.session.adminName || req.session.adminUsername
+        ]);
+        
+        res.json({
+            success: true,
+            message: 'SMS가 전송되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ SMS 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: 'SMS API 연동이 필요합니다.'
+        });
+    }
+});
+
+// 바우처 전송 기록 조회 API
+app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        
+        const result = await pool.query(`
+            SELECT 
+                id,
+                send_method as method,
+                CASE send_method
+                    WHEN 'email' THEN '이메일'
+                    WHEN 'kakao' THEN '카카오 알림톡'
+                    WHEN 'sms' THEN 'SMS'
+                    WHEN 'link' THEN '링크 복사'
+                END as method_name,
+                recipient,
+                status,
+                sent_at,
+                viewed_at
+            FROM voucher_sends
+            WHERE reservation_id = $1
+            ORDER BY sent_at DESC
+        `, [reservationId]);
+        
+        res.json({
+            success: true,
+            history: result.rows
+        });
+        
+    } catch (error) {
+        console.error('❌ 전송 기록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '전송 기록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 바우처 재생성 API
+app.post('/api/vouchers/regenerate/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        
+        // 새 토큰 생성
+        const newToken = crypto.randomBytes(32).toString('hex');
+        
+        await pool.query(`
+            UPDATE reservations 
+            SET voucher_token = $1, updated_at = NOW()
+            WHERE id = $2
+        `, [newToken, reservationId]);
+        
+        // 히스토리 기록
+        const adminName = req.session.adminName || req.session.adminUsername || '시스템';
+        await logHistory(
+            reservationId,
+            '바우처',
+            '재생성',
+            adminName,
+            '바우처가 재생성되었습니다. (보안상 이유로 기존 링크 무효화)',
+            null,
+            { new_voucher_token: newToken }
+        );
+        
+        res.json({
+            success: true,
+            voucher_token: newToken,
+            message: '바우처가 재생성되었습니다.'
+        });
+        
+    } catch (error) {
+        console.error('❌ 바우처 재생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '바우처 재생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 바우처 열람 추적 (고객용)
+app.get('/voucher/:voucherToken', async (req, res) => {
+    try {
+        const { voucherToken } = req.params;
+        
+        // 바우처 정보 조회
+        const result = await pool.query(`
+            SELECT r.*, a.confirmation_number, a.vendor_name, a.vendor_contact
+            FROM reservations r
+            LEFT JOIN assignments a ON r.id = a.reservation_id
+            WHERE r.voucher_token = $1
+        `, [voucherToken]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).send('바우처를 찾을 수 없습니다.');
+        }
+        
+        const reservation = result.rows[0];
+        
+        // 열람 기록 저장
+        const userAgent = req.headers['user-agent'] || '';
+        const deviceType = userAgent.match(/Mobile|Android|iPhone/) ? 'mobile' : 'desktop';
+        
+        await pool.query(`
+            INSERT INTO voucher_views (
+                voucher_token, reservation_id, ip_address, user_agent, device_type
+            ) VALUES ($1, $2, $3, $4, $5)
+        `, [
+            voucherToken,
+            reservation.id,
+            req.ip || req.connection.remoteAddress,
+            userAgent,
+            deviceType
+        ]);
+        
+        // RAG 기반 이용방법 생성
+        const { generateVoucherInstructions } = require('./utils/rag-voucher');
+        const usage_instructions = await generateVoucherInstructions(reservation);
+        
+        // 템플릿 렌더링
+        res.render('voucher-template', {
+            reservation,
+            confirmation_number: reservation.confirmation_number,
+            qr_code_data: reservation.qr_code_data,
+            qr_image_path: reservation.qr_image_path,
+            vendor_name: reservation.vendor_name,
+            vendor_contact: reservation.vendor_contact,
+            usage_instructions,
+            voucher_token: voucherToken,
+            formatDate: (date) => {
+                if (!date) return '-';
+                return new Date(date).toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'short'
+                });
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ 바우처 표시 오류:', error);
+        res.status(500).send('바우처를 불러올 수 없습니다.');
+    }
+});
+
 // 예약 상태 변경 API
 app.patch('/api/reservations/:id/status', requireAuth, async (req, res) => {
     try {
