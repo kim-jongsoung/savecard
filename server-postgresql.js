@@ -9979,6 +9979,10 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 SELECT 
                     r.*,
                     CONCAT(r.english_last_name, ' ', r.english_first_name) as english_name,
+                    r.voucher_token,
+                    r.qr_code_data,
+                    r.qr_image_path,
+                    r.vendor_voucher_path,
                     a.id as assignment_id,
                     a.vendor_id,
                     a.vendor_name,
@@ -9991,7 +9995,6 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                     a.viewed_at,
                     a.response_at,
                     a.confirmation_number,
-                    a.voucher_token,
                     a.rejection_reason,
                     v.email as vendor_email,
                     v.phone as vendor_phone,
@@ -10023,6 +10026,10 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 SELECT 
                     r.*,
                     CONCAT(r.english_last_name, ' ', r.english_first_name) as english_name,
+                    r.voucher_token,
+                    r.qr_code_data,
+                    r.qr_image_path,
+                    r.vendor_voucher_path,
                     NULL as assignment_id,
                     NULL as vendor_name,
                     NULL as vendor_contact,
@@ -10034,7 +10041,6 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                     NULL as viewed_at,
                     NULL as response_at,
                     NULL as confirmation_number,
-                    NULL as voucher_token,
                     NULL as rejection_reason,
                     COUNT(*) OVER() as total_count
                 FROM reservations r
