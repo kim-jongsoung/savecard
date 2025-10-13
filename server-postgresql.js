@@ -5499,6 +5499,67 @@ app.post('/api/register-reservation', async (req, res) => {
     }
 });
 
+// ==================== 헬퍼 함수 ====================
+
+// 별칭으로 표준 업체명 조회 (서버 내부 함수)
+async function resolvePlatformAlias(alias) {
+    try {
+        if (!alias || !alias.trim()) {
+            return null;
+        }
+        
+        const cleanAlias = alias.trim();
+        
+        // 모든 활성 업체의 별칭 조회
+        const query = `
+            SELECT platform_name, platform_code, aliases 
+            FROM platforms 
+            WHERE is_active = true
+        `;
+        
+        const result = await pool.query(query);
+        
+        // 1. 업체명 정확히 일치
+        for (const platform of result.rows) {
+            if (platform.platform_name.toLowerCase() === cleanAlias.toLowerCase()) {
+                console.log(`✅ 업체명 변환: "${cleanAlias}" → "${platform.platform_name}" (exact_name)`);
+                return platform.platform_name;
+            }
+        }
+        
+        // 2. 업체 코드 정확히 일치
+        for (const platform of result.rows) {
+            if (platform.platform_code.toLowerCase() === cleanAlias.toLowerCase()) {
+                console.log(`✅ 업체명 변환: "${cleanAlias}" → "${platform.platform_name}" (code)`);
+                return platform.platform_name;
+            }
+        }
+        
+        // 3. 별칭 조회 (대소문자 무시, 부분 일치)
+        for (const platform of result.rows) {
+            const aliases = platform.aliases || [];
+            for (const platformAlias of aliases) {
+                if (platformAlias.toLowerCase() === cleanAlias.toLowerCase() ||
+                    cleanAlias.toLowerCase().includes(platformAlias.toLowerCase()) ||
+                    platformAlias.toLowerCase().includes(cleanAlias.toLowerCase())) {
+                    console.log(`✅ 업체명 변환: "${cleanAlias}" → "${platform.platform_name}" (alias: ${platformAlias})`);
+                    return platform.platform_name;
+                }
+            }
+        }
+        
+        // 매칭 실패 - 원본 반환
+        console.log(`ℹ️ 업체명 "${cleanAlias}" - 별칭 미등록 (원본 유지)`);
+        return cleanAlias;
+        
+    } catch (error) {
+        console.error('❌ 별칭 조회 실패:', error);
+        return alias; // 실패 시 원본 반환
+    }
+}
+
+// ==================== API 라우트 ====================
+
 // 예약 등록 (텍스트 파싱) - 관리자용
 app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     try {
@@ -9941,63 +10002,6 @@ app.post('/api/platforms/resolve-alias', async (req, res) => {
         });
     }
 });
-
-// 별칭으로 표준 업체명 조회 (서버 내부 함수)
-async function resolvePlatformAlias(alias) {
-    try {
-        if (!alias || !alias.trim()) {
-            return null;
-        }
-        
-        const cleanAlias = alias.trim();
-        
-        // 모든 활성 업체의 별칭 조회
-        const query = `
-            SELECT platform_name, platform_code, aliases 
-            FROM platforms 
-            WHERE is_active = true
-        `;
-        
-        const result = await pool.query(query);
-        
-        // 1. 업체명 정확히 일치
-        for (const platform of result.rows) {
-            if (platform.platform_name.toLowerCase() === cleanAlias.toLowerCase()) {
-                console.log(`✅ 업체명 변환: "${cleanAlias}" → "${platform.platform_name}" (exact_name)`);
-                return platform.platform_name;
-            }
-        }
-        
-        // 2. 업체 코드 정확히 일치
-        for (const platform of result.rows) {
-            if (platform.platform_code.toLowerCase() === cleanAlias.toLowerCase()) {
-                console.log(`✅ 업체명 변환: "${cleanAlias}" → "${platform.platform_name}" (code)`);
-                return platform.platform_name;
-            }
-        }
-        
-        // 3. 별칭 조회 (대소문자 무시, 부분 일치)
-        for (const platform of result.rows) {
-            const aliases = platform.aliases || [];
-            for (const platformAlias of aliases) {
-                if (platformAlias.toLowerCase() === cleanAlias.toLowerCase() ||
-                    cleanAlias.toLowerCase().includes(platformAlias.toLowerCase()) ||
-                    platformAlias.toLowerCase().includes(cleanAlias.toLowerCase())) {
-                    console.log(`✅ 업체명 변환: "${cleanAlias}" → "${platform.platform_name}" (alias: ${platformAlias})`);
-                    return platform.platform_name;
-                }
-            }
-        }
-        
-        // 매칭 실패 - 원본 반환
-        console.log(`ℹ️ 업체명 "${cleanAlias}" - 별칭 미등록 (원본 유지)`);
-        return cleanAlias;
-        
-    } catch (error) {
-        console.error('❌ 별칭 조회 실패:', error);
-        return alias; // 실패 시 원본 반환
-    }
-}
 
 // 자동 수배 생성 함수
 async function createAutoAssignment(reservationId, productName) {
