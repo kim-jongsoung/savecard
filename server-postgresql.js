@@ -697,8 +697,12 @@ app.get('/api/reservations', async (req, res) => {
         
         // ✅ 예약관리 페이지: assignment_token이 없는 예약만 표시 (수배서 미생성)
         // 즉, 수배업체 자동 매칭 안 된 예약들
+        // 날짜 형식을 YYYY-MM-DD로 명시적으로 변환
         const query = `
-            SELECT r.* 
+            SELECT 
+                r.*,
+                TO_CHAR(r.usage_date, 'YYYY-MM-DD') as usage_date,
+                TO_CHAR(r.reservation_datetime, 'YYYY-MM-DD"T"HH24:MI') as reservation_datetime
             FROM reservations r
             LEFT JOIN assignments a ON r.id = a.reservation_id
             WHERE a.assignment_token IS NULL
@@ -6641,7 +6645,7 @@ app.patch('/api/reservations/:id', requireAuth, async (req, res) => {
         const values = [];
         let paramIndex = 1;
         
-        // 코어 필드 매핑
+        // 코어 필드 매핑 (DB에 실제 존재하는 컬럼만)
         const fieldMapping = {
             reservation_number: 'reservation_number',
             platform_name: 'platform_name',
@@ -6662,7 +6666,7 @@ app.patch('/api/reservations/:id', requireAuth, async (req, res) => {
             people_infant: 'people_infant',
             adult_unit_price: 'adult_unit_price',
             child_unit_price: 'child_unit_price',
-            infant_unit_price: 'infant_unit_price',
+            // infant_unit_price는 DB 컬럼이 없으므로 제외
             memo: 'memo',
             total_amount: 'total_amount'
         };
