@@ -51,8 +51,14 @@ console.log('🚀 최종 PORT 설정:', PORT, '(NODE_ENV:', process.env.NODE_ENV
 
 // 이메일 기능 완전 제거됨
 
-// 미들웨어 설정
-app.use(cors());
+// 미들웨어 설정 - CORS 설정 (북마클릿 지원)
+app.use(cors({
+    origin: true, // 모든 origin 허용 (북마클릿이 다양한 플랫폼에서 실행됨)
+    credentials: true, // 쿠키/세션 포함 허용
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
@@ -61,13 +67,15 @@ app.use('/uploads', express.static('uploads')); // 업로드된 파일 정적 �
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// 세션 설정
+// 세션 설정 (북마클릿 cross-origin 요청 지원)
 const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'guam-savecard-secret-key-2025',
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        httpOnly: true, // XSS 방지
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 북마클릿 cross-site 지원
         maxAge: 24 * 60 * 60 * 1000 // 24시간
     }
 };
@@ -89,11 +97,20 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(session(sessionConfig));
 
-// 관리자 인증 미들웨어
+// 관리자 인증 미들웨어 (API와 페이지 요청 모두 지원)
 function requireAuth(req, res, next) {
     if (req.session.adminId) {
         next();
     } else {
+        // API 요청인 경우 JSON 응답
+        if (req.path.startsWith('/api/') || req.xhr || req.headers.accept?.includes('application/json')) {
+            return res.status(401).json({
+                ok: false,
+                success: false,
+                message: '인증이 필요합니다. 관리자 로그인을 해주세요.'
+            });
+        }
+        // 페이지 요청인 경우 리다이렉트
         res.redirect('/admin/login');
     }
 }
