@@ -5636,7 +5636,10 @@ app.post('/api/ingest/html', requireAuth, htmlUpload.single('html'), async (req,
             console.log('🎫 예약번호 자동 생성:', normalizedData.reservation_number);
         }
         
-        // 예약 테이블에 저장
+        // 담당자 정보
+        const assignedBy = req.session.adminName || req.session.adminUsername || '시스템';
+        
+        // 예약 테이블에 저장 (상태: pending = 대기중)
         const insertQuery = `
             INSERT INTO reservations (
                 reservation_number, confirmation_number, channel, platform_name,
@@ -5644,10 +5647,10 @@ app.post('/api/ingest/html', requireAuth, htmlUpload.single('html'), async (req,
                 korean_name, english_first_name, english_last_name, email, phone, kakao_id,
                 people_adult, people_child, people_infant, adult_unit_price, child_unit_price,
                 usage_date, usage_time, reservation_datetime, payment_status,
-                memo, created_at, updated_at
+                memo, assigned_to, created_at, updated_at
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()
+                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW(), NOW()
             ) RETURNING id
         `;
         
@@ -5675,8 +5678,9 @@ app.post('/api/ingest/html', requireAuth, htmlUpload.single('html'), async (req,
             normalizedData.usage_date || null,
             normalizedData.usage_time || null,
             normalizedData.reservation_datetime || null,
-            normalizedData.payment_status || '확인필요',
-            normalizedData.memo || null
+            'pending', // ✅ 상태를 pending(대기중)으로 설정
+            normalizedData.memo || null,
+            assignedBy
         ];
         
         const result = await pool.query(insertQuery, values);
@@ -5684,14 +5688,43 @@ app.post('/api/ingest/html', requireAuth, htmlUpload.single('html'), async (req,
         
         console.log('✅ 북마클릿: 예약 저장 완료, ID:', reservationId);
         
+        // 🏢 상품명으로 수배업체 자동 매칭 (인박스와 동일한 로직)
+        let autoAssignmentResult = null;
+        const productName = normalizedData.product_name;
+        
+        if (productName) {
+            try {
+                console.log('🔍 상품명 자동 매칭 시도:', productName);
+                autoAssignmentResult = await createAutoAssignment(reservationId, productName);
+                
+                if (autoAssignmentResult) {
+                    console.log('✅ 수배서 자동 생성 성공:', autoAssignmentResult.vendor.vendor_name);
+                } else {
+                    console.log('⚠️ 매칭되는 수배업체 없음 - 예약관리로 이동');
+                }
+            } catch (error) {
+                console.error('❌ 자동 수배 생성 오류:', error);
+            }
+        }
+        
         // 성공 응답
         res.json({
             ok: true,
-            message: '예약이 성공적으로 등록되었습니다.',
+            message: autoAssignmentResult 
+                ? '예약이 등록되고 수배서가 자동 생성되었습니다.' 
+                : '예약이 등록되었습니다. (수배업체 미지정)',
             reservation_id: reservationId,
             reservation_number: normalizedData.reservation_number,
             confidence: confidence,
-            parsing_method: parsingMethod
+            parsing_method: parsingMethod,
+            auto_assignment: autoAssignmentResult ? {
+                created: true,
+                vendor: autoAssignmentResult.vendor.vendor_name,
+                assignment_id: autoAssignmentResult.assignment.id
+            } : {
+                created: false,
+                reason: '매칭되는 수배업체가 없습니다'
+            }
         });
         
     } catch (error) {
