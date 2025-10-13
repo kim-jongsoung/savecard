@@ -125,7 +125,12 @@
         <div class="settings-nav">
             <ul class="nav nav-pills p-3" id="settingsTab" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="vendors-tab" data-bs-toggle="pill" data-bs-target="#vendors" type="button" role="tab">
+                    <button class="nav-link active" id="platforms-tab" data-bs-toggle="pill" data-bs-target="#platforms" type="button" role="tab">
+                        <i class="fas fa-store me-2"></i>예약업체 관리
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="vendors-tab" data-bs-toggle="pill" data-bs-target="#vendors" type="button" role="tab">
                         <i class="fas fa-building me-2"></i>수배업체 관리
                     </button>
                 </li>
@@ -149,8 +154,36 @@
 
         <!-- 설정 내용 -->
         <div class="tab-content" id="settingsTabContent">
+            <!-- 예약업체 관리 탭 -->
+            <div class="tab-pane fade show active" id="platforms" role="tabpanel">
+                <div class="settings-content">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h4><i class="fas fa-store me-2"></i>예약업체 관리</h4>
+                            <p class="text-muted mb-0">예약을 받는 플랫폼/업체를 등록하고 관리합니다. (정산 관리용)</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openPlatformModal()">
+                            <i class="fas fa-plus me-2"></i>예약업체 등록
+                        </button>
+                    </div>
+
+                    <!-- 알림 영역 -->
+                    <div id="platformAlertArea"></div>
+
+                    <!-- 예약업체 목록 -->
+                    <div id="platformsList">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">로딩중...</span>
+                            </div>
+                            <p class="mt-3 text-muted">예약업체 목록을 불러오는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 수배업체 관리 탭 -->
-            <div class="tab-pane fade show active" id="vendors" role="tabpanel">
+            <div class="tab-pane fade" id="vendors" role="tabpanel">
                 <div class="settings-content">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
@@ -352,6 +385,93 @@
         </div>
     </div>
 
+    <!-- 예약업체 등록/수정 모달 -->
+    <div class="modal fade" id="platformModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="platformModalTitle">예약업체 등록</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="platformForm">
+                        <input type="hidden" id="platformId">
+                        
+                        <!-- 기본 정보 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">업체명 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="platform_name" name="platform_name" required>
+                                <div class="form-text">예: 놀공, 클룩, 카톡, 마이리얼트립</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">업체 코드 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="platform_code" name="platform_code" required>
+                                <div class="form-text">예: NOL, KLOOK, KAKAO, MRT</div>
+                            </div>
+                        </div>
+
+                        <!-- 연락처 정보 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-phone me-2"></i>연락처 정보</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">담당자명</label>
+                                <input type="text" class="form-control" id="platform_contact_person" name="contact_person">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">이메일</label>
+                                <input type="email" class="form-control" id="platform_email" name="email">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">전화번호</label>
+                                <input type="tel" class="form-control" id="platform_phone" name="phone">
+                            </div>
+                        </div>
+
+                        <!-- 정산 정보 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-calculator me-2"></i>정산 정보</h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">수수료율 (%)</label>
+                                <input type="number" step="0.01" class="form-control" id="commission_rate" name="commission_rate" value="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">정산 주기</label>
+                                <select class="form-select" id="settlement_cycle" name="settlement_cycle">
+                                    <option value="weekly">주간</option>
+                                    <option value="biweekly">격주</option>
+                                    <option value="monthly" selected>월간</option>
+                                    <option value="quarterly">분기</option>
+                                </select>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">결제 조건</label>
+                                <input type="text" class="form-control" id="payment_terms" name="payment_terms" placeholder="예: 월말 마감 익월 15일 지급">
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">메모</label>
+                                <textarea class="form-control" id="platform_memo" name="memo" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="savePlatform()">
+                        <i class="fas fa-save me-1"></i>저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 직원 등록/수정 모달 -->
     <div class="modal fade" id="staffModal" tabindex="-1">
         <div class="modal-dialog">
@@ -420,16 +540,248 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let platforms = [];
+        let editingPlatformId = null;
         let vendors = [];
         let editingVendorId = null;
         let staffList = [];
         let editingStaffId = null;
 
-        // 페이지 로드시 수배업체 및 직원 목록 가져오기
+        // 페이지 로드시 예약업체, 수배업체 및 직원 목록 가져오기
         document.addEventListener('DOMContentLoaded', function() {
+            loadPlatforms();
             loadVendors();
             loadStaff();
         });
+
+        // ============================================
+        // 예약업체 관리 함수들
+        // ============================================
+
+        // 예약업체 목록 로드
+        async function loadPlatforms() {
+            try {
+                const response = await fetch('/api/platforms');
+                const data = await response.json();
+                
+                if (data.success) {
+                    platforms = data.platforms;
+                    renderPlatforms();
+                } else {
+                    showPlatformAlert('danger', '예약업체 목록을 불러오는데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('예약업체 목록 로드 실패:', error);
+                showPlatformAlert('danger', '예약업체 목록을 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 예약업체 목록 렌더링
+        function renderPlatforms() {
+            const platformsList = document.getElementById('platformsList');
+            
+            if (platforms.length === 0) {
+                platformsList.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">등록된 예약업체가 없습니다</h5>
+                        <p class="text-muted">첫 번째 예약업체를 등록해보세요.</p>
+                        <button class="btn btn-primary" onclick="openPlatformModal()">
+                            <i class="fas fa-plus me-2"></i>예약업체 등록
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            platformsList.innerHTML = platforms.map(platform => `
+                <div class="vendor-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <h5 class="mb-0 me-3">${platform.platform_name}</h5>
+                                <span class="badge bg-secondary">${platform.platform_code}</span>
+                                <span class="vendor-status ms-2 ${platform.is_active ? 'vendor-active' : 'vendor-inactive'}">
+                                    ${platform.is_active ? '활성' : '비활성'}
+                                </span>
+                            </div>
+                            <div class="text-muted mb-2">
+                                ${platform.contact_person ? `<i class="fas fa-user me-1"></i>${platform.contact_person}` : ''}
+                                ${platform.email ? `<i class="fas fa-envelope ms-3 me-1"></i>${platform.email}` : ''}
+                                ${platform.phone ? `<i class="fas fa-phone ms-3 me-1"></i>${platform.phone}` : ''}
+                            </div>
+                            <div class="text-muted mb-2">
+                                <i class="fas fa-percent me-1"></i>수수료 ${platform.commission_rate}%
+                                <i class="fas fa-calendar ms-3 me-1"></i>${getSettlementCycleText(platform.settlement_cycle)}
+                                <i class="fas fa-file-invoice-dollar ms-3 me-1"></i>예약 ${platform.reservation_count}건
+                                <i class="fas fa-money-bill-wave ms-3 me-1"></i>${formatCurrency(platform.total_amount)}
+                            </div>
+                            ${platform.memo ? `<p class="text-muted small mb-0">${platform.memo}</p>` : ''}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button class="btn btn-outline-primary btn-sm me-2" onclick="editPlatform(${platform.id})">
+                                <i class="fas fa-edit me-1"></i>수정
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deletePlatform(${platform.id}, '${platform.platform_name}')">
+                                <i class="fas fa-trash me-1"></i>삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 예약업체 등록 모달 열기
+        function openPlatformModal(platformId = null) {
+            editingPlatformId = platformId;
+            const modal = new bootstrap.Modal(document.getElementById('platformModal'));
+            const title = document.getElementById('platformModalTitle');
+            
+            if (platformId) {
+                title.textContent = '예약업체 수정';
+                loadPlatformForEdit(platformId);
+            } else {
+                title.textContent = '예약업체 등록';
+                document.getElementById('platformForm').reset();
+                document.getElementById('platformId').value = '';
+            }
+            
+            modal.show();
+        }
+
+        // 예약업체 정보 로드 (수정용)
+        async function loadPlatformForEdit(platformId) {
+            try {
+                const response = await fetch(`/api/platforms/${platformId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const platform = data.platform;
+                    
+                    document.getElementById('platformId').value = platform.id;
+                    document.getElementById('platform_name').value = platform.platform_name;
+                    document.getElementById('platform_code').value = platform.platform_code;
+                    document.getElementById('platform_contact_person').value = platform.contact_person || '';
+                    document.getElementById('platform_email').value = platform.email || '';
+                    document.getElementById('platform_phone').value = platform.phone || '';
+                    document.getElementById('commission_rate').value = platform.commission_rate || 0;
+                    document.getElementById('settlement_cycle').value = platform.settlement_cycle || 'monthly';
+                    document.getElementById('payment_terms').value = platform.payment_terms || '';
+                    document.getElementById('platform_memo').value = platform.memo || '';
+                } else {
+                    showPlatformAlert('danger', '예약업체 정보를 불러오는데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('예약업체 정보 로드 실패:', error);
+                showPlatformAlert('danger', '예약업체 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 예약업체 저장
+        async function savePlatform() {
+            const form = document.getElementById('platformForm');
+            const formData = new FormData(form);
+            
+            const platformData = {
+                platform_name: formData.get('platform_name'),
+                platform_code: formData.get('platform_code'),
+                contact_person: formData.get('contact_person'),
+                email: formData.get('email'),
+                phone: formData.get('phone'),
+                commission_rate: parseFloat(formData.get('commission_rate')) || 0,
+                settlement_cycle: formData.get('settlement_cycle'),
+                payment_terms: formData.get('payment_terms'),
+                memo: formData.get('memo')
+            };
+            
+            try {
+                const url = editingPlatformId ? `/api/platforms/${editingPlatformId}` : '/api/platforms';
+                const method = editingPlatformId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(platformData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showPlatformAlert('success', data.message);
+                    bootstrap.Modal.getInstance(document.getElementById('platformModal')).hide();
+                    loadPlatforms();
+                } else {
+                    showPlatformAlert('danger', data.message);
+                }
+                
+            } catch (error) {
+                console.error('예약업체 저장 실패:', error);
+                showPlatformAlert('danger', '예약업체 저장에 실패했습니다.');
+            }
+        }
+
+        // 예약업체 수정
+        function editPlatform(platformId) {
+            openPlatformModal(platformId);
+        }
+
+        // 예약업체 삭제
+        async function deletePlatform(platformId, platformName) {
+            if (!confirm(`'${platformName}' 업체를 정말 삭제하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/platforms/${platformId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showPlatformAlert('success', data.message);
+                    loadPlatforms();
+                } else {
+                    showPlatformAlert('danger', data.message);
+                }
+                
+            } catch (error) {
+                console.error('예약업체 삭제 실패:', error);
+                showPlatformAlert('danger', '예약업체 삭제에 실패했습니다.');
+            }
+        }
+
+        // 정산 주기 텍스트
+        function getSettlementCycleText(cycle) {
+            const cycleMap = {
+                'weekly': '주간',
+                'biweekly': '격주',
+                'monthly': '월간',
+                'quarterly': '분기'
+            };
+            return cycleMap[cycle] || cycle;
+        }
+
+        // 예약업체 알림 표시
+        function showPlatformAlert(type, message) {
+            const alertArea = document.getElementById('platformAlertArea');
+            alertArea.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show alert-custom" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            setTimeout(() => {
+                alertArea.innerHTML = '';
+            }, 5000);
+        }
+
+        // ============================================
+        // 수배업체 관리 함수들
+        // ============================================
 
         // 수배업체 목록 로드
         async function loadVendors() {
@@ -740,6 +1092,15 @@
                     bootstrap.Alert.getOrCreateInstance(alert).close();
                 }
             }, 5000);
+        }
+
+        // 금액 포맷팅
+        function formatCurrency(amount) {
+            if (!amount) return '$0';
+            return '$' + Number(amount).toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
         }
 
         // ==================== 직원 관리 기능 ====================

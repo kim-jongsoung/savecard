@@ -428,6 +428,26 @@ async function initializeDatabase() {
           `);
           console.log('✅ vendors 테이블 생성 완료');
           
+          // 4. platforms 테이블 (예약업체/플랫폼 정보 - 정산 관리용)
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS platforms (
+              id SERIAL PRIMARY KEY,
+              platform_name VARCHAR(100) NOT NULL UNIQUE,
+              platform_code VARCHAR(50) NOT NULL UNIQUE,
+              contact_person VARCHAR(50),
+              email VARCHAR(100),
+              phone VARCHAR(20),
+              commission_rate DECIMAL(5,2) DEFAULT 0,
+              settlement_cycle VARCHAR(20) DEFAULT 'monthly',
+              payment_terms VARCHAR(50),
+              memo TEXT,
+              is_active BOOLEAN DEFAULT true,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          console.log('✅ platforms 테이블 생성 완료');
+          
           // 2. vendor_products 테이블 (업체별 담당 상품 - 자동 매칭용)
           await pool.query(`
             CREATE TABLE IF NOT EXISTS vendor_products (
@@ -9618,6 +9638,210 @@ app.delete('/api/vendors/:vendorId/products/:productId', requireAuth, async (req
         res.status(500).json({
             success: false,
             message: '상품명 삭제 실패: ' + error.message
+        });
+    }
+});
+
+// ============================================
+// 예약업체(플랫폼) 관리 API
+// ============================================
+
+// 예약업체 목록 조회
+app.get('/api/platforms', requireAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT 
+                p.*,
+                COUNT(DISTINCT r.id) as reservation_count,
+                COALESCE(SUM(r.total_amount), 0) as total_amount
+            FROM platforms p
+            LEFT JOIN reservations r ON p.platform_name = r.platform_name
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        `;
+        
+        const result = await pool.query(query);
+        
+        res.json({
+            success: true,
+            platforms: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 예약업체 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약업체 목록 조회 실패: ' + error.message
+        });
+    }
+});
+
+// 예약업체 단일 조회
+app.get('/api/platforms/:platformId', requireAuth, async (req, res) => {
+    try {
+        const { platformId } = req.params;
+        
+        const query = 'SELECT * FROM platforms WHERE id = $1';
+        const result = await pool.query(query, [platformId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약업체를 찾을 수 없습니다'
+            });
+        }
+        
+        res.json({
+            success: true,
+            platform: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 예약업체 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약업체 조회 실패: ' + error.message
+        });
+    }
+});
+
+// 예약업체 등록
+app.post('/api/platforms', requireAuth, async (req, res) => {
+    try {
+        const { platform_name, platform_code, contact_person, email, phone,
+                commission_rate, settlement_cycle, payment_terms, memo } = req.body;
+        
+        if (!platform_name || !platform_code) {
+            return res.status(400).json({
+                success: false,
+                message: '업체명과 업체 코드는 필수 항목입니다'
+            });
+        }
+        
+        const query = `
+            INSERT INTO platforms (
+                platform_name, platform_code, contact_person, email, phone,
+                commission_rate, settlement_cycle, payment_terms, memo,
+                is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, [
+            platform_name, platform_code, contact_person || null, email || null, phone || null,
+            commission_rate || 0, settlement_cycle || 'monthly', payment_terms || null,
+            memo || null
+        ]);
+        
+        console.log('✅ 예약업체 등록 완료:', platform_name);
+        
+        res.json({
+            success: true,
+            message: '예약업체가 등록되었습니다',
+            platform: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 예약업체 등록 오류:', error);
+        
+        if (error.code === '23505') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 등록된 업체명 또는 코드입니다'
+            });
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: '예약업체 등록 실패: ' + error.message
+        });
+    }
+});
+
+// 예약업체 수정
+app.put('/api/platforms/:platformId', requireAuth, async (req, res) => {
+    try {
+        const { platformId } = req.params;
+        const { platform_name, platform_code, contact_person, email, phone,
+                commission_rate, settlement_cycle, payment_terms, memo, is_active } = req.body;
+        
+        if (!platform_name || !platform_code) {
+            return res.status(400).json({
+                success: false,
+                message: '업체명과 업체 코드는 필수 항목입니다'
+            });
+        }
+        
+        const query = `
+            UPDATE platforms 
+            SET platform_name = $1, platform_code = $2, contact_person = $3,
+                email = $4, phone = $5, commission_rate = $6,
+                settlement_cycle = $7, payment_terms = $8, memo = $9,
+                is_active = $10, updated_at = NOW()
+            WHERE id = $11
+            RETURNING *
+        `;
+        
+        const result = await pool.query(query, [
+            platform_name, platform_code, contact_person || null, email || null, phone || null,
+            commission_rate || 0, settlement_cycle || 'monthly', payment_terms || null,
+            memo || null, is_active !== undefined ? is_active : true, platformId
+        ]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약업체를 찾을 수 없습니다'
+            });
+        }
+        
+        console.log('✅ 예약업체 수정 완료:', platform_name);
+        
+        res.json({
+            success: true,
+            message: '예약업체가 수정되었습니다',
+            platform: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 예약업체 수정 오류:', error);
+        
+        if (error.code === '23505') {
+            return res.status(400).json({
+                success: false,
+                message: '이미 등록된 업체명 또는 코드입니다'
+            });
+        }
+        
+        res.status(500).json({
+            success: false,
+            message: '예약업체 수정 실패: ' + error.message
+        });
+    }
+});
+
+// 예약업체 삭제
+app.delete('/api/platforms/:platformId', requireAuth, async (req, res) => {
+    try {
+        const { platformId } = req.params;
+        
+        const query = 'DELETE FROM platforms WHERE id = $1 RETURNING *';
+        const result = await pool.query(query, [platformId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약업체를 찾을 수 없습니다'
+            });
+        }
+        
+        console.log('✅ 예약업체 삭제 완료:', result.rows[0].platform_name);
+        
+        res.json({
+            success: true,
+            message: '예약업체가 삭제되었습니다'
+        });
+    } catch (error) {
+        console.error('❌ 예약업체 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약업체 삭제 실패: ' + error.message
         });
     }
 });
