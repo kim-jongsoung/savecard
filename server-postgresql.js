@@ -5517,6 +5517,172 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     }
 });
 
+// ==================== 북마클릿 HTML Ingest API ====================
+
+// Multer 설정 (메모리 저장)
+const htmlUpload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB 제한
+    },
+    fileFilter: (req, file, cb) => {
+        // HTML 파일만 허용
+        if (file.mimetype === 'text/html' || file.originalname.endsWith('.html')) {
+            cb(null, true);
+        } else {
+            cb(new Error('HTML 파일만 업로드 가능합니다.'));
+        }
+    }
+});
+
+// 북마클릿: HTML 수신 및 파싱 API
+app.post('/api/ingest/html', requireAuth, htmlUpload.single('html'), async (req, res) => {
+    try {
+        console.log('📥 북마클릿: HTML 수신 시작');
+        
+        // HTML 파일 확인
+        if (!req.file) {
+            return res.status(400).json({
+                ok: false,
+                message: 'HTML 파일이 전송되지 않았습니다.'
+            });
+        }
+        
+        // HTML 내용 추출
+        const htmlContent = req.file.buffer.toString('utf-8');
+        const pageUrl = req.body.page_url || 'Unknown';
+        
+        console.log('📄 HTML 파일 정보:', {
+            size: req.file.size,
+            filename: req.file.originalname,
+            pageUrl: pageUrl
+        });
+        
+        // HTML에서 텍스트 추출 (간단한 태그 제거)
+        let textContent = htmlContent
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // 스크립트 제거
+            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '') // 스타일 제거
+            .replace(/<[^>]+>/g, ' ') // HTML 태그 제거
+            .replace(/\s+/g, ' ') // 연속 공백 제거
+            .trim();
+        
+        console.log('📝 추출된 텍스트 길이:', textContent.length);
+        
+        // OpenAI로 파싱
+        let parsedData;
+        let parsingMethod = 'OpenAI';
+        let confidence = 0.8;
+        let extractedNotes = `북마클릿으로 수집됨 - 출처: ${pageUrl}`;
+        
+        try {
+            const aiResult = await parseBooking(textContent);
+            parsedData = aiResult;
+            confidence = aiResult.confidence || 0.8;
+            extractedNotes = `${extractedNotes}\n${aiResult.extracted_notes || ''}`;
+            console.log('✅ OpenAI 파싱 성공');
+        } catch (error) {
+            console.error('❌ OpenAI 파싱 실패:', error.message);
+            return res.status(500).json({
+                ok: false,
+                message: 'AI 파싱에 실패했습니다: ' + error.message
+            });
+        }
+        
+        // 정규화 처리
+        const normalizedData = normalizeReservationData(parsedData);
+        
+        // 메모에 북마클릿 정보 추가
+        normalizedData.memo = normalizedData.memo 
+            ? `${normalizedData.memo}\n\n[북마클릿 수집: ${pageUrl}]`
+            : `[북마클릿 수집: ${pageUrl}]`;
+        
+        // 예약번호 중복 체크
+        if (normalizedData.reservation_number) {
+            const checkQuery = 'SELECT id FROM reservations WHERE reservation_number = $1';
+            const existingReservation = await pool.query(checkQuery, [normalizedData.reservation_number]);
+            
+            if (existingReservation.rows.length > 0) {
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+                normalizedData.reservation_number = `${normalizedData.reservation_number}_${random}`;
+                console.log('🔄 중복 예약번호 감지, 새 번호 생성:', normalizedData.reservation_number);
+            }
+        } else {
+            // 예약번호가 없으면 자동 생성
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substr(2, 6).toUpperCase();
+            normalizedData.reservation_number = `BM_${timestamp}_${random}`;
+            console.log('🎫 예약번호 자동 생성:', normalizedData.reservation_number);
+        }
+        
+        // 예약 테이블에 저장
+        const insertQuery = `
+            INSERT INTO reservations (
+                reservation_number, confirmation_number, channel, platform_name,
+                product_name, package_type, total_amount, quantity, guest_count,
+                korean_name, english_first_name, english_last_name, email, phone, kakao_id,
+                people_adult, people_child, people_infant, adult_unit_price, child_unit_price,
+                usage_date, usage_time, reservation_datetime, payment_status,
+                memo, created_at, updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW(), NOW()
+            ) RETURNING id
+        `;
+        
+        const values = [
+            normalizedData.reservation_number || null,
+            normalizedData.confirmation_number || null,
+            normalizedData.channel || '북마클릿',
+            normalizedData.platform_name || 'BOOKMARKLET',
+            normalizedData.product_name || null,
+            normalizedData.package_type || null,
+            normalizedData.total_amount || null,
+            normalizedData.quantity || 1,
+            normalizedData.guest_count || null,
+            normalizedData.korean_name || null,
+            normalizedData.english_first_name || null,
+            normalizedData.english_last_name || null,
+            normalizedData.email || null,
+            normalizedData.phone || null,
+            normalizedData.kakao_id || null,
+            normalizedData.people_adult || null,
+            normalizedData.people_child || null,
+            normalizedData.people_infant || null,
+            normalizedData.adult_unit_price || null,
+            normalizedData.child_unit_price || null,
+            normalizedData.usage_date || null,
+            normalizedData.usage_time || null,
+            normalizedData.reservation_datetime || null,
+            normalizedData.payment_status || '확인필요',
+            normalizedData.memo || null
+        ];
+        
+        const result = await pool.query(insertQuery, values);
+        const reservationId = result.rows[0].id;
+        
+        console.log('✅ 북마클릿: 예약 저장 완료, ID:', reservationId);
+        
+        // 성공 응답
+        res.json({
+            ok: true,
+            message: '예약이 성공적으로 등록되었습니다.',
+            reservation_id: reservationId,
+            reservation_number: normalizedData.reservation_number,
+            confidence: confidence,
+            parsing_method: parsingMethod
+        });
+        
+    } catch (error) {
+        console.error('❌ 북마클릿 처리 오류:', error);
+        res.status(500).json({
+            ok: false,
+            message: '예약 등록 중 오류가 발생했습니다: ' + error.message,
+            error: error.stack
+        });
+    }
+});
+
 // 예약 직접 저장 API
 app.post('/admin/reservations/save', requireAuth, async (req, res) => {
     try {

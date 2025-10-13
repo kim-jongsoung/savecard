@@ -26,6 +26,9 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="fas fa-inbox me-2"></i>인박스 - 예약 파싱 및 관리</h2>
                     <div>
+                        <button class="btn btn-success me-2" onclick="openBookmarkletModal()">
+                            <i class="fas fa-bookmark me-1"></i>북마클릿 설치
+                        </button>
                         <button class="btn btn-primary" onclick="openRulesModal()">
                             <i class="fas fa-cogs me-1"></i>파싱 규칙 설정
                         </button>
@@ -1408,6 +1411,25 @@
             }
         }
 
+        // 북마클릿 모달 열기
+        function openBookmarkletModal() {
+            const modal = new bootstrap.Modal(document.getElementById('bookmarkletModal'));
+            modal.show();
+        }
+
+        // 북마클릿 코드 복사
+        function copyBookmarkletCode() {
+            const codeElement = document.getElementById('bookmarkletCode');
+            const code = codeElement.textContent;
+            
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('북마클릿 코드가 클립보드에 복사되었습니다!', 'success');
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                showNotification('복사에 실패했습니다. 직접 선택하여 복사해주세요.', 'danger');
+            });
+        }
+
         // 알림 메시지 표시 함수
         function showNotification(message, type = 'info') {
             // 기존 알림 제거
@@ -1436,5 +1458,169 @@
             }, 3000);
         }
     </script>
+
+    <!-- 북마클릿 설치 모달 -->
+    <div class="modal fade" id="bookmarkletModal" tabindex="-1" aria-labelledby="bookmarkletModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="bookmarkletModalLabel">
+                        <i class="fas fa-bookmark me-2"></i>북마클릿(Bookmarklet) 설치 가이드
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 북마클릿이란? -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading"><i class="fas fa-lightbulb me-2"></i>북마클릿이란?</h6>
+                        <p class="mb-2">브라우저 즐겨찾기(북마크)에 저장하는 <strong>작은 자바스크립트 프로그램</strong>입니다.</p>
+                        <p class="mb-0">
+                            <i class="fas fa-check-circle text-success me-1"></i>
+                            플랫폼 예약 상세 페이지에서 <strong>버튼 한 번만 클릭</strong>하면,<br>
+                            <i class="fas fa-check-circle text-success me-1 ms-3"></i>
+                            해당 페이지의 HTML이 자동으로 우리 시스템으로 전송되어 AI가 파싱합니다!
+                        </p>
+                    </div>
+
+                    <!-- 장점 -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-star text-warning me-2"></i>왜 필요한가요?</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-danger"><i class="fas fa-times-circle me-1"></i>기존 방식</h6>
+                                    <ul class="text-muted">
+                                        <li>이메일 링크 클릭 → 플랫폼 로그인</li>
+                                        <li>마이페이지 → 예약 상세 페이지 열기</li>
+                                        <li>정보 복사 → 붙여넣기 → 파싱</li>
+                                        <li><strong>번거롭고 시간 소요!</strong></li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-success"><i class="fas fa-check-circle me-1"></i>북마클릿 방식</h6>
+                                    <ul>
+                                        <li>플랫폼에 <strong>이미 로그인된 상태</strong></li>
+                                        <li>예약 상세 페이지에서</li>
+                                        <li><strong>북마크 버튼 한 번 클릭!</strong></li>
+                                        <li>자동으로 HTML 전송 → AI 파싱 → 인박스 등록 ✨</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 설치 방법 -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-download me-2"></i>설치 방법 (한 번만 하면 됨)</h6>
+                        </div>
+                        <div class="card-body">
+                            <ol class="mb-3">
+                                <li class="mb-2">
+                                    <strong>브라우저 북마크바 표시</strong>
+                                    <ul class="text-muted small">
+                                        <li>Chrome/Edge: <kbd>Ctrl+Shift+B</kbd></li>
+                                        <li>Safari: <kbd>⌘+Shift+B</kbd></li>
+                                    </ul>
+                                </li>
+                                <li class="mb-2">
+                                    <strong>북마크바에서 마우스 우클릭</strong> → <strong>"새 북마크 추가"</strong> 선택
+                                </li>
+                                <li class="mb-2">
+                                    <strong>이름</strong>: <code>📥 예약전송</code> (원하는 이름으로 변경 가능)
+                                </li>
+                                <li class="mb-2">
+                                    <strong>URL/주소</strong>: 아래 코드를 <strong>전체 복사</strong>하여 붙여넣기
+                                    <div class="mt-2">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control font-monospace small" id="bookmarkletCode" readonly
+                                                   value="javascript:(()=>{const u='https://www.guamsavecard.com/api/ingest/html';const b=new Blob([document.documentElement.outerHTML],{type:'text/html'});const f=new FormData();f.append('html',b,'page.html');f.append('page_url',location.href);fetch(u,{method:'POST',body:f,credentials:'include'}).then(r=>r.json()).then(x=>alert('전송완료: '+(x.ok?'성공':'실패'))).catch(e=>alert('오류: '+e));})();">
+                                            <button class="btn btn-outline-primary" type="button" onclick="copyBookmarkletCode()">
+                                                <i class="fas fa-copy me-1"></i>복사
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            위 코드를 복사하여 북마크의 URL/주소 필드에 붙여넣으세요
+                                        </small>
+                                    </div>
+                                </li>
+                                <li class="mb-2">
+                                    <strong>저장</strong> 클릭! 완료! 🎉
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <!-- 사용 방법 -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-rocket me-2"></i>사용 방법</h6>
+                        </div>
+                        <div class="card-body">
+                            <ol>
+                                <li class="mb-2">
+                                    <strong>플랫폼 사이트에 로그인</strong> (KLOOK, Viator, NOL 등)
+                                </li>
+                                <li class="mb-2">
+                                    <strong>예약 상세 페이지</strong> (마이페이지 → 예약 내역)로 이동
+                                </li>
+                                <li class="mb-2">
+                                    브라우저 북마크바에서 <strong>📥 예약전송</strong> 클릭!
+                                </li>
+                                <li class="mb-2">
+                                    잠시 후 <span class="badge bg-success">전송완료: 성공</span> 팝업이 뜨면 완료!
+                                </li>
+                                <li class="mb-0">
+                                    <strong>인박스 페이지</strong>를 새로고침하면 자동으로 파싱된 예약이 표시됩니다 ✨
+                                </li>
+                            </ol>
+                            <div class="alert alert-warning mt-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>주의:</strong> 반드시 <strong>플랫폼에 로그인된 상태</strong>에서 사용하세요!<br>
+                                로그인하지 않으면 예약 상세 정보를 읽을 수 없습니다.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 문제 해결 -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-wrench me-2"></i>문제 해결</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="mb-0">
+                                <dt><i class="fas fa-question-circle text-info me-1"></i>"전송완료: 실패" 메시지가 뜰 때</dt>
+                                <dd class="text-muted">
+                                    → 괌세이브카드 관리자에 로그인되어 있는지 확인하세요<br>
+                                    → 브라우저 쿠키가 차단되어 있지 않은지 확인하세요
+                                </dd>
+                                
+                                <dt class="mt-3"><i class="fas fa-question-circle text-info me-1"></i>북마크를 클릭해도 아무 반응이 없을 때</dt>
+                                <dd class="text-muted">
+                                    → 북마크 URL에 코드가 올바르게 복사되었는지 확인하세요<br>
+                                    → <code>javascript:(()=>{...</code>로 시작해야 합니다
+                                </dd>
+                                
+                                <dt class="mt-3"><i class="fas fa-question-circle text-info me-1"></i>파싱이 제대로 안 될 때</dt>
+                                <dd class="text-muted mb-0">
+                                    → 플랫폼의 페이지 구조가 변경되었을 수 있습니다<br>
+                                    → 인박스에서 수동으로 수정하거나 개발팀에 문의하세요
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-primary" onclick="copyBookmarkletCode()">
+                        <i class="fas fa-copy me-1"></i>코드 복사
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
