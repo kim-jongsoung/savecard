@@ -175,6 +175,34 @@ async function ensureAllColumns() {
       }
     }
 
+    // platforms - 별칭 시스템 추가
+    try {
+      await client.query(`
+        ALTER TABLE platforms
+        ADD COLUMN IF NOT EXISTS aliases JSONB DEFAULT '[]'::jsonb
+      `);
+      
+      console.log('✅ platforms 테이블 aliases 컬럼 추가 완료');
+      
+      // 정산 정보 컬럼 제거 (선택적)
+      try {
+        await client.query(`
+          ALTER TABLE platforms 
+          DROP COLUMN IF EXISTS commission_rate,
+          DROP COLUMN IF EXISTS settlement_cycle,
+          DROP COLUMN IF EXISTS payment_terms
+        `);
+        console.log('✅ platforms 테이블 정산 정보 컬럼 제거 완료');
+      } catch (dropErr) {
+        console.log('ℹ️ platforms 정산 정보 컬럼 제거 스킵:', dropErr.message);
+      }
+    } catch (err) {
+      // platforms 테이블이 없으면 무시
+      if (err.code !== '42P01') {
+        console.warn('⚠️ platforms 컬럼 추가 경고:', err.message);
+      }
+    }
+
     console.log('🛠️ 모든 테이블 컬럼 보정 완료');
   } catch (err) {
     console.warn('⚠️ 컬럼 보정 중 경고:', err.message);
