@@ -13411,6 +13411,153 @@ async function startServer() {
             }
         }, 2000);
         
+        // ==================== 자동 정산 이관 배치 작업 ====================
+        
+        // 매일 자정에 실행되는 자동 이관 배치 (고객이용일이 지난 예약 자동 이관)
+        async function autoMigrateToSettlement() {
+            const client = await pool.connect();
+            try {
+                console.log('🤖 [자동 정산 이관] 배치 작업 시작:', new Date().toISOString());
+                
+                await client.query('BEGIN');
+                
+                // 이관 대상: 고객이용일(usage_date)이 오늘 이전이고, 
+                // payment_status가 'voucher_sent'이며, 취소가 아닌 예약
+                const targetQuery = `
+                    SELECT 
+                        r.id,
+                        r.reservation_number,
+                        r.usage_date,
+                        r.payment_status,
+                        r.platform_name,
+                        r.product_name
+                    FROM reservations r
+                    WHERE r.usage_date < CURRENT_DATE
+                    AND r.payment_status = 'voucher_sent'
+                    AND r.payment_status NOT IN ('cancelled', 'refunded')
+                    AND NOT EXISTS (
+                        SELECT 1 FROM settlements s 
+                        WHERE s.reservation_id = r.id
+                    )
+                    ORDER BY r.usage_date DESC
+                `;
+                
+                const targets = await client.query(targetQuery);
+                console.log(`📊 이관 대상 예약: ${targets.rows.length}건`);
+                
+                let successCount = 0;
+                let failCount = 0;
+                const errors = [];
+                
+                for (const reservation of targets.rows) {
+                    try {
+                        // settlements 테이블에 삽입
+                        await client.query(`
+                            INSERT INTO settlements (
+                                reservation_id,
+                                settlement_period,
+                                usage_date,
+                                status,
+                                auto_migrated,
+                                migrated_at,
+                                created_at
+                            ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                        `, [
+                            reservation.id,
+                            reservation.usage_date.toISOString().substring(0, 7), // YYYY-MM
+                            reservation.usage_date,
+                            'pending',
+                            true
+                        ]);
+                        
+                        // 예약 상태 업데이트 (settlement_pending)
+                        await client.query(`
+                            UPDATE reservations 
+                            SET payment_status = 'settlement_pending',
+                                updated_at = NOW()
+                            WHERE id = $1
+                        `, [reservation.id]);
+                        
+                        successCount++;
+                        console.log(`  ✅ ${reservation.reservation_number} (이용일: ${reservation.usage_date})`);
+                        
+                    } catch (error) {
+                        failCount++;
+                        errors.push({
+                            reservation_id: reservation.id,
+                            reservation_number: reservation.reservation_number,
+                            error: error.message
+                        });
+                        console.error(`  ❌ ${reservation.reservation_number} 이관 실패:`, error.message);
+                    }
+                }
+                
+                // 배치 로그 기록
+                await client.query(`
+                    INSERT INTO settlement_batch_logs (
+                        batch_date,
+                        batch_type,
+                        total_count,
+                        success_count,
+                        fail_count,
+                        error_details,
+                        executed_by,
+                        executed_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                `, [
+                    new Date(),
+                    'auto_migration',
+                    targets.rows.length,
+                    successCount,
+                    failCount,
+                    JSON.stringify(errors),
+                    'system'
+                ]);
+                
+                await client.query('COMMIT');
+                
+                console.log(`🎉 [자동 정산 이관] 완료 - 성공: ${successCount}, 실패: ${failCount}`);
+                
+                return {
+                    success: true,
+                    total: targets.rows.length,
+                    successCount,
+                    failCount,
+                    errors
+                };
+                
+            } catch (error) {
+                await client.query('ROLLBACK');
+                console.error('❌ [자동 정산 이관] 오류:', error);
+                return {
+                    success: false,
+                    error: error.message
+                };
+            } finally {
+                client.release();
+            }
+        }
+        
+        // 매일 자정 1시에 자동 실행 (node-cron 사용 시)
+        // const cron = require('node-cron');
+        // cron.schedule('0 1 * * *', autoMigrateToSettlement);
+        
+        // 수동 실행 API (테스트용)
+        app.post('/api/settlements/auto-migrate', requireAuth, async (req, res) => {
+            try {
+                console.log('🔧 수동 정산 이관 실행');
+                const result = await autoMigrateToSettlement();
+                res.json(result);
+            } catch (error) {
+                console.error('수동 정산 이관 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '자동 이관 실행 중 오류가 발생했습니다',
+                    error: error.message
+                });
+            }
+        });
+
         // ==================== 정산관리 API ====================
 
         // 정산관리 페이지 라우트
