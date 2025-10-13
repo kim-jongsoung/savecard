@@ -14055,6 +14055,317 @@ async function startServer() {
                 });
             }
         });
+
+        // ==================== 환율 관리 API ====================
+        
+        // 환율 조회 API (특정 날짜의 환율)
+        app.get('/api/exchange-rates/:currency/:date', requireAuth, async (req, res) => {
+            try {
+                const { currency, date } = req.params;
+                
+                // 해당 날짜의 환율 조회 (없으면 최근 환율)
+                const result = await pool.query(`
+                    SELECT * FROM exchange_rates
+                    WHERE currency_code = $1
+                    AND rate_date <= $2
+                    ORDER BY rate_date DESC, rate_time DESC
+                    LIMIT 1
+                `, [currency, date]);
+                
+                if (result.rows.length === 0) {
+                    return res.json({
+                        success: false,
+                        message: `${currency} 환율 정보가 없습니다.`
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    data: result.rows[0]
+                });
+                
+            } catch (error) {
+                console.error('환율 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '환율 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 환율 등록/수정 API
+        app.post('/api/exchange-rates', requireAuth, async (req, res) => {
+            try {
+                const { currency_code, rate_date, rate_time, rate, source } = req.body;
+                
+                if (!currency_code || !rate_date || !rate) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '통화코드, 날짜, 환율은 필수입니다.'
+                    });
+                }
+                
+                // UPSERT (중복 시 업데이트)
+                const result = await pool.query(`
+                    INSERT INTO exchange_rates (currency_code, rate_date, rate_time, rate, source)
+                    VALUES ($1, $2, $3, $4, $5)
+                    ON CONFLICT (currency_code, rate_date, rate_time)
+                    DO UPDATE SET rate = $4, source = $5, created_at = NOW()
+                    RETURNING *
+                `, [currency_code, rate_date, rate_time || '16:00:00', rate, source || 'manual']);
+                
+                res.json({
+                    success: true,
+                    message: '환율이 등록되었습니다.',
+                    data: result.rows[0]
+                });
+                
+            } catch (error) {
+                console.error('환율 등록 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '환율 등록 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 환율 목록 조회 API
+        app.get('/api/exchange-rates', requireAuth, async (req, res) => {
+            try {
+                const { currency, from_date, to_date } = req.query;
+                
+                let whereClause = '';
+                const queryParams = [];
+                
+                if (currency) {
+                    queryParams.push(currency);
+                    whereClause += ` WHERE currency_code = $${queryParams.length}`;
+                }
+                
+                if (from_date) {
+                    queryParams.push(from_date);
+                    whereClause += whereClause ? ' AND' : ' WHERE';
+                    whereClause += ` rate_date >= $${queryParams.length}`;
+                }
+                
+                if (to_date) {
+                    queryParams.push(to_date);
+                    whereClause += whereClause ? ' AND' : ' WHERE';
+                    whereClause += ` rate_date <= $${queryParams.length}`;
+                }
+                
+                const result = await pool.query(`
+                    SELECT * FROM exchange_rates
+                    ${whereClause}
+                    ORDER BY rate_date DESC, currency_code ASC
+                    LIMIT 100
+                `, queryParams);
+                
+                res.json({
+                    success: true,
+                    data: result.rows
+                });
+                
+            } catch (error) {
+                console.error('환율 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '환율 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
+        // ==================== 대량 정산 계산 API ====================
+        
+        // 대량 정산 계산 API (AI 기반 자동 계산)
+        app.post('/api/settlements/bulk-calculate', requireAuth, async (req, res) => {
+            const client = await pool.connect();
+            try {
+                const { reservation_ids, platform_id, supplier_id } = req.body;
+                
+                if (!reservation_ids || reservation_ids.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '정산할 예약을 선택해주세요.'
+                    });
+                }
+                
+                console.log(`🧮 대량 정산 계산 시작: ${reservation_ids.length}건`);
+                
+                await client.query('BEGIN');
+                
+                const results = [];
+                const errors = [];
+                
+                for (const reservationId of reservation_ids) {
+                    try {
+                        // 1. 예약 정보 조회
+                        const reservationResult = await client.query(`
+                            SELECT r.*, a.cost_amount as assignment_cost, a.cost_currency as assignment_currency
+                            FROM reservations r
+                            LEFT JOIN assignments a ON a.reservation_id = r.id
+                            WHERE r.id = $1
+                        `, [reservationId]);
+                        
+                        if (reservationResult.rows.length === 0) {
+                            throw new Error('예약을 찾을 수 없습니다');
+                        }
+                        
+                        const reservation = reservationResult.rows[0];
+                        
+                        // 2. 플랫폼 정산금 계산 (KRW)
+                        const grossAmountKrw = reservation.total_amount || 0;
+                        let commissionAmountKrw = 0;
+                        let commissionPercent = null;
+                        
+                        // RAG에서 플랫폼 수수료 정책 검색 (임시로 10% 가정)
+                        commissionPercent = 10;
+                        commissionAmountKrw = grossAmountKrw * (commissionPercent / 100);
+                        
+                        const netFromPlatformKrw = grossAmountKrw - commissionAmountKrw;
+                        
+                        // 3. 공급사 원가 계산 (현지통화 → KRW)
+                        const supplierCostCurrency = reservation.assignment_currency || 'USD';
+                        const supplierCostAmount = reservation.assignment_cost || 0;
+                        
+                        // 환율 조회 (체크인 전일 16:00 기준)
+                        const usageDate = new Date(reservation.usage_date);
+                        const dayBefore = new Date(usageDate);
+                        dayBefore.setDate(dayBefore.getDate() - 1);
+                        const fxRateDate = dayBefore.toISOString().split('T')[0];
+                        
+                        let fxRate = 1;
+                        let supplierCostKrw = supplierCostAmount;
+                        
+                        if (supplierCostCurrency !== 'KRW') {
+                            const fxResult = await client.query(`
+                                SELECT rate FROM exchange_rates
+                                WHERE currency_code = $1
+                                AND rate_date <= $2
+                                ORDER BY rate_date DESC, rate_time DESC
+                                LIMIT 1
+                            `, [supplierCostCurrency, fxRateDate]);
+                            
+                            if (fxResult.rows.length > 0) {
+                                fxRate = parseFloat(fxResult.rows[0].rate);
+                                supplierCostKrw = supplierCostAmount / fxRate; // 외화 → KRW
+                            } else {
+                                // 환율 없으면 기본값 사용 (USD: 1330, VND: 0.055)
+                                const defaultRates = { USD: 1330, VND: 0.055 };
+                                fxRate = defaultRates[supplierCostCurrency] || 1;
+                                supplierCostKrw = supplierCostAmount * fxRate;
+                            }
+                        }
+                        
+                        // 4. 마진 계산
+                        const marginKrw = netFromPlatformKrw - supplierCostKrw;
+                        const marginRate = netFromPlatformKrw > 0 ? (marginKrw / netFromPlatformKrw * 100) : 0;
+                        
+                        // 5. settlements 테이블에 저장/업데이트
+                        const settlementResult = await client.query(`
+                            INSERT INTO settlements (
+                                reservation_id,
+                                settlement_period,
+                                usage_date,
+                                platform_id,
+                                supplier_id,
+                                gross_amount_krw,
+                                commission_percent,
+                                commission_amount_krw,
+                                net_from_platform_krw,
+                                supplier_cost_currency,
+                                supplier_cost_amount,
+                                fx_rate,
+                                fx_rate_date,
+                                supplier_cost_krw,
+                                margin_krw,
+                                margin_rate,
+                                status,
+                                created_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
+                            ON CONFLICT (reservation_id) 
+                            DO UPDATE SET
+                                gross_amount_krw = $6,
+                                commission_percent = $7,
+                                commission_amount_krw = $8,
+                                net_from_platform_krw = $9,
+                                supplier_cost_currency = $10,
+                                supplier_cost_amount = $11,
+                                fx_rate = $12,
+                                fx_rate_date = $13,
+                                supplier_cost_krw = $14,
+                                margin_krw = $15,
+                                margin_rate = $16,
+                                updated_at = NOW()
+                            RETURNING id
+                        `, [
+                            reservationId,
+                            usageDate.toISOString().substring(0, 7), // YYYY-MM
+                            reservation.usage_date,
+                            platform_id || null,
+                            supplier_id || null,
+                            grossAmountKrw,
+                            commissionPercent,
+                            commissionAmountKrw,
+                            netFromPlatformKrw,
+                            supplierCostCurrency,
+                            supplierCostAmount,
+                            fxRate,
+                            fxRateDate,
+                            supplierCostKrw,
+                            marginKrw,
+                            marginRate.toFixed(2),
+                            'calculated'
+                        ]);
+                        
+                        results.push({
+                            reservation_id: reservationId,
+                            reservation_number: reservation.reservation_number,
+                            gross_amount_krw: grossAmountKrw,
+                            net_from_platform_krw: netFromPlatformKrw,
+                            supplier_cost_krw: supplierCostKrw,
+                            margin_krw: marginKrw,
+                            margin_rate: marginRate.toFixed(2)
+                        });
+                        
+                        console.log(`  ✅ ${reservation.reservation_number} 정산 완료: 마진 ${marginKrw.toFixed(0)}원 (${marginRate.toFixed(1)}%)`);
+                        
+                    } catch (error) {
+                        errors.push({
+                            reservation_id: reservationId,
+                            error: error.message
+                        });
+                        console.error(`  ❌ 예약 ${reservationId} 정산 실패:`, error.message);
+                    }
+                }
+                
+                await client.query('COMMIT');
+                
+                console.log(`🎉 대량 정산 완료 - 성공: ${results.length}, 실패: ${errors.length}`);
+                
+                res.json({
+                    success: true,
+                    message: `${results.length}건 정산 계산 완료`,
+                    data: {
+                        success_count: results.length,
+                        fail_count: errors.length,
+                        results,
+                        errors
+                    }
+                });
+                
+            } catch (error) {
+                await client.query('ROLLBACK');
+                console.error('❌ 대량 정산 계산 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '대량 정산 계산 중 오류가 발생했습니다.',
+                    error: error.message
+                });
+            } finally {
+                client.release();
+            }
+        });
         
         // ERP 확장 마이그레이션 함수
         async function runERPMigration() {
