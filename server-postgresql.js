@@ -6614,6 +6614,120 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
 });
 */
 
+// 예약 수정 API (예약관리 페이지용)
+app.patch('/api/reservations/:id', requireAuth, async (req, res) => {
+    try {
+        const reservationId = req.params.id;
+        const updateData = req.body;
+        
+        console.log('📝 예약 수정 요청:', {
+            id: reservationId,
+            data: updateData
+        });
+        
+        // 예약 존재 확인
+        const checkQuery = 'SELECT * FROM reservations WHERE id = $1';
+        const checkResult = await pool.query(checkQuery, [reservationId]);
+        
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 업데이트할 필드 동적 생성
+        const fields = [];
+        const values = [];
+        let paramIndex = 1;
+        
+        // 코어 필드 매핑
+        const fieldMapping = {
+            reservation_number: 'reservation_number',
+            platform_name: 'platform_name',
+            payment_status: 'payment_status',
+            product_name: 'product_name',
+            package_type: 'package_type',
+            usage_date: 'usage_date',
+            usage_time: 'usage_time',
+            reservation_datetime: 'reservation_datetime',
+            korean_name: 'korean_name',
+            english_first_name: 'english_first_name',
+            english_last_name: 'english_last_name',
+            phone: 'phone',
+            email: 'email',
+            kakao_id: 'kakao_id',
+            people_adult: 'people_adult',
+            people_child: 'people_child',
+            people_infant: 'people_infant',
+            adult_unit_price: 'adult_unit_price',
+            child_unit_price: 'child_unit_price',
+            infant_unit_price: 'infant_unit_price',
+            memo: 'memo',
+            total_amount: 'total_amount'
+        };
+        
+        // 제공된 필드만 업데이트
+        for (const [key, dbColumn] of Object.entries(fieldMapping)) {
+            if (updateData.hasOwnProperty(key)) {
+                fields.push(`${dbColumn} = $${paramIndex}`);
+                values.push(updateData[key]);
+                paramIndex++;
+            }
+        }
+        
+        // 업데이트할 필드가 없으면 에러
+        if (fields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: '업데이트할 데이터가 없습니다.'
+            });
+        }
+        
+        // updated_at 자동 추가
+        fields.push(`updated_at = NOW()`);
+        
+        // 예약 ID 추가
+        values.push(reservationId);
+        
+        // UPDATE 쿼리 실행
+        const updateQuery = `
+            UPDATE reservations 
+            SET ${fields.join(', ')} 
+            WHERE id = $${paramIndex}
+            RETURNING *
+        `;
+        
+        console.log('🔄 UPDATE 쿼리:', updateQuery);
+        console.log('📊 VALUES:', values);
+        
+        const result = await pool.query(updateQuery, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(500).json({
+                success: false,
+                message: '예약 수정에 실패했습니다.'
+            });
+        }
+        
+        console.log('✅ 예약 수정 완료:', result.rows[0]);
+        
+        res.json({
+            success: true,
+            message: '예약이 성공적으로 수정되었습니다.',
+            reservation: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('❌ 예약 수정 오류:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: '예약 수정 중 오류가 발생했습니다: ' + error.message,
+            error: error.stack
+        });
+    }
+});
+
 // 예약 삭제 API
 app.delete('/api/reservations/:id', requireAuth, async (req, res) => {
     try {
