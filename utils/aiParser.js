@@ -61,7 +61,9 @@ adult_unit_price, child_unit_price, payment_status
 - total_amount, adult_unit_price, child_unit_price 모두 적용
 
 🔍 필수 파싱 필드 (절대 누락 금지):
-- platform_name: 업체명/여행사명 (VASCO, NOL, KLOOK 등)
+- platform_name: 업체명/여행사명 (NOL, KLOOK 등)
+  ⚠️ 중요: "vasco", "바스코", "luxfind", "럭스파인드"는 자사 이름이므로 절대 platform_name으로 추출하지 마세요!
+  이 단어들이 나와도 무시하고, 실제 예약을 받은 외부 업체명만 추출하세요.
 - usage_date: 이용일/출발일/여행일 (YYYY-MM-DD)
 - usage_time: 이용시간/출발시간 (HH:MM:SS)
 - reservation_datetime: 예약일시/접수일시 (YYYY-MM-DD HH:MM:SS)
@@ -76,12 +78,12 @@ adult_unit_price, child_unit_price, payment_status
 - confidence: 파싱 신뢰도 (0.0~1.0, 소수점 2자리)
 - extracted_notes: 파싱 과정에서 발견한 특이사항이나 애매한 부분 설명
 
-✅ 출력 예시 1 (VASCO):
+✅ 출력 예시 1 (KLOOK):
 {
   "id": null,
   "reservation_number": "459447",
   "confirmation_number": "PROD:d7cb49",
-  "channel": "NOL 인터파크",
+  "channel": "KLOOK",
   "product_name": "괌 정글리버크루즈 원주민문화체험 맹글로브숲 수공예품만들기 물소타기",
   "total_amount": 304.00,
   "package_type": "1차 (선셋 & 별빛투어)",
@@ -102,7 +104,7 @@ adult_unit_price, child_unit_price, payment_status
   "issue_code_id": null,
   "code_issued": true,
   "code_issued_at": "2025-09-17 11:22:47",
-  "platform_name": "VASCO",
+  "platform_name": "KLOOK",
   "people_adult": 2,
   "people_child": 1,
   "people_infant": 0,
@@ -161,6 +163,8 @@ adult_unit_price, child_unit_price, payment_status
 - 원본 텍스트에서 찾을 수 있는 모든 부가 정보를 자연스러운 문장으로 정리
 
 🔍 파싱 가이드라인:
+- 업체명/여행사명 추출 시 "vasco", "바스코", "luxfind", "럭스파인드"는 제외 (자사 이름)
+- 외부 예약 업체명만 platform_name으로 추출 (예: NOL, KLOOK, Viator 등)
 - 업체명/여행사명이 없으면 platform_name을 "UNKNOWN"으로 설정
 - 이용일/출발일/여행일을 찾아서 usage_date에 YYYY-MM-DD 형식으로 저장
 - 이용시간/출발시간을 찾아서 usage_time에 HH:MM:SS 형식으로 저장
