@@ -5693,6 +5693,16 @@ app.post('/api/ingest/html', requireAuth, htmlUpload.single('html'), async (req,
         // 정규화 처리
         const normalizedData = normalizeReservationData(parsedData);
         
+        // 🔍 별칭 조회 → 표준 업체명으로 변환
+        if (normalizedData.platform_name) {
+            console.log('🔍 북마클릿: 업체명 변환 시도:', normalizedData.platform_name);
+            const standardName = await resolvePlatformAlias(normalizedData.platform_name);
+            if (standardName) {
+                normalizedData.platform_name = standardName;
+                normalizedData.channel = standardName; // channel도 동기화
+            }
+        }
+        
         // 메모에 북마클릿 정보 추가
         normalizedData.memo = normalizedData.memo 
             ? `${normalizedData.memo}\n\n[북마클릿 수집: ${pageUrl}]`
