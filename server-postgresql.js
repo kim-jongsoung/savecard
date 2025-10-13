@@ -13406,10 +13406,147 @@ async function startServer() {
             try {
                 await initializeDatabase();
                 console.log('✅ 데이터베이스 초기화 완료');
+                
+                // 정산관리 마이그레이션 실행
+                await runSettlementsMigration();
+                console.log('✅ 정산관리 마이그레이션 완료');
             } catch (error) {
                 console.error('⚠️ 데이터베이스 초기화 실패 (서버는 계속 실행):', error.message);
             }
         }, 2000);
+        
+        // 정산관리 마이그레이션 함수
+        async function runSettlementsMigration() {
+            try {
+                console.log('🔧 정산관리 테이블 마이그레이션 시작...');
+                
+                // settlements 테이블 확장 컬럼들
+                const columnsToAdd = [
+                    { name: 'platform_id', type: 'INTEGER' },
+                    { name: 'supplier_id', type: 'INTEGER' },
+                    { name: 'usage_date', type: 'DATE' },
+                    { name: 'gross_amount_krw', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+                    { name: 'commission_percent', type: 'DECIMAL(5,2)' },
+                    { name: 'commission_flat_krw', type: 'DECIMAL(15,2)' },
+                    { name: 'commission_amount_krw', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+                    { name: 'net_from_platform_krw', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+                    { name: 'supplier_cost_currency', type: 'VARCHAR(3) DEFAULT \'USD\'' },
+                    { name: 'supplier_cost_amount', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+                    { name: 'fx_rate', type: 'DECIMAL(10,4)' },
+                    { name: 'fx_rate_date', type: 'DATE' },
+                    { name: 'supplier_cost_krw', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+                    { name: 'margin_krw', type: 'DECIMAL(15,2) DEFAULT 0.00' },
+                    { name: 'rag_document_ids', type: 'TEXT[]' },
+                    { name: 'rag_evidence', type: 'JSONB' },
+                    { name: 'payment_received', type: 'BOOLEAN DEFAULT FALSE' },
+                    { name: 'payment_received_at', type: 'TIMESTAMP' },
+                    { name: 'payment_received_amount', type: 'DECIMAL(15,2)' },
+                    { name: 'payment_received_note', type: 'TEXT' },
+                    { name: 'payment_sent', type: 'BOOLEAN DEFAULT FALSE' },
+                    { name: 'payment_sent_at', type: 'TIMESTAMP' },
+                    { name: 'payment_sent_amount', type: 'DECIMAL(15,2)' },
+                    { name: 'payment_sent_currency', type: 'VARCHAR(3)' },
+                    { name: 'payment_sent_note', type: 'TEXT' },
+                    { name: 'auto_migrated', type: 'BOOLEAN DEFAULT FALSE' },
+                    { name: 'migrated_at', type: 'TIMESTAMP' }
+                ];
+                
+                for (const col of columnsToAdd) {
+                    try {
+                        await pool.query(`
+                            ALTER TABLE settlements 
+                            ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}
+                        `);
+                        console.log(`  ✅ settlements.${col.name} 추가 완료`);
+                    } catch (error) {
+                        if (!error.message.includes('already exists')) {
+                            console.error(`  ⚠️ settlements.${col.name} 추가 실패:`, error.message);
+                        }
+                    }
+                }
+                
+                // exchange_rates 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS exchange_rates (
+                        id SERIAL PRIMARY KEY,
+                        currency_code VARCHAR(3) NOT NULL,
+                        rate_date DATE NOT NULL,
+                        rate_time TIME DEFAULT '16:00:00',
+                        base_currency VARCHAR(3) DEFAULT 'KRW',
+                        rate DECIMAL(10,4) NOT NULL,
+                        source VARCHAR(50) DEFAULT 'manual',
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        UNIQUE(currency_code, rate_date, rate_time)
+                    )
+                `);
+                console.log('  ✅ exchange_rates 테이블 생성 완료');
+                
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_exchange_rates_currency_date 
+                    ON exchange_rates(currency_code, rate_date DESC)
+                `);
+                
+                // rag_documents 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS rag_documents (
+                        id SERIAL PRIMARY KEY,
+                        document_name VARCHAR(255) NOT NULL,
+                        document_type VARCHAR(50) NOT NULL,
+                        platform_id INTEGER,
+                        supplier_id INTEGER,
+                        effective_from DATE,
+                        effective_to DATE,
+                        file_path TEXT,
+                        content_text TEXT,
+                        vector_embedding TEXT,
+                        metadata JSONB,
+                        uploaded_by VARCHAR(100),
+                        uploaded_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    )
+                `);
+                console.log('  ✅ rag_documents 테이블 생성 완료');
+                
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_rag_documents_type 
+                    ON rag_documents(document_type)
+                `);
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_rag_documents_platform 
+                    ON rag_documents(platform_id)
+                `);
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_rag_documents_supplier 
+                    ON rag_documents(supplier_id)
+                `);
+                
+                // settlement_batch_logs 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS settlement_batch_logs (
+                        id SERIAL PRIMARY KEY,
+                        batch_date DATE NOT NULL,
+                        batch_type VARCHAR(50) NOT NULL,
+                        total_count INTEGER DEFAULT 0,
+                        success_count INTEGER DEFAULT 0,
+                        fail_count INTEGER DEFAULT 0,
+                        error_details JSONB,
+                        executed_by VARCHAR(100),
+                        executed_at TIMESTAMP DEFAULT NOW()
+                    )
+                `);
+                console.log('  ✅ settlement_batch_logs 테이블 생성 완료');
+                
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_settlement_batch_logs_date 
+                    ON settlement_batch_logs(batch_date DESC)
+                `);
+                
+                console.log('🎉 정산관리 마이그레이션 완료!');
+            } catch (error) {
+                console.error('❌ 정산관리 마이그레이션 오류:', error);
+                throw error;
+            }
+        }
         
         // ==================== 자동 정산 이관 배치 작업 ====================
         
