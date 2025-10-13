@@ -508,10 +508,34 @@
 
             // 모든 필드 매핑 (AI 파서 필드명 → 폼 필드명)
             const companyName = extractCompanyName(data);
+            
+            // 🔍 별칭 조회 → 표준 업체명으로 변환
+            let standardPlatformName = companyName;
+            if (companyName) {
+                try {
+                    const aliasResponse = await fetch('/api/platforms/resolve-alias', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ alias: companyName })
+                    });
+                    const aliasData = await aliasResponse.json();
+                    
+                    if (aliasData.success && aliasData.matched) {
+                        standardPlatformName = aliasData.standardName;
+                        console.log(`✅ 업체명 변환: "${companyName}" → "${standardPlatformName}" (${aliasData.matchType})`);
+                    } else {
+                        console.log(`ℹ️ 업체명 "${companyName}" - 별칭 미등록 (원본 유지)`);
+                    }
+                } catch (error) {
+                    console.error('❌ 별칭 조회 실패:', error);
+                    // 실패 시 원본 유지
+                }
+            }
+            
             const fieldMappings = {
                 'reservation_number': data.reservation_number || data.booking_reference || data.order_number || '',
-                'platform_name': companyName,
-                'channel': companyName,  // 업체명과 플랫폼명 동기화
+                'platform_name': standardPlatformName,  // 표준 업체명
+                'channel': standardPlatformName,        // 표준 업체명 (동기화)
                 'payment_status': 'pending', // 기본값: 대기중 (신규예약)
                 'product_name': data.product_name || data.tour_name || data.service_name || '',
                 'package_type': data.package_type || data.package || data.option || '',

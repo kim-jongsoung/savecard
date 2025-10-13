@@ -9707,7 +9707,7 @@ app.get('/api/platforms/:platformId', requireAuth, async (req, res) => {
 app.post('/api/platforms', requireAuth, async (req, res) => {
     try {
         const { platform_name, platform_code, contact_person, email, phone,
-                commission_rate, settlement_cycle, payment_terms, memo } = req.body;
+                aliases, memo } = req.body;
         
         if (!platform_name || !platform_code) {
             return res.status(400).json({
@@ -9716,22 +9716,23 @@ app.post('/api/platforms', requireAuth, async (req, res) => {
             });
         }
         
+        // 별칭 배열을 JSON으로 변환
+        const aliasesJson = JSON.stringify(aliases || []);
+        
         const query = `
             INSERT INTO platforms (
                 platform_name, platform_code, contact_person, email, phone,
-                commission_rate, settlement_cycle, payment_terms, memo,
-                is_active, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NOW(), NOW())
+                aliases, memo, is_active, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW(), NOW())
             RETURNING *
         `;
         
         const result = await pool.query(query, [
             platform_name, platform_code, contact_person || null, email || null, phone || null,
-            commission_rate || 0, settlement_cycle || 'monthly', payment_terms || null,
-            memo || null
+            aliasesJson, memo || null
         ]);
         
-        console.log('✅ 예약업체 등록 완료:', platform_name);
+        console.log('✅ 예약업체 등록 완료:', platform_name, '/ 별칭:', aliases);
         
         res.json({
             success: true,
@@ -9760,7 +9761,7 @@ app.put('/api/platforms/:platformId', requireAuth, async (req, res) => {
     try {
         const { platformId } = req.params;
         const { platform_name, platform_code, contact_person, email, phone,
-                commission_rate, settlement_cycle, payment_terms, memo, is_active } = req.body;
+                aliases, memo, is_active } = req.body;
         
         if (!platform_name || !platform_code) {
             return res.status(400).json({
@@ -9769,20 +9770,21 @@ app.put('/api/platforms/:platformId', requireAuth, async (req, res) => {
             });
         }
         
+        // 별칭 배열을 JSON으로 변환
+        const aliasesJson = JSON.stringify(aliases || []);
+        
         const query = `
             UPDATE platforms 
             SET platform_name = $1, platform_code = $2, contact_person = $3,
-                email = $4, phone = $5, commission_rate = $6,
-                settlement_cycle = $7, payment_terms = $8, memo = $9,
-                is_active = $10, updated_at = NOW()
-            WHERE id = $11
+                email = $4, phone = $5, aliases = $6, memo = $7,
+                is_active = $8, updated_at = NOW()
+            WHERE id = $9
             RETURNING *
         `;
         
         const result = await pool.query(query, [
             platform_name, platform_code, contact_person || null, email || null, phone || null,
-            commission_rate || 0, settlement_cycle || 'monthly', payment_terms || null,
-            memo || null, is_active !== undefined ? is_active : true, platformId
+            aliasesJson, memo || null, is_active !== undefined ? is_active : true, platformId
         ]);
         
         if (result.rows.length === 0) {
@@ -9792,7 +9794,7 @@ app.put('/api/platforms/:platformId', requireAuth, async (req, res) => {
             });
         }
         
-        console.log('✅ 예약업체 수정 완료:', platform_name);
+        console.log('✅ 예약업체 수정 완료:', platform_name, '/ 별칭:', aliases);
         
         res.json({
             success: true,
@@ -9842,6 +9844,91 @@ app.delete('/api/platforms/:platformId', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '예약업체 삭제 실패: ' + error.message
+        });
+    }
+});
+
+// 별칭으로 표준 업체명 조회 (인박스용)
+app.post('/api/platforms/resolve-alias', async (req, res) => {
+    try {
+        const { alias } = req.body;
+        
+        if (!alias || !alias.trim()) {
+            return res.json({
+                success: true,
+                standardName: null,
+                matched: false
+            });
+        }
+        
+        const cleanAlias = alias.trim();
+        
+        // 모든 활성 업체의 별칭 조회
+        const query = `
+            SELECT platform_name, platform_code, aliases 
+            FROM platforms 
+            WHERE is_active = true
+        `;
+        
+        const result = await pool.query(query);
+        
+        // 1. 업체명 정확히 일치
+        for (const platform of result.rows) {
+            if (platform.platform_name.toLowerCase() === cleanAlias.toLowerCase()) {
+                return res.json({
+                    success: true,
+                    standardName: platform.platform_name,
+                    platformCode: platform.platform_code,
+                    matched: true,
+                    matchType: 'exact_name'
+                });
+            }
+        }
+        
+        // 2. 업체 코드 정확히 일치
+        for (const platform of result.rows) {
+            if (platform.platform_code.toLowerCase() === cleanAlias.toLowerCase()) {
+                return res.json({
+                    success: true,
+                    standardName: platform.platform_name,
+                    platformCode: platform.platform_code,
+                    matched: true,
+                    matchType: 'code'
+                });
+            }
+        }
+        
+        // 3. 별칭 조회 (대소문자 무시, 부분 일치)
+        for (const platform of result.rows) {
+            const aliases = platform.aliases || [];
+            for (const platformAlias of aliases) {
+                if (platformAlias.toLowerCase() === cleanAlias.toLowerCase() ||
+                    cleanAlias.toLowerCase().includes(platformAlias.toLowerCase()) ||
+                    platformAlias.toLowerCase().includes(cleanAlias.toLowerCase())) {
+                    return res.json({
+                        success: true,
+                        standardName: platform.platform_name,
+                        platformCode: platform.platform_code,
+                        matched: true,
+                        matchType: 'alias',
+                        matchedAlias: platformAlias
+                    });
+                }
+            }
+        }
+        
+        // 매칭 실패
+        res.json({
+            success: true,
+            standardName: null,
+            matched: false
+        });
+        
+    } catch (error) {
+        console.error('❌ 별칭 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '별칭 조회 실패: ' + error.message
         });
     }
 });

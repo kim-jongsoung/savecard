@@ -433,31 +433,32 @@
                             </div>
                         </div>
 
-                        <!-- 정산 정보 -->
+                        <!-- 별칭 관리 -->
                         <div class="row mb-4">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-calculator me-2"></i>정산 정보</h6>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">수수료율 (%)</label>
-                                <input type="number" step="0.01" class="form-control" id="commission_rate" name="commission_rate" value="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">정산 주기</label>
-                                <select class="form-select" id="settlement_cycle" name="settlement_cycle">
-                                    <option value="weekly">주간</option>
-                                    <option value="biweekly">격주</option>
-                                    <option value="monthly" selected>월간</option>
-                                    <option value="quarterly">분기</option>
-                                </select>
+                                <h6 class="text-primary border-bottom pb-2"><i class="fas fa-tags me-2"></i>별칭 관리</h6>
+                                <p class="text-muted small mb-3">
+                                    AI 파싱 시 다양하게 인식되는 업체명을 별칭으로 등록하면 자동으로 표준 업체명으로 통일됩니다.
+                                </p>
                             </div>
                             <div class="col-12 mb-3">
-                                <label class="form-label">결제 조건</label>
-                                <input type="text" class="form-control" id="payment_terms" name="payment_terms" placeholder="예: 월말 마감 익월 15일 지급">
+                                <label class="form-label">별칭 목록</label>
+                                <div id="aliasesContainer">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control alias-input" placeholder='예: NOL, nol, 놀공, NOL 인터파크, "놀공 여행"'>
+                                        <button type="button" class="btn btn-outline-danger" onclick="removeAlias(this)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addAlias()">
+                                    <i class="fas fa-plus me-1"></i>별칭 추가
+                                </button>
+                                <div class="form-text">쉼표(,)로 구분하여 여러 별칭을 입력하거나, 각 줄에 하나씩 추가하세요.</div>
                             </div>
                             <div class="col-12 mb-3">
                                 <label class="form-label">메모</label>
-                                <textarea class="form-control" id="platform_memo" name="memo" rows="3"></textarea>
+                                <textarea class="form-control" id="platform_memo" name="memo" rows="2" placeholder="업체 특이사항이나 참고사항을 입력하세요"></textarea>
                             </div>
                         </div>
                     </form>
@@ -594,7 +595,13 @@
                 return;
             }
 
-            platformsList.innerHTML = platforms.map(platform => `
+            platformsList.innerHTML = platforms.map(platform => {
+                const aliases = platform.aliases || [];
+                const aliasesText = aliases.length > 0 
+                    ? aliases.slice(0, 5).join(', ') + (aliases.length > 5 ? ` 외 ${aliases.length - 5}개` : '')
+                    : '별칭 미등록';
+                
+                return `
                 <div class="vendor-card">
                     <div class="row align-items-center">
                         <div class="col-md-8">
@@ -611,12 +618,13 @@
                                 ${platform.phone ? `<i class="fas fa-phone ms-3 me-1"></i>${platform.phone}` : ''}
                             </div>
                             <div class="text-muted mb-2">
-                                <i class="fas fa-percent me-1"></i>수수료 ${platform.commission_rate}%
-                                <i class="fas fa-calendar ms-3 me-1"></i>${getSettlementCycleText(platform.settlement_cycle)}
-                                <i class="fas fa-file-invoice-dollar ms-3 me-1"></i>예약 ${platform.reservation_count}건
-                                <i class="fas fa-money-bill-wave ms-3 me-1"></i>${formatCurrency(platform.total_amount)}
+                                <i class="fas fa-tags me-1"></i>별칭: <span class="text-info">${aliasesText}</span>
                             </div>
-                            ${platform.memo ? `<p class="text-muted small mb-0">${platform.memo}</p>` : ''}
+                            <div class="text-muted mb-2">
+                                <i class="fas fa-file-invoice-dollar me-1"></i>예약 ${platform.reservation_count || 0}건
+                                <i class="fas fa-money-bill-wave ms-3 me-1"></i>${formatCurrency(platform.total_amount || 0)}
+                            </div>
+                            ${platform.memo ? `<p class="text-muted small mb-0"><i class="fas fa-sticky-note me-1"></i>${platform.memo}</p>` : ''}
                         </div>
                         <div class="col-md-4 text-end">
                             <button class="btn btn-outline-primary btn-sm me-2" onclick="editPlatform(${platform.id})">
@@ -628,7 +636,8 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // 예약업체 등록 모달 열기
@@ -649,6 +658,31 @@
             modal.show();
         }
 
+        // 별칭 입력 필드 추가
+        function addAlias() {
+            const container = document.getElementById('aliasesContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'input-group mb-2';
+            newRow.innerHTML = `
+                <input type="text" class="form-control alias-input" placeholder="별칭 입력">
+                <button type="button" class="btn btn-outline-danger" onclick="removeAlias(this)">
+                    <i class="fas fa-minus"></i>
+                </button>
+            `;
+            container.appendChild(newRow);
+        }
+
+        // 별칭 제거
+        function removeAlias(button) {
+            const container = document.getElementById('aliasesContainer');
+            if (container.children.length > 1) {
+                button.closest('.input-group').remove();
+            } else {
+                // 마지막 하나는 비우기만
+                container.querySelector('.alias-input').value = '';
+            }
+        }
+
         // 예약업체 정보 로드 (수정용)
         async function loadPlatformForEdit(platformId) {
             try {
@@ -664,10 +698,37 @@
                     document.getElementById('platform_contact_person').value = platform.contact_person || '';
                     document.getElementById('platform_email').value = platform.email || '';
                     document.getElementById('platform_phone').value = platform.phone || '';
-                    document.getElementById('commission_rate').value = platform.commission_rate || 0;
-                    document.getElementById('settlement_cycle').value = platform.settlement_cycle || 'monthly';
-                    document.getElementById('payment_terms').value = platform.payment_terms || '';
                     document.getElementById('platform_memo').value = platform.memo || '';
+                    
+                    // 별칭 로드
+                    const aliases = platform.aliases || [];
+                    const container = document.getElementById('aliasesContainer');
+                    container.innerHTML = '';
+                    
+                    if (aliases.length === 0) {
+                        // 빈 입력 필드 하나
+                        container.innerHTML = `
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control alias-input" placeholder='예: NOL, nol, 놀공'>
+                                <button type="button" class="btn btn-outline-danger" onclick="removeAlias(this)">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        // 각 별칭별로 입력 필드 생성
+                        aliases.forEach(alias => {
+                            const row = document.createElement('div');
+                            row.className = 'input-group mb-2';
+                            row.innerHTML = `
+                                <input type="text" class="form-control alias-input" value="${alias}">
+                                <button type="button" class="btn btn-outline-danger" onclick="removeAlias(this)">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            `;
+                            container.appendChild(row);
+                        });
+                    }
                 } else {
                     showPlatformAlert('danger', '예약업체 정보를 불러오는데 실패했습니다.');
                 }
@@ -682,15 +743,25 @@
             const form = document.getElementById('platformForm');
             const formData = new FormData(form);
             
+            // 별칭 수집
+            const aliasInputs = document.querySelectorAll('.alias-input');
+            const aliases = [];
+            aliasInputs.forEach(input => {
+                const value = input.value.trim();
+                if (value) {
+                    // 쉼표로 구분된 경우 분리
+                    const parts = value.split(',').map(s => s.trim()).filter(s => s);
+                    aliases.push(...parts);
+                }
+            });
+            
             const platformData = {
                 platform_name: formData.get('platform_name'),
                 platform_code: formData.get('platform_code'),
                 contact_person: formData.get('contact_person'),
                 email: formData.get('email'),
                 phone: formData.get('phone'),
-                commission_rate: parseFloat(formData.get('commission_rate')) || 0,
-                settlement_cycle: formData.get('settlement_cycle'),
-                payment_terms: formData.get('payment_terms'),
+                aliases: aliases,  // 별칭 배열
                 memo: formData.get('memo')
             };
             
