@@ -309,7 +309,7 @@ router.get('/api/flights', (req, res) => {
   res.json(FLIGHTS);
 });
 
-// API: 월별 예약 조회 (달력용)
+// API: 월별 예약 조회 (달력용 - 전체 예약 목록 포함)
 router.get('/api/calendar', async (req, res) => {
   const pool = req.app.locals.pool;
   const { year, month } = req.query;
@@ -321,29 +321,27 @@ router.get('/api/calendar', async (req, res) => {
     // 공항 픽업 (도착일 기준)
     const arrivals = await pool.query(`
       SELECT 
-        guam_arrival_date as date,
-        COUNT(*) as count,
-        SUM(adult_count + child_count + infant_count) as total_passengers
-      FROM airport_pickups
-      WHERE guam_arrival_date BETWEEN $1 AND $2
-        AND pickup_type IN ('airport_to_hotel', 'roundtrip')
-        AND status = 'active'
-      GROUP BY guam_arrival_date
-      ORDER BY guam_arrival_date
+        ap.*,
+        pa.agency_name
+      FROM airport_pickups ap
+      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
+      WHERE ap.guam_arrival_date BETWEEN $1 AND $2
+        AND ap.pickup_type IN ('airport_to_hotel', 'roundtrip')
+        AND ap.status = 'active'
+      ORDER BY ap.guam_arrival_date, ap.guam_arrival_time
     `, [startDate, endDate]);
     
     // 호텔 픽업 (픽업일 기준)
     const departures = await pool.query(`
       SELECT 
-        hotel_pickup_date as date,
-        COUNT(*) as count,
-        SUM(adult_count + child_count + infant_count) as total_passengers
-      FROM airport_pickups
-      WHERE hotel_pickup_date BETWEEN $1 AND $2
-        AND pickup_type IN ('hotel_to_airport', 'roundtrip')
-        AND status = 'active'
-      GROUP BY hotel_pickup_date
-      ORDER BY hotel_pickup_date
+        ap.*,
+        pa.agency_name
+      FROM airport_pickups ap
+      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
+      WHERE ap.hotel_pickup_date BETWEEN $1 AND $2
+        AND ap.pickup_type IN ('hotel_to_airport', 'roundtrip')
+        AND ap.status = 'active'
+      ORDER BY ap.hotel_pickup_date, ap.hotel_pickup_time
     `, [startDate, endDate]);
     
     res.json({ arrivals: arrivals.rows, departures: departures.rows });

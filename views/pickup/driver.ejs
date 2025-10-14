@@ -40,20 +40,49 @@
 </head>
 <body>
   <div class="container-fluid">
-    <h2 class="text-center mb-3">🚗 오늘의 픽업</h2>
+    <h2 class="text-center mb-3">🚗 기사 화면</h2>
     
-    <!-- 달력 뷰 (기본) -->
+    <!-- 달력 뷰 (유일한 화면) -->
     <div id="calendarView" class="mb-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <button class="btn btn-sm btn-secondary" onclick="changeMonth(-1)">◀ 이전달</button>
         <h4 id="currentMonth"></h4>
         <button class="btn btn-sm btn-secondary" onclick="changeMonth(1)">다음달 ▶</button>
       </div>
-      <div id="calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; font-size: 14px;"></div>
-      <button class="btn btn-secondary mt-3" onclick="backToCalendar()">달력으로</button>
+      <div id="calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; font-size: 12px;"></div>
     </div>
-    
-    <!-- 상세 뷰 -->
+  </div>
+  
+  <!-- 상세 보기 모달 -->
+  <div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">픽업 상세</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="detailBody">
+          <!-- 동적 내용 -->
+        </div>
+        <div class="modal-footer">
+          <select class="form-select w-auto me-auto" id="modalVehicle" onchange="updateVehicleFromModal()">
+            <option value="">차량 선택</option>
+            <option value="세단">세단</option>
+            <option value="SUV">SUV</option>
+            <option value="밴">밴</option>
+            <option value="버스">버스</option>
+          </select>
+          <div class="form-check me-3">
+            <input class="form-check-input" type="checkbox" id="modalReady" onchange="updateReadyFromModal()">
+            <label class="form-check-label" for="modalReady">준비완료</label>
+          </div>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div style="display:none;">
     <div id="detailView" style="display:none;">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <button class="btn btn-secondary" onclick="backToCalendar()">← 달력으로</button>
@@ -81,14 +110,18 @@
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let currentDetailDate = null;
+    let detailModalInstance;
+    let currentPickupData = null;
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
-    let autoRefreshInterval = null;
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
+      detailModalInstance = new bootstrap.Modal(document.getElementById('detailModal'));
       loadCalendar(); // 달력을 기본으로
+      
+      // 3초마다 자동 새로고침
+      setInterval(loadCalendar, 3000);
     });
     
     // 달력으로 돌아가기
@@ -181,19 +214,120 @@
         const border = isToday ? '2px solid #ff9800' : '1px solid #ddd';
         
         html += `
-          <div style="border:${border};padding:8px;background:${bgColor};border-radius:5px;cursor:pointer;min-height:80px;" onclick="viewDate('${dateStr}')">
-            <div style="font-size:16px;font-weight:bold;margin-bottom:5px;">${day}일</div>
-            ${hasPickup ? `<div style="background:#fff3cd;padding:3px;border-radius:3px;margin:2px 0;font-size:11px;font-weight:bold;">📊 ${(arr ? arr.count : 0) + (dep ? dep.count : 0)}건 | ${arr ? arr.total_passengers : 0 + dep ? dep.total_passengers : 0}명</div>` : ''}
-            ${arr ? `<div style="background:#e3f2fd;padding:2px;border-radius:3px;margin:2px 0;font-size:10px;color:#1976d2;">🛬 ${arr.total_passengers}명</div>` : ''}
-            ${dep ? `<div style="background:#fce4ec;padding:2px;border-radius:3px;margin:2px 0;font-size:10px;color:#c2185b;">🏨 ${dep.total_passengers}명</div>` : ''}
+          <div style="border:${border};padding:5px;background:${bgColor};border-radius:5px;min-height:100px;max-height:100px;overflow-y:auto;">
+            <div style="font-size:14px;font-weight:bold;margin-bottom:3px;position:sticky;top:0;background:${bgColor};">${day}일</div>
+            ${hasPickup ? `<div style="background:#fff3cd;padding:2px;border-radius:2px;margin:2px 0;font-size:9px;font-weight:bold;">📊 ${(arr ? arr.count : 0) + (dep ? dep.count : 0)}건 | ${(arr ? arr.total_passengers : 0) + (dep ? dep.total_passengers : 0)}명</div>` : ''}
           </div>
         `;
       }
       
-      document.getElementById('calendar').innerHTML = html;
+      // 날짜별로 예약 추가
+      const pickupsByDate = {};
+      arrivals.forEach(p => {
+        const date = p.guam_arrival_date;
+        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
+        pickupsByDate[date].arrivals.push(p);
+      });
+      departures.forEach(p => {
+        const date = p.hotel_pickup_date;
+        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
+        pickupsByDate[date].departures.push(p);
+      });
+      
+      // 달력에 예약 목록 추가
+      const days = document.querySelectorAll('.calendar-day');
+      days.forEach((dayEl, index) => {
+        if (index < firstDay + 7) return; // 헤더 및 빈칸 건너뛰기
+        
+        const day = index - firstDay - 6;
+        if (day < 1 || day > daysInMonth) return;
+        
+        const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayPickups = pickupsByDate[dateStr];
+        if (!dayPickups) return;
+        
+        let itemsHtml = '';
+        
+        // 공항 픽업
+        dayPickups.arrivals.forEach(p => {
+          itemsHtml += `<div style="background:#e3f2fd;padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid #2196f3;color:#1565c0;" onclick='showPickupDetail(${JSON.stringify(p).replace(/'/g, "\\'")})'>🛬 ${p.guam_arrival_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
+        });
+        
+        // 호텔 픽업
+        dayPickups.departures.forEach(p => {
+          const isEarly = p.is_early_morning;
+          const bg = isEarly ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#fce4ec';
+          const color = isEarly ? 'white' : '#c2185b';
+          itemsHtml += `<div style="background:${bg};padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid ${isEarly ? '#fbbf24' : '#e91e63'};color:${color};" onclick='showPickupDetail(${JSON.stringify(p).replace(/'/g, "\\'")})'>${ isEarly ? '🌙' : '🏨'} ${p.hotel_pickup_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
+        });
+        
+        dayEl.innerHTML += itemsHtml;
+      });
     }
     
-    // 픽업 목록 로드 (상세 보기용)
+    // 예약 상세 보기
+    function showPickupDetail(pickup) {
+      currentPickupData = pickup;
+      const isArrival = pickup.guam_arrival_date;
+      
+      let html = `
+        <div class="row">
+          <div class="col-md-6">
+            <h6>👤 고객 정보</h6>
+            <p><strong>이름:</strong> ${pickup.customer_name}</p>
+            <p><strong>업체:</strong> ${pickup.agency_name || '-'}</p>
+            <p><strong>호텔:</strong> ${pickup.hotel_name}</p>
+            <p><strong>전화:</strong> ${pickup.phone || '-'}</p>
+          </div>
+          <div class="col-md-6">
+            <h6>👥 인원</h6>
+            <p><strong>성인:</strong> ${pickup.adult_count || 0}명</p>
+            <p><strong>소아:</strong> ${pickup.child_count || 0}명</p>
+            <p><strong>유아:</strong> ${pickup.infant_count || 0}명</p>
+            <p><strong>짐:</strong> ${pickup.luggage_count || 0}개</p>
+            <p><strong>총:</strong> ${pickup.passenger_count}명</p>
+          </div>
+        </div>
+      `;
+      
+      if (isArrival) {
+        html += `<hr><h6>✈️ 공항 픽업</h6><p>한국: ${pickup.kr_departure_date} ${pickup.kr_departure_time} (${pickup.kr_flight_number})</p><p>괌: ${pickup.guam_arrival_date} ${pickup.guam_arrival_time}</p>`;
+      } else {
+        html += `<hr><h6>🏨 호텔 픽업</h6><p>픽업: ${pickup.hotel_pickup_date} ${pickup.hotel_pickup_time}</p><p>비행기: ${pickup.guam_departure_date} ${pickup.guam_departure_time} (${pickup.departure_flight_number})</p>`;
+        if (pickup.is_early_morning) html += '<p class="text-danger"><strong>⚠️ 새벽 비행기</strong></p>';
+      }
+      if (pickup.memo) html += `<p><strong>메모:</strong> ${pickup.memo}</p>`;
+      
+      document.getElementById('detailBody').innerHTML = html;
+      document.getElementById('modalVehicle').value = pickup.vehicle_type || '';
+      document.getElementById('modalReady').checked = pickup.vehicle_ready || false;
+      detailModalInstance.show();
+    }
+    
+    // 모달에서 차량 업데이트
+    async function updateVehicleFromModal() {
+      if (!currentPickupData) return;
+      const vehicle = document.getElementById('modalVehicle').value;
+      await fetch(`/pickup/api/${currentPickupData.id}/vehicle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicle_type: vehicle })
+      });
+      currentPickupData.vehicle_type = vehicle;
+    }
+    
+    // 모달에서 준비완료 업데이트
+    async function updateReadyFromModal() {
+      if (!currentPickupData) return;
+      const ready = document.getElementById('modalReady').checked;
+      await fetch(`/pickup/api/${currentPickupData.id}/vehicle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicle_ready: ready })
+      });
+      currentPickupData.vehicle_ready = ready;
+    }
+    
     async function loadPickups() {
       try {
         const res = await fetch(`/pickup/api/list?date=${currentDetailDate}`);
