@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>픽업 데이터 테스트</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    .box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    .arrival { background: #e3f2fd; }
+    .departure { background: #fce4ec; }
+    pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>🧪 픽업 데이터 테스트</h1>
+  
+  <div>
+    <h2>현재 달: <span id="currentMonth"></span></h2>
+    <button onclick="loadData()">데이터 새로고침</button>
+  </div>
+  
+  <h3>📊 결과</h3>
+  <div id="result"></div>
+  
+  <h3>📝 원본 데이터 (JSON)</h3>
+  <pre id="rawData"></pre>
+
+  <script>
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    
+    document.getElementById('currentMonth').textContent = `${year}년 ${month}월`;
+    
+    async function loadData() {
+      try {
+        const url = `/pickup/api/calendar?year=${year}&month=${month}`;
+        console.log('🔍 API 호출:', url);
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        console.log('✅ 응답 받음:', data);
+        
+        // 원본 데이터 표시
+        document.getElementById('rawData').textContent = JSON.stringify(data, null, 2);
+        
+        // 결과 표시
+        let html = '';
+        
+        html += `<div class="box">`;
+        html += `<strong>공항 픽업 (arrivals):</strong> ${data.arrivals.length}건<br>`;
+        html += `<strong>호텔 픽업 (departures):</strong> ${data.departures.length}건`;
+        html += `</div>`;
+        
+        if (data.arrivals.length === 0 && data.departures.length === 0) {
+          html += `<div class="box" style="background:#fff3cd;">⚠️ 데이터가 없습니다. 신규 예약을 등록해주세요.</div>`;
+        }
+        
+        // 공항 픽업
+        data.arrivals.forEach(p => {
+          html += `
+            <div class="box arrival">
+              <strong>🛬 공항 픽업 #${p.id}</strong><br>
+              날짜: ${p.guam_arrival_date} ${p.guam_arrival_time}<br>
+              고객: ${p.customer_name} (${p.passenger_count}명)<br>
+              호텔: ${p.hotel_name}<br>
+              업체: ${p.agency_name || '-'}
+            </div>
+          `;
+        });
+        
+        // 호텔 픽업
+        data.departures.forEach(p => {
+          html += `
+            <div class="box departure">
+              <strong>🏨 호텔 픽업 #${p.id}</strong><br>
+              날짜: ${p.hotel_pickup_date} ${p.hotel_pickup_time}<br>
+              고객: ${p.customer_name} (${p.passenger_count}명)<br>
+              호텔: ${p.hotel_name}<br>
+              업체: ${p.agency_name || '-'}
+              ${p.is_early_morning ? '<br>🌙 <strong>새벽 비행기</strong>' : ''}
+            </div>
+          `;
+        });
+        
+        document.getElementById('result').innerHTML = html;
+        
+      } catch (error) {
+        console.error('❌ 오류:', error);
+        document.getElementById('result').innerHTML = 
+          `<div class="box" style="background:#ffebee;">❌ 오류 발생: ${error.message}</div>`;
+      }
+    }
+    
+    // 자동 로드
+    loadData();
+  </script>
+</body>
+</html>

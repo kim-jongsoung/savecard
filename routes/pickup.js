@@ -309,6 +309,16 @@ router.get('/api/flights', (req, res) => {
   res.json(FLIGHTS);
 });
 
+// API: 기사 화면
+router.get('/driver', (req, res) => {
+  res.render('pickup/driver');
+});
+
+// 테스트 화면
+router.get('/test', (req, res) => {
+  res.render('pickup/test');
+});
+
 // API: 월별 예약 조회 (달력용 - 전체 예약 목록 포함)
 router.get('/api/calendar', async (req, res) => {
   const pool = req.app.locals.pool;
