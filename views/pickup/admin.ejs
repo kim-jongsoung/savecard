@@ -478,8 +478,13 @@
       const res = await fetch(`/pickup/api/calendar?year=${currentCalendarYear}&month=${currentCalendarMonth}`);
       const { arrivals, departures } = await res.json();
       
+      console.log('📅 달력 데이터:', { arrivals: arrivals.length, departures: departures.length });
+      
       // 월 표시
       document.getElementById('currentMonth').textContent = `${currentCalendarYear}년 ${currentCalendarMonth}월`;
+      
+      // 전역 예약 데이터 초기화
+      allPickups = {};
       
       // 날짜별로 예약 그룹화
       const pickupsByDate = {};
