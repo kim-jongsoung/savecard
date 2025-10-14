@@ -490,14 +490,18 @@
       const pickupsByDate = {};
       arrivals.forEach(p => {
         const date = p.guam_arrival_date;
+        console.log('✈️ 공항픽업 추가:', date, p.customer_name);
         if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
         pickupsByDate[date].arrivals.push(p);
       });
       departures.forEach(p => {
         const date = p.hotel_pickup_date;
+        console.log('🏨 호텔픽업 추가:', date, p.customer_name);
         if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
         pickupsByDate[date].departures.push(p);
       });
+      
+      console.log('📋 날짜별 그룹:', Object.keys(pickupsByDate));
       
       // 달력 그리기
       const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
@@ -536,12 +540,13 @@
           html += `<div class="day-summary">📊 ${arrCount+depCount}건 | ${arrPax+depPax}명</div>`;
         }
         
-        // 공항 픽업 목록
+          // 공항 픽업 목록
         dayPickups.arrivals.forEach(p => {
           allPickups[p.id] = p; // 저장
+          const time = p.guam_arrival_time || '';
           html += `
             <div class="pickup-item pickup-arrival" onclick="showPickupDetail(${p.id})">
-              🛬 ${p.guam_arrival_time} ${p.customer_name} (${p.passenger_count}명)
+              🛬 ${time} ${p.customer_name} (${p.passenger_count}명)
             </div>
           `;
         });
@@ -550,9 +555,10 @@
         dayPickups.departures.forEach(p => {
           allPickups[p.id] = p; // 저장
           const earlyClass = p.is_early_morning ? 'pickup-early' : 'pickup-departure';
+          const time = p.hotel_pickup_time || '';
           html += `
             <div class="pickup-item ${earlyClass}" onclick="showPickupDetail(${p.id})">
-              ${p.is_early_morning ? '🌙' : '🏨'} ${p.hotel_pickup_time} ${p.customer_name} (${p.passenger_count}명)
+              ${p.is_early_morning ? '🌙' : '🏨'} ${time} ${p.customer_name} (${p.passenger_count}명)
             </div>
           `;
         });

@@ -242,7 +242,8 @@
         
         // 공항 픽업
         dayPickups.arrivals.forEach(p => {
-          html += `<div style="background:#e3f2fd;padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid #2196f3;color:#1565c0;" onclick="showPickupDetail(${p.id})">🛬 ${p.guam_arrival_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
+          const time = p.guam_arrival_time || '';
+          html += `<div style="background:#e3f2fd;padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid #2196f3;color:#1565c0;" onclick="showPickupDetail(${p.id})">🛬 ${time} ${p.customer_name} (${p.passenger_count}명)</div>`;
         });
         
         // 호텔 픽업
@@ -250,7 +251,8 @@
           const isEarly = p.is_early_morning;
           const bg = isEarly ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#fce4ec';
           const color = isEarly ? 'white' : '#c2185b';
-          html += `<div style="background:${bg};padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid ${isEarly ? '#fbbf24' : '#e91e63'};color:${color};" onclick="showPickupDetail(${p.id})">${ isEarly ? '🌙' : '🏨'} ${p.hotel_pickup_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
+          const time = p.hotel_pickup_time || '';
+          html += `<div style="background:${bg};padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid ${isEarly ? '#fbbf24' : '#e91e63'};color:${color};" onclick="showPickupDetail(${p.id})">${ isEarly ? '🌙' : '🏨'} ${time} ${p.customer_name} (${p.passenger_count}명)</div>`;
         });
         
         html += `</div>`;
