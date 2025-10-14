@@ -222,6 +222,7 @@
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
     let currentPickupData = null;
+    let allPickups = {}; // ID별 예약 데이터 저장
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
@@ -248,7 +249,9 @@
     }
     
     // 예약 상세 보기 (모달)
-    function showPickupDetail(pickup) {
+    function showPickupDetail(pickupId) {
+      const pickup = allPickups[pickupId];
+      if (!pickup) return;
       currentPickupData = pickup;
       const isArrival = pickup.guam_arrival_date;
       
@@ -530,8 +533,9 @@
         
         // 공항 픽업 목록
         dayPickups.arrivals.forEach(p => {
+          allPickups[p.id] = p; // 저장
           html += `
-            <div class="pickup-item pickup-arrival" onclick='showPickupDetail(${JSON.stringify(p).replace(/'/g, "\\'")})'>
+            <div class="pickup-item pickup-arrival" onclick="showPickupDetail(${p.id})">
               🛬 ${p.guam_arrival_time} ${p.customer_name} (${p.passenger_count}명)
             </div>
           `;
@@ -539,9 +543,10 @@
         
         // 호텔 픽업 목록
         dayPickups.departures.forEach(p => {
+          allPickups[p.id] = p; // 저장
           const earlyClass = p.is_early_morning ? 'pickup-early' : 'pickup-departure';
           html += `
-            <div class="pickup-item ${earlyClass}" onclick='showPickupDetail(${JSON.stringify(p).replace(/'/g, "\\'")})'>
+            <div class="pickup-item ${earlyClass}" onclick="showPickupDetail(${p.id})">
               ${p.is_early_morning ? '🌙' : '🏨'} ${p.hotel_pickup_time} ${p.customer_name} (${p.passenger_count}명)
             </div>
           `;

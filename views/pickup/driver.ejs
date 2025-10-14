@@ -114,6 +114,7 @@
     let currentPickupData = null;
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
+    let allPickups = {}; // ID별 예약 데이터 저장
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
@@ -185,6 +186,21 @@
       
       document.getElementById('currentMonth').textContent = `${currentCalendarYear}년 ${currentCalendarMonth}월`;
       
+      // 날짜별로 예약 그룹화
+      const pickupsByDate = {};
+      arrivals.forEach(p => {
+        allPickups[p.id] = p; // 전역 저장
+        const date = p.guam_arrival_date;
+        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
+        pickupsByDate[date].arrivals.push(p);
+      });
+      departures.forEach(p => {
+        allPickups[p.id] = p; // 전역 저장
+        const date = p.hotel_pickup_date;
+        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
+        pickupsByDate[date].departures.push(p);
+      });
+      
       const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
       const firstDay = new Date(currentCalendarYear, currentCalendarMonth - 1, 1).getDay();
       
@@ -194,63 +210,34 @@
       });
       
       for (let i = 0; i < firstDay; i++) {
-        html += '<div></div>';
+        html += '<div style="border:1px solid #ddd;padding:5px;"></div>';
       }
-      
-      const arrivalMap = {};
-      arrivals.forEach(a => { arrivalMap[a.date] = a; });
-      const departureMap = {};
-      departures.forEach(d => { departureMap[d.date] = d; });
       
       const today = new Date().toISOString().split('T')[0];
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const arr = arrivalMap[dateStr];
-        const dep = departureMap[dateStr];
-        const hasPickup = arr || dep;
+        const dayPickups = pickupsByDate[dateStr] || { arrivals: [], departures: [] };
+        const hasPickup = dayPickups.arrivals.length > 0 || dayPickups.departures.length > 0;
         const isToday = dateStr === today;
         
-        const bgColor = isToday ? '#fff3cd' : (hasPickup ? '#e3f2fd' : '#fff');
+        const arrCount = dayPickups.arrivals.length;
+        const depCount = dayPickups.departures.length;
+        const arrPax = dayPickups.arrivals.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        const depPax = dayPickups.departures.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        
+        const bgColor = isToday ? '#fff3cd' : (hasPickup ? '#fafafa' : '#fff');
         const border = isToday ? '2px solid #ff9800' : '1px solid #ddd';
         
-        html += `
-          <div style="border:${border};padding:5px;background:${bgColor};border-radius:5px;min-height:100px;max-height:100px;overflow-y:auto;">
-            <div style="font-size:14px;font-weight:bold;margin-bottom:3px;position:sticky;top:0;background:${bgColor};">${day}일</div>
-            ${hasPickup ? `<div style="background:#fff3cd;padding:2px;border-radius:2px;margin:2px 0;font-size:9px;font-weight:bold;">📊 ${(arr ? arr.count : 0) + (dep ? dep.count : 0)}건 | ${(arr ? arr.total_passengers : 0) + (dep ? dep.total_passengers : 0)}명</div>` : ''}
-          </div>
-        `;
-      }
-      
-      // 날짜별로 예약 추가
-      const pickupsByDate = {};
-      arrivals.forEach(p => {
-        const date = p.guam_arrival_date;
-        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
-        pickupsByDate[date].arrivals.push(p);
-      });
-      departures.forEach(p => {
-        const date = p.hotel_pickup_date;
-        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
-        pickupsByDate[date].departures.push(p);
-      });
-      
-      // 달력에 예약 목록 추가
-      const days = document.querySelectorAll('.calendar-day');
-      days.forEach((dayEl, index) => {
-        if (index < firstDay + 7) return; // 헤더 및 빈칸 건너뛰기
+        html += `<div style="border:${border};padding:5px;background:${bgColor};border-radius:5px;min-height:100px;max-height:100px;overflow-y:auto;">`;
+        html += `<div style="font-size:14px;font-weight:bold;margin-bottom:3px;position:sticky;top:0;background:${bgColor};">${day}일</div>`;
         
-        const day = index - firstDay - 6;
-        if (day < 1 || day > daysInMonth) return;
-        
-        const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayPickups = pickupsByDate[dateStr];
-        if (!dayPickups) return;
-        
-        let itemsHtml = '';
+        if (hasPickup) {
+          html += `<div style="background:#fff3cd;padding:2px;border-radius:2px;margin:2px 0;font-size:9px;font-weight:bold;">📊 ${arrCount+depCount}건 | ${arrPax+depPax}명</div>`;
+        }
         
         // 공항 픽업
         dayPickups.arrivals.forEach(p => {
-          itemsHtml += `<div style="background:#e3f2fd;padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid #2196f3;color:#1565c0;" onclick='showPickupDetail(${JSON.stringify(p).replace(/'/g, "\\'")})'>🛬 ${p.guam_arrival_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
+          html += `<div style="background:#e3f2fd;padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid #2196f3;color:#1565c0;" onclick="showPickupDetail(${p.id})">🛬 ${p.guam_arrival_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
         });
         
         // 호텔 픽업
@@ -258,15 +245,19 @@
           const isEarly = p.is_early_morning;
           const bg = isEarly ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#fce4ec';
           const color = isEarly ? 'white' : '#c2185b';
-          itemsHtml += `<div style="background:${bg};padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid ${isEarly ? '#fbbf24' : '#e91e63'};color:${color};" onclick='showPickupDetail(${JSON.stringify(p).replace(/'/g, "\\'")})'>${ isEarly ? '🌙' : '🏨'} ${p.hotel_pickup_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
+          html += `<div style="background:${bg};padding:2px 3px;margin:2px 0;border-radius:2px;font-size:9px;cursor:pointer;border-left:2px solid ${isEarly ? '#fbbf24' : '#e91e63'};color:${color};" onclick="showPickupDetail(${p.id})">${ isEarly ? '🌙' : '🏨'} ${p.hotel_pickup_time} ${p.customer_name} (${p.passenger_count}명)</div>`;
         });
         
-        dayEl.innerHTML += itemsHtml;
-      });
+        html += `</div>`;
+      }
+      
+      document.getElementById('calendar').innerHTML = html;
     }
     
     // 예약 상세 보기
-    function showPickupDetail(pickup) {
+    function showPickupDetail(pickupId) {
+      const pickup = allPickups[pickupId];
+      if (!pickup) return;
       currentPickupData = pickup;
       const isArrival = pickup.guam_arrival_date;
       
