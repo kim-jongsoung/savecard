@@ -40,66 +40,98 @@
 </head>
 <body>
   <div class="container-fluid">
-    <!-- 날짜 네비게이션 -->
-    <div class="date-nav text-center">
-      <button class="btn btn-secondary" onclick="changeDate(-1)">← 어제</button>
-      <strong id="currentDate" class="mx-3"></strong>
-      <button class="btn btn-secondary" onclick="changeDate(1)">내일 →</button>
-      <br>
-      <button class="btn btn-sm btn-outline-primary mt-2" onclick="showCalendar()">📅 달력 보기</button>
-    </div>
+    <h2 class="text-center mb-3">🚗 오늘의 픽업</h2>
     
-    <!-- 달력 뷰 -->
-    <div id="calendarView" style="display:none;" class="mb-4">
+    <!-- 달력 뷰 (기본) -->
+    <div id="calendarView" class="mb-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <button class="btn btn-sm btn-secondary" onclick="changeMonth(-1)">◀ 이전달</button>
         <h4 id="currentMonth"></h4>
         <button class="btn btn-sm btn-secondary" onclick="changeMonth(1)">다음달 ▶</button>
       </div>
       <div id="calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; font-size: 14px;"></div>
-      <button class="btn btn-secondary mt-3" onclick="hideCalendar()">오늘로</button>
+      <button class="btn btn-secondary mt-3" onclick="backToCalendar()">달력으로</button>
     </div>
     
-    <!-- 통계 -->
-    <div class="stats text-center mb-3">
-      <div>📊 오늘 전체: <strong id="totalCount">0명</strong></div>
+    <!-- 상세 뷰 -->
+    <div id="detailView" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn btn-secondary" onclick="backToCalendar()">← 달력으로</button>
+        <h4 id="detailDate" class="mb-0"></h4>
+        <div>
+          <button class="btn btn-sm btn-secondary" onclick="changeDetailDate(-1)">← 전날</button>
+          <button class="btn btn-sm btn-secondary" onclick="changeDetailDate(1)">다음날 →</button>
+        </div>
+      </div>
+      
+      <!-- 통계 -->
+      <div class="stats text-center mb-3">
+        <div>📊 전체: <strong id="totalCount">0명</strong></div>
+      </div>
+      
+      <!-- 공항 픽업 -->
+      <h3 class="text-primary">🛬 공항 픽업</h3>
+      <div id="arrivalsList"></div>
+      
+      <!-- 호텔 픽업 -->
+      <h3 class="text-danger mt-4">🏨 호텔 픽업</h3>
+      <div id="departuresList"></div>
     </div>
-    
-    <!-- 공항 픽업 -->
-    <h3 class="text-primary">🛬 오늘 공항 픽업</h3>
-    <div id="arrivalsList"></div>
-    
-    <!-- 호텔 픽업 -->
-    <h3 class="text-danger mt-4">🏨 오늘 호텔 픽업</h3>
-    <div id="departuresList"></div>
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let currentDate = new Date().toISOString().split('T')[0];
+    let currentDetailDate = null;
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
+    let autoRefreshInterval = null;
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
-      updateDateDisplay();
-      loadPickups();
-      
-      // 3초마다 자동 새로고침
-      setInterval(loadPickups, 3000);
+      loadCalendar(); // 달력을 기본으로
     });
     
-    // 달력 보기
-    async function showCalendar() {
+    // 달력으로 돌아가기
+    function backToCalendar() {
+      // 자동 새로고침 중지
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+      document.getElementById('detailView').style.display = 'none';
       document.getElementById('calendarView').style.display = 'block';
-      await loadCalendar();
+      loadCalendar();
     }
     
-    function hideCalendar() {
+    // 날짜 클릭 시 상세 보기
+    function viewDate(date) {
+      currentDetailDate = date;
       document.getElementById('calendarView').style.display = 'none';
-      currentDate = new Date().toISOString().split('T')[0];
-      updateDateDisplay();
+      document.getElementById('detailView').style.display = 'block';
+      updateDetailDate();
       loadPickups();
+      
+      // 3초마다 자동 새로고침 시작
+      if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+      autoRefreshInterval = setInterval(loadPickups, 3000);
+    }
+    
+    // 상세 날짜 변경
+    function changeDetailDate(days) {
+      const date = new Date(currentDetailDate);
+      date.setDate(date.getDate() + days);
+      currentDetailDate = date.toISOString().split('T')[0];
+      updateDetailDate();
+      loadPickups();
+    }
+    
+    // 상세 날짜 표시
+    function updateDetailDate() {
+      const date = new Date(currentDetailDate);
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayName = days[date.getDay()];
+      document.getElementById('detailDate').textContent = 
+        `${currentDetailDate} (${dayName})`;
     }
     
     function changeMonth(delta) {
@@ -149,10 +181,11 @@
         const border = isToday ? '2px solid #ff9800' : '1px solid #ddd';
         
         html += `
-          <div style="border:${border};padding:8px;background:${bgColor};border-radius:5px;cursor:pointer;min-height:60px;" onclick="viewDate('${dateStr}')">
-            <strong>${day}</strong>
-            ${arr ? `<div style="color:#2196f3;font-size:12px;">🛬 ${arr.total_passengers}명</div>` : ''}
-            ${dep ? `<div style="color:#f44336;font-size:12px;">🏨 ${dep.total_passengers}명</div>` : ''}
+          <div style="border:${border};padding:8px;background:${bgColor};border-radius:5px;cursor:pointer;min-height:80px;" onclick="viewDate('${dateStr}')">
+            <div style="font-size:16px;font-weight:bold;margin-bottom:5px;">${day}일</div>
+            ${hasPickup ? `<div style="background:#fff3cd;padding:3px;border-radius:3px;margin:2px 0;font-size:11px;font-weight:bold;">📊 ${(arr ? arr.count : 0) + (dep ? dep.count : 0)}건 | ${arr ? arr.total_passengers : 0 + dep ? dep.total_passengers : 0}명</div>` : ''}
+            ${arr ? `<div style="background:#e3f2fd;padding:2px;border-radius:3px;margin:2px 0;font-size:10px;color:#1976d2;">🛬 ${arr.total_passengers}명</div>` : ''}
+            ${dep ? `<div style="background:#fce4ec;padding:2px;border-radius:3px;margin:2px 0;font-size:10px;color:#c2185b;">🏨 ${dep.total_passengers}명</div>` : ''}
           </div>
         `;
       }
@@ -160,35 +193,10 @@
       document.getElementById('calendar').innerHTML = html;
     }
     
-    function viewDate(date) {
-      currentDate = date;
-      document.getElementById('calendarView').style.display = 'none';
-      updateDateDisplay();
-      loadPickups();
-    }
-    
-    // 날짜 표시
-    function updateDateDisplay() {
-      const date = new Date(currentDate);
-      const days = ['일', '월', '화', '수', '목', '금', '토'];
-      const dayName = days[date.getDay()];
-      document.getElementById('currentDate').textContent = 
-        `${currentDate} (${dayName})`;
-    }
-    
-    // 날짜 변경
-    function changeDate(days) {
-      const date = new Date(currentDate);
-      date.setDate(date.getDate() + days);
-      currentDate = date.toISOString().split('T')[0];
-      updateDateDisplay();
-      loadPickups();
-    }
-    
-    // 픽업 목록 로드
+    // 픽업 목록 로드 (상세 보기용)
     async function loadPickups() {
       try {
-        const res = await fetch(`/pickup/api/list?date=${currentDate}`);
+        const res = await fetch(`/pickup/api/list?date=${currentDetailDate}`);
         const { arrivals, departures } = await res.json();
         
         // 총 인원수

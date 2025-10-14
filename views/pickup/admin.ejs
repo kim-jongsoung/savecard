@@ -10,11 +10,16 @@
     .early-morning { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
     .pickup-card { margin-bottom: 15px; padding: 15px; border: 2px solid #ddd; border-radius: 8px; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-    .calendar-day { border: 1px solid #ddd; padding: 15px; border-radius: 8px; min-height: 100px; cursor: pointer; }
-    .calendar-day:hover { background: #f8f9fa; }
-    .calendar-day.has-pickup { background: #e3f2fd; border-color: #2196f3; }
-    .calendar-day.today { background: #fff3cd; border-color: #ff9800; }
-    .calendar-header { font-weight: bold; text-align: center; padding: 10px; background: #f8f9fa; }
+    .calendar-day { border: 1px solid #ddd; padding: 10px; border-radius: 8px; min-height: 140px; cursor: pointer; transition: all 0.3s; }
+    .calendar-day:hover { background: #f8f9fa; transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .calendar-day.has-pickup { background: linear-gradient(135deg, #e3f2fd 0%, #f8f9fa 100%); border-color: #2196f3; border-width: 2px; }
+    .calendar-day.today { background: #fff3cd; border-color: #ff9800; font-weight: bold; border-width: 3px; }
+    .calendar-header { font-weight: bold; text-align: center; padding: 10px; background: #667eea; color: white; border-radius: 4px; }
+    .calendar-date { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+    .calendar-stat { font-size: 11px; line-height: 1.4; margin: 3px 0; padding: 2px 5px; border-radius: 3px; }
+    .stat-arrival { background: #e3f2fd; color: #1976d2; }
+    .stat-departure { background: #fce4ec; color: #c2185b; }
+    .stat-total { background: #fff3cd; color: #f57c00; font-weight: bold; border: 1px solid #ff9800; }
   </style>
 </head>
 <body>
@@ -22,31 +27,29 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2>🚗 공항 픽업 관리</h2>
       <div>
-        <button class="btn btn-outline-primary me-2" onclick="showCalendar()">📅 달력 보기</button>
         <button class="btn btn-outline-secondary me-2" onclick="location.href='/pickup/agencies'">🏢 업체 관리</button>
         <button class="btn btn-success" onclick="showAddModal()">+ 새 예약 등록</button>
       </div>
     </div>
     
-    <!-- 달력 뷰 -->
-    <div id="calendarView" style="display:none;" class="mb-4">
+    <!-- 달력 뷰 (기본) -->
+    <div id="calendarView" class="mb-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <button class="btn btn-sm btn-secondary" onclick="changeMonth(-1)">◀ 이전달</button>
         <h4 id="currentMonth"></h4>
         <button class="btn btn-sm btn-secondary" onclick="changeMonth(1)">다음달 ▶</button>
       </div>
       <div id="calendar" class="calendar-grid"></div>
-      <button class="btn btn-secondary mt-3" onclick="hideCalendar()">목록으로</button>
     </div>
     
-    <!-- 날짜 선택 (목록 뷰) -->
-    <div id="listView">
-      <div class="row mb-3">
-        <div class="col-md-4">
-          <input type="date" id="viewDate" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
-        </div>
-        <div class="col-md-4">
-          <button class="btn btn-primary" onclick="loadPickups()">조회</button>
+    <!-- 날짜별 상세 뷰 -->
+    <div id="detailView" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn btn-secondary" onclick="backToCalendar()">← 달력으로</button>
+        <h4 id="detailDate" class="mb-0"></h4>
+        <div>
+          <button class="btn btn-sm btn-outline-secondary" onclick="changeDetailDate(-1)">← 전날</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="changeDetailDate(1)">다음날 →</button>
         </div>
       </div>
     
@@ -218,12 +221,13 @@
     let addModalInstance;
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
+    let currentDetailDate = null;
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
       addModalInstance = new bootstrap.Modal(document.getElementById('addModal'));
       loadAgencies();
-      loadPickups();
+      loadCalendar(); // 달력을 기본으로 로드
     });
     
     // 인원 계산
@@ -242,9 +246,9 @@
       select.innerHTML = agencies.map(a => `<option value="${a.id}">${a.agency_name}</option>`).join('');
     }
     
-    // 픽업 목록 로드
+    // 픽업 목록 로드 (상세 보기용)
     async function loadPickups() {
-      const date = document.getElementById('viewDate').value;
+      const date = currentDetailDate;
       const res = await fetch(`/pickup/api/list?date=${date}`);
       const { arrivals, departures } = await res.json();
       
@@ -464,11 +468,16 @@
         const hasPickup = arr || dep;
         const isToday = dateStr === today;
         
+        // 총 인원 계산
+        const totalPax = (arr ? parseInt(arr.total_passengers) : 0) + (dep ? parseInt(dep.total_passengers) : 0);
+        const totalCount = (arr ? parseInt(arr.count) : 0) + (dep ? parseInt(dep.count) : 0);
+        
         html += `
           <div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''}" onclick="viewDate('${dateStr}')">
-            <strong>${day}</strong>
-            ${arr ? `<div class="text-primary small">🛬 ${arr.count}건 (${arr.total_passengers}명)</div>` : ''}
-            ${dep ? `<div class="text-danger small">🏨 ${dep.count}건 (${dep.total_passengers}명)</div>` : ''}
+            <div class="calendar-date">${day}일</div>
+            ${hasPickup ? `<div class="calendar-stat stat-total">📊 총 ${totalCount}건 | ${totalPax}명</div>` : ''}
+            ${arr ? `<div class="calendar-stat stat-arrival">🛬 공항 ${arr.count}건 · ${arr.total_passengers}명</div>` : ''}
+            ${dep ? `<div class="calendar-stat stat-departure">🏨 호텔 ${dep.count}건 · ${dep.total_passengers}명</div>` : ''}
           </div>
         `;
       }
@@ -476,10 +485,38 @@
       document.getElementById('calendar').innerHTML = html;
     }
     
+    // 달력으로 돌아가기
+    function backToCalendar() {
+      document.getElementById('detailView').style.display = 'none';
+      document.getElementById('calendarView').style.display = 'block';
+      loadCalendar();
+    }
+    
+    // 날짜 클릭 시 상세 보기
     function viewDate(date) {
-      document.getElementById('viewDate').value = date;
-      hideCalendar();
+      currentDetailDate = date;
+      document.getElementById('calendarView').style.display = 'none';
+      document.getElementById('detailView').style.display = 'block';
+      updateDetailDate();
       loadPickups();
+    }
+    
+    // 상세 보기에서 날짜 변경
+    function changeDetailDate(days) {
+      const date = new Date(currentDetailDate);
+      date.setDate(date.getDate() + days);
+      currentDetailDate = date.toISOString().split('T')[0];
+      updateDetailDate();
+      loadPickups();
+    }
+    
+    // 상세 날짜 표시 업데이트
+    function updateDetailDate() {
+      const date = new Date(currentDetailDate);
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayName = days[date.getDay()];
+      document.getElementById('detailDate').textContent = 
+        `${currentDetailDate} (${dayName})`;
     }
     
     // 저장
