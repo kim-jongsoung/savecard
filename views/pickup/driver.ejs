@@ -195,13 +195,13 @@
       const pickupsByDate = {};
       arrivals.forEach(p => {
         allPickups[p.id] = p; // 전역 저장
-        const date = p.guam_arrival_date;
+        const date = p.guam_arrival_date.split('T')[0]; // 날짜만 추출
         if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
         pickupsByDate[date].arrivals.push(p);
       });
       departures.forEach(p => {
         allPickups[p.id] = p; // 전역 저장
-        const date = p.hotel_pickup_date;
+        const date = p.hotel_pickup_date.split('T')[0]; // 날짜만 추출
         if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
         pickupsByDate[date].departures.push(p);
       });

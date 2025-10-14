@@ -489,13 +489,13 @@
       // 날짜별로 예약 그룹화
       const pickupsByDate = {};
       arrivals.forEach(p => {
-        const date = p.guam_arrival_date;
+        const date = p.guam_arrival_date.split('T')[0]; // 날짜만 추출
         console.log('✈️ 공항픽업 추가:', date, p.customer_name);
         if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
         pickupsByDate[date].arrivals.push(p);
       });
       departures.forEach(p => {
-        const date = p.hotel_pickup_date;
+        const date = p.hotel_pickup_date.split('T')[0]; // 날짜만 추출
         console.log('🏨 호텔픽업 추가:', date, p.customer_name);
         if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
         pickupsByDate[date].departures.push(p);
