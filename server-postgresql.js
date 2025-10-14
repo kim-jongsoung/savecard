@@ -701,6 +701,29 @@ try {
     console.error('⚠️ 수배업체 라우트 연결 실패:', error.message);
 }
 
+// 공항 픽업 라우트 연결 ⭐
+try {
+    const pickupRouter = require('./routes/pickup');
+    app.use('/pickup', pickupRouter);
+    console.log('✅ 공항 픽업 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 공항 픽업 라우트 연결 실패:', error.message);
+}
+
+// 공항 픽업 페이지 라우트 ⭐
+app.get('/pickup', requireAuth, (req, res) => {
+    res.render('pickup/admin', {
+        title: '공항 픽업 관리',
+        adminUsername: req.session.adminUsername
+    });
+});
+
+app.get('/pickup/driver', (req, res) => {
+    res.render('pickup/driver', {
+        title: '기사 화면'
+    });
+});
+
 // 임시 테스트 API (구체적인 라우트를 먼저 배치)
 app.get('/api/test', (req, res) => {
     res.json({ 

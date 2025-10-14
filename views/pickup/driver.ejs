@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오늘의 픽업</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f5f5f5; padding: 10px; }
+    .flight-card { 
+      background: white; 
+      border: 3px solid #ddd; 
+      border-radius: 10px; 
+      padding: 20px; 
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .flight-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+    .passenger-item { 
+      background: #f8f9fa; 
+      padding: 15px; 
+      margin: 10px 0; 
+      border-radius: 8px;
+      border-left: 5px solid #007bff;
+    }
+    .early-morning { 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      color: white;
+      border-color: #5a67d8;
+    }
+    .early-morning .passenger-item { 
+      background: rgba(255,255,255,0.2); 
+      color: white;
+      border-left-color: #fbbf24;
+    }
+    .vehicle-select { font-size: 20px; padding: 12px; }
+    .stats { font-size: 18px; padding: 15px; background: #e3f2fd; border-radius: 8px; }
+    .date-nav { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <!-- 날짜 네비게이션 -->
+    <div class="date-nav text-center">
+      <button class="btn btn-secondary" onclick="changeDate(-1)">← 어제</button>
+      <strong id="currentDate" class="mx-3"></strong>
+      <button class="btn btn-secondary" onclick="changeDate(1)">내일 →</button>
+    </div>
+    
+    <!-- 통계 -->
+    <div class="stats text-center mb-3">
+      <div>📊 오늘 전체: <strong id="totalCount">0명</strong></div>
+    </div>
+    
+    <!-- 공항 픽업 -->
+    <h3 class="text-primary">🛬 오늘 공항 픽업</h3>
+    <div id="arrivalsList"></div>
+    
+    <!-- 호텔 픽업 -->
+    <h3 class="text-danger mt-4">🏨 오늘 호텔 픽업</h3>
+    <div id="departuresList"></div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let currentDate = new Date().toISOString().split('T')[0];
+    
+    // 페이지 로드
+    document.addEventListener('DOMContentLoaded', () => {
+      updateDateDisplay();
+      loadPickups();
+      
+      // 3초마다 자동 새로고침
+      setInterval(loadPickups, 3000);
+    });
+    
+    // 날짜 표시
+    function updateDateDisplay() {
+      const date = new Date(currentDate);
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayName = days[date.getDay()];
+      document.getElementById('currentDate').textContent = 
+        `${currentDate} (${dayName})`;
+    }
+    
+    // 날짜 변경
+    function changeDate(days) {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() + days);
+      currentDate = date.toISOString().split('T')[0];
+      updateDateDisplay();
+      loadPickups();
+    }
+    
+    // 픽업 목록 로드
+    async function loadPickups() {
+      try {
+        const res = await fetch(`/pickup/api/list?date=${currentDate}`);
+        const { arrivals, departures } = await res.json();
+        
+        // 총 인원수
+        const totalArr = arrivals.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        const totalDep = departures.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        document.getElementById('totalCount').textContent = 
+          `공항픽업 ${totalArr}명 | 호텔픽업 ${totalDep}명`;
+        
+        // 공항 픽업
+        if (arrivals.length === 0) {
+          document.getElementById('arrivalsList').innerHTML = 
+            '<p class="text-muted text-center">예약 없음</p>';
+        } else {
+          // 비행편별로 그룹화
+          const grouped = {};
+          arrivals.forEach(p => {
+            const key = `${p.kr_flight_number}_${p.guam_arrival_time}`;
+            if (!grouped[key]) grouped[key] = { flight: p, passengers: [] };
+            grouped[key].passengers.push(p);
+          });
+          
+          document.getElementById('arrivalsList').innerHTML = 
+            Object.values(grouped).map(renderArrivalFlight).join('');
+        }
+        
+        // 호텔 픽업
+        if (departures.length === 0) {
+          document.getElementById('departuresList').innerHTML = 
+            '<p class="text-muted text-center">예약 없음</p>';
+        } else {
+          const grouped = {};
+          departures.forEach(p => {
+            const key = `${p.hotel_pickup_time}`;
+            if (!grouped[key]) grouped[key] = { flight: p, passengers: [] };
+            grouped[key].passengers.push(p);
+          });
+          
+          document.getElementById('departuresList').innerHTML = 
+            Object.values(grouped).map(renderDepartureFlight).join('');
+        }
+      } catch (error) {
+        console.error('로드 실패:', error);
+      }
+    }
+    
+    // 공항 픽업 렌더링
+    function renderArrivalFlight(group) {
+      const p = group.flight;
+      const passengers = group.passengers;
+      const totalPax = passengers.reduce((sum, x) => sum + (x.passenger_count || 0), 0);
+      
+      return `
+        <div class="flight-card">
+          <div class="flight-title">
+            ✈️ ${p.kr_flight_number} ${p.guam_arrival_time} 도착
+          </div>
+          <div class="mb-2">
+            <strong>👥 총 ${totalPax}명 (${passengers.length}팀)</strong>
+          </div>
+          <div class="mb-3">
+            🚗 차량: 
+            <select class="vehicle-select" onchange="updateVehicle(${p.id}, this.value)">
+              <option value="">선택</option>
+              <option value="sedan" ${p.vehicle_type === 'sedan' ? 'selected' : ''}>세단 (1-4명)</option>
+              <option value="van" ${p.vehicle_type === 'van' ? 'selected' : ''}>밴 (5-8명)</option>
+              <option value="bus12" ${p.vehicle_type === 'bus12' ? 'selected' : ''}>12인승 (9-12명)</option>
+            </select>
+            <label class="ms-3">
+              <input type="checkbox" ${p.vehicle_ready ? 'checked' : ''} 
+                onchange="updateReady(${p.id}, this.checked)"> ✅ 준비완료
+            </label>
+          </div>
+          ${passengers.map(renderPassenger).join('')}
+          <small class="text-muted">한국 ${p.kr_departure_date} ${p.kr_departure_time} 출발</small>
+        </div>
+      `;
+    }
+    
+    // 호텔 픽업 렌더링
+    function renderDepartureFlight(group) {
+      const p = group.flight;
+      const passengers = group.passengers;
+      const totalPax = passengers.reduce((sum, x) => sum + (x.passenger_count || 0), 0);
+      const isEarly = p.is_early_morning;
+      
+      return `
+        <div class="flight-card ${isEarly ? 'early-morning' : ''}">
+          <div class="flight-title">
+            ⏰ ${p.hotel_pickup_time} 픽업 ${isEarly ? '🌙' : ''}
+          </div>
+          ${isEarly ? '<div class="mb-2">⚠️ 새벽 비행기 - 전날 밤 픽업</div>' : ''}
+          <div class="mb-2">
+            <strong>👥 총 ${totalPax}명 (${passengers.length}팀)</strong>
+          </div>
+          <div class="mb-3">
+            🚗 차량: 
+            <select class="vehicle-select" onchange="updateVehicle(${p.id}, this.value)">
+              <option value="">선택</option>
+              <option value="sedan" ${p.vehicle_type === 'sedan' ? 'selected' : ''}>세단</option>
+              <option value="van" ${p.vehicle_type === 'van' ? 'selected' : ''}>밴</option>
+              <option value="bus12" ${p.vehicle_type === 'bus12' ? 'selected' : ''}>12인승</option>
+            </select>
+            <label class="ms-3">
+              <input type="checkbox" ${p.vehicle_ready ? 'checked' : ''} 
+                onchange="updateReady(${p.id}, this.checked)"> ✅ 준비완료
+            </label>
+          </div>
+          ${passengers.map(renderPassenger).join('')}
+          <small ${isEarly ? '' : 'class="text-muted"'}>
+            비행기: ${p.guam_departure_date} ${p.guam_departure_time} 출발
+          </small>
+        </div>
+      `;
+    }
+    
+    // 승객 렌더링
+    function renderPassenger(p) {
+      return `
+        <div class="passenger-item">
+          <strong>${p.customer_name} ${p.passenger_count}명</strong>
+          → ${p.hotel_name}
+          ${p.memo ? `<br>📝 ${p.memo}` : ''}
+          ${p.phone ? `<br>📞 ${p.phone}` : ''}
+        </div>
+      `;
+    }
+    
+    // 차량 업데이트
+    async function updateVehicle(id, vehicle_type) {
+      await fetch(`/pickup/api/${id}/vehicle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicle_type, vehicle_ready: false })
+      });
+      loadPickups();
+    }
+    
+    // 준비완료 업데이트
+    async function updateReady(id, vehicle_ready) {
+      const card = event.target.closest('.flight-card');
+      const select = card.querySelector('.vehicle-select');
+      const vehicle_type = select.value;
+      
+      await fetch(`/pickup/api/${id}/vehicle`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicle_type, vehicle_ready })
+      });
+      loadPickups();
+    }
+  </script>
+</body>
+</html>

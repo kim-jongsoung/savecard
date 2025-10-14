@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공항 픽업 관리</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .date-warning { background: #fff3cd; border-left: 4px solid #ff6b6b; }
+    .early-morning { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .pickup-card { margin-bottom: 15px; padding: 15px; border: 2px solid #ddd; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container mt-4">
+    <h2>🚗 공항 픽업 관리</h2>
+    
+    <!-- 날짜 선택 -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <input type="date" id="viewDate" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+      </div>
+      <div class="col-md-4">
+        <button class="btn btn-primary" onclick="loadPickups()">조회</button>
+        <button class="btn btn-success" onclick="showAddModal()">+ 새 예약 등록</button>
+      </div>
+    </div>
+    
+    <!-- 공항 픽업 목록 -->
+    <h4>🛬 공항 픽업 (공항 → 호텔)</h4>
+    <div id="arrivalsList"></div>
+    
+    <hr class="my-4">
+    
+    <!-- 호텔 픽업 목록 -->
+    <h4>🏨 호텔 픽업 (호텔 → 공항)</h4>
+    <div id="departuresList"></div>
+  </div>
+  
+  <!-- 등록 모달 -->
+  <div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">새 픽업 등록</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addForm">
+            <!-- 픽업 유형 -->
+            <div class="mb-3">
+              <label class="form-label">픽업 유형</label>
+              <select class="form-select" id="pickupType" onchange="toggleFields()">
+                <option value="airport_to_hotel">공항 → 호텔 (도착)</option>
+                <option value="hotel_to_airport">호텔 → 공항 (출국)</option>
+                <option value="roundtrip">왕복</option>
+              </select>
+            </div>
+            
+            <!-- 도착 정보 -->
+            <div id="arrivalFields">
+              <h6 class="text-primary">🇰🇷 한국 출발 (도착 픽업)</h6>
+              <div class="row">
+                <div class="col-md-4">
+                  <label class="form-label">날짜</label>
+                  <input type="date" class="form-control" id="krDate" onchange="autoCalculate()">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">편명</label>
+                  <select class="form-select" id="krFlight" onchange="autoCalculate()">
+                    <option value="">선택</option>
+                    <option value="KE111">KE111 (07:30)</option>
+                    <option value="KE123">KE123 (22:00) ⚠️ 다음날 도착</option>
+                    <option value="OZ456">OZ456 (10:00)</option>
+                    <option value="OZ789">OZ789 (15:30)</option>
+                    <option value="UA873">UA873 (13:20)</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">시간</label>
+                  <input type="text" class="form-control" id="krTime" readonly>
+                </div>
+              </div>
+              <div id="arrivalResult" class="alert alert-info mt-2" style="display:none;"></div>
+            </div>
+            
+            <!-- 출발 정보 -->
+            <div id="departureFields" style="display:none;">
+              <h6 class="text-danger">🇬🇺 괌 출발 (출국 픽업)</h6>
+              <div class="row">
+                <div class="col-md-4">
+                  <label class="form-label">날짜</label>
+                  <input type="date" class="form-control" id="guamDepDate" onchange="autoCalculatePickup()">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">편명</label>
+                  <select class="form-select" id="depFlight" onchange="autoCalculatePickup()">
+                    <option value="">선택</option>
+                    <option value="KE124">KE124</option>
+                    <option value="OZ458">OZ458</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">시간</label>
+                  <input type="text" class="form-control" id="guamDepTime" readonly>
+                </div>
+              </div>
+              <div id="pickupResult" class="alert alert-warning mt-2" style="display:none;"></div>
+            </div>
+            
+            <hr class="my-3">
+            
+            <!-- 고객 정보 -->
+            <h6>👤 고객 정보</h6>
+            <div class="row">
+              <div class="col-md-4">
+                <label class="form-label">업체</label>
+                <select class="form-select" id="agencyId"></select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">고객명</label>
+                <input type="text" class="form-control" id="customerName" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">인원</label>
+                <input type="number" class="form-control" id="passengerCount" required>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-4">
+                <label class="form-label">호텔</label>
+                <input type="text" class="form-control" id="hotelName" list="hotels" required>
+                <datalist id="hotels">
+                  <option value="Hilton Hotel">
+                  <option value="Hyatt Regency">
+                  <option value="PIC Guam">
+                  <option value="Marriott Resort">
+                  <option value="Dusit Thani">
+                </datalist>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">연락처</label>
+                <input type="text" class="form-control" id="phone">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">카톡ID</label>
+                <input type="text" class="form-control" id="kakaoId">
+              </div>
+            </div>
+            <div class="mt-2">
+              <label class="form-label">메모</label>
+              <textarea class="form-control" id="memo" rows="2"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" onclick="savePickup()">등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const FLIGHTS = {
+      'KE111': { time: '07:30', hours: 4 },
+      'KE123': { time: '22:00', hours: 4 },
+      'KE124': { time: '01:00', hours: 4 },
+      'OZ456': { time: '10:00', hours: 4 },
+      'OZ458': { time: '03:30', hours: 4 },
+      'OZ789': { time: '15:30', hours: 4 },
+      'UA873': { time: '13:20', hours: 4 }
+    };
+    
+    let addModalInstance;
+    
+    // 페이지 로드
+    document.addEventListener('DOMContentLoaded', () => {
+      addModalInstance = new bootstrap.Modal(document.getElementById('addModal'));
+      loadAgencies();
+      loadPickups();
+    });
+    
+    // 업체 목록 로드
+    async function loadAgencies() {
+      const res = await fetch('/pickup/api/agencies');
+      const agencies = await res.json();
+      const select = document.getElementById('agencyId');
+      select.innerHTML = agencies.map(a => `<option value="${a.id}">${a.agency_name}</option>`).join('');
+    }
+    
+    // 픽업 목록 로드
+    async function loadPickups() {
+      const date = document.getElementById('viewDate').value;
+      const res = await fetch(`/pickup/api/list?date=${date}`);
+      const { arrivals, departures } = await res.json();
+      
+      // 공항 픽업
+      document.getElementById('arrivalsList').innerHTML = arrivals.length === 0 
+        ? '<p class="text-muted">예약 없음</p>'
+        : arrivals.map(renderArrivalCard).join('');
+      
+      // 호텔 픽업
+      document.getElementById('departuresList').innerHTML = departures.length === 0 
+        ? '<p class="text-muted">예약 없음</p>'
+        : departures.map(renderDepartureCard).join('');
+    }
+    
+    function renderArrivalCard(p) {
+      return `
+        <div class="pickup-card">
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>✈️ ${p.kr_flight_number || ''} ${p.guam_arrival_time || ''} 도착</strong>
+              <span class="badge bg-secondary">${p.agency_name || ''}</span>
+              <br>
+              <small class="text-muted">한국 ${p.kr_departure_date} ${p.kr_departure_time} 출발</small>
+            </div>
+            <div>
+              <span class="badge bg-info">${p.passenger_count}명</span>
+              ${p.vehicle_type ? `<span class="badge bg-success">${p.vehicle_type}</span>` : ''}
+            </div>
+          </div>
+          <div class="mt-2">
+            ${p.customer_name} → ${p.hotel_name}
+            ${p.memo ? `<br><small>📝 ${p.memo}</small>` : ''}
+          </div>
+          <div class="mt-2">
+            <button class="btn btn-sm btn-warning" onclick="editPickup(${p.id})">수정</button>
+            <button class="btn btn-sm btn-danger" onclick="deletePickup(${p.id})">취소</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderDepartureCard(p) {
+      const isEarly = p.is_early_morning;
+      return `
+        <div class="pickup-card ${isEarly ? 'early-morning' : ''}">
+          <div class="d-flex justify-content-between">
+            <div>
+              <strong>⏰ ${p.hotel_pickup_time} 픽업 ${isEarly ? '🌙' : ''}</strong>
+              <span class="badge ${isEarly ? 'bg-warning' : 'bg-secondary'}">${p.agency_name || ''}</span>
+              <br>
+              <small ${isEarly ? '' : 'class="text-muted"'}>비행기: ${p.guam_departure_date} ${p.guam_departure_time} 출발</small>
+              ${isEarly ? '<br><small>⚠️ 새벽 비행기 - 전날 밤 픽업</small>' : ''}
+            </div>
+            <div>
+              <span class="badge ${isEarly ? 'bg-light text-dark' : 'bg-info'}">${p.passenger_count}명</span>
+              ${p.vehicle_type ? `<span class="badge bg-success">${p.vehicle_type}</span>` : ''}
+            </div>
+          </div>
+          <div class="mt-2">
+            ${p.customer_name} ← ${p.hotel_name}
+            ${p.memo ? `<br><small>📝 ${p.memo}</small>` : ''}
+          </div>
+          <div class="mt-2">
+            <button class="btn btn-sm btn-warning" onclick="editPickup(${p.id})">수정</button>
+            <button class="btn btn-sm btn-danger" onclick="deletePickup(${p.id})">취소</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // 모달 열기
+    function showAddModal() {
+      document.getElementById('addForm').reset();
+      toggleFields();
+      addModalInstance.show();
+    }
+    
+    // 필드 토글
+    function toggleFields() {
+      const type = document.getElementById('pickupType').value;
+      document.getElementById('arrivalFields').style.display = 
+        (type === 'airport_to_hotel' || type === 'roundtrip') ? 'block' : 'none';
+      document.getElementById('departureFields').style.display = 
+        (type === 'hotel_to_airport' || type === 'roundtrip') ? 'block' : 'none';
+    }
+    
+    // 자동 계산 (도착)
+    function autoCalculate() {
+      const date = document.getElementById('krDate').value;
+      const flightNum = document.getElementById('krFlight').value;
+      if (!date || !flightNum) return;
+      
+      const flight = FLIGHTS[flightNum];
+      if (!flight) return;
+      
+      document.getElementById('krTime').value = flight.time;
+      
+      const krDateTime = new Date(`${date}T${flight.time}:00+09:00`);
+      const guamDateTime = new Date(krDateTime);
+      guamDateTime.setHours(guamDateTime.getHours() + flight.hours + 1);
+      
+      const guamDate = guamDateTime.toISOString().split('T')[0];
+      const guamTime = guamDateTime.toTimeString().slice(0, 5);
+      
+      const dateChanged = date !== guamDate;
+      
+      const result = document.getElementById('arrivalResult');
+      result.style.display = 'block';
+      result.className = dateChanged ? 'alert alert-warning' : 'alert alert-info';
+      result.innerHTML = dateChanged 
+        ? `⚠️ 날짜 변경!<br>한국: ${date} ${flight.time} 출발<br>괌: <strong>${guamDate} ${guamTime} 도착</strong>`
+        : `괌 도착: ${guamDate} ${guamTime}`;
+    }
+    
+    // 자동 계산 (호텔 픽업)
+    function autoCalculatePickup() {
+      const date = document.getElementById('guamDepDate').value;
+      const flightNum = document.getElementById('depFlight').value;
+      if (!date || !flightNum) return;
+      
+      const flight = FLIGHTS[flightNum];
+      if (!flight) return;
+      
+      document.getElementById('guamDepTime').value = flight.time;
+      
+      const flightDateTime = new Date(`${date}T${flight.time}:00+10:00`);
+      const hour = flightDateTime.getHours();
+      
+      let pickupDate, pickupTime, isEarly = false;
+      
+      if (hour >= 0 && hour < 6) {
+        // 새벽 비행기
+        const prevDay = new Date(flightDateTime);
+        prevDay.setDate(prevDay.getDate() - 1);
+        pickupDate = prevDay.toISOString().split('T')[0];
+        pickupTime = '23:59';
+        isEarly = true;
+      } else {
+        // 정상
+        const pickupDateTime = new Date(flightDateTime);
+        pickupDateTime.setHours(pickupDateTime.getHours() - 3);
+        pickupDate = pickupDateTime.toISOString().split('T')[0];
+        pickupTime = pickupDateTime.toTimeString().slice(0, 5);
+      }
+      
+      const result = document.getElementById('pickupResult');
+      result.style.display = 'block';
+      result.className = isEarly ? 'alert alert-danger' : 'alert alert-info';
+      result.innerHTML = isEarly 
+        ? `🌙 새벽 비행기 특별 규칙!<br>비행기: ${date} ${flight.time} 출발<br>픽업: <strong>${pickupDate} ${pickupTime}</strong> (전날 밤)`
+        : `호텔 픽업: ${pickupDate} ${pickupTime} (3시간 전)`;
+    }
+    
+    // 저장
+    async function savePickup() {
+      const data = {
+        pickup_type: document.getElementById('pickupType').value,
+        agency_id: document.getElementById('agencyId').value,
+        customer_name: document.getElementById('customerName').value,
+        passenger_count: document.getElementById('passengerCount').value,
+        hotel_name: document.getElementById('hotelName').value,
+        phone: document.getElementById('phone').value,
+        kakao_id: document.getElementById('kakaoId').value,
+        memo: document.getElementById('memo').value
+      };
+      
+      const type = data.pickup_type;
+      
+      if (type === 'airport_to_hotel' || type === 'roundtrip') {
+        data.kr_departure_date = document.getElementById('krDate').value;
+        data.kr_flight_number = document.getElementById('krFlight').value;
+      }
+      
+      if (type === 'hotel_to_airport' || type === 'roundtrip') {
+        data.guam_departure_date = document.getElementById('guamDepDate').value;
+        data.departure_flight_number = document.getElementById('depFlight').value;
+      }
+      
+      try {
+        const res = await fetch('/pickup/api/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+          alert('✅ 등록 완료!');
+          addModalInstance.hide();
+          loadPickups();
+        } else {
+          const err = await res.json();
+          alert('❌ 오류: ' + err.error);
+        }
+      } catch (error) {
+        alert('❌ 오류: ' + error.message);
+      }
+    }
+    
+    // 삭제
+    async function deletePickup(id) {
+      if (!confirm('정말 취소하시겠습니까?')) return;
+      
+      await fetch(`/pickup/api/${id}`, { method: 'DELETE' });
+      alert('✅ 취소 완료');
+      loadPickups();
+    }
+  </script>
+</body>
+</html>
