@@ -714,6 +714,14 @@ try {
 app.get('/pickup', requireAuth, (req, res) => {
     res.render('pickup/admin', {
         title: '공항 픽업 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'pickup'
+    });
+});
+
+app.get('/pickup/agencies', requireAuth, (req, res) => {
+    res.render('pickup/agencies', {
+        title: '업체 관리',
         adminUsername: req.session.adminUsername
     });
 });

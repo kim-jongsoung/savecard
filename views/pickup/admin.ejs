@@ -9,32 +9,57 @@
     .date-warning { background: #fff3cd; border-left: 4px solid #ff6b6b; }
     .early-morning { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
     .pickup-card { margin-bottom: 15px; padding: 15px; border: 2px solid #ddd; border-radius: 8px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+    .calendar-day { border: 1px solid #ddd; padding: 15px; border-radius: 8px; min-height: 100px; cursor: pointer; }
+    .calendar-day:hover { background: #f8f9fa; }
+    .calendar-day.has-pickup { background: #e3f2fd; border-color: #2196f3; }
+    .calendar-day.today { background: #fff3cd; border-color: #ff9800; }
+    .calendar-header { font-weight: bold; text-align: center; padding: 10px; background: #f8f9fa; }
   </style>
 </head>
 <body>
-  <div class="container mt-4">
-    <h2>🚗 공항 픽업 관리</h2>
-    
-    <!-- 날짜 선택 -->
-    <div class="row mb-3">
-      <div class="col-md-4">
-        <input type="date" id="viewDate" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
-      </div>
-      <div class="col-md-4">
-        <button class="btn btn-primary" onclick="loadPickups()">조회</button>
+  <div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>🚗 공항 픽업 관리</h2>
+      <div>
+        <button class="btn btn-outline-primary me-2" onclick="showCalendar()">📅 달력 보기</button>
+        <button class="btn btn-outline-secondary me-2" onclick="location.href='/pickup/agencies'">🏢 업체 관리</button>
         <button class="btn btn-success" onclick="showAddModal()">+ 새 예약 등록</button>
       </div>
     </div>
     
-    <!-- 공항 픽업 목록 -->
-    <h4>🛬 공항 픽업 (공항 → 호텔)</h4>
-    <div id="arrivalsList"></div>
+    <!-- 달력 뷰 -->
+    <div id="calendarView" style="display:none;" class="mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <button class="btn btn-sm btn-secondary" onclick="changeMonth(-1)">◀ 이전달</button>
+        <h4 id="currentMonth"></h4>
+        <button class="btn btn-sm btn-secondary" onclick="changeMonth(1)">다음달 ▶</button>
+      </div>
+      <div id="calendar" class="calendar-grid"></div>
+      <button class="btn btn-secondary mt-3" onclick="hideCalendar()">목록으로</button>
+    </div>
     
-    <hr class="my-4">
+    <!-- 날짜 선택 (목록 뷰) -->
+    <div id="listView">
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <input type="date" id="viewDate" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+        </div>
+        <div class="col-md-4">
+          <button class="btn btn-primary" onclick="loadPickups()">조회</button>
+        </div>
+      </div>
     
-    <!-- 호텔 픽업 목록 -->
-    <h4>🏨 호텔 픽업 (호텔 → 공항)</h4>
-    <div id="departuresList"></div>
+      <!-- 공항 픽업 목록 -->
+      <h4>🛬 공항 픽업 (공항 → 호텔)</h4>
+      <div id="arrivalsList"></div>
+      
+      <hr class="my-4">
+      
+      <!-- 호텔 픽업 목록 -->
+      <h4>🏨 호텔 픽업 (호텔 → 공항)</h4>
+      <div id="departuresList"></div>
+    </div>
   </div>
   
   <!-- 등록 모달 -->
@@ -117,14 +142,31 @@
                 <label class="form-label">업체</label>
                 <select class="form-select" id="agencyId"></select>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-8">
                 <label class="form-label">고객명</label>
                 <input type="text" class="form-control" id="customerName" required>
               </div>
-              <div class="col-md-4">
-                <label class="form-label">인원</label>
-                <input type="number" class="form-control" id="passengerCount" required>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-3">
+                <label class="form-label">성인 (Adult)</label>
+                <input type="number" class="form-control" id="adultCount" min="0" value="0" onchange="updateTotal()">
               </div>
+              <div class="col-md-3">
+                <label class="form-label">소아 (Child)</label>
+                <input type="number" class="form-control" id="childCount" min="0" value="0" onchange="updateTotal()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">유아 (Infant)</label>
+                <input type="number" class="form-control" id="infantCount" min="0" value="0" onchange="updateTotal()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">짐 (Luggage)</label>
+                <input type="number" class="form-control" id="luggageCount" min="0" value="0">
+              </div>
+            </div>
+            <div class="alert alert-info mt-2">
+              <strong>총 인원:</strong> <span id="totalPassengers">0</span>명
             </div>
             <div class="row mt-2">
               <div class="col-md-4">
@@ -174,6 +216,8 @@
     };
     
     let addModalInstance;
+    let currentCalendarYear = new Date().getFullYear();
+    let currentCalendarMonth = new Date().getMonth() + 1;
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
@@ -181,6 +225,14 @@
       loadAgencies();
       loadPickups();
     });
+    
+    // 인원 계산
+    function updateTotal() {
+      const adult = parseInt(document.getElementById('adultCount').value) || 0;
+      const child = parseInt(document.getElementById('childCount').value) || 0;
+      const infant = parseInt(document.getElementById('infantCount').value) || 0;
+      document.getElementById('totalPassengers').textContent = adult + child + infant;
+    }
     
     // 업체 목록 로드
     async function loadAgencies() {
@@ -219,6 +271,7 @@
             </div>
             <div>
               <span class="badge bg-info">${p.passenger_count}명</span>
+              ${p.adult_count ? `<small>(성인:${p.adult_count} 소아:${p.child_count||0} 유아:${p.infant_count||0} 짐:${p.luggage_count||0})</small>` : ''}
               ${p.vehicle_type ? `<span class="badge bg-success">${p.vehicle_type}</span>` : ''}
             </div>
           </div>
@@ -346,17 +399,103 @@
         : `호텔 픽업: ${pickupDate} ${pickupTime} (3시간 전)`;
     }
     
+    // 달력 보기
+    async function showCalendar() {
+      document.getElementById('listView').style.display = 'none';
+      document.getElementById('calendarView').style.display = 'block';
+      await loadCalendar();
+    }
+    
+    function hideCalendar() {
+      document.getElementById('listView').style.display = 'block';
+      document.getElementById('calendarView').style.display = 'none';
+    }
+    
+    function changeMonth(delta) {
+      currentCalendarMonth += delta;
+      if (currentCalendarMonth > 12) {
+        currentCalendarMonth = 1;
+        currentCalendarYear++;
+      } else if (currentCalendarMonth < 1) {
+        currentCalendarMonth = 12;
+        currentCalendarYear--;
+      }
+      loadCalendar();
+    }
+    
+    async function loadCalendar() {
+      const res = await fetch(`/pickup/api/calendar?year=${currentCalendarYear}&month=${currentCalendarMonth}`);
+      const { arrivals, departures } = await res.json();
+      
+      // 월 표시
+      document.getElementById('currentMonth').textContent = `${currentCalendarYear}년 ${currentCalendarMonth}월`;
+      
+      // 달력 그리기
+      const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth, 0).getDate();
+      const firstDay = new Date(currentCalendarYear, currentCalendarMonth - 1, 1).getDay();
+      
+      let html = '';
+      // 요일 헤더
+      ['일', '월', '화', '수', '목', '금', '토'].forEach(day => {
+        html += `<div class="calendar-header">${day}</div>`;
+      });
+      
+      // 빈 칸
+      for (let i = 0; i < firstDay; i++) {
+        html += '<div class="calendar-day"></div>';
+      }
+      
+      // 날짜별 픽업 데이터 맵핑
+      const arrivalMap = {};
+      arrivals.forEach(a => {
+        arrivalMap[a.date] = a;
+      });
+      const departureMap = {};
+      departures.forEach(d => {
+        departureMap[d.date] = d;
+      });
+      
+      // 날짜
+      const today = new Date().toISOString().split('T')[0];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const arr = arrivalMap[dateStr];
+        const dep = departureMap[dateStr];
+        const hasPickup = arr || dep;
+        const isToday = dateStr === today;
+        
+        html += `
+          <div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''}" onclick="viewDate('${dateStr}')">
+            <strong>${day}</strong>
+            ${arr ? `<div class="text-primary small">🛬 ${arr.count}건 (${arr.total_passengers}명)</div>` : ''}
+            ${dep ? `<div class="text-danger small">🏨 ${dep.count}건 (${dep.total_passengers}명)</div>` : ''}
+          </div>
+        `;
+      }
+      
+      document.getElementById('calendar').innerHTML = html;
+    }
+    
+    function viewDate(date) {
+      document.getElementById('viewDate').value = date;
+      hideCalendar();
+      loadPickups();
+    }
+    
     // 저장
     async function savePickup() {
       const data = {
         pickup_type: document.getElementById('pickupType').value,
         agency_id: document.getElementById('agencyId').value,
         customer_name: document.getElementById('customerName').value,
-        passenger_count: document.getElementById('passengerCount').value,
         hotel_name: document.getElementById('hotelName').value,
         phone: document.getElementById('phone').value,
         kakao_id: document.getElementById('kakaoId').value,
-        memo: document.getElementById('memo').value
+        memo: document.getElementById('memo').value,
+        adult_count: parseInt(document.getElementById('adultCount').value) || 0,
+        child_count: parseInt(document.getElementById('childCount').value) || 0,
+        infant_count: parseInt(document.getElementById('infantCount').value) || 0,
+        luggage_count: parseInt(document.getElementById('luggageCount').value) || 0
       };
       
       const type = data.pickup_type;

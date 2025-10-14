@@ -59,14 +59,20 @@ router.post('/api/create', async (req, res) => {
     pickup_type, agency_id, 
     kr_departure_date, kr_flight_number,
     customer_name, passenger_count, hotel_name,
-    phone, kakao_id, memo
+    phone, kakao_id, memo,
+    adult_count, child_count, infant_count, luggage_count
   } = req.body;
   
   try {
     let data = {
       pickup_type, agency_id,
-      customer_name, passenger_count, hotel_name,
-      phone, kakao_id, memo
+      customer_name, hotel_name,
+      phone, kakao_id, memo,
+      adult_count: adult_count || 0,
+      child_count: child_count || 0,
+      infant_count: infant_count || 0,
+      luggage_count: luggage_count || 0,
+      passenger_count: (adult_count || 0) + (child_count || 0) + (infant_count || 0)
     };
     
     // 공항→호텔 또는 왕복
@@ -216,7 +222,7 @@ router.delete('/api/:id', async (req, res) => {
   }
 });
 
-// API: 업체 목록
+// API: 업체 목록 (활성만)
 router.get('/api/agencies', async (req, res) => {
   const pool = req.app.locals.pool;
   
@@ -231,9 +237,120 @@ router.get('/api/agencies', async (req, res) => {
   }
 });
 
+// API: 업체 전체 목록 (관리용)
+router.get('/api/agencies/all', async (req, res) => {
+  const pool = req.app.locals.pool;
+  
+  try {
+    const result = await pool.query(
+      `SELECT * FROM pickup_agencies ORDER BY created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ 업체 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 업체 추가
+router.post('/api/agencies', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { agency_name, contact_person, phone, email, is_active } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `INSERT INTO pickup_agencies (agency_name, contact_person, phone, email, is_active)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [agency_name, contact_person, phone, email, is_active !== false]
+    );
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('❌ 업체 추가 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 업체 수정
+router.put('/api/agencies/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  const { agency_name, contact_person, phone, email, is_active } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `UPDATE pickup_agencies 
+       SET agency_name = $1, contact_person = $2, phone = $3, email = $4, is_active = $5
+       WHERE id = $6 RETURNING *`,
+      [agency_name, contact_person, phone, email, is_active, id]
+    );
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('❌ 업체 수정 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 업체 삭제
+router.delete('/api/agencies/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  
+  try {
+    await pool.query(`DELETE FROM pickup_agencies WHERE id = $1`, [id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 업체 삭제 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: 비행편 자동완성 데이터
 router.get('/api/flights', (req, res) => {
   res.json(FLIGHTS);
+});
+
+// API: 월별 예약 조회 (달력용)
+router.get('/api/calendar', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { year, month } = req.query;
+  
+  try {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+    
+    // 공항 픽업 (도착일 기준)
+    const arrivals = await pool.query(`
+      SELECT 
+        guam_arrival_date as date,
+        COUNT(*) as count,
+        SUM(adult_count + child_count + infant_count) as total_passengers
+      FROM airport_pickups
+      WHERE guam_arrival_date BETWEEN $1 AND $2
+        AND pickup_type IN ('airport_to_hotel', 'roundtrip')
+        AND status = 'active'
+      GROUP BY guam_arrival_date
+      ORDER BY guam_arrival_date
+    `, [startDate, endDate]);
+    
+    // 호텔 픽업 (픽업일 기준)
+    const departures = await pool.query(`
+      SELECT 
+        hotel_pickup_date as date,
+        COUNT(*) as count,
+        SUM(adult_count + child_count + infant_count) as total_passengers
+      FROM airport_pickups
+      WHERE hotel_pickup_date BETWEEN $1 AND $2
+        AND pickup_type IN ('hotel_to_airport', 'roundtrip')
+        AND status = 'active'
+      GROUP BY hotel_pickup_date
+      ORDER BY hotel_pickup_date
+    `, [startDate, endDate]);
+    
+    res.json({ arrivals: arrivals.rows, departures: departures.rows });
+  } catch (error) {
+    console.error('❌ 달력 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
