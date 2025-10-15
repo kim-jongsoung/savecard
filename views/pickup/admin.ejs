@@ -428,18 +428,17 @@
       // 출발 시간
       const depDateTime = new Date(`${date}T${flight.time}:00${depTZ}`);
       
-      // 비행시간 더하기
+      // 비행시간으로 날짜 계산 (다음날 여부 판단용)
       const arrivalMillis = depDateTime.getTime() + (flight.hours * 3600000);
       const arrivalDateTime = new Date(arrivalMillis);
       
-      // UTC 시간 추출
+      // UTC 시간 추출 (날짜 계산용)
       const utcHours = arrivalDateTime.getUTCHours();
-      const utcMinutes = arrivalDateTime.getUTCMinutes();
       const utcDate = arrivalDateTime.getUTCDate();
       const utcMonth = arrivalDateTime.getUTCMonth();
       const utcYear = arrivalDateTime.getUTCFullYear();
       
-      // 도착지 시간 계산
+      // 도착지 날짜 계산 (비행시간 기반)
       let arrHours = utcHours + arrTZ;
       let arrDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
       
@@ -449,7 +448,9 @@
       }
       
       const arrivalDate = arrDateObj.toISOString().split('T')[0];
-      const arrivalTime = String(arrHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
+      
+      // 도착시간은 항공편 마스터의 실제 arrival_time 사용
+      const arrivalTime = flight.arrival_time;
       
       const dateChanged = date !== arrivalDate;
       
