@@ -202,8 +202,11 @@
         }
 
         tbody.innerHTML = flights.map(f => `
-          <tr>
-            <td><strong>${f.flight_number}</strong></td>
+          <tr class="${!f.is_active ? 'table-secondary' : ''}">
+            <td>
+              <strong>${f.flight_number}</strong>
+              ${!f.is_active ? '<br><small class="text-muted">(사용중인 픽업건 있음)</small>' : ''}
+            </td>
             <td><span class="badge bg-info">${f.departure_airport || '-'}</span></td>
             <td><span class="badge bg-info">${f.arrival_airport || '-'}</span></td>
             <td>${f.departure_time?.substring(0,5) || '-'}</td>
@@ -219,9 +222,14 @@
               <button class="btn btn-sm btn-outline-primary" onclick="editFlight(${f.id})">
                 <i class="bi bi-pencil"></i>
               </button>
-              <button class="btn btn-sm btn-outline-danger" onclick="deleteFlight(${f.id}, '${f.flight_number}')">
-                <i class="bi bi-trash"></i>
-              </button>
+              ${f.is_active
+                ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteFlight(${f.id}, '${f.flight_number}')">
+                     <i class="bi bi-trash"></i>
+                   </button>`
+                : `<button class="btn btn-sm btn-outline-success" onclick="activateFlight(${f.id}, '${f.flight_number}')">
+                     <i class="bi bi-check-circle"></i> 활성화
+                   </button>`
+              }
             </td>
           </tr>
         `).join('');
@@ -346,20 +354,55 @@
 
     // 삭제
     async function deleteFlight(id, flightNumber) {
-      if (!confirm(`${flightNumber} 항공편을 삭제하시겠습니까?`)) return;
+      if (!confirm(`${flightNumber} 항공편을 삭제하시겠습니까?\n\n※ 해당 항공편을 사용하는 픽업 예약이 있으면 비활성화 처리됩니다.`)) return;
 
       try {
         const res = await fetch(`/pickup/api/flights/${id}`, {
           method: 'DELETE'
         });
+        
+        const result = await res.json();
 
-        if (!res.ok) throw new Error('삭제 실패');
-
-        alert('항공편이 삭제되었습니다.');
-        loadFlights();
+        if (res.ok) {
+          if (result.deactivated) {
+            alert('⚠️ ' + result.message + '\n\n비활성 상태로 전환되었습니다.');
+          } else {
+            alert('✅ ' + result.message);
+          }
+          loadFlights();
+        } else {
+          alert('❌ 삭제 실패\n\n' + (result.error || '알 수 없는 오류'));
+          if (result.hint) {
+            alert('💡 ' + result.hint);
+          }
+        }
       } catch (error) {
         console.error('삭제 실패:', error);
-        alert('삭제에 실패했습니다.');
+        alert('❌ 삭제에 실패했습니다: ' + error.message);
+      }
+    }
+    
+    // 활성화
+    async function activateFlight(id, flightNumber) {
+      if (!confirm(`${flightNumber} 항공편을 다시 활성화하시겠습니까?`)) return;
+      
+      try {
+        const res = await fetch(`/pickup/api/flights/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: true })
+        });
+        
+        if (res.ok) {
+          alert('✅ 항공편이 활성화되었습니다.');
+          loadFlights();
+        } else {
+          const result = await res.json();
+          alert('❌ 활성화 실패: ' + (result.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('활성화 실패:', error);
+        alert('❌ 활성화에 실패했습니다: ' + error.message);
       }
     }
   </script>

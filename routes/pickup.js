@@ -718,21 +718,69 @@ router.put('/api/flights/:id', async (req, res) => {
   }
 });
 
-// API: 항공편 삭제
+// API: 항공편 삭제 (스마트 삭제)
 router.delete('/api/flights/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
   
   try {
-    await pool.query(`DELETE FROM pickup_flights WHERE id = $1`, [id]);
+    // 먼저 항공편 정보 조회
+    const flightResult = await pool.query(
+      `SELECT flight_number FROM pickup_flights WHERE id = $1`,
+      [id]
+    );
     
-    // 캐시 갱신
-    await loadFlightsFromDB(pool);
+    if (flightResult.rows.length === 0) {
+      return res.status(404).json({ error: '항공편을 찾을 수 없습니다.' });
+    }
     
-    res.json({ success: true });
+    const flightNumber = flightResult.rows[0].flight_number;
+    
+    // 해당 항공편을 사용하는 픽업건이 있는지 확인
+    const checkResult = await pool.query(
+      `SELECT COUNT(*) as count FROM airport_pickups 
+       WHERE flight_number = $1 AND status = 'active'`,
+      [flightNumber]
+    );
+    
+    const usageCount = parseInt(checkResult.rows[0].count);
+    
+    if (usageCount > 0) {
+      // 사용 중인 항공편은 비활성화만 가능
+      await pool.query(
+        `UPDATE pickup_flights SET is_active = false, updated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+      
+      // 캐시 갱신
+      await loadFlightsFromDB(pool);
+      
+      res.json({ 
+        success: true, 
+        message: `해당 항공편을 사용하는 픽업건이 ${usageCount}건 있어 비활성화 처리되었습니다.`,
+        deactivated: true
+      });
+    } else {
+      // 사용 중이지 않은 항공편은 완전 삭제
+      await pool.query(`DELETE FROM pickup_flights WHERE id = $1`, [id]);
+      
+      // 캐시 갱신
+      await loadFlightsFromDB(pool);
+      
+      res.json({ success: true, message: '항공편이 삭제되었습니다.', deleted: true });
+    }
   } catch (error) {
     console.error('❌ 항공편 삭제 실패:', error);
-    res.status(500).json({ error: error.message });
+    
+    // 외래키 제약조건 에러 처리
+    if (error.code === '23503') {
+      res.status(400).json({ 
+        error: '해당 항공편을 사용하는 픽업 예약이 있어 삭제할 수 없습니다.',
+        hint: '항공편을 삭제하려면 먼저 해당 항공편을 사용하는 모든 픽업 예약을 삭제하거나 다른 항공편으로 변경해주세요.'
+      });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 
