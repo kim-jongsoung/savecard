@@ -38,8 +38,11 @@
         <button class="btn btn-outline-secondary me-2" onclick="location.href='/pickup/agencies'">
           <i class="bi bi-building"></i> 업체 관리
         </button>
-        <button class="btn btn-success" onclick="showAddModal()">
+        <button class="btn btn-success me-2" onclick="showAddModal()">
           <i class="bi bi-plus-circle"></i> 새 예약 등록
+        </button>
+        <button class="btn btn-outline-danger" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i> 로그아웃
         </button>
       </div>
     </div>
@@ -887,6 +890,19 @@
       await fetch(`/pickup/api/${id}`, { method: 'DELETE' });
       alert('✅ 취소 완료');
       loadPickups();
+    }
+    
+    // 로그아웃
+    async function logout() {
+      if (confirm('로그아웃 하시겠습니까?')) {
+        try {
+          await fetch('/admin/logout', { method: 'POST' });
+          window.location.href = '/pickup/login';
+        } catch (error) {
+          console.error('로그아웃 오류:', error);
+          window.location.href = '/pickup/login';
+        }
+      }
     }
   </script>
 </body>

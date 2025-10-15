@@ -798,6 +798,21 @@ router.delete('/api/flights/:id', async (req, res) => {
   }
 });
 
+// 픽업 전용 로그인 페이지
+router.get('/login', (req, res) => {
+  res.render('pickup/login', { 
+    title: '공항픽업 관리 시스템',
+    error: null 
+  });
+});
+
+// 픽업 로그인 처리 (POST) - 관리자 로그인 API 재사용
+router.post('/login', async (req, res) => {
+  // 실제 인증은 /admin/login API를 재사용
+  // 프론트엔드에서 fetch로 처리
+  res.redirect('/pickup');
+});
+
 // API: 기사 화면
 router.get('/driver', (req, res) => {
   res.render('pickup/driver');
