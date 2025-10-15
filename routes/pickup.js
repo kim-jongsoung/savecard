@@ -700,7 +700,7 @@ router.get('/settlement', (req, res) => {
   res.render('pickup/settlement');
 });
 
-// API: 정산 전 픽업건 조회 (이용일이 지난 픽업건)
+// API: 정산 전 픽업건 조회 (이용일이 지난 출발건만)
 router.get('/api/settlement/pending', async (req, res) => {
   const pool = req.app.locals.pool;
   
@@ -716,6 +716,7 @@ router.get('/api/settlement/pending', async (req, res) => {
       WHERE ap.display_date < $1
         AND ap.status = 'active'
         AND ap.settlement_date IS NULL
+        AND ap.record_type = 'departure'
       ORDER BY ap.display_date DESC, ap.display_time DESC
     `, [today]);
     
