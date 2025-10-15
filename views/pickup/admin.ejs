@@ -245,10 +245,40 @@
       const pickup = allPickups[pickupId];
       if (!pickup) return;
       currentPickupData = pickup;
-      const isArrival = pickup.guam_arrival_date;
+      
+      const recordType = pickup.record_type || 'arrival';
+      const depAirport = pickup.departure_airport || '';
+      const arrAirport = pickup.arrival_airport || '';
+      const flightNum = pickup.flight_number || '';
+      const depDate = pickup.departure_date || '';
+      const depTime = pickup.departure_time?.substring(0, 5) || '';
+      const arrDate = pickup.arrival_date || '';
+      const arrTime = pickup.arrival_time?.substring(0, 5) || '';
+      
+      // 레코드 타입 라벨
+      let typeLabel = '';
+      let typeColor = '';
+      if (recordType === 'departure') {
+        typeLabel = depAirport === 'ICN' ? '✈️ 인천 출발' : '✈️ 괌 출발';
+        typeColor = '#2196f3';
+      } else {
+        typeLabel = arrAirport === 'GUM' ? '🛬 괌 도착' : '🛬 인천 도착';
+        typeColor = '#f44336';
+      }
       
       let html = `
-        <div class="row">
+        <div class="alert" style="background-color: ${recordType === 'departure' ? '#e3f2fd' : '#ffebee'}; border-left: 4px solid ${typeColor};">
+          <h5 style="color: ${typeColor}; margin: 0;">${typeLabel}</h5>
+          <div style="font-size: 1.1rem; font-weight: bold; margin-top: 5px;">
+            ${flightNum} | ${depAirport} → ${arrAirport}
+          </div>
+          <div class="mt-2">
+            <strong>출발:</strong> ${depDate} ${depTime} (${depAirport})<br>
+            <strong>도착:</strong> ${arrDate} ${arrTime} (${arrAirport})
+          </div>
+        </div>
+        
+        <div class="row mt-3">
           <div class="col-md-6">
             <h6>👤 고객 정보</h6>
             <p><strong>이름:</strong> ${pickup.customer_name}</p>
@@ -268,89 +298,15 @@
         </div>
       `;
       
-      if (isArrival) {
-        html += `
-          <hr>
-          <h6>✈️ 공항 픽업 정보</h6>
-          <p><strong>한국 출발:</strong> ${pickup.kr_departure_date} ${pickup.kr_departure_time} (${pickup.kr_flight_number})</p>
-          <p><strong>괌 도착:</strong> ${pickup.guam_arrival_date} ${pickup.guam_arrival_time}</p>
-        `;
-      } else {
-        html += `
-          <hr>
-          <h6>🏨 호텔 픽업 정보</h6>
-          <p><strong>호텔 픽업:</strong> ${pickup.hotel_pickup_date} ${pickup.hotel_pickup_time}</p>
-          <p><strong>출발 비행기:</strong> ${pickup.guam_departure_date} ${pickup.guam_departure_time} (${pickup.departure_flight_number})</p>
-          ${pickup.is_early_morning ? '<p class="text-danger"><strong>⚠️ 새벽 비행기 - 전날 밤 픽업</strong></p>' : ''}
-        `;
-      }
-      
       if (pickup.vehicle_type) {
-        html += `<p><strong>차량:</strong> ${pickup.vehicle_type}</p>`;
+        html += `<hr><p><strong>🚗 차량:</strong> ${pickup.vehicle_type}</p>`;
       }
       if (pickup.memo) {
-        html += `<p><strong>메모:</strong> ${pickup.memo}</p>`;
+        html += `<hr><p><strong>📝 메모:</strong> ${pickup.memo}</p>`;
       }
       
       document.getElementById('detailBody').innerHTML = html;
       detailModalInstance.show();
-    }
-    
-    function renderArrivalCard(p) {
-      return `
-        <div class="pickup-card">
-          <div class="d-flex justify-content-between">
-            <div>
-              <strong>✈️ ${p.kr_flight_number || ''} ${p.guam_arrival_time || ''} 도착</strong>
-              <span class="badge bg-secondary">${p.agency_name || ''}</span>
-              <br>
-              <small class="text-muted">한국 ${p.kr_departure_date} ${p.kr_departure_time} 출발</small>
-            </div>
-            <div>
-              <span class="badge bg-info">${p.passenger_count}명</span>
-              ${p.adult_count ? `<small>(성인:${p.adult_count} 소아:${p.child_count||0} 유아:${p.infant_count||0} 짐:${p.luggage_count||0})</small>` : ''}
-              ${p.vehicle_type ? `<span class="badge bg-success">${p.vehicle_type}</span>` : ''}
-            </div>
-          </div>
-          <div class="mt-2">
-            ${p.customer_name} → ${p.hotel_name}
-            ${p.memo ? `<br><small>📝 ${p.memo}</small>` : ''}
-          </div>
-          <div class="mt-2">
-            <button class="btn btn-sm btn-warning" onclick="editPickup(${p.id})">수정</button>
-            <button class="btn btn-sm btn-danger" onclick="deletePickup(${p.id})">취소</button>
-          </div>
-        </div>
-      `;
-    }
-    
-    function renderDepartureCard(p) {
-      const isEarly = p.is_early_morning;
-      return `
-        <div class="pickup-card ${isEarly ? 'early-morning' : ''}">
-          <div class="d-flex justify-content-between">
-            <div>
-              <strong>⏰ ${p.hotel_pickup_time} 픽업 ${isEarly ? '🌙' : ''}</strong>
-              <span class="badge ${isEarly ? 'bg-warning' : 'bg-secondary'}">${p.agency_name || ''}</span>
-              <br>
-              <small ${isEarly ? '' : 'class="text-muted"'}>비행기: ${p.guam_departure_date} ${p.guam_departure_time} 출발</small>
-              ${isEarly ? '<br><small>⚠️ 새벽 비행기 - 전날 밤 픽업</small>' : ''}
-            </div>
-            <div>
-              <span class="badge ${isEarly ? 'bg-light text-dark' : 'bg-info'}">${p.passenger_count}명</span>
-              ${p.vehicle_type ? `<span class="badge bg-success">${p.vehicle_type}</span>` : ''}
-            </div>
-          </div>
-          <div class="mt-2">
-            ${p.customer_name} ← ${p.hotel_name}
-            ${p.memo ? `<br><small>📝 ${p.memo}</small>` : ''}
-          </div>
-          <div class="mt-2">
-            <button class="btn btn-sm btn-warning" onclick="editPickup(${p.id})">수정</button>
-            <button class="btn btn-sm btn-danger" onclick="deletePickup(${p.id})">취소</button>
-          </div>
-        </div>
-      `;
     }
     
     // 모달 열기
