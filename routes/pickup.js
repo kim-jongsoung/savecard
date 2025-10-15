@@ -319,52 +319,78 @@ router.put('/api/:id', async (req, res) => {
       );
       
       // 새로운 레코드 생성 (기존 create 로직 재사용)
-      const flight = FLIGHTS[flight_number];
+      const flights = await getFlights(pool);
+      const flight = flights[flight_number];
       if (!flight) {
         return res.status(400).json({ error: '유효하지 않은 편명입니다' });
       }
       
-      const records = createFlightRecords({
-        flight_date,
-        flight_number,
-        flight,
-        pickup_type,
-        customer_name,
-        hotel_name,
-        phone,
-        kakao_id,
-        memo,
-        adult_count,
-        child_count,
-        infant_count,
-        luggage_count,
-        passenger_count,
-        agency_id
-      });
+      // 도착일시 계산
+      const isToGuam = flight.arrival_airport === 'GUM';
+      const depTZ = isToGuam ? '+09:00' : '+10:00';
+      const arrTZ = isToGuam ? 10 : 9;
       
-      const newRecords = [];
-      for (const rec of records) {
-        const result = await pool.query(
-          `INSERT INTO airport_pickups (
-            pickup_type, departure_date, departure_time, departure_airport,
-            arrival_date, arrival_time, arrival_airport, flight_number,
-            display_date, display_time, record_type,
-            customer_name, hotel_name, phone, kakao_id, memo,
-            adult_count, child_count, infant_count, luggage_count, passenger_count,
-            agency_id, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
-          RETURNING id`,
-          [
-            rec.pickup_type, rec.departure_date, rec.departure_time, rec.departure_airport,
-            rec.arrival_date, rec.arrival_time, rec.arrival_airport, rec.flight_number,
-            rec.display_date, rec.display_time, rec.record_type,
-            rec.customer_name, rec.hotel_name, rec.phone, rec.kakao_id, rec.memo,
-            rec.adult_count, rec.child_count, rec.infant_count, rec.luggage_count, rec.passenger_count,
-            rec.agency_id, 'confirmed'
-          ]
-        );
-        newRecords.push(result.rows[0].id);
+      const depDateTime = new Date(`${flight_date}T${flight.time}:00${depTZ}`);
+      const arrMillis = depDateTime.getTime() + (flight.hours * 3600000);
+      const arrDateTime = new Date(arrMillis);
+      
+      const utcHours = arrDateTime.getUTCHours();
+      const utcMinutes = arrDateTime.getUTCMinutes();
+      const utcDate = arrDateTime.getUTCDate();
+      const utcMonth = arrDateTime.getUTCMonth();
+      const utcYear = arrDateTime.getUTCFullYear();
+      
+      let arrHours = utcHours + arrTZ;
+      let arrDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
+      
+      if (arrHours >= 24) {
+        arrHours -= 24;
+        arrDateObj.setUTCDate(arrDateObj.getUTCDate() + 1);
       }
+      
+      const arrivalDate = arrDateObj.toISOString().split('T')[0];
+      const arrivalTime = String(arrHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
+      
+      // 1. 출발 레코드 생성
+      const depResult = await pool.query(
+        `INSERT INTO airport_pickups (
+          pickup_type, departure_date, departure_time, departure_airport,
+          arrival_date, arrival_time, arrival_airport, flight_number,
+          display_date, display_time, record_type,
+          customer_name, hotel_name, phone, kakao_id, memo,
+          adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+        RETURNING id`,
+        [
+          pickup_type, flight_date, flight.time, flight.departure_airport,
+          arrivalDate, arrivalTime, flight.arrival_airport, flight_number,
+          flight_date, flight.time, 'departure',
+          customer_name, hotel_name, phone, kakao_id, memo,
+          adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id
+        ]
+      );
+      
+      // 2. 도착 레코드 생성
+      const arrResult = await pool.query(
+        `INSERT INTO airport_pickups (
+          pickup_type, departure_date, departure_time, departure_airport,
+          arrival_date, arrival_time, arrival_airport, flight_number,
+          display_date, display_time, record_type,
+          customer_name, hotel_name, phone, kakao_id, memo,
+          adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id, linked_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+        RETURNING id`,
+        [
+          pickup_type, flight_date, flight.time, flight.departure_airport,
+          arrivalDate, arrivalTime, flight.arrival_airport, flight_number,
+          arrivalDate, arrivalTime, 'arrival',
+          customer_name, hotel_name, phone, kakao_id, memo,
+          adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id,
+          depResult.rows[0].id
+        ]
+      );
+      
+      const newRecords = [depResult.rows[0].id, arrResult.rows[0].id];
       
       // linked_id 연결
       if (newRecords.length === 2) {
