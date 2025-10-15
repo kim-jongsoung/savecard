@@ -517,8 +517,25 @@
         const res = await fetch(`/pickup/api/calendar?year=${date.split('-')[0]}&month=${date.split('-')[1]}`);
         const data = await res.json();
         
+        // 날짜별로 예약 그룹화
+        const pickupsByDate = {};
+        data.pickups.forEach(p => {
+          const displayDate = p.display_date?.split('T')[0];
+          if (!displayDate) return;
+          
+          if (!pickupsByDate[displayDate]) {
+            pickupsByDate[displayDate] = { departures: [], arrivals: [] };
+          }
+          
+          if (p.record_type === 'departure') {
+            pickupsByDate[displayDate].departures.push(p);
+          } else if (p.record_type === 'arrival') {
+            pickupsByDate[displayDate].arrivals.push(p);
+          }
+        });
+        
         // 해당 날짜의 예약만 필터링
-        const dayData = data.dates[date] || { departures: [], arrivals: [] };
+        const dayData = pickupsByDate[date] || { departures: [], arrivals: [] };
         
         // ICN 관련 (인천 출발/도착)
         const icnDepartures = dayData.departures.filter(p => p.departure_airport === 'ICN');
