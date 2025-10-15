@@ -88,8 +88,11 @@
       const agencies = await res.json();
       
       document.getElementById('agenciesList').innerHTML = agencies.map(a => `
-        <tr>
-          <td><strong>${a.agency_name}</strong></td>
+        <tr class="${!a.is_active ? 'table-secondary' : ''}">
+          <td>
+            <strong>${a.agency_name}</strong>
+            ${!a.is_active ? '<small class="text-muted"> (사용중인 픽업건 있음)</small>' : ''}
+          </td>
           <td>${a.contact_person || '-'}</td>
           <td>${a.phone || '-'}</td>
           <td>${a.email || '-'}</td>
@@ -101,7 +104,10 @@
           <td>${new Date(a.created_at).toLocaleDateString()}</td>
           <td>
             <button class="btn btn-sm btn-warning" onclick='editAgency(${JSON.stringify(a)})'>수정</button>
-            <button class="btn btn-sm btn-danger" onclick="deleteAgency(${a.id})">삭제</button>
+            ${a.is_active 
+              ? `<button class="btn btn-sm btn-danger" onclick="deleteAgency(${a.id})">삭제</button>`
+              : `<button class="btn btn-sm btn-success" onclick="activateAgency(${a.id})">활성화</button>`
+            }
           </td>
         </tr>
       `).join('');
@@ -155,21 +161,50 @@
     }
     
     async function deleteAgency(id) {
-      if (!confirm('정말 삭제하시겠습니까?')) return;
+      if (!confirm('정말 삭제하시겠습니까?\n\n※ 해당 업체를 사용하는 픽업 예약이 있으면 비활성화 처리됩니다.')) return;
       
       try {
         const res = await fetch(`/pickup/api/agencies/${id}`, { method: 'DELETE' });
+        const result = await res.json();
         
         if (res.ok) {
-          alert('✅ 삭제 완료');
+          if (result.deactivated) {
+            alert('⚠️ ' + result.message + '\n\n비활성 상태로 전환되었습니다.');
+          } else {
+            alert('✅ ' + result.message);
+          }
           loadAgencies();
         } else {
-          const error = await res.json();
-          alert('❌ 삭제 실패: ' + (error.error || '알 수 없는 오류'));
+          alert('❌ 삭제 실패\n\n' + (result.error || '알 수 없는 오류'));
+          if (result.hint) {
+            alert('💡 ' + result.hint);
+          }
         }
       } catch (error) {
         console.error('삭제 오류:', error);
         alert('❌ 삭제 실패: ' + error.message);
+      }
+    }
+    
+    async function activateAgency(id) {
+      if (!confirm('이 업체를 다시 활성화하시겠습니까?')) return;
+      
+      try {
+        const res = await fetch(`/pickup/api/agencies/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: true })
+        });
+        
+        if (res.ok) {
+          alert('✅ 업체가 활성화되었습니다.');
+          loadAgencies();
+        } else {
+          alert('❌ 활성화 실패');
+        }
+      } catch (error) {
+        console.error('활성화 오류:', error);
+        alert('❌ 활성화 실패: ' + error.message);
       }
     }
   </script>

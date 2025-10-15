@@ -533,11 +533,31 @@ router.put('/api/agencies/:id', async (req, res) => {
   const { agency_name, contact_person, phone, email, is_active } = req.body;
   
   try {
+    // 기존 데이터 조회
+    const existing = await pool.query(
+      `SELECT * FROM pickup_agencies WHERE id = $1`,
+      [id]
+    );
+    
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: '업체를 찾을 수 없습니다.' });
+    }
+    
+    const current = existing.rows[0];
+    
+    // 부분 업데이트 지원 (제공된 값만 업데이트)
     const result = await pool.query(
       `UPDATE pickup_agencies 
-       SET agency_name = $1, contact_person = $2, phone = $3, email = $4, is_active = $5
+       SET agency_name = $1, contact_person = $2, phone = $3, email = $4, is_active = $5, updated_at = NOW()
        WHERE id = $6 RETURNING *`,
-      [agency_name, contact_person, phone, email, is_active, id]
+      [
+        agency_name !== undefined ? agency_name : current.agency_name,
+        contact_person !== undefined ? contact_person : current.contact_person,
+        phone !== undefined ? phone : current.phone,
+        email !== undefined ? email : current.email,
+        is_active !== undefined ? is_active : current.is_active,
+        id
+      ]
     );
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -546,17 +566,48 @@ router.put('/api/agencies/:id', async (req, res) => {
   }
 });
 
-// API: 업체 삭제
+// API: 업체 삭제 (논리 삭제)
 router.delete('/api/agencies/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
   
   try {
-    await pool.query(`DELETE FROM pickup_agencies WHERE id = $1`, [id]);
-    res.json({ success: true });
+    // 해당 업체를 사용하는 픽업건이 있는지 확인
+    const checkResult = await pool.query(
+      `SELECT COUNT(*) as count FROM airport_pickups WHERE agency_id = $1 AND status = 'active'`,
+      [id]
+    );
+    
+    const usageCount = parseInt(checkResult.rows[0].count);
+    
+    if (usageCount > 0) {
+      // 사용 중인 업체는 비활성화만 가능
+      await pool.query(
+        `UPDATE pickup_agencies SET is_active = false WHERE id = $1`,
+        [id]
+      );
+      res.json({ 
+        success: true, 
+        message: `해당 업체를 사용하는 픽업건이 ${usageCount}건 있어 비활성화 처리되었습니다.`,
+        deactivated: true
+      });
+    } else {
+      // 사용 중이지 않은 업체는 완전 삭제
+      await pool.query(`DELETE FROM pickup_agencies WHERE id = $1`, [id]);
+      res.json({ success: true, message: '업체가 삭제되었습니다.', deleted: true });
+    }
   } catch (error) {
     console.error('❌ 업체 삭제 실패:', error);
-    res.status(500).json({ error: error.message });
+    
+    // 외래키 제약조건 에러 처리
+    if (error.code === '23503') {
+      res.status(400).json({ 
+        error: '해당 업체를 사용하는 픽업 예약이 있어 삭제할 수 없습니다. 비활성화 처리됩니다.',
+        hint: '업체를 삭제하려면 먼저 해당 업체를 사용하는 모든 픽업 예약을 삭제하거나 다른 업체로 변경해주세요.'
+      });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
   }
 });
 
