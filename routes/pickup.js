@@ -703,11 +703,12 @@ router.get('/settlement', (req, res) => {
 // API: 정산 전 픽업건 조회 (이용일이 지난 출발건만)
 router.get('/api/settlement/pending', async (req, res) => {
   const pool = req.app.locals.pool;
+  const { agency_id, start_date, end_date } = req.query;
   
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    const result = await pool.query(`
+    let query = `
       SELECT 
         ap.*,
         pa.agency_name
@@ -717,8 +718,35 @@ router.get('/api/settlement/pending', async (req, res) => {
         AND ap.status = 'active'
         AND ap.settlement_date IS NULL
         AND ap.record_type = 'departure'
-      ORDER BY ap.display_date DESC, ap.display_time DESC
-    `, [today]);
+    `;
+    
+    const params = [today];
+    let paramCount = 2;
+    
+    // 업체 필터
+    if (agency_id) {
+      query += ` AND ap.agency_id = $${paramCount}`;
+      params.push(agency_id);
+      paramCount++;
+    }
+    
+    // 출발일 시작 필터
+    if (start_date) {
+      query += ` AND ap.display_date >= $${paramCount}`;
+      params.push(start_date);
+      paramCount++;
+    }
+    
+    // 출발일 종료 필터
+    if (end_date) {
+      query += ` AND ap.display_date <= $${paramCount}`;
+      params.push(end_date);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY ap.display_date DESC, ap.display_time DESC`;
+    
+    const result = await pool.query(query, params);
     
     res.json({ pickups: result.rows });
   } catch (error) {

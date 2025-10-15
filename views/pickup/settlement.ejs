@@ -57,20 +57,23 @@
             <div class="row g-3">
               <div class="col-md-3">
                 <label class="form-label">업체</label>
-                <select class="form-select" id="pendingAgency" onchange="filterPending()">
+                <select class="form-select" id="pendingAgency">
                   <option value="">전체 업체</option>
                 </select>
               </div>
               <div class="col-md-3">
-                <label class="form-label">픽업일 시작</label>
-                <input type="date" class="form-control" id="pendingStartDate" onchange="filterPending()">
+                <label class="form-label">출발일 시작</label>
+                <input type="date" class="form-control" id="pendingStartDate">
               </div>
               <div class="col-md-3">
-                <label class="form-label">픽업일 종료</label>
-                <input type="date" class="form-control" id="pendingEndDate" onchange="filterPending()">
+                <label class="form-label">출발일 종료</label>
+                <input type="date" class="form-control" id="pendingEndDate">
               </div>
-              <div class="col-md-3 d-flex align-items-end">
-                <button class="btn btn-outline-secondary w-100" onclick="resetPendingFilter()">
+              <div class="col-md-3 d-flex align-items-end gap-2">
+                <button class="btn btn-primary flex-fill" onclick="searchPending()">
+                  <i class="bi bi-search"></i> 검색
+                </button>
+                <button class="btn btn-outline-secondary flex-fill" onclick="resetPendingFilter()">
                   <i class="bi bi-arrow-clockwise"></i> 초기화
                 </button>
               </div>
@@ -120,20 +123,23 @@
             <div class="row g-3">
               <div class="col-md-3">
                 <label class="form-label">업체</label>
-                <select class="form-select" id="completedAgency" onchange="loadCompleted()">
+                <select class="form-select" id="completedAgency">
                   <option value="">전체 업체</option>
                 </select>
               </div>
               <div class="col-md-3">
-                <label class="form-label">픽업일 시작</label>
-                <input type="date" class="form-control" id="completedStartDate" onchange="loadCompleted()">
+                <label class="form-label">출발일 시작</label>
+                <input type="date" class="form-control" id="completedStartDate">
               </div>
               <div class="col-md-3">
-                <label class="form-label">픽업일 종료</label>
-                <input type="date" class="form-control" id="completedEndDate" onchange="loadCompleted()">
+                <label class="form-label">출발일 종료</label>
+                <input type="date" class="form-control" id="completedEndDate">
               </div>
-              <div class="col-md-3 d-flex align-items-end">
-                <button class="btn btn-outline-secondary w-100" onclick="resetCompletedFilter()">
+              <div class="col-md-3 d-flex align-items-end gap-2">
+                <button class="btn btn-primary flex-fill" onclick="searchCompleted()">
+                  <i class="bi bi-search"></i> 검색
+                </button>
+                <button class="btn btn-outline-secondary flex-fill" onclick="resetCompletedFilter()">
                   <i class="bi bi-arrow-clockwise"></i> 초기화
                 </button>
               </div>
@@ -179,12 +185,13 @@
       loadAgencies();
       loadPending();
       
-      // 정산 완료 탭 클릭 시 로드
-      document.getElementById('completed-tab').addEventListener('shown.bs.tab', () => {
-        if (allCompletedPickups.length === 0) {
-          loadCompleted();
-        }
-      });
+      // 정산 완료 탭 초기 메시지
+      document.getElementById('completedList').innerHTML = `
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+          <p class="mt-2">검색 조건을 선택하고 검색 버튼을 클릭하세요</p>
+        </div>
+      `;
     });
 
     // 업체 목록 로드
@@ -206,13 +213,37 @@
       }
     }
 
-    // 정산 전 목록 로드
+    // 정산 전 목록 로드 (초기 로드 - 전체)
     async function loadPending() {
+      document.getElementById('pendingList').innerHTML = `
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+          <p class="mt-2">검색 조건을 선택하고 검색 버튼을 클릭하세요</p>
+        </div>
+      `;
+      updatePendingStats([]);
+    }
+
+    // 정산 전 검색
+    async function searchPending() {
+      const agencyId = document.getElementById('pendingAgency').value;
+      const startDate = document.getElementById('pendingStartDate').value;
+      const endDate = document.getElementById('pendingEndDate').value;
+      
       try {
-        const res = await fetch('/pickup/api/settlement/pending');
+        // 쿼리 파라미터 구성
+        let url = '/pickup/api/settlement/pending?';
+        const params = [];
+        
+        if (agencyId) params.push(`agency_id=${agencyId}`);
+        if (startDate) params.push(`start_date=${startDate}`);
+        if (endDate) params.push(`end_date=${endDate}`);
+        
+        url += params.join('&');
+        
+        const res = await fetch(url);
         const data = await res.json();
-        allPendingPickups = data.pickups || [];
-        pendingPickups = allPendingPickups;
+        pendingPickups = data.pickups || [];
         
         renderPending();
       } catch (error) {
@@ -221,27 +252,6 @@
           <div class="alert alert-danger">데이터 조회 실패: ${error.message}</div>
         `;
       }
-    }
-
-    // 정산 전 필터링
-    function filterPending() {
-      const agencyId = document.getElementById('pendingAgency').value;
-      const startDate = document.getElementById('pendingStartDate').value;
-      const endDate = document.getElementById('pendingEndDate').value;
-      
-      pendingPickups = allPendingPickups.filter(p => {
-        // 업체 필터
-        if (agencyId && p.agency_id != agencyId) return false;
-        
-        // 날짜 필터
-        const pickupDate = p.display_date?.split('T')[0];
-        if (startDate && pickupDate < startDate) return false;
-        if (endDate && pickupDate > endDate) return false;
-        
-        return true;
-      });
-      
-      renderPending();
     }
 
     // 정산 전 렌더링
@@ -328,11 +338,20 @@
       document.getElementById('pendingAgency').value = '';
       document.getElementById('pendingStartDate').value = '';
       document.getElementById('pendingEndDate').value = '';
-      filterPending();
+      pendingPickups = [];
+      selectedIds.clear();
+      document.getElementById('pendingList').innerHTML = `
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+          <p class="mt-2">검색 조건을 선택하고 검색 버튼을 클릭하세요</p>
+        </div>
+      `;
+      updatePendingStats([]);
+      updateSelectedInfo();
     }
 
-    // 정산 완료 목록 로드
-    async function loadCompleted() {
+    // 정산 완료 검색
+    async function searchCompleted() {
       const agencyId = document.getElementById('completedAgency').value;
       const startDate = document.getElementById('completedStartDate').value;
       const endDate = document.getElementById('completedEndDate').value;
@@ -350,8 +369,7 @@
         
         const res = await fetch(url);
         const data = await res.json();
-        allCompletedPickups = data.pickups || [];
-        completedPickups = allCompletedPickups;
+        completedPickups = data.pickups || [];
         
         renderCompleted();
       } catch (error) {
@@ -439,7 +457,14 @@
       document.getElementById('completedAgency').value = '';
       document.getElementById('completedStartDate').value = '';
       document.getElementById('completedEndDate').value = '';
-      loadCompleted();
+      completedPickups = [];
+      document.getElementById('completedList').innerHTML = `
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-info-circle" style="font-size: 3rem;"></i>
+          <p class="mt-2">검색 조건을 선택하고 검색 버튼을 클릭하세요</p>
+        </div>
+      `;
+      updateCompletedStats([]);
     }
 
     // 선택 토글
@@ -456,24 +481,29 @@
 
     // 전체 선택/해제
     function toggleSelectAll() {
-      const allChecked = selectedIds.size === pendingPickups.length;
+      if (pendingPickups.length === 0) {
+        alert('선택할 픽업건이 없습니다');
+        return;
+      }
+      
+      const allChecked = selectedIds.size === pendingPickups.length && pendingPickups.length > 0;
       
       if (allChecked) {
         // 전체 해제
-        selectedIds.clear();
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        pendingPickups.forEach(p => selectedIds.delete(p.id));
+        document.querySelectorAll('#pending input[type="checkbox"]').forEach(cb => {
           cb.checked = false;
         });
-        document.querySelectorAll('.settlement-card').forEach(card => {
+        document.querySelectorAll('#pending .settlement-card').forEach(card => {
           card.classList.remove('selected');
         });
       } else {
         // 전체 선택
         pendingPickups.forEach(p => selectedIds.add(p.id));
-        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        document.querySelectorAll('#pending input[type="checkbox"]').forEach(cb => {
           cb.checked = true;
         });
-        document.querySelectorAll('.settlement-card').forEach(card => {
+        document.querySelectorAll('#pending .settlement-card').forEach(card => {
           card.classList.add('selected');
         });
       }
@@ -509,7 +539,8 @@
           const result = await res.json();
           alert(`✅ ${result.count}건 정산 완료 처리되었습니다`);
           selectedIds.clear();
-          loadPending();
+          // 검색 재실행
+          searchPending();
         } else {
           const error = await res.json();
           alert('❌ 정산 처리 실패: ' + error.error);
