@@ -76,6 +76,60 @@
     </div>
   </div>
   
+  <!-- 일별 전체보기 모달 -->
+  <div class="modal fade" id="dayViewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="dayViewTitle">📅 날짜별 전체보기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <!-- 모바일: 괌출발/도착이 위로 (order-1) -->
+            <div class="col-md-6 order-2 order-md-1 mb-4">
+              <div class="card">
+                <div class="card-header bg-primary text-white">
+                  <h6 class="mb-0">🇰🇷 인천 출발/도착</h6>
+                </div>
+                <div class="card-body" id="icnSection">
+                  <!-- 통계 -->
+                  <div class="alert alert-info mb-3" id="icnStats">
+                    <strong>📊 통계</strong><br>
+                    <span id="icnStatsContent">로딩중...</span>
+                  </div>
+                  <!-- 리스트 -->
+                  <div id="icnList"></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 모바일: 괌출발/도착이 위로 (order-1) -->
+            <div class="col-md-6 order-1 order-md-2 mb-4">
+              <div class="card">
+                <div class="card-header bg-success text-white">
+                  <h6 class="mb-0">🇬🇺 괌 출발/도착</h6>
+                </div>
+                <div class="card-body" id="gumSection">
+                  <!-- 통계 -->
+                  <div class="alert alert-success mb-3" id="gumStats">
+                    <strong>📊 통계</strong><br>
+                    <span id="gumStatsContent">로딩중...</span>
+                  </div>
+                  <!-- 리스트 -->
+                  <div id="gumList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <!-- 등록 모달 -->
   <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -178,15 +232,18 @@
     
     let addModalInstance;
     let detailModalInstance;
+    let dayViewModalInstance;
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
     let currentPickupData = null;
+    let currentDayViewDate = null;
     let allPickups = {}; // ID별 예약 데이터 저장
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
       addModalInstance = new bootstrap.Modal(document.getElementById('addModal'));
       detailModalInstance = new bootstrap.Modal(document.getElementById('detailModal'));
+      dayViewModalInstance = new bootstrap.Modal(document.getElementById('dayViewModal'));
       loadFlights();
       loadAgencies();
       loadCalendar(); // 달력을 기본으로 로드
@@ -450,6 +507,134 @@
       }
     }
     
+    // 일별 전체보기 모달
+    async function showDayView(date) {
+      currentDayViewDate = date;
+      document.getElementById('dayViewTitle').textContent = `📅 ${date} 전체보기`;
+      
+      try {
+        // 해당 날짜의 모든 예약 조회
+        const res = await fetch(`/pickup/api/calendar?year=${date.split('-')[0]}&month=${date.split('-')[1]}`);
+        const data = await res.json();
+        
+        // 해당 날짜의 예약만 필터링
+        const dayData = data.dates[date] || { departures: [], arrivals: [] };
+        
+        // ICN 관련 (인천 출발/도착)
+        const icnDepartures = dayData.departures.filter(p => p.departure_airport === 'ICN');
+        const icnArrivals = dayData.arrivals.filter(p => p.arrival_airport === 'ICN');
+        
+        // GUM 관련 (괌 출발/도착)
+        const gumDepartures = dayData.departures.filter(p => p.departure_airport === 'GUM');
+        const gumArrivals = dayData.arrivals.filter(p => p.arrival_airport === 'GUM');
+        
+        // 통계 계산
+        const icnStats = {
+          departures: icnDepartures.length,
+          arrivals: icnArrivals.length,
+          totalPax: [...icnDepartures, ...icnArrivals].reduce((sum, p) => sum + (p.passenger_count || 0), 0)
+        };
+        
+        const gumStats = {
+          departures: gumDepartures.length,
+          arrivals: gumArrivals.length,
+          totalPax: [...gumDepartures, ...gumArrivals].reduce((sum, p) => sum + (p.passenger_count || 0), 0)
+        };
+        
+        // 통계 표시
+        document.getElementById('icnStatsContent').innerHTML = `
+          출발: ${icnStats.departures}건 | 도착: ${icnStats.arrivals}건<br>
+          총 인원: ${icnStats.totalPax}명
+        `;
+        
+        document.getElementById('gumStatsContent').innerHTML = `
+          출발: ${gumStats.departures}건 | 도착: ${gumStats.arrivals}건<br>
+          총 인원: ${gumStats.totalPax}명
+        `;
+        
+        // ICN 리스트 표시
+        let icnHtml = '';
+        
+        if (icnDepartures.length > 0) {
+          icnHtml += '<h6 class="text-primary">✈️ 인천 출발</h6>';
+          icnDepartures.forEach(p => {
+            icnHtml += renderPickupCard(p, 'departure');
+          });
+        }
+        
+        if (icnArrivals.length > 0) {
+          icnHtml += '<h6 class="text-danger mt-3">🛬 인천 도착</h6>';
+          icnArrivals.forEach(p => {
+            icnHtml += renderPickupCard(p, 'arrival');
+          });
+        }
+        
+        if (!icnDepartures.length && !icnArrivals.length) {
+          icnHtml = '<p class="text-muted">예약 없음</p>';
+        }
+        
+        document.getElementById('icnList').innerHTML = icnHtml;
+        
+        // GUM 리스트 표시
+        let gumHtml = '';
+        
+        if (gumDepartures.length > 0) {
+          gumHtml += '<h6 class="text-primary">✈️ 괌 출발</h6>';
+          gumDepartures.forEach(p => {
+            gumHtml += renderPickupCard(p, 'departure');
+          });
+        }
+        
+        if (gumArrivals.length > 0) {
+          gumHtml += '<h6 class="text-danger mt-3">🛬 괌 도착</h6>';
+          gumArrivals.forEach(p => {
+            gumHtml += renderPickupCard(p, 'arrival');
+          });
+        }
+        
+        if (!gumDepartures.length && !gumArrivals.length) {
+          gumHtml = '<p class="text-muted">예약 없음</p>';
+        }
+        
+        document.getElementById('gumList').innerHTML = gumHtml;
+        
+        // 모달 열기
+        dayViewModalInstance.show();
+      } catch (error) {
+        console.error('❌ 일별 조회 실패:', error);
+        alert('❌ 데이터 조회 실패: ' + error.message);
+      }
+    }
+    
+    // 예약 카드 렌더링
+    function renderPickupCard(pickup, type) {
+      const bgColor = type === 'departure' ? '#e3f2fd' : '#ffebee';
+      const borderColor = type === 'departure' ? '#2196f3' : '#f44336';
+      const time = pickup.display_time?.substring(0, 5) || '';
+      const flightNum = pickup.flight_number || '';
+      
+      return `
+        <div class="card mb-2" style="border-left: 4px solid ${borderColor}; background: ${bgColor}; cursor: pointer;" onclick="showPickupDetail(${pickup.id})">
+          <div class="card-body p-2">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong>${flightNum} (${time})</strong><br>
+                <small>${pickup.customer_name} | ${pickup.hotel_name}</small><br>
+                <small class="text-muted">
+                  성인: ${pickup.adult_count || 0} | 소아: ${pickup.child_count || 0} | 유아: ${pickup.infant_count || 0} | 짐: ${pickup.luggage_count || 0}
+                </small>
+              </div>
+              <div class="text-end">
+                <span class="badge bg-info">${pickup.passenger_count}명</span><br>
+                ${pickup.agency_name ? `<small class="text-muted">${pickup.agency_name}</small>` : ''}
+              </div>
+            </div>
+            ${pickup.memo ? `<div class="mt-1"><small>📝 ${pickup.memo}</small></div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+    
     function changeMonth(delta) {
       currentCalendarMonth += delta;
       if (currentCalendarMonth > 12) {
@@ -531,7 +716,12 @@
         
         // 요약
         if (hasPickup) {
-          html += `<div class="day-summary">📊 ${totalCount}건 | ${totalPax}명</div>`;
+          html += `
+            <div class="day-summary">📊 ${totalCount}건 | ${totalPax}명</div>
+            <button class="btn btn-sm btn-outline-primary w-100 mb-2" style="font-size: 0.7rem; padding: 2px 4px;" onclick="showDayView('${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}')">
+              📋 전체보기
+            </button>
+          `;
         }
         
         // record_type에 따라 구분하여 표시
