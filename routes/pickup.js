@@ -278,32 +278,110 @@ router.put('/api/:id/vehicle', async (req, res) => {
   }
 });
 
-// API: 예약 수정 (linked_id로 연결된 레코드도 함께 수정)
+// API: 예약 수정 (날짜/편명 변경 시 재생성)
 router.put('/api/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
   const { 
     customer_name, hotel_name, phone, kakao_id, memo,
     adult_count, child_count, infant_count, luggage_count,
-    agency_id
+    agency_id, pickup_type, flight_date, flight_number
   } = req.body;
   
   try {
     const passenger_count = (adult_count || 0) + (child_count || 0) + (infant_count || 0);
     
-    // 1. linked_id 조회
-    const record = await pool.query(
-      `SELECT linked_id FROM airport_pickups WHERE id = $1`,
+    // 1. 기존 레코드 조회
+    const oldRecord = await pool.query(
+      `SELECT * FROM airport_pickups WHERE id = $1`,
       [id]
     );
     
-    if (record.rows.length === 0) {
+    if (oldRecord.rows.length === 0) {
       return res.status(404).json({ error: '예약을 찾을 수 없습니다' });
     }
     
-    const linkedId = record.rows[0].linked_id;
+    const old = oldRecord.rows[0];
+    const linkedId = old.linked_id;
     
-    // 2. 현재 레코드 수정
+    // 2. 날짜나 편명이 변경되었는지 확인
+    const dateChanged = flight_date && flight_date !== old.departure_date;
+    const flightChanged = flight_number && flight_number !== old.flight_number;
+    
+    if (dateChanged || flightChanged) {
+      // 날짜/편명 변경 → 기존 레코드 삭제 후 재생성
+      console.log('📅 날짜/편명 변경 감지 - 레코드 재생성');
+      
+      // 기존 레코드 삭제
+      await pool.query(
+        `UPDATE airport_pickups SET status = 'cancelled' WHERE id = $1 OR id = $2`,
+        [id, linkedId]
+      );
+      
+      // 새로운 레코드 생성 (기존 create 로직 재사용)
+      const flight = FLIGHTS[flight_number];
+      if (!flight) {
+        return res.status(400).json({ error: '유효하지 않은 편명입니다' });
+      }
+      
+      const records = createFlightRecords({
+        flight_date,
+        flight_number,
+        flight,
+        pickup_type,
+        customer_name,
+        hotel_name,
+        phone,
+        kakao_id,
+        memo,
+        adult_count,
+        child_count,
+        infant_count,
+        luggage_count,
+        passenger_count,
+        agency_id
+      });
+      
+      const newRecords = [];
+      for (const rec of records) {
+        const result = await pool.query(
+          `INSERT INTO airport_pickups (
+            pickup_type, departure_date, departure_time, departure_airport,
+            arrival_date, arrival_time, arrival_airport, flight_number,
+            display_date, display_time, record_type,
+            customer_name, hotel_name, phone, kakao_id, memo,
+            adult_count, child_count, infant_count, luggage_count, passenger_count,
+            agency_id, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+          RETURNING id`,
+          [
+            rec.pickup_type, rec.departure_date, rec.departure_time, rec.departure_airport,
+            rec.arrival_date, rec.arrival_time, rec.arrival_airport, rec.flight_number,
+            rec.display_date, rec.display_time, rec.record_type,
+            rec.customer_name, rec.hotel_name, rec.phone, rec.kakao_id, rec.memo,
+            rec.adult_count, rec.child_count, rec.infant_count, rec.luggage_count, rec.passenger_count,
+            rec.agency_id, 'confirmed'
+          ]
+        );
+        newRecords.push(result.rows[0].id);
+      }
+      
+      // linked_id 연결
+      if (newRecords.length === 2) {
+        await pool.query(
+          `UPDATE airport_pickups SET linked_id = $1 WHERE id = $2`,
+          [newRecords[1], newRecords[0]]
+        );
+        await pool.query(
+          `UPDATE airport_pickups SET linked_id = $1 WHERE id = $2`,
+          [newRecords[0], newRecords[1]]
+        );
+      }
+      
+      return res.json({ success: true, updatedCount: 2, recreated: true });
+    }
+    
+    // 3. 고객 정보만 수정 (날짜/편명 변경 없음)
     await pool.query(
       `UPDATE airport_pickups 
        SET customer_name = $1, passenger_count = $2, hotel_name = $3,
@@ -315,7 +393,6 @@ router.put('/api/:id', async (req, res) => {
        adult_count, child_count, infant_count, luggage_count, agency_id, id]
     );
     
-    // 3. 연결된 레코드도 수정 (linked_id가 있는 경우)
     if (linkedId) {
       await pool.query(
         `UPDATE airport_pickups 
