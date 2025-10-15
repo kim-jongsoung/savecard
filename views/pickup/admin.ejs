@@ -96,7 +96,7 @@
             <div class="col-md-6 order-2 order-md-1 mb-4">
               <div class="card">
                 <div class="card-header bg-primary text-white">
-                  <h6 class="mb-0">🇰🇷 인천 출발/도착</h6>
+                  <h6 class="mb-0">🇰🇷 한국 출발/도착 (인천/부산/대구)</h6>
                 </div>
                 <div class="card-body" id="icnSection">
                   <!-- 통계 -->
@@ -322,14 +322,33 @@
       const arrDate = pickup.arrival_date || '';
       const arrTime = pickup.arrival_time?.substring(0, 5) || '';
       
+      // 공항명 매핑
+      const airportNames = {
+        'ICN': '인천',
+        'PUS': '부산',
+        'TAE': '대구',
+        'GMP': '김포',
+        'CJU': '제주',
+        'GUM': '괌',
+        'NRT': '나리타',
+        'FUK': '후쿠오카',
+        'SPN': '사이판',
+        'ROR': '팔라우'
+      };
+      
+      const getAirportName = (code) => airportNames[code] || code;
+      const isKorea = (code) => ['ICN', 'PUS', 'TAE', 'GMP', 'CJU'].includes(code);
+      
       // 레코드 타입 라벨
       let typeLabel = '';
       let typeColor = '';
       if (recordType === 'departure') {
-        typeLabel = depAirport === 'ICN' ? '✈️ 인천 출발' : '✈️ 괌 출발';
+        const depName = getAirportName(depAirport);
+        typeLabel = isKorea(depAirport) ? `✈️ ${depName} 출발` : `✈️ ${depName} 출발`;
         typeColor = '#2196f3';
       } else {
-        typeLabel = arrAirport === 'GUM' ? '🛬 괌 도착' : '🛬 인천 도착';
+        const arrName = getAirportName(arrAirport);
+        typeLabel = `🛬 ${arrName} 도착`;
         typeColor = '#f44336';
       }
       
@@ -543,9 +562,12 @@
         // 해당 날짜의 예약만 필터링
         const dayData = pickupsByDate[date] || { departures: [], arrivals: [] };
         
-        // ICN 관련 (인천 출발/도착)
-        const icnDepartures = dayData.departures.filter(p => p.departure_airport === 'ICN');
-        const icnArrivals = dayData.arrivals.filter(p => p.arrival_airport === 'ICN');
+        // 한국 공항 코드
+        const koreaAirports = ['ICN', 'PUS', 'TAE', 'GMP', 'CJU'];
+        
+        // 한국 공항 관련 (인천/부산/대구 등 출발/도착)
+        const icnDepartures = dayData.departures.filter(p => koreaAirports.includes(p.departure_airport));
+        const icnArrivals = dayData.arrivals.filter(p => koreaAirports.includes(p.arrival_airport));
         
         // GUM 관련 (괌 출발/도착)
         const gumDepartures = dayData.departures.filter(p => p.departure_airport === 'GUM');
@@ -583,18 +605,18 @@
           총 인원: ${gumStats.totalPax}명 (성인: ${gumStats.adults} / 소아: ${gumStats.children} / 유아: ${gumStats.infants})
         `;
         
-        // ICN 리스트 표시
+        // 한국 공항 리스트 표시
         let icnHtml = '';
         
         if (icnDepartures.length > 0) {
-          icnHtml += '<h6 class="text-primary">✈️ 인천 출발</h6>';
+          icnHtml += '<h6 class="text-primary">✈️ 한국 출발</h6>';
           icnDepartures.forEach(p => {
             icnHtml += renderPickupCard(p, 'departure');
           });
         }
         
         if (icnArrivals.length > 0) {
-          icnHtml += '<h6 class="text-danger mt-3">🛬 인천 도착</h6>';
+          icnHtml += '<h6 class="text-danger mt-3">🛬 한국 도착</h6>';
           icnArrivals.forEach(p => {
             icnHtml += renderPickupCard(p, 'arrival');
           });
@@ -758,6 +780,16 @@
           `;
         }
         
+        // 공항명 매핑 함수
+        const getAirportLabel = (code) => {
+          const names = {
+            'ICN': '인천', 'PUS': '부산', 'TAE': '대구',
+            'GMP': '김포', 'CJU': '제주', 'GUM': '괌',
+            'NRT': '나리타', 'FUK': '후쿠오카', 'SPN': '사이판', 'ROR': '팔라우'
+          };
+          return names[code] || code;
+        };
+        
         // record_type에 따라 구분하여 표시
         dayPickups.departures.forEach(p => {
           const time = p.display_time?.substring(0, 5) || '';
@@ -765,8 +797,9 @@
           const depAirport = p.departure_airport || '';
           const arrAirport = p.arrival_airport || '';
           
-          // 출발지가 ICN이면 "인천출발", GUM이면 "괌출발"
-          const label = depAirport === 'ICN' ? '✈️ 인천출발' : '✈️ 괌출발';
+          // 출발공항명 표시
+          const depName = getAirportLabel(depAirport);
+          const label = `✈️ ${depName}출발`;
           
           html += `
             <div class="pickup-item" style="background: #e3f2fd; border-left-color: #2196f3; color: #1565c0; cursor: pointer;" onclick="showPickupDetail(${p.id})">
@@ -783,8 +816,9 @@
           const depAirport = p.departure_airport || '';
           const arrAirport = p.arrival_airport || '';
           
-          // 도착지가 GUM이면 "괌도착", ICN이면 "인천도착"
-          const label = arrAirport === 'GUM' ? '🛬 괌도착' : '🛬 인천도착';
+          // 도착공항명 표시
+          const arrName = getAirportLabel(arrAirport);
+          const label = `🛬 ${arrName}도착`;
           
           html += `
             <div class="pickup-item" style="background: #ffebee; border-left-color: #f44336; color: #c62828; cursor: pointer;" onclick="showPickupDetail(${p.id})">
