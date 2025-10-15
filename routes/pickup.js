@@ -702,16 +702,20 @@ router.get('/api/calendar', async (req, res) => {
   
   try {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
     
-    // display_date 기준으로 모든 레코드 조회
+    // 해당 월의 마지막 날 계산
+    const nextMonth = parseInt(month) === 12 ? 1 : parseInt(month) + 1;
+    const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
+    const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+    
+    // display_date 기준으로 모든 레코드 조회 (해당 월만)
     const pickups = await pool.query(`
       SELECT 
         ap.*,
         pa.agency_name
       FROM airport_pickups ap
       LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
-      WHERE ap.display_date BETWEEN $1 AND $2
+      WHERE ap.display_date >= $1 AND ap.display_date < $2
         AND ap.status = 'active'
       ORDER BY ap.display_date, ap.display_time
     `, [startDate, endDate]);
