@@ -7,6 +7,7 @@
     "start": "node server-postgresql.js",
     "dev": "nodemon server-postgresql.js",
     "migrate": "node migrate-pickup-columns.js",
+    "migrate:pickup": "node run-pickup-migration.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
