@@ -10,7 +10,8 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5분
 async function loadFlightsFromDB(pool) {
   try {
     const result = await pool.query(
-      `SELECT flight_number, departure_time, arrival_time, flight_hours 
+      `SELECT flight_number, departure_time, arrival_time, flight_hours, 
+              departure_airport, arrival_airport
        FROM pickup_flights 
        WHERE is_active = true`
     );
@@ -20,7 +21,9 @@ async function loadFlightsFromDB(pool) {
       flights[f.flight_number] = {
         time: f.departure_time?.substring(0, 5) || '00:00',
         arrival_time: f.arrival_time?.substring(0, 5) || '00:00',
-        hours: parseFloat(f.flight_hours) || 4
+        hours: parseFloat(f.flight_hours) || 4,
+        departure_airport: f.departure_airport || '',
+        arrival_airport: f.arrival_airport || ''
       };
     });
     
@@ -31,11 +34,12 @@ async function loadFlightsFromDB(pool) {
     console.error('❌ 항공편 로드 실패:', error);
     // 실패 시 기본값 사용
     return {
-      'KE111': { time: '07:30', arrival_time: '12:30', hours: 4 },
-      'KE123': { time: '22:00', arrival_time: '03:00', hours: 4 },
-      'OZ456': { time: '10:00', arrival_time: '15:00', hours: 4 },
-      'OZ789': { time: '15:30', arrival_time: '20:30', hours: 4 },
-      'UA873': { time: '13:20', arrival_time: '18:20', hours: 4 }
+      'KE111': { time: '07:30', arrival_time: '12:30', hours: 4, departure_airport: 'ICN', arrival_airport: 'GUM' },
+      'KE123': { time: '22:00', arrival_time: '03:00', hours: 4, departure_airport: 'ICN', arrival_airport: 'GUM' },
+      'KE124': { time: '03:30', arrival_time: '06:30', hours: 4, departure_airport: 'GUM', arrival_airport: 'ICN' },
+      'OZ456': { time: '10:00', arrival_time: '15:00', hours: 4, departure_airport: 'ICN', arrival_airport: 'GUM' },
+      'OZ789': { time: '15:30', arrival_time: '20:30', hours: 4, departure_airport: 'ICN', arrival_airport: 'GUM' },
+      'UA873': { time: '13:20', arrival_time: '18:20', hours: 4, departure_airport: 'ICN', arrival_airport: 'GUM' }
     };
   }
 }
@@ -92,12 +96,12 @@ function calculateHotelPickup(guamDate, guamTime) {
   };
 }
 
-// API: 픽업 생성
+// API: 픽업 생성 (항상 2개 레코드: 출발 파란색 + 도착 빨간색)
 router.post('/api/create', async (req, res) => {
   const pool = req.app.locals.pool;
   const { 
     pickup_type, agency_id, 
-    kr_departure_date, kr_flight_number,
+    flight_date, flight_number,
     customer_name, passenger_count, hotel_name,
     phone, kakao_id, memo,
     adult_count, child_count, infant_count, luggage_count
@@ -105,8 +109,13 @@ router.post('/api/create', async (req, res) => {
   
   try {
     const FLIGHTS = await getFlights(pool);
+    const flight = FLIGHTS[flight_number];
     
-    let data = {
+    if (!flight) {
+      return res.status(400).json({ error: '비행편 정보를 찾을 수 없습니다' });
+    }
+    
+    const baseData = {
       pickup_type, agency_id,
       customer_name, hotel_name,
       phone, kakao_id, memo,
@@ -114,51 +123,96 @@ router.post('/api/create', async (req, res) => {
       child_count: child_count || 0,
       infant_count: infant_count || 0,
       luggage_count: luggage_count || 0,
-      passenger_count: (adult_count || 0) + (child_count || 0) + (infant_count || 0)
+      passenger_count: (adult_count || 0) + (child_count || 0) + (infant_count || 0),
+      flight_number
     };
     
-    // 공항→호텔 또는 왕복
-    if (pickup_type === 'airport_to_hotel' || pickup_type === 'roundtrip') {
-      const flight = FLIGHTS[kr_flight_number];
-      if (!flight) {
-        return res.status(400).json({ error: '비행편 정보를 찾을 수 없습니다' });
-      }
-      
-      const arrival = calculateArrival(kr_departure_date, flight.time, kr_flight_number, FLIGHTS);
-      data.kr_departure_date = kr_departure_date;
-      data.kr_departure_time = flight.time;
-      data.kr_flight_number = kr_flight_number;
-      data.guam_arrival_date = arrival.date;
-      data.guam_arrival_time = arrival.time;
+    // 도착일시 계산 (비행시간 기반)
+    const isToGuam = flight.arrival_airport === 'GUM';
+    const depTZ = isToGuam ? '+09:00' : '+10:00'; // 출발지 시간대
+    const arrTZ = isToGuam ? 10 : 9; // 도착지 UTC 오프셋
+    
+    const depDateTime = new Date(`${flight_date}T${flight.time}:00${depTZ}`);
+    const arrMillis = depDateTime.getTime() + (flight.hours * 3600000);
+    const arrDateTime = new Date(arrMillis);
+    
+    // UTC 시간 추출
+    const utcHours = arrDateTime.getUTCHours();
+    const utcMinutes = arrDateTime.getUTCMinutes();
+    const utcDate = arrDateTime.getUTCDate();
+    const utcMonth = arrDateTime.getUTCMonth();
+    const utcYear = arrDateTime.getUTCFullYear();
+    
+    // 도착지 시간 계산
+    let arrHours = utcHours + arrTZ;
+    let arrDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
+    
+    if (arrHours >= 24) {
+      arrHours -= 24;
+      arrDateObj.setUTCDate(arrDateObj.getUTCDate() + 1);
     }
     
-    // 호텔→공항 또는 왕복
-    if (pickup_type === 'hotel_to_airport' || pickup_type === 'roundtrip') {
-      const { guam_departure_date, departure_flight_number } = req.body;
-      const flight = FLIGHTS[departure_flight_number];
-      if (!flight) {
-        return res.status(400).json({ error: '출발 비행편 정보를 찾을 수 없습니다' });
-      }
-      
-      const pickup = calculateHotelPickup(guam_departure_date, flight.time);
-      data.guam_departure_date = guam_departure_date;
-      data.guam_departure_time = flight.time;
-      data.departure_flight_number = departure_flight_number;
-      data.hotel_pickup_date = pickup.date;
-      data.hotel_pickup_time = pickup.time;
-      data.is_early_morning = pickup.isEarlyMorning;
-    }
+    const arrivalDate = arrDateObj.toISOString().split('T')[0];
+    const arrivalTime = String(arrHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
     
-    const columns = Object.keys(data).join(', ');
-    const values = Object.values(data);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const createdRecords = [];
     
-    const result = await pool.query(
-      `INSERT INTO airport_pickups (${columns}) VALUES (${placeholders}) RETURNING *`,
-      values
+    // 1. 출발 레코드 (파란색)
+    const departureData = {
+      ...baseData,
+      departure_date: flight_date,
+      departure_time: flight.time,
+      departure_airport: flight.departure_airport,
+      arrival_date: arrivalDate,
+      arrival_time: arrivalTime,
+      arrival_airport: flight.arrival_airport,
+      record_type: 'departure',
+      display_date: flight_date,
+      display_time: flight.time
+    };
+    
+    const depColumns = Object.keys(departureData).join(', ');
+    const depValues = Object.values(departureData);
+    const depPlaceholders = depValues.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const depResult = await pool.query(
+      `INSERT INTO airport_pickups (${depColumns}) VALUES (${depPlaceholders}) RETURNING *`,
+      depValues
     );
     
-    res.json({ success: true, data: result.rows[0] });
+    // 2. 도착 레코드 (빨간색)
+    const arrivalData = {
+      ...baseData,
+      departure_date: flight_date,
+      departure_time: flight.time,
+      departure_airport: flight.departure_airport,
+      arrival_date: arrivalDate,
+      arrival_time: arrivalTime,
+      arrival_airport: flight.arrival_airport,
+      record_type: 'arrival',
+      display_date: arrivalDate,
+      display_time: arrivalTime,
+      linked_id: depResult.rows[0].id
+    };
+    
+    const arrColumns = Object.keys(arrivalData).join(', ');
+    const arrValues = Object.values(arrivalData);
+    const arrPlaceholders = arrValues.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const arrResult = await pool.query(
+      `INSERT INTO airport_pickups (${arrColumns}) VALUES (${arrPlaceholders}) RETURNING *`,
+      arrValues
+    );
+    
+    // 출발 레코드에 linked_id 업데이트
+    await pool.query(
+      `UPDATE airport_pickups SET linked_id = $1 WHERE id = $2`,
+      [arrResult.rows[0].id, depResult.rows[0].id]
+    );
+    
+    createdRecords.push(depResult.rows[0], arrResult.rows[0]);
+    
+    res.json({ success: true, data: createdRecords });
   } catch (error) {
     console.error('❌ 픽업 등록 실패:', error);
     res.status(500).json({ error: error.message });
@@ -481,7 +535,7 @@ router.get('/test', (req, res) => {
   res.render('pickup/test');
 });
 
-// API: 월별 예약 조회 (달력용 - 전체 예약 목록 포함)
+// API: 월별 예약 조회 (달력용 - display_date 기준)
 router.get('/api/calendar', async (req, res) => {
   const pool = req.app.locals.pool;
   const { year, month } = req.query;
@@ -490,33 +544,19 @@ router.get('/api/calendar', async (req, res) => {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
     
-    // 공항 픽업 (도착일 기준)
-    const arrivals = await pool.query(`
+    // display_date 기준으로 모든 레코드 조회
+    const pickups = await pool.query(`
       SELECT 
         ap.*,
         pa.agency_name
       FROM airport_pickups ap
       LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
-      WHERE ap.guam_arrival_date BETWEEN $1 AND $2
-        AND ap.pickup_type IN ('airport_to_hotel', 'roundtrip')
+      WHERE ap.display_date BETWEEN $1 AND $2
         AND ap.status = 'active'
-      ORDER BY ap.guam_arrival_date, ap.guam_arrival_time
+      ORDER BY ap.display_date, ap.display_time
     `, [startDate, endDate]);
     
-    // 호텔 픽업 (픽업일 기준)
-    const departures = await pool.query(`
-      SELECT 
-        ap.*,
-        pa.agency_name
-      FROM airport_pickups ap
-      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
-      WHERE ap.hotel_pickup_date BETWEEN $1 AND $2
-        AND ap.pickup_type IN ('hotel_to_airport', 'roundtrip')
-        AND ap.status = 'active'
-      ORDER BY ap.hotel_pickup_date, ap.hotel_pickup_time
-    `, [startDate, endDate]);
-    
-    res.json({ arrivals: arrivals.rows, departures: departures.rows });
+    res.json({ pickups: pickups.rows });
   } catch (error) {
     console.error('❌ 달력 조회 실패:', error);
     res.status(500).json({ error: error.message });

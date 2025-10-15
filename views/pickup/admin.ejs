@@ -82,51 +82,21 @@
         </div>
         <div class="modal-body">
           <form id="addForm">
-            <!-- 픽업 유형 -->
-            <div class="mb-3">
-              <label class="form-label">픽업 유형 *</label>
-              <select class="form-select" id="pickupType" onchange="toggleFields()" required>
-                <option value="airport_to_hotel">공항 → 호텔 (도착)</option>
-                <option value="hotel_to_airport">호텔 → 공항 (출국)</option>
-                <option value="roundtrip">왕복</option>
-              </select>
-            </div>
-            
-            <!-- 도착 정보 -->
-            <div id="arrivalFields">
-              <h6 class="text-primary mb-3">✈️ 항공편 정보</h6>
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">출발일 *</label>
-                  <input type="date" class="form-control" id="krDate" onchange="autoCalculate()" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">편명 *</label>
-                  <select class="form-select" id="krFlight" onchange="autoCalculate()" required>
-                    <option value="">편명 선택</option>
-                  </select>
-                </div>
+            <!-- 항공편 정보 -->
+            <h6 class="text-primary mb-3">✈️ 항공편 정보</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">출발일 *</label>
+                <input type="date" class="form-control" id="flightDate" onchange="autoCalculate()" required>
               </div>
-              <div id="arrivalResult" class="alert alert-info mt-2" style="display:none;"></div>
-            </div>
-            
-            <!-- 출발 정보 -->
-            <div id="departureFields" style="display:none;">
-              <h6 class="text-danger mb-3">🏨 호텔 픽업 정보</h6>
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">출발일 *</label>
-                  <input type="date" class="form-control" id="guamDepDate" onchange="autoCalculatePickup()" required>
-                </div>
-                <div class="col-md-6 mb-3">
-                  <label class="form-label">편명 *</label>
-                  <select class="form-select" id="depFlight" onchange="autoCalculatePickup()" required>
-                    <option value="">편명 선택</option>
-                  </select>
-                </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">편명 *</label>
+                <select class="form-select" id="flightNumber" onchange="autoCalculate()" required>
+                  <option value="">편명 선택</option>
+                </select>
               </div>
-              <div id="pickupResult" class="alert alert-warning mt-2" style="display:none;"></div>
             </div>
+            <div id="flightResult" class="alert alert-info mt-2" style="display:none;"></div>
             
             <hr class="my-3">
             
@@ -225,6 +195,7 @@
         const flights = await res.json();
         
         // FLIGHTS 객체 구성
+        FLIGHTS = {};
         flights.forEach(f => {
           FLIGHTS[f.flight_number] = {
             time: f.departure_time?.substring(0, 5) || '00:00',
@@ -236,28 +207,14 @@
           };
         });
         
-        // 도착편 드롭다운 구성 (ICN → GUM)
-        const arrivalFlights = flights.filter(f => 
-          f.departure_airport === 'ICN' && f.arrival_airport === 'GUM' && f.is_active
-        );
-        const krFlightSelect = document.getElementById('krFlight');
-        krFlightSelect.innerHTML = '<option value="">편명 선택</option>' + 
-          arrivalFlights.map(f => {
+        // 모든 항공편을 하나의 드롭다운에 표시
+        const flightSelect = document.getElementById('flightNumber');
+        flightSelect.innerHTML = '<option value="">편명 선택</option>' + 
+          flights.filter(f => f.is_active).map(f => {
             const depTime = f.departure_time?.substring(0, 5);
             const arrTime = f.arrival_time?.substring(0, 5);
-            const isOvernight = parseInt(arrTime.split(':')[0]) < parseInt(depTime.split(':')[0]);
-            return `<option value="${f.flight_number}">${f.flight_number} (${depTime} → ${arrTime}${isOvernight ? ' +1일' : ''})</option>`;
-          }).join('');
-        
-        // 출발편 드롭다운 구성 (GUM → ICN)
-        const departureFlights = flights.filter(f => 
-          f.departure_airport === 'GUM' && f.arrival_airport === 'ICN' && f.is_active
-        );
-        const depFlightSelect = document.getElementById('depFlight');
-        depFlightSelect.innerHTML = '<option value="">편명 선택</option>' + 
-          departureFlights.map(f => {
-            const depTime = f.departure_time?.substring(0, 5);
-            return `<option value="${f.flight_number}">${f.flight_number} (${depTime} 출발)</option>`;
+            const route = `${f.departure_airport} → ${f.arrival_airport}`;
+            return `<option value="${f.flight_number}">${f.flight_number} (${route} ${depTime} → ${arrTime})</option>`;
           }).join('');
         
         console.log('✅ 항공편 로드 완료:', Object.keys(FLIGHTS).length, '개');
@@ -399,115 +356,67 @@
     // 모달 열기
     function showAddModal() {
       document.getElementById('addForm').reset();
-      document.getElementById('arrivalResult').style.display = 'none';
-      document.getElementById('pickupResult').style.display = 'none';
-      toggleFields();
+      document.getElementById('flightResult').style.display = 'none';
       addModalInstance.show();
     }
     
-    // 필드 토글
-    function toggleFields() {
-      const type = document.getElementById('pickupType').value;
-      document.getElementById('arrivalFields').style.display = 
-        (type === 'airport_to_hotel' || type === 'roundtrip') ? 'block' : 'none';
-      document.getElementById('departureFields').style.display = 
-        (type === 'hotel_to_airport' || type === 'roundtrip') ? 'block' : 'none';
-    }
-    
-    // 자동 계산 (도착)
+    // 자동 계산 (출발/도착)
     function autoCalculate() {
-      const date = document.getElementById('krDate').value;
-      const flightNum = document.getElementById('krFlight').value;
+      const date = document.getElementById('flightDate').value;
+      const flightNum = document.getElementById('flightNumber').value;
       if (!date || !flightNum) return;
       
       const flight = FLIGHTS[flightNum];
       if (!flight) return;
       
-      // 비행시간 기준으로 도착일시 계산
-      // 한국 출발 시간 (KST = UTC+9)
-      const krDateTime = new Date(`${date}T${flight.time}:00+09:00`);
+      // 출발지 시간대 결정
+      const isToGuam = flight.arrival_airport === 'GUM';
+      const depTZ = isToGuam ? '+09:00' : '+10:00';
+      const arrTZ = isToGuam ? 10 : 9;
       
-      // 비행시간만큼 더함 (밀리초 단위)
-      const arrivalMillis = krDateTime.getTime() + (flight.hours * 3600000);
+      // 출발 시간
+      const depDateTime = new Date(`${date}T${flight.time}:00${depTZ}`);
+      
+      // 비행시간 더하기
+      const arrivalMillis = depDateTime.getTime() + (flight.hours * 3600000);
       const arrivalDateTime = new Date(arrivalMillis);
       
-      // 괌 시간으로 변환 (UTC+10)
+      // UTC 시간 추출
       const utcHours = arrivalDateTime.getUTCHours();
       const utcMinutes = arrivalDateTime.getUTCMinutes();
       const utcDate = arrivalDateTime.getUTCDate();
       const utcMonth = arrivalDateTime.getUTCMonth();
       const utcYear = arrivalDateTime.getUTCFullYear();
       
-      // 괌 시간 계산 (UTC에 +10시간)
-      let guamHours = utcHours + 10;
-      let guamDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
+      // 도착지 시간 계산
+      let arrHours = utcHours + arrTZ;
+      let arrDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
       
-      // 24시가 넘으면 다음날로
-      if (guamHours >= 24) {
-        guamHours -= 24;
-        guamDateObj.setUTCDate(guamDateObj.getUTCDate() + 1);
+      if (arrHours >= 24) {
+        arrHours -= 24;
+        arrDateObj.setUTCDate(arrDateObj.getUTCDate() + 1);
       }
       
-      const guamDate = guamDateObj.toISOString().split('T')[0];
-      const guamTime = String(guamHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
+      const arrivalDate = arrDateObj.toISOString().split('T')[0];
+      const arrivalTime = String(arrHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
       
-      const dateChanged = date !== guamDate;
+      const dateChanged = date !== arrivalDate;
       
-      const result = document.getElementById('arrivalResult');
+      const result = document.getElementById('flightResult');
       result.style.display = 'block';
       result.className = 'alert alert-success';
       result.innerHTML = `
         <div class="d-flex justify-content-between align-items-center">
           <div>
             <strong>✅ 출도착 정보 확인</strong><br>
-            <i class="bi bi-airplane-fill"></i> ${flight.airline} ${flightNum}<br>
-            ${flight.departure_airport} ${date} ${flight.time} 출발 → ${flight.arrival_airport} ${guamDate} ${guamTime} 도착
-            ${dateChanged ? '<br><span class="badge bg-warning text-dark">다음날 도착</span>' : ''}
-          </div>
-          <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #198754;"></i>
-        </div>
-      `;
-    }
-    
-    // 자동 계산 (호텔 픽업)
-    function autoCalculatePickup() {
-      const date = document.getElementById('guamDepDate').value;
-      const flightNum = document.getElementById('depFlight').value;
-      if (!date || !flightNum) return;
-      
-      const flight = FLIGHTS[flightNum];
-      if (!flight) return;
-      
-      const flightDateTime = new Date(`${date}T${flight.time}:00+10:00`);
-      const hour = flightDateTime.getHours();
-      
-      let pickupDate, pickupTime, isEarly = false;
-      
-      if (hour >= 0 && hour < 6) {
-        // 새벽 비행기
-        const prevDay = new Date(flightDateTime);
-        prevDay.setDate(prevDay.getDate() - 1);
-        pickupDate = prevDay.toISOString().split('T')[0];
-        pickupTime = '23:59';
-        isEarly = true;
-      } else {
-        // 정상
-        const pickupDateTime = new Date(flightDateTime);
-        pickupDateTime.setHours(pickupDateTime.getHours() - 3);
-        pickupDate = pickupDateTime.toISOString().split('T')[0];
-        pickupTime = pickupDateTime.toTimeString().slice(0, 5);
-      }
-      
-      const result = document.getElementById('pickupResult');
-      result.style.display = 'block';
-      result.className = 'alert alert-success';
-      result.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <strong>✅ 호텔 픽업 정보 확인</strong><br>
-            <i class="bi bi-airplane-fill"></i> ${flight.airline} ${flightNum} - ${date} ${flight.time} 출발<br>
-            <i class="bi bi-alarm-fill"></i> 호텔 픽업: ${pickupDate} ${pickupTime}
-            ${isEarly ? '<br><span class="badge bg-danger">🌙 전날 밤 픽업</span>' : '<br><span class="badge bg-info">3시간 전 픽업</span>'}
+            <div class="mt-2">
+              <span class="badge bg-primary">출발</span> ${flight.departure_airport} ${date} ${flight.time}<br>
+              <span class="badge bg-danger">도착</span> ${flight.arrival_airport} ${arrivalDate} ${arrivalTime}
+              ${dateChanged ? ' <span class="badge bg-warning text-dark">다음날</span>' : ''}
+            </div>
+            <div class="mt-2 text-muted small">
+              달력에 파란색(출발)과 빨간색(도착) 2개 레코드가 저장됩니다.
+            </div>
           </div>
           <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #198754;"></i>
         </div>
@@ -546,9 +455,9 @@
     
     async function loadCalendar() {
       const res = await fetch(`/pickup/api/calendar?year=${currentCalendarYear}&month=${currentCalendarMonth}`);
-      const { arrivals, departures } = await res.json();
+      const { pickups } = await res.json();
       
-      console.log('📅 달력 데이터:', { arrivals: arrivals.length, departures: departures.length });
+      console.log('📅 달력 데이터:', pickups.length, '개');
       
       // 월 표시
       document.getElementById('currentMonth').textContent = `${currentCalendarYear}년 ${currentCalendarMonth}월`;
@@ -556,19 +465,26 @@
       // 전역 예약 데이터 초기화
       allPickups = {};
       
-      // 날짜별로 예약 그룹화
+      // 날짜별로 예약 그룹화 (record_type 기준)
       const pickupsByDate = {};
-      arrivals.forEach(p => {
-        const date = p.guam_arrival_date.split('T')[0]; // 날짜만 추출
-        console.log('✈️ 공항픽업 추가:', date, p.customer_name);
-        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
-        pickupsByDate[date].arrivals.push(p);
-      });
-      departures.forEach(p => {
-        const date = p.hotel_pickup_date.split('T')[0]; // 날짜만 추출
-        console.log('🏨 호텔픽업 추가:', date, p.customer_name);
-        if (!pickupsByDate[date]) pickupsByDate[date] = { arrivals: [], departures: [] };
-        pickupsByDate[date].departures.push(p);
+      pickups.forEach(p => {
+        const date = p.display_date?.split('T')[0]; // 표시 날짜
+        if (!date) return;
+        
+        if (!pickupsByDate[date]) {
+          pickupsByDate[date] = { departures: [], arrivals: [], hotelPickups: [] };
+        }
+        
+        // record_type에 따라 분류
+        if (p.record_type === 'departure') {
+          pickupsByDate[date].departures.push(p);
+        } else if (p.record_type === 'arrival') {
+          pickupsByDate[date].arrivals.push(p);
+        } else if (p.record_type === 'hotel_pickup') {
+          pickupsByDate[date].hotelPickups.push(p);
+        }
+        
+        allPickups[p.id] = p; // 전역 저장
       });
       
       console.log('📋 날짜별 그룹:', Object.keys(pickupsByDate));
@@ -592,40 +508,49 @@
       const today = new Date().toISOString().split('T')[0];
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${currentCalendarYear}-${String(currentCalendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const dayPickups = pickupsByDate[dateStr] || { arrivals: [], departures: [] };
-        const hasPickup = dayPickups.arrivals.length > 0 || dayPickups.departures.length > 0;
+        const dayPickups = pickupsByDate[dateStr] || { departures: [], arrivals: [], hotelPickups: [] };
+        const hasPickup = dayPickups.departures.length > 0 || dayPickups.arrivals.length > 0 || dayPickups.hotelPickups.length > 0;
         const isToday = dateStr === today;
         
         // 통계 계산
-        const arrCount = dayPickups.arrivals.length;
-        const depCount = dayPickups.departures.length;
-        const arrPax = dayPickups.arrivals.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
-        const depPax = dayPickups.departures.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        const totalCount = dayPickups.departures.length + dayPickups.arrivals.length + dayPickups.hotelPickups.length;
+        const totalPax = [...dayPickups.departures, ...dayPickups.arrivals, ...dayPickups.hotelPickups]
+          .reduce((sum, p) => sum + (p.passenger_count || 0), 0);
         
         html += `<div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''}">`;
         html += `<div class="calendar-date">${day}일</div>`;
         
         // 요약
         if (hasPickup) {
-          html += `<div class="day-summary">📊 ${arrCount+depCount}건 | ${arrPax+depPax}명</div>`;
+          html += `<div class="day-summary">📊 ${totalCount}건 | ${totalPax}명</div>`;
         }
         
-          // 공항 픽업 목록
-        dayPickups.arrivals.forEach(p => {
-          allPickups[p.id] = p; // 저장
-          const time = p.guam_arrival_time || '';
+        // 한국 출발 (파란색)
+        dayPickups.departures.forEach(p => {
+          const time = p.display_time?.substring(0, 5) || '';
+          const flightNum = p.kr_flight_number || '';
           html += `
-            <div class="pickup-item pickup-arrival" onclick="showPickupDetail(${p.id})">
-              🛬 ${time} ${p.customer_name} (${p.passenger_count}명)
+            <div class="pickup-item" style="background: #e3f2fd; border-left-color: #2196f3; color: #1565c0;" onclick="showPickupDetail(${p.id})">
+              ✈️ ${flightNum} ${time} ${p.customer_name} (${p.passenger_count}명)
             </div>
           `;
         });
         
-        // 호텔 픽업 목록
-        dayPickups.departures.forEach(p => {
-          allPickups[p.id] = p; // 저장
+        // 괌 도착 (빨간색)
+        dayPickups.arrivals.forEach(p => {
+          const time = p.display_time?.substring(0, 5) || '';
+          const flightNum = p.kr_flight_number || '';
+          html += `
+            <div class="pickup-item" style="background: #ffebee; border-left-color: #f44336; color: #c62828;" onclick="showPickupDetail(${p.id})">
+              🛬 ${flightNum} ${time} ${p.customer_name} (${p.passenger_count}명)
+            </div>
+          `;
+        });
+        
+        // 호텔 픽업 (노란색/보라색)
+        dayPickups.hotelPickups.forEach(p => {
           const earlyClass = p.is_early_morning ? 'pickup-early' : 'pickup-departure';
-          const time = p.hotel_pickup_time || '';
+          const time = p.display_time?.substring(0, 5) || '';
           html += `
             <div class="pickup-item ${earlyClass}" onclick="showPickupDetail(${p.id})">
               ${p.is_early_morning ? '🌙' : '🏨'} ${time} ${p.customer_name} (${p.passenger_count}명)
@@ -646,8 +571,18 @@
     
     // 저장
     async function savePickup() {
+      const flightNum = document.getElementById('flightNumber').value;
+      const flight = FLIGHTS[flightNum];
+      
+      if (!flight) {
+        alert('편명을 선택해주세요.');
+        return;
+      }
+      
       const data = {
-        pickup_type: document.getElementById('pickupType').value,
+        pickup_type: flight.arrival_airport === 'GUM' ? 'airport_to_hotel' : 'hotel_to_airport',
+        flight_date: document.getElementById('flightDate').value,
+        flight_number: flightNum,
         agency_id: document.getElementById('agencyId').value,
         customer_name: document.getElementById('customerName').value,
         hotel_name: document.getElementById('hotelName').value,
@@ -660,18 +595,6 @@
         luggage_count: parseInt(document.getElementById('luggageCount').value) || 0
       };
       
-      const type = data.pickup_type;
-      
-      if (type === 'airport_to_hotel' || type === 'roundtrip') {
-        data.kr_departure_date = document.getElementById('krDate').value;
-        data.kr_flight_number = document.getElementById('krFlight').value;
-      }
-      
-      if (type === 'hotel_to_airport' || type === 'roundtrip') {
-        data.guam_departure_date = document.getElementById('guamDepDate').value;
-        data.departure_flight_number = document.getElementById('depFlight').value;
-      }
-      
       try {
         const res = await fetch('/pickup/api/create', {
           method: 'POST',
@@ -680,7 +603,8 @@
         });
         
         if (res.ok) {
-          alert('✅ 등록 완료!');
+          const result = await res.json();
+          alert(`✅ 등록 완료!\n출발/도착 ${result.data.length}개 레코드가 저장되었습니다.`);
           addModalInstance.hide();
           loadCalendar(); // 달력 새로고침
         } else {
