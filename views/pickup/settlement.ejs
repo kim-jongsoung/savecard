@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>정산 관리</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .settlement-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+    .settlement-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .settlement-card.selected {
+      background: #e3f2fd;
+      border-color: #2196f3;
+      border-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2>💰 정산 관리</h2>
+      <button class="btn btn-secondary" onclick="location.href='/pickup/admin'">
+        <i class="bi bi-arrow-left"></i> 픽업 관리로 돌아가기
+      </button>
+    </div>
+
+    <!-- 탭 -->
+    <ul class="nav nav-tabs mb-3" id="settlementTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button">
+          ⏳ 정산 전 픽업건 <span class="badge bg-warning" id="pendingCount">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button">
+          ✅ 정산 완료 픽업건 <span class="badge bg-success" id="completedCount">0</span>
+        </button>
+      </li>
+    </ul>
+
+    <!-- 탭 내용 -->
+    <div class="tab-content" id="settlementTabContent">
+      <!-- 정산 전 -->
+      <div class="tab-pane fade show active" id="pending" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
+              <i class="bi bi-check-square"></i> 전체 선택
+            </button>
+            <span class="ms-2 text-muted" id="selectedInfo">선택: 0건</span>
+          </div>
+          <button class="btn btn-success" onclick="completeSettlement()" id="completeBtn" disabled>
+            <i class="bi bi-check-circle"></i> 정산 완료 처리
+          </button>
+        </div>
+        <div id="pendingList">
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-hourglass-split" style="font-size: 3rem;"></i>
+            <p class="mt-2">로딩중...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 정산 완료 -->
+      <div class="tab-pane fade" id="completed" role="tabpanel">
+        <div class="mb-3">
+          <input type="month" class="form-control" id="completedMonth" style="max-width: 200px;" onchange="loadCompleted()">
+        </div>
+        <div id="completedList">
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-hourglass-split" style="font-size: 3rem;"></i>
+            <p class="mt-2">로딩중...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let pendingPickups = [];
+    let completedPickups = [];
+    let selectedIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPending();
+      
+      // 정산 완료 탭 클릭 시 현재 월로 초기화
+      document.getElementById('completed-tab').addEventListener('shown.bs.tab', () => {
+        const now = new Date();
+        const monthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        document.getElementById('completedMonth').value = monthValue;
+        loadCompleted();
+      });
+    });
+
+    // 정산 전 목록 로드
+    async function loadPending() {
+      try {
+        const res = await fetch('/pickup/api/settlement/pending');
+        const data = await res.json();
+        pendingPickups = data.pickups || [];
+        
+        document.getElementById('pendingCount').textContent = pendingPickups.length;
+        
+        if (pendingPickups.length === 0) {
+          document.getElementById('pendingList').innerHTML = `
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-check-circle" style="font-size: 3rem; color: #28a745;"></i>
+              <p class="mt-2">정산할 픽업건이 없습니다</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        pendingPickups.forEach(p => {
+          const isSelected = selectedIds.has(p.id);
+          html += `
+            <div class="settlement-card ${isSelected ? 'selected' : ''}" id="card-${p.id}">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="${p.id}" 
+                       id="check-${p.id}" onchange="toggleSelect(${p.id})" ${isSelected ? 'checked' : ''}>
+                <label class="form-check-label w-100" for="check-${p.id}">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <strong>${p.flight_number || '-'}</strong> 
+                      <span class="badge bg-${p.record_type === 'departure' ? 'primary' : 'danger'}">
+                        ${p.record_type === 'departure' ? '출발' : '도착'}
+                      </span>
+                      <span class="badge bg-info">${p.passenger_count}명</span>
+                      <br>
+                      <small class="text-muted">
+                        ${p.departure_airport} → ${p.arrival_airport} | 
+                        ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
+                      </small>
+                    </div>
+                    <div class="col-md-4">
+                      <small>
+                        👤 ${p.customer_name}<br>
+                        🏨 ${p.hotel_name}<br>
+                        ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
+                      </small>
+                    </div>
+                    <div class="col-md-2 text-end">
+                      <small class="text-muted">
+                        성인: ${p.adult_count || 0}<br>
+                        소아: ${p.child_count || 0}<br>
+                        유아: ${p.infant_count || 0}
+                      </small>
+                    </div>
+                  </div>
+                  ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
+                </label>
+              </div>
+            </div>
+          `;
+        });
+        
+        document.getElementById('pendingList').innerHTML = html;
+        updateSelectedInfo();
+      } catch (error) {
+        console.error('❌ 정산 전 목록 조회 실패:', error);
+        document.getElementById('pendingList').innerHTML = `
+          <div class="alert alert-danger">데이터 조회 실패: ${error.message}</div>
+        `;
+      }
+    }
+
+    // 정산 완료 목록 로드
+    async function loadCompleted() {
+      const monthValue = document.getElementById('completedMonth').value;
+      if (!monthValue) return;
+      
+      const [year, month] = monthValue.split('-');
+      
+      try {
+        const res = await fetch(`/pickup/api/settlement/completed?year=${year}&month=${month}`);
+        const data = await res.json();
+        completedPickups = data.pickups || [];
+        
+        document.getElementById('completedCount').textContent = completedPickups.length;
+        
+        if (completedPickups.length === 0) {
+          document.getElementById('completedList').innerHTML = `
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+              <p class="mt-2">해당 월에 정산 완료된 픽업건이 없습니다</p>
+            </div>
+          `;
+          return;
+        }
+        
+        let html = '';
+        completedPickups.forEach(p => {
+          const settlementDate = p.settlement_date ? new Date(p.settlement_date).toLocaleDateString('ko-KR') : '-';
+          html += `
+            <div class="settlement-card">
+              <div class="row">
+                <div class="col-md-5">
+                  <strong>${p.flight_number || '-'}</strong>
+                  <span class="badge bg-${p.record_type === 'departure' ? 'primary' : 'danger'}">
+                    ${p.record_type === 'departure' ? '출발' : '도착'}
+                  </span>
+                  <span class="badge bg-info">${p.passenger_count}명</span>
+                  <br>
+                  <small class="text-muted">
+                    ${p.departure_airport} → ${p.arrival_airport} | 
+                    ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
+                  </small>
+                </div>
+                <div class="col-md-4">
+                  <small>
+                    👤 ${p.customer_name}<br>
+                    🏨 ${p.hotel_name}<br>
+                    ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
+                  </small>
+                </div>
+                <div class="col-md-3 text-end">
+                  <span class="badge bg-success">✅ 정산 완료</span><br>
+                  <small class="text-muted">${settlementDate}</small>
+                </div>
+              </div>
+              ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
+            </div>
+          `;
+        });
+        
+        document.getElementById('completedList').innerHTML = html;
+      } catch (error) {
+        console.error('❌ 정산 완료 목록 조회 실패:', error);
+        document.getElementById('completedList').innerHTML = `
+          <div class="alert alert-danger">데이터 조회 실패: ${error.message}</div>
+        `;
+      }
+    }
+
+    // 선택 토글
+    function toggleSelect(id) {
+      if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+        document.getElementById(`card-${id}`).classList.remove('selected');
+      } else {
+        selectedIds.add(id);
+        document.getElementById(`card-${id}`).classList.add('selected');
+      }
+      updateSelectedInfo();
+    }
+
+    // 전체 선택/해제
+    function toggleSelectAll() {
+      const allChecked = selectedIds.size === pendingPickups.length;
+      
+      if (allChecked) {
+        // 전체 해제
+        selectedIds.clear();
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.checked = false;
+        });
+        document.querySelectorAll('.settlement-card').forEach(card => {
+          card.classList.remove('selected');
+        });
+      } else {
+        // 전체 선택
+        pendingPickups.forEach(p => selectedIds.add(p.id));
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.checked = true;
+        });
+        document.querySelectorAll('.settlement-card').forEach(card => {
+          card.classList.add('selected');
+        });
+      }
+      
+      updateSelectedInfo();
+    }
+
+    // 선택 정보 업데이트
+    function updateSelectedInfo() {
+      document.getElementById('selectedInfo').textContent = `선택: ${selectedIds.size}건`;
+      document.getElementById('completeBtn').disabled = selectedIds.size === 0;
+    }
+
+    // 정산 완료 처리
+    async function completeSettlement() {
+      if (selectedIds.size === 0) {
+        alert('정산할 픽업건을 선택해주세요');
+        return;
+      }
+
+      if (!confirm(`선택한 ${selectedIds.size}건을 정산 완료 처리하시겠습니까?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch('/pickup/api/settlement/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: Array.from(selectedIds) })
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          alert(`✅ ${result.count}건 정산 완료 처리되었습니다`);
+          selectedIds.clear();
+          loadPending();
+        } else {
+          const error = await res.json();
+          alert('❌ 정산 처리 실패: ' + error.error);
+        }
+      } catch (error) {
+        console.error('❌ 정산 처리 실패:', error);
+        alert('❌ 정산 처리 실패: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

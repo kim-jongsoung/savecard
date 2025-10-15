@@ -695,6 +695,98 @@ router.get('/test', (req, res) => {
   res.render('pickup/test');
 });
 
+// 정산 관리 화면
+router.get('/settlement', (req, res) => {
+  res.render('pickup/settlement');
+});
+
+// API: 정산 전 픽업건 조회 (이용일이 지난 픽업건)
+router.get('/api/settlement/pending', async (req, res) => {
+  const pool = req.app.locals.pool;
+  
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const result = await pool.query(`
+      SELECT 
+        ap.*,
+        pa.agency_name
+      FROM airport_pickups ap
+      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
+      WHERE ap.display_date < $1
+        AND ap.status = 'active'
+        AND ap.settlement_date IS NULL
+      ORDER BY ap.display_date DESC, ap.display_time DESC
+    `, [today]);
+    
+    res.json({ pickups: result.rows });
+  } catch (error) {
+    console.error('❌ 정산 전 목록 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 정산 완료 픽업건 조회
+router.get('/api/settlement/completed', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { year, month } = req.query;
+  
+  try {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const nextMonth = parseInt(month) === 12 ? 1 : parseInt(month) + 1;
+    const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
+    const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+    
+    const result = await pool.query(`
+      SELECT 
+        ap.*,
+        pa.agency_name
+      FROM airport_pickups ap
+      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
+      WHERE ap.settlement_date >= $1 AND ap.settlement_date < $2
+        AND ap.status = 'active'
+      ORDER BY ap.settlement_date DESC, ap.display_date DESC
+    `, [startDate, endDate]);
+    
+    res.json({ pickups: result.rows });
+  } catch (error) {
+    console.error('❌ 정산 완료 목록 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 정산 완료 처리
+router.post('/api/settlement/complete', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { ids } = req.body;
+  
+  if (!ids || ids.length === 0) {
+    return res.status(400).json({ error: '정산할 픽업건을 선택해주세요' });
+  }
+  
+  try {
+    const now = new Date().toISOString();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    
+    const result = await pool.query(`
+      UPDATE airport_pickups
+      SET settlement_date = $${ids.length + 1}
+      WHERE id IN (${placeholders})
+        AND settlement_date IS NULL
+      RETURNING id
+    `, [...ids, now]);
+    
+    res.json({ 
+      success: true, 
+      count: result.rowCount,
+      message: `${result.rowCount}건 정산 완료 처리되었습니다`
+    });
+  } catch (error) {
+    console.error('❌ 정산 처리 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: 월별 예약 조회 (달력용 - display_date 기준)
 router.get('/api/calendar', async (req, res) => {
   const pool = req.app.locals.pool;
