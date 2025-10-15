@@ -278,40 +278,97 @@ router.put('/api/:id/vehicle', async (req, res) => {
   }
 });
 
-// API: 예약 수정
+// API: 예약 수정 (linked_id로 연결된 레코드도 함께 수정)
 router.put('/api/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
-  const { customer_name, passenger_count, hotel_name, phone, kakao_id, memo } = req.body;
+  const { 
+    customer_name, hotel_name, phone, kakao_id, memo,
+    adult_count, child_count, infant_count, luggage_count,
+    agency_id
+  } = req.body;
   
   try {
-    const result = await pool.query(
-      `UPDATE airport_pickups 
-       SET customer_name = $1, passenger_count = $2, hotel_name = $3,
-           phone = $4, kakao_id = $5, memo = $6, updated_at = NOW()
-       WHERE id = $7 RETURNING *`,
-      [customer_name, passenger_count, hotel_name, phone, kakao_id, memo, id]
+    const passenger_count = (adult_count || 0) + (child_count || 0) + (infant_count || 0);
+    
+    // 1. linked_id 조회
+    const record = await pool.query(
+      `SELECT linked_id FROM airport_pickups WHERE id = $1`,
+      [id]
     );
     
-    res.json({ success: true, data: result.rows[0] });
+    if (record.rows.length === 0) {
+      return res.status(404).json({ error: '예약을 찾을 수 없습니다' });
+    }
+    
+    const linkedId = record.rows[0].linked_id;
+    
+    // 2. 현재 레코드 수정
+    await pool.query(
+      `UPDATE airport_pickups 
+       SET customer_name = $1, passenger_count = $2, hotel_name = $3,
+           phone = $4, kakao_id = $5, memo = $6,
+           adult_count = $7, child_count = $8, infant_count = $9, luggage_count = $10,
+           agency_id = $11, updated_at = NOW()
+       WHERE id = $12`,
+      [customer_name, passenger_count, hotel_name, phone, kakao_id, memo,
+       adult_count, child_count, infant_count, luggage_count, agency_id, id]
+    );
+    
+    // 3. 연결된 레코드도 수정 (linked_id가 있는 경우)
+    if (linkedId) {
+      await pool.query(
+        `UPDATE airport_pickups 
+         SET customer_name = $1, passenger_count = $2, hotel_name = $3,
+             phone = $4, kakao_id = $5, memo = $6,
+             adult_count = $7, child_count = $8, infant_count = $9, luggage_count = $10,
+             agency_id = $11, updated_at = NOW()
+         WHERE id = $12`,
+        [customer_name, passenger_count, hotel_name, phone, kakao_id, memo,
+         adult_count, child_count, infant_count, luggage_count, agency_id, linkedId]
+      );
+    }
+    
+    res.json({ success: true, updatedCount: linkedId ? 2 : 1 });
   } catch (error) {
     console.error('❌ 예약 수정 실패:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// API: 예약 취소
+// API: 예약 취소 (linked_id로 연결된 레코드도 함께 취소)
 router.delete('/api/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
   
   try {
+    // 1. 해당 레코드의 linked_id 조회
+    const record = await pool.query(
+      `SELECT linked_id FROM airport_pickups WHERE id = $1`,
+      [id]
+    );
+    
+    if (record.rows.length === 0) {
+      return res.status(404).json({ error: '예약을 찾을 수 없습니다' });
+    }
+    
+    const linkedId = record.rows[0].linked_id;
+    
+    // 2. 현재 레코드 취소
     await pool.query(
       `UPDATE airport_pickups SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
       [id]
     );
     
-    res.json({ success: true });
+    // 3. 연결된 레코드도 취소 (linked_id가 있는 경우)
+    if (linkedId) {
+      await pool.query(
+        `UPDATE airport_pickups SET status = 'cancelled', updated_at = NOW() WHERE id = $1`,
+        [linkedId]
+      );
+    }
+    
+    res.json({ success: true, deletedCount: linkedId ? 2 : 1 });
   } catch (error) {
     console.error('❌ 예약 취소 실패:', error);
     res.status(500).json({ error: error.message });

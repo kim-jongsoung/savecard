@@ -355,8 +355,17 @@
     
     // 모달 열기
     function showAddModal() {
+      const modal = document.getElementById('addModal');
+      
+      // 수정 모드 초기화
+      delete modal.dataset.editId;
+      modal.querySelector('.modal-title').textContent = '새 픽업 등록';
+      
+      // 폼 리셋
       document.getElementById('addForm').reset();
       document.getElementById('flightResult').style.display = 'none';
+      updateTotal();
+      
       addModalInstance.show();
     }
     
@@ -426,19 +435,59 @@
     // 모달에서 수정
     function editFromDetail() {
       if (!currentPickupData) return;
+      
+      const pickup = currentPickupData;
+      
+      // 상세 모달 닫기
       detailModalInstance.hide();
-      alert('수정 기능은 곧 추가됩니다.');
-      // TODO: 수정 모달 열기
+      
+      // 등록 모달에 데이터 로드
+      document.getElementById('flightDate').value = pickup.departure_date || '';
+      document.getElementById('flightNumber').value = pickup.flight_number || '';
+      document.getElementById('agencyId').value = pickup.agency_id || '';
+      document.getElementById('customerName').value = pickup.customer_name || '';
+      document.getElementById('hotelName').value = pickup.hotel_name || '';
+      document.getElementById('phone').value = pickup.phone || '';
+      document.getElementById('kakaoId').value = pickup.kakao_id || '';
+      document.getElementById('memo').value = pickup.memo || '';
+      document.getElementById('adultCount').value = pickup.adult_count || 0;
+      document.getElementById('childCount').value = pickup.child_count || 0;
+      document.getElementById('infantCount').value = pickup.infant_count || 0;
+      document.getElementById('luggageCount').value = pickup.luggage_count || 0;
+      
+      updateTotal();
+      autoCalculate();
+      
+      // 수정 모드로 표시
+      document.getElementById('addModal').querySelector('.modal-title').textContent = '픽업 수정';
+      document.getElementById('addModal').dataset.editId = pickup.id;
+      
+      addModalInstance.show();
     }
     
     // 모달에서 삭제
     async function deleteFromDetail() {
-      if (!currentPickupData || !confirm('정말 취소하시겠습니까?')) return;
+      if (!currentPickupData) return;
       
-      await fetch(`/pickup/api/${currentPickupData.id}`, { method: 'DELETE' });
-      alert('✅ 취소 완료');
-      detailModalInstance.hide();
-      loadCalendar(); // 달력 새로고침
+      if (!confirm(`정말 취소하시겠습니까?\n\n출발/도착 2개 레코드가 모두 취소됩니다.`)) return;
+      
+      try {
+        const res = await fetch(`/pickup/api/${currentPickupData.id}`, { 
+          method: 'DELETE' 
+        });
+        
+        if (res.ok) {
+          const result = await res.json();
+          alert(`✅ 취소 완료 (${result.deletedCount}개 레코드)`);
+          detailModalInstance.hide();
+          loadCalendar(); // 달력 새로고침
+        } else {
+          const err = await res.json();
+          alert('❌ 취소 실패: ' + err.error);
+        }
+      } catch (error) {
+        alert('❌ 오류: ' + error.message);
+      }
     }
     
     function changeMonth(delta) {
@@ -571,6 +620,10 @@
     
     // 저장
     async function savePickup() {
+      const modal = document.getElementById('addModal');
+      const editId = modal.dataset.editId;
+      const isEdit = !!editId;
+      
       const flightNum = document.getElementById('flightNumber').value;
       const flight = FLIGHTS[flightNum];
       
@@ -596,15 +649,35 @@
       };
       
       try {
-        const res = await fetch('/pickup/api/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
+        let res, result;
+        
+        if (isEdit) {
+          // 수정 모드
+          res = await fetch(`/pickup/api/${editId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          
+          if (res.ok) {
+            result = await res.json();
+            alert(`✅ 수정 완료!\n출발/도착 ${result.updatedCount || 2}개 레코드가 수정되었습니다.`);
+          }
+        } else {
+          // 등록 모드
+          res = await fetch('/pickup/api/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          
+          if (res.ok) {
+            result = await res.json();
+            alert(`✅ 등록 완료!\n출발/도착 ${result.data.length}개 레코드가 저장되었습니다.`);
+          }
+        }
         
         if (res.ok) {
-          const result = await res.json();
-          alert(`✅ 등록 완료!\n출발/도착 ${result.data.length}개 레코드가 저장되었습니다.`);
           addModalInstance.hide();
           loadCalendar(); // 달력 새로고침
         } else {
