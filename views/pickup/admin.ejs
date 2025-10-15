@@ -546,27 +546,35 @@
         const gumArrivals = dayData.arrivals.filter(p => p.arrival_airport === 'GUM');
         
         // 통계 계산
+        const icnAll = [...icnDepartures, ...icnArrivals];
         const icnStats = {
           departures: icnDepartures.length,
           arrivals: icnArrivals.length,
-          totalPax: [...icnDepartures, ...icnArrivals].reduce((sum, p) => sum + (p.passenger_count || 0), 0)
+          totalPax: icnAll.reduce((sum, p) => sum + (p.passenger_count || 0), 0),
+          adults: icnAll.reduce((sum, p) => sum + (p.adult_count || 0), 0),
+          children: icnAll.reduce((sum, p) => sum + (p.child_count || 0), 0),
+          infants: icnAll.reduce((sum, p) => sum + (p.infant_count || 0), 0)
         };
         
+        const gumAll = [...gumDepartures, ...gumArrivals];
         const gumStats = {
           departures: gumDepartures.length,
           arrivals: gumArrivals.length,
-          totalPax: [...gumDepartures, ...gumArrivals].reduce((sum, p) => sum + (p.passenger_count || 0), 0)
+          totalPax: gumAll.reduce((sum, p) => sum + (p.passenger_count || 0), 0),
+          adults: gumAll.reduce((sum, p) => sum + (p.adult_count || 0), 0),
+          children: gumAll.reduce((sum, p) => sum + (p.child_count || 0), 0),
+          infants: gumAll.reduce((sum, p) => sum + (p.infant_count || 0), 0)
         };
         
         // 통계 표시
         document.getElementById('icnStatsContent').innerHTML = `
           출발: ${icnStats.departures}건 | 도착: ${icnStats.arrivals}건<br>
-          총 인원: ${icnStats.totalPax}명
+          총 인원: ${icnStats.totalPax}명 (성인: ${icnStats.adults} / 소아: ${icnStats.children} / 유아: ${icnStats.infants})
         `;
         
         document.getElementById('gumStatsContent').innerHTML = `
           출발: ${gumStats.departures}건 | 도착: ${gumStats.arrivals}건<br>
-          총 인원: ${gumStats.totalPax}명
+          총 인원: ${gumStats.totalPax}명 (성인: ${gumStats.adults} / 소아: ${gumStats.children} / 유아: ${gumStats.infants})
         `;
         
         // ICN 리스트 표시
