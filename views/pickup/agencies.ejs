@@ -157,9 +157,20 @@
     async function deleteAgency(id) {
       if (!confirm('정말 삭제하시겠습니까?')) return;
       
-      await fetch(`/pickup/api/agencies/${id}`, { method: 'DELETE' });
-      alert('✅ 삭제 완료');
-      loadAgencies();
+      try {
+        const res = await fetch(`/pickup/api/agencies/${id}`, { method: 'DELETE' });
+        
+        if (res.ok) {
+          alert('✅ 삭제 완료');
+          loadAgencies();
+        } else {
+          const error = await res.json();
+          alert('❌ 삭제 실패: ' + (error.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('삭제 오류:', error);
+        alert('❌ 삭제 실패: ' + error.message);
+      }
     }
   </script>
 </body>
