@@ -618,6 +618,99 @@ async function initializeDatabase() {
         console.log('⚠️ reservations 테이블 생성 시도 중 오류:', tableError.message);
       }
       
+      // 픽업 관련 테이블 생성
+      try {
+        console.log('✈️ 픽업 관리 테이블 생성 시작...');
+        
+        // pickup_flights 테이블 생성
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pickup_flights (
+            id SERIAL PRIMARY KEY,
+            flight_number VARCHAR(20) UNIQUE NOT NULL,
+            airline VARCHAR(3),
+            departure_time TIME NOT NULL,
+            arrival_time TIME NOT NULL,
+            flight_hours DECIMAL(3,1) NOT NULL,
+            departure_airport VARCHAR(3),
+            arrival_airport VARCHAR(3),
+            days_of_week VARCHAR(20),
+            is_active BOOLEAN DEFAULT true,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+        console.log('✅ pickup_flights 테이블 생성 완료');
+        
+        // 인덱스 생성
+        await pool.query(`
+          CREATE INDEX IF NOT EXISTS idx_flight_number ON pickup_flights(flight_number);
+          CREATE INDEX IF NOT EXISTS idx_is_active ON pickup_flights(is_active);
+        `);
+        
+        // 기본 항공편 데이터 추가
+        await pool.query(`
+          INSERT INTO pickup_flights (flight_number, airline, departure_time, arrival_time, flight_hours, departure_airport, arrival_airport, days_of_week, notes) 
+          VALUES 
+            ('KE111', 'KE', '07:30', '12:30', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항'),
+            ('KE123', 'KE', '22:00', '03:00', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '심야편 - 다음날 도착'),
+            ('KE124', 'KE', '03:30', '07:30', 4.0, 'GUM', 'ICN', '1,2,3,4,5,6,7', '새벽 출발 - 전날 23:59 픽업'),
+            ('OZ456', 'OZ', '10:00', '15:00', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항'),
+            ('OZ458', 'OZ', '17:00', '21:00', 4.0, 'GUM', 'ICN', '1,2,3,4,5,6,7', '정상 운항'),
+            ('OZ789', 'OZ', '15:30', '20:30', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항'),
+            ('OZ678', 'OZ', '11:00', '13:00', 3.0, 'NRT', 'GUM', '2,4,6', '도쿄발'),
+            ('UA873', 'UA', '13:20', '18:20', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항')
+          ON CONFLICT (flight_number) DO NOTHING
+        `);
+        console.log('✅ pickup_flights 기본 데이터 추가 완료');
+        
+        // pickup_agencies 테이블 생성
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pickup_agencies (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            contact_person VARCHAR(100),
+            phone VARCHAR(50),
+            email VARCHAR(100),
+            vehicle_types TEXT,
+            base_price DECIMAL(10,2),
+            notes TEXT,
+            is_active BOOLEAN DEFAULT true,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+        console.log('✅ pickup_agencies 테이블 생성 완료');
+        
+        // pickup_reservations 테이블 생성
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS pickup_reservations (
+            id SERIAL PRIMARY KEY,
+            flight_date DATE NOT NULL,
+            flight_number VARCHAR(20),
+            passenger_name_kr VARCHAR(100),
+            passenger_name_en VARCHAR(100),
+            passenger_count INTEGER DEFAULT 1,
+            phone VARCHAR(50),
+            memo TEXT,
+            hotel_name VARCHAR(200),
+            hotel_pickup_time TIME,
+            agency_id INTEGER,
+            agency_name VARCHAR(100),
+            cost DECIMAL(10,2),
+            status VARCHAR(20) DEFAULT '대기중',
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            FOREIGN KEY (agency_id) REFERENCES pickup_agencies(id) ON DELETE SET NULL
+          )
+        `);
+        console.log('✅ pickup_reservations 테이블 생성 완료');
+        
+        console.log('✈️ 픽업 관리 시스템 초기화 완료!');
+      } catch (pickupError) {
+        console.log('⚠️ 픽업 테이블 생성 중 오류:', pickupError.message);
+      }
+      
       await migrateFromJSON();
     }
   } catch (error) {
