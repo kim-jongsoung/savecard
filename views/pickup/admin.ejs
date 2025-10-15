@@ -424,12 +424,32 @@
       if (!flight) return;
       
       // 비행시간 기준으로 도착일시 계산
+      // 한국 출발 시간 (KST = UTC+9)
       const krDateTime = new Date(`${date}T${flight.time}:00+09:00`);
-      const guamDateTime = new Date(krDateTime);
-      guamDateTime.setHours(guamDateTime.getHours() + flight.hours + 1); // +1시간은 시차
       
-      const guamDate = guamDateTime.toISOString().split('T')[0];
-      const guamTime = guamDateTime.toTimeString().slice(0, 5);
+      // 비행시간만큼 더함 (밀리초 단위)
+      const arrivalMillis = krDateTime.getTime() + (flight.hours * 3600000);
+      const arrivalDateTime = new Date(arrivalMillis);
+      
+      // 괌 시간으로 변환 (UTC+10)
+      const utcHours = arrivalDateTime.getUTCHours();
+      const utcMinutes = arrivalDateTime.getUTCMinutes();
+      const utcDate = arrivalDateTime.getUTCDate();
+      const utcMonth = arrivalDateTime.getUTCMonth();
+      const utcYear = arrivalDateTime.getUTCFullYear();
+      
+      // 괌 시간 계산 (UTC에 +10시간)
+      let guamHours = utcHours + 10;
+      let guamDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
+      
+      // 24시가 넘으면 다음날로
+      if (guamHours >= 24) {
+        guamHours -= 24;
+        guamDateObj.setUTCDate(guamDateObj.getUTCDate() + 1);
+      }
+      
+      const guamDate = guamDateObj.toISOString().split('T')[0];
+      const guamTime = String(guamHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
       
       const dateChanged = date !== guamDate;
       
