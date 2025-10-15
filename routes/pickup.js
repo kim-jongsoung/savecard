@@ -730,24 +730,47 @@ router.get('/api/settlement/pending', async (req, res) => {
 // API: 정산 완료 픽업건 조회
 router.get('/api/settlement/completed', async (req, res) => {
   const pool = req.app.locals.pool;
-  const { year, month } = req.query;
+  const { agency_id, start_date, end_date } = req.query;
   
   try {
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const nextMonth = parseInt(month) === 12 ? 1 : parseInt(month) + 1;
-    const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
-    const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
-    
-    const result = await pool.query(`
+    let query = `
       SELECT 
         ap.*,
         pa.agency_name
       FROM airport_pickups ap
       LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
-      WHERE ap.settlement_date >= $1 AND ap.settlement_date < $2
+      WHERE ap.settlement_date IS NOT NULL
         AND ap.status = 'active'
-      ORDER BY ap.settlement_date DESC, ap.display_date DESC
-    `, [startDate, endDate]);
+        AND ap.record_type = 'departure'
+    `;
+    
+    const params = [];
+    let paramCount = 1;
+    
+    // 업체 필터
+    if (agency_id) {
+      query += ` AND ap.agency_id = $${paramCount}`;
+      params.push(agency_id);
+      paramCount++;
+    }
+    
+    // 픽업일 시작 필터
+    if (start_date) {
+      query += ` AND ap.display_date >= $${paramCount}`;
+      params.push(start_date);
+      paramCount++;
+    }
+    
+    // 픽업일 종료 필터
+    if (end_date) {
+      query += ` AND ap.display_date <= $${paramCount}`;
+      params.push(end_date);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY ap.settlement_date DESC, ap.display_date DESC`;
+    
+    const result = await pool.query(query, params);
     
     res.json({ pickups: result.rows });
   } catch (error) {

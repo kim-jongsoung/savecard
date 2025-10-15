@@ -51,6 +51,33 @@
     <div class="tab-content" id="settlementTabContent">
       <!-- 정산 전 -->
       <div class="tab-pane fade show active" id="pending" role="tabpanel">
+        <!-- 검색 필터 -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">업체</label>
+                <select class="form-select" id="pendingAgency" onchange="filterPending()">
+                  <option value="">전체 업체</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">픽업일 시작</label>
+                <input type="date" class="form-control" id="pendingStartDate" onchange="filterPending()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">픽업일 종료</label>
+                <input type="date" class="form-control" id="pendingEndDate" onchange="filterPending()">
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" onclick="resetPendingFilter()">
+                  <i class="bi bi-arrow-clockwise"></i> 초기화
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <button class="btn btn-sm btn-outline-secondary" onclick="toggleSelectAll()">
@@ -62,23 +89,76 @@
             <i class="bi bi-check-circle"></i> 정산 완료 처리
           </button>
         </div>
+        
         <div id="pendingList">
           <div class="text-center text-muted py-5">
             <i class="bi bi-hourglass-split" style="font-size: 3rem;"></i>
             <p class="mt-2">로딩중...</p>
           </div>
         </div>
+        
+        <!-- 통계 -->
+        <div class="card mt-3 bg-light">
+          <div class="card-body">
+            <h6>📊 총 통계</h6>
+            <div id="pendingStats">
+              <span class="badge bg-primary me-2">총 건수: 0건</span>
+              <span class="badge bg-info me-2">총 인원: 0명</span>
+              <span class="badge bg-success me-2">성인: 0명</span>
+              <span class="badge bg-warning me-2">소아: 0명</span>
+              <span class="badge bg-secondary">유아: 0명</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 정산 완료 -->
       <div class="tab-pane fade" id="completed" role="tabpanel">
-        <div class="mb-3">
-          <input type="month" class="form-control" id="completedMonth" style="max-width: 200px;" onchange="loadCompleted()">
+        <!-- 검색 필터 -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <label class="form-label">업체</label>
+                <select class="form-select" id="completedAgency" onchange="loadCompleted()">
+                  <option value="">전체 업체</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">픽업일 시작</label>
+                <input type="date" class="form-control" id="completedStartDate" onchange="loadCompleted()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">픽업일 종료</label>
+                <input type="date" class="form-control" id="completedEndDate" onchange="loadCompleted()">
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-outline-secondary w-100" onclick="resetCompletedFilter()">
+                  <i class="bi bi-arrow-clockwise"></i> 초기화
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+
         <div id="completedList">
           <div class="text-center text-muted py-5">
             <i class="bi bi-hourglass-split" style="font-size: 3rem;"></i>
             <p class="mt-2">로딩중...</p>
+          </div>
+        </div>
+        
+        <!-- 통계 -->
+        <div class="card mt-3 bg-light">
+          <div class="card-body">
+            <h6>📊 총 통계</h6>
+            <div id="completedStats">
+              <span class="badge bg-primary me-2">총 건수: 0건</span>
+              <span class="badge bg-info me-2">총 인원: 0명</span>
+              <span class="badge bg-success me-2">성인: 0명</span>
+              <span class="badge bg-warning me-2">소아: 0명</span>
+              <span class="badge bg-secondary">유아: 0명</span>
+            </div>
           </div>
         </div>
       </div>
@@ -91,83 +171,50 @@
     let completedPickups = [];
     let selectedIds = new Set();
 
+    let allPendingPickups = []; // 전체 데이터
+    let allCompletedPickups = []; // 전체 데이터
+    let agencies = []; // 업체 목록
+
     document.addEventListener('DOMContentLoaded', () => {
+      loadAgencies();
       loadPending();
       
-      // 정산 완료 탭 클릭 시 현재 월로 초기화
+      // 정산 완료 탭 클릭 시 로드
       document.getElementById('completed-tab').addEventListener('shown.bs.tab', () => {
-        const now = new Date();
-        const monthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        document.getElementById('completedMonth').value = monthValue;
-        loadCompleted();
+        if (allCompletedPickups.length === 0) {
+          loadCompleted();
+        }
       });
     });
+
+    // 업체 목록 로드
+    async function loadAgencies() {
+      try {
+        const res = await fetch('/pickup/api/agencies');
+        const data = await res.json();
+        agencies = data.agencies || [];
+        
+        // 정산 전 업체 드롭다운
+        let options = '<option value="">전체 업체</option>';
+        agencies.forEach(a => {
+          options += `<option value="${a.id}">${a.agency_name}</option>`;
+        });
+        document.getElementById('pendingAgency').innerHTML = options;
+        document.getElementById('completedAgency').innerHTML = options;
+      } catch (error) {
+        console.error('❌ 업체 목록 조회 실패:', error);
+      }
+    }
 
     // 정산 전 목록 로드
     async function loadPending() {
       try {
         const res = await fetch('/pickup/api/settlement/pending');
         const data = await res.json();
-        pendingPickups = data.pickups || [];
+        allPendingPickups = data.pickups || [];
+        pendingPickups = allPendingPickups;
         
-        document.getElementById('pendingCount').textContent = pendingPickups.length;
-        
-        if (pendingPickups.length === 0) {
-          document.getElementById('pendingList').innerHTML = `
-            <div class="text-center text-muted py-5">
-              <i class="bi bi-check-circle" style="font-size: 3rem; color: #28a745;"></i>
-              <p class="mt-2">정산할 픽업건이 없습니다</p>
-            </div>
-          `;
-          return;
-        }
-        
-        let html = '';
-        pendingPickups.forEach(p => {
-          const isSelected = selectedIds.has(p.id);
-          html += `
-            <div class="settlement-card ${isSelected ? 'selected' : ''}" id="card-${p.id}">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="${p.id}" 
-                       id="check-${p.id}" onchange="toggleSelect(${p.id})" ${isSelected ? 'checked' : ''}>
-                <label class="form-check-label w-100" for="check-${p.id}">
-                  <div class="row">
-                    <div class="col-md-6">
-                      <strong>${p.flight_number || '-'}</strong> 
-                      <span class="badge bg-${p.record_type === 'departure' ? 'primary' : 'danger'}">
-                        ${p.record_type === 'departure' ? '출발' : '도착'}
-                      </span>
-                      <span class="badge bg-info">${p.passenger_count}명</span>
-                      <br>
-                      <small class="text-muted">
-                        ${p.departure_airport} → ${p.arrival_airport} | 
-                        ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
-                      </small>
-                    </div>
-                    <div class="col-md-4">
-                      <small>
-                        👤 ${p.customer_name}<br>
-                        🏨 ${p.hotel_name}<br>
-                        ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
-                      </small>
-                    </div>
-                    <div class="col-md-2 text-end">
-                      <small class="text-muted">
-                        성인: ${p.adult_count || 0}<br>
-                        소아: ${p.child_count || 0}<br>
-                        유아: ${p.infant_count || 0}
-                      </small>
-                    </div>
-                  </div>
-                  ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
-                </label>
-              </div>
-            </div>
-          `;
-        });
-        
-        document.getElementById('pendingList').innerHTML = html;
-        updateSelectedInfo();
+        renderPending();
       } catch (error) {
         console.error('❌ 정산 전 목록 조회 실패:', error);
         document.getElementById('pendingList').innerHTML = `
@@ -176,72 +223,223 @@
       }
     }
 
+    // 정산 전 필터링
+    function filterPending() {
+      const agencyId = document.getElementById('pendingAgency').value;
+      const startDate = document.getElementById('pendingStartDate').value;
+      const endDate = document.getElementById('pendingEndDate').value;
+      
+      pendingPickups = allPendingPickups.filter(p => {
+        // 업체 필터
+        if (agencyId && p.agency_id != agencyId) return false;
+        
+        // 날짜 필터
+        const pickupDate = p.display_date?.split('T')[0];
+        if (startDate && pickupDate < startDate) return false;
+        if (endDate && pickupDate > endDate) return false;
+        
+        return true;
+      });
+      
+      renderPending();
+    }
+
+    // 정산 전 렌더링
+    function renderPending() {
+      document.getElementById('pendingCount').textContent = pendingPickups.length;
+      
+      if (pendingPickups.length === 0) {
+        document.getElementById('pendingList').innerHTML = `
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-check-circle" style="font-size: 3rem; color: #28a745;"></i>
+            <p class="mt-2">정산할 픽업건이 없습니다</p>
+          </div>
+        `;
+        updatePendingStats([]);
+        return;
+      }
+      
+      let html = '';
+      pendingPickups.forEach(p => {
+        const isSelected = selectedIds.has(p.id);
+        html += `
+          <div class="settlement-card ${isSelected ? 'selected' : ''}" id="card-${p.id}">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="${p.id}" 
+                     id="check-${p.id}" onchange="toggleSelect(${p.id})" ${isSelected ? 'checked' : ''}>
+              <label class="form-check-label w-100" for="check-${p.id}">
+                <div class="row">
+                  <div class="col-md-6">
+                    <strong>${p.flight_number || '-'}</strong> 
+                    <span class="badge bg-primary">출발</span>
+                    <span class="badge bg-info">${p.passenger_count}명</span>
+                    <br>
+                    <small class="text-muted">
+                      ${p.departure_airport} → ${p.arrival_airport} | 
+                      ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
+                    </small>
+                  </div>
+                  <div class="col-md-4">
+                    <small>
+                      👤 ${p.customer_name}<br>
+                      🏨 ${p.hotel_name}<br>
+                      ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
+                    </small>
+                  </div>
+                  <div class="col-md-2 text-end">
+                    <small class="text-muted">
+                      성인: ${p.adult_count || 0}<br>
+                      소아: ${p.child_count || 0}<br>
+                      유아: ${p.infant_count || 0}
+                    </small>
+                  </div>
+                </div>
+                ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
+              </label>
+            </div>
+          </div>
+        `;
+      });
+      
+      document.getElementById('pendingList').innerHTML = html;
+      updateSelectedInfo();
+      updatePendingStats(pendingPickups);
+    }
+
+    // 정산 전 통계 업데이트
+    function updatePendingStats(pickups) {
+      const totalCount = pickups.length;
+      const totalPax = pickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+      const totalAdults = pickups.reduce((sum, p) => sum + (p.adult_count || 0), 0);
+      const totalChildren = pickups.reduce((sum, p) => sum + (p.child_count || 0), 0);
+      const totalInfants = pickups.reduce((sum, p) => sum + (p.infant_count || 0), 0);
+      
+      document.getElementById('pendingStats').innerHTML = `
+        <span class="badge bg-primary me-2">총 건수: ${totalCount}건</span>
+        <span class="badge bg-info me-2">총 인원: ${totalPax}명</span>
+        <span class="badge bg-success me-2">성인: ${totalAdults}명</span>
+        <span class="badge bg-warning me-2">소아: ${totalChildren}명</span>
+        <span class="badge bg-secondary">유아: ${totalInfants}명</span>
+      `;
+    }
+
+    // 정산 전 필터 초기화
+    function resetPendingFilter() {
+      document.getElementById('pendingAgency').value = '';
+      document.getElementById('pendingStartDate').value = '';
+      document.getElementById('pendingEndDate').value = '';
+      filterPending();
+    }
+
     // 정산 완료 목록 로드
     async function loadCompleted() {
-      const monthValue = document.getElementById('completedMonth').value;
-      if (!monthValue) return;
-      
-      const [year, month] = monthValue.split('-');
+      const agencyId = document.getElementById('completedAgency').value;
+      const startDate = document.getElementById('completedStartDate').value;
+      const endDate = document.getElementById('completedEndDate').value;
       
       try {
-        const res = await fetch(`/pickup/api/settlement/completed?year=${year}&month=${month}`);
+        // 쿼리 파라미터 구성
+        let url = '/pickup/api/settlement/completed?';
+        const params = [];
+        
+        if (agencyId) params.push(`agency_id=${agencyId}`);
+        if (startDate) params.push(`start_date=${startDate}`);
+        if (endDate) params.push(`end_date=${endDate}`);
+        
+        url += params.join('&');
+        
+        const res = await fetch(url);
         const data = await res.json();
-        completedPickups = data.pickups || [];
+        allCompletedPickups = data.pickups || [];
+        completedPickups = allCompletedPickups;
         
-        document.getElementById('completedCount').textContent = completedPickups.length;
-        
-        if (completedPickups.length === 0) {
-          document.getElementById('completedList').innerHTML = `
-            <div class="text-center text-muted py-5">
-              <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-              <p class="mt-2">해당 월에 정산 완료된 픽업건이 없습니다</p>
-            </div>
-          `;
-          return;
-        }
-        
-        let html = '';
-        completedPickups.forEach(p => {
-          const settlementDate = p.settlement_date ? new Date(p.settlement_date).toLocaleDateString('ko-KR') : '-';
-          html += `
-            <div class="settlement-card">
-              <div class="row">
-                <div class="col-md-5">
-                  <strong>${p.flight_number || '-'}</strong>
-                  <span class="badge bg-${p.record_type === 'departure' ? 'primary' : 'danger'}">
-                    ${p.record_type === 'departure' ? '출발' : '도착'}
-                  </span>
-                  <span class="badge bg-info">${p.passenger_count}명</span>
-                  <br>
-                  <small class="text-muted">
-                    ${p.departure_airport} → ${p.arrival_airport} | 
-                    ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
-                  </small>
-                </div>
-                <div class="col-md-4">
-                  <small>
-                    👤 ${p.customer_name}<br>
-                    🏨 ${p.hotel_name}<br>
-                    ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
-                  </small>
-                </div>
-                <div class="col-md-3 text-end">
-                  <span class="badge bg-success">✅ 정산 완료</span><br>
-                  <small class="text-muted">${settlementDate}</small>
-                </div>
-              </div>
-              ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
-            </div>
-          `;
-        });
-        
-        document.getElementById('completedList').innerHTML = html;
+        renderCompleted();
       } catch (error) {
         console.error('❌ 정산 완료 목록 조회 실패:', error);
         document.getElementById('completedList').innerHTML = `
           <div class="alert alert-danger">데이터 조회 실패: ${error.message}</div>
         `;
       }
+    }
+
+    // 정산 완료 렌더링
+    function renderCompleted() {
+      document.getElementById('completedCount').textContent = completedPickups.length;
+      
+      if (completedPickups.length === 0) {
+        document.getElementById('completedList').innerHTML = `
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+            <p class="mt-2">정산 완료된 픽업건이 없습니다</p>
+          </div>
+        `;
+        updateCompletedStats([]);
+        return;
+      }
+      
+      let html = '';
+      completedPickups.forEach(p => {
+        const settlementDate = p.settlement_date ? new Date(p.settlement_date).toLocaleDateString('ko-KR') : '-';
+        html += `
+          <div class="settlement-card">
+            <div class="row">
+              <div class="col-md-5">
+                <strong>${p.flight_number || '-'}</strong>
+                <span class="badge bg-primary">출발</span>
+                <span class="badge bg-info">${p.passenger_count}명</span>
+                <br>
+                <small class="text-muted">
+                  ${p.departure_airport} → ${p.arrival_airport} | 
+                  ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
+                </small>
+              </div>
+              <div class="col-md-4">
+                <small>
+                  👤 ${p.customer_name}<br>
+                  🏨 ${p.hotel_name}<br>
+                  ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
+                </small>
+              </div>
+              <div class="col-md-3 text-end">
+                <span class="badge bg-success">✅ 정산 완료</span><br>
+                <small class="text-muted">${settlementDate}</small><br>
+                <small class="text-muted">
+                  성인: ${p.adult_count || 0} | 소아: ${p.child_count || 0} | 유아: ${p.infant_count || 0}
+                </small>
+              </div>
+            </div>
+            ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
+          </div>
+        `;
+      });
+      
+      document.getElementById('completedList').innerHTML = html;
+      updateCompletedStats(completedPickups);
+    }
+
+    // 정산 완료 통계 업데이트
+    function updateCompletedStats(pickups) {
+      const totalCount = pickups.length;
+      const totalPax = pickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+      const totalAdults = pickups.reduce((sum, p) => sum + (p.adult_count || 0), 0);
+      const totalChildren = pickups.reduce((sum, p) => sum + (p.child_count || 0), 0);
+      const totalInfants = pickups.reduce((sum, p) => sum + (p.infant_count || 0), 0);
+      
+      document.getElementById('completedStats').innerHTML = `
+        <span class="badge bg-primary me-2">총 건수: ${totalCount}건</span>
+        <span class="badge bg-info me-2">총 인원: ${totalPax}명</span>
+        <span class="badge bg-success me-2">성인: ${totalAdults}명</span>
+        <span class="badge bg-warning me-2">소아: ${totalChildren}명</span>
+        <span class="badge bg-secondary">유아: ${totalInfants}명</span>
+      `;
+    }
+
+    // 정산 완료 필터 초기화
+    function resetCompletedFilter() {
+      document.getElementById('completedAgency').value = '';
+      document.getElementById('completedStartDate').value = '';
+      document.getElementById('completedEndDate').value = '';
+      loadCompleted();
     }
 
     // 선택 토글
