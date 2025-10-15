@@ -574,35 +574,38 @@
           html += `<div class="day-summary">📊 ${totalCount}건 | ${totalPax}명</div>`;
         }
         
-        // 한국 출발 (파란색)
+        // record_type에 따라 구분하여 표시
         dayPickups.departures.forEach(p => {
           const time = p.display_time?.substring(0, 5) || '';
-          const flightNum = p.kr_flight_number || '';
+          const flightNum = p.flight_number || '';
+          const depAirport = p.departure_airport || '';
+          const arrAirport = p.arrival_airport || '';
+          
+          // 출발지가 ICN이면 "인천출발", GUM이면 "괌출발"
+          const label = depAirport === 'ICN' ? '✈️ 인천출발' : '✈️ 괌출발';
+          
           html += `
-            <div class="pickup-item" style="background: #e3f2fd; border-left-color: #2196f3; color: #1565c0;" onclick="showPickupDetail(${p.id})">
-              ✈️ ${flightNum} ${time} ${p.customer_name} (${p.passenger_count}명)
+            <div class="pickup-item" style="background: #e3f2fd; border-left-color: #2196f3; color: #1565c0; cursor: pointer;" onclick="showPickupDetail(${p.id})">
+              <div style="font-size: 0.75rem; font-weight: bold;">${label}</div>
+              <div>${flightNum}(${time}) ${p.customer_name} (${p.passenger_count}명)</div>
             </div>
           `;
         });
         
-        // 괌 도착 (빨간색)
+        // 도착 레코드
         dayPickups.arrivals.forEach(p => {
           const time = p.display_time?.substring(0, 5) || '';
-          const flightNum = p.kr_flight_number || '';
+          const flightNum = p.flight_number || '';
+          const depAirport = p.departure_airport || '';
+          const arrAirport = p.arrival_airport || '';
+          
+          // 도착지가 GUM이면 "괌도착", ICN이면 "인천도착"
+          const label = arrAirport === 'GUM' ? '🛬 괌도착' : '🛬 인천도착';
+          
           html += `
-            <div class="pickup-item" style="background: #ffebee; border-left-color: #f44336; color: #c62828;" onclick="showPickupDetail(${p.id})">
-              🛬 ${flightNum} ${time} ${p.customer_name} (${p.passenger_count}명)
-            </div>
-          `;
-        });
-        
-        // 호텔 픽업 (노란색/보라색)
-        dayPickups.hotelPickups.forEach(p => {
-          const earlyClass = p.is_early_morning ? 'pickup-early' : 'pickup-departure';
-          const time = p.display_time?.substring(0, 5) || '';
-          html += `
-            <div class="pickup-item ${earlyClass}" onclick="showPickupDetail(${p.id})">
-              ${p.is_early_morning ? '🌙' : '🏨'} ${time} ${p.customer_name} (${p.passenger_count}명)
+            <div class="pickup-item" style="background: #ffebee; border-left-color: #f44336; color: #c62828; cursor: pointer;" onclick="showPickupDetail(${p.id})">
+              <div style="font-size: 0.75rem; font-weight: bold;">${label}</div>
+              <div>${flightNum}(${time}) ${p.customer_name} (${p.passenger_count}명)</div>
             </div>
           `;
         });
