@@ -648,21 +648,8 @@ async function initializeDatabase() {
           CREATE INDEX IF NOT EXISTS idx_is_active ON pickup_flights(is_active);
         `);
         
-        // 기본 항공편 데이터 추가
-        await pool.query(`
-          INSERT INTO pickup_flights (flight_number, airline, departure_time, arrival_time, flight_hours, departure_airport, arrival_airport, days_of_week, notes) 
-          VALUES 
-            ('KE111', 'KE', '07:30', '12:30', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항'),
-            ('KE123', 'KE', '22:00', '03:00', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '심야편 - 다음날 도착'),
-            ('KE124', 'KE', '03:30', '07:30', 4.0, 'GUM', 'ICN', '1,2,3,4,5,6,7', '새벽 출발 - 전날 23:59 픽업'),
-            ('OZ456', 'OZ', '10:00', '15:00', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항'),
-            ('OZ458', 'OZ', '17:00', '21:00', 4.0, 'GUM', 'ICN', '1,2,3,4,5,6,7', '정상 운항'),
-            ('OZ789', 'OZ', '15:30', '20:30', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항'),
-            ('OZ678', 'OZ', '11:00', '13:00', 3.0, 'NRT', 'GUM', '2,4,6', '도쿄발'),
-            ('UA873', 'UA', '13:20', '18:20', 4.0, 'ICN', 'GUM', '1,2,3,4,5,6,7', '정상 운항')
-          ON CONFLICT (flight_number) DO NOTHING
-        `);
-        console.log('✅ pickup_flights 기본 데이터 추가 완료');
+        // 기본 항공편 데이터는 자동 생성하지 않음 (항공편 관리 페이지에서 직접 추가)
+        console.log('✅ pickup_flights 테이블 준비 완료');
         
         // pickup_agencies 테이블 생성
         await pool.query(`
