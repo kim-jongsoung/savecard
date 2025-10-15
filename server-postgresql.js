@@ -14229,6 +14229,36 @@ app.patch('/api/assignments/:id/status', requireAuth, async (req, res) => {
 
 async function startServer() {
     try {
+        // 픽업 테이블 마이그레이션 (컬럼 추가)
+        console.log('🔧 픽업 테이블 마이그레이션 확인 중...');
+        try {
+            const columns = ['record_type', 'display_date', 'display_time', 'departure_date', 'departure_time', 
+                           'departure_airport', 'arrival_date', 'arrival_time', 'arrival_airport', 'linked_id', 'flight_number'];
+            
+            for (const col of columns) {
+                await pool.query(`
+                    DO $$ 
+                    BEGIN 
+                        IF NOT EXISTS (
+                            SELECT FROM information_schema.columns 
+                            WHERE table_name = 'airport_pickups' AND column_name = '${col}'
+                        ) THEN
+                            ALTER TABLE airport_pickups ADD COLUMN ${col} ${
+                                col === 'record_type' ? "VARCHAR(20) DEFAULT 'arrival'" :
+                                col === 'display_date' || col === 'departure_date' || col === 'arrival_date' ? 'DATE' :
+                                col === 'display_time' || col === 'departure_time' || col === 'arrival_time' ? 'TIME' :
+                                col === 'linked_id' ? 'INTEGER' :
+                                'VARCHAR(20)'
+                            };
+                        END IF;
+                    END $$;
+                `);
+            }
+            console.log('✅ 픽업 테이블 마이그레이션 완료');
+        } catch (migrateErr) {
+            console.warn('⚠️  마이그레이션 경고:', migrateErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
