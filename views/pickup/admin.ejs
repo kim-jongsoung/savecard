@@ -718,7 +718,7 @@
         if (hasPickup) {
           html += `
             <div class="day-summary">📊 ${totalCount}건 | ${totalPax}명</div>
-            <button class="btn btn-sm btn-outline-primary w-100 mb-2" style="font-size: 0.7rem; padding: 2px 4px;" onclick="showDayView('${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}')">
+            <button class="btn btn-sm btn-outline-primary w-100 mb-2" style="font-size: 0.7rem; padding: 2px 4px;" onclick="showDayView('${dateStr}')">
               📋 전체보기
             </button>
           `;
