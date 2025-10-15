@@ -10,7 +10,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5분
 async function loadFlightsFromDB(pool) {
   try {
     const result = await pool.query(
-      `SELECT flight_number, departure_time, arrival_time 
+      `SELECT flight_number, departure_time, arrival_time, flight_hours 
        FROM pickup_flights 
        WHERE is_active = true`
     );
@@ -19,7 +19,8 @@ async function loadFlightsFromDB(pool) {
     result.rows.forEach(f => {
       flights[f.flight_number] = {
         time: f.departure_time?.substring(0, 5) || '00:00',
-        arrival_time: f.arrival_time?.substring(0, 5) || '00:00'
+        arrival_time: f.arrival_time?.substring(0, 5) || '00:00',
+        hours: parseFloat(f.flight_hours) || 4
       };
     });
     
@@ -30,11 +31,11 @@ async function loadFlightsFromDB(pool) {
     console.error('❌ 항공편 로드 실패:', error);
     // 실패 시 기본값 사용
     return {
-      'KE111': { time: '07:30', arrival_time: '12:30' },
-      'KE123': { time: '22:00', arrival_time: '03:00' },
-      'OZ456': { time: '10:00', arrival_time: '15:00' },
-      'OZ789': { time: '15:30', arrival_time: '20:30' },
-      'UA873': { time: '13:20', arrival_time: '18:20' }
+      'KE111': { time: '07:30', arrival_time: '12:30', hours: 4 },
+      'KE123': { time: '22:00', arrival_time: '03:00', hours: 4 },
+      'OZ456': { time: '10:00', arrival_time: '15:00', hours: 4 },
+      'OZ789': { time: '15:30', arrival_time: '20:30', hours: 4 },
+      'UA873': { time: '13:20', arrival_time: '18:20', hours: 4 }
     };
   }
 }
@@ -47,28 +48,21 @@ async function getFlights(pool) {
   return FLIGHTS_CACHE;
 }
 
-// 날짜/시간 계산 헬퍼 - 출발/도착 시간 직접 사용
+// 날짜/시간 계산 헬퍼 - 비행시간 사용하여 도착일시 계산
 function calculateArrival(krDate, krTime, flightNum, flightData) {
   const flight = flightData[flightNum];
   if (!flight) return null;
   
-  // 출발일 + 도착시간으로 도착일시 계산 (간단 버전)
+  // 출발일시 + 비행시간으로 도착일시 계산
   const krDateTime = new Date(`${krDate}T${krTime}:00+09:00`);
   const guamDateTime = new Date(krDateTime);
   
-  // 도착시간 설정
-  const [arrivalHour, arrivalMin] = flight.arrival_time.split(':');
-  guamDateTime.setHours(parseInt(arrivalHour) + 1, parseInt(arrivalMin), 0); // +1시간은 시차
-  
-  // 심야편 처리 (출발시간보다 도착시간이 작으면 다음날)
-  const [depHour] = krTime.split(':');
-  if (parseInt(arrivalHour) < parseInt(depHour)) {
-    guamDateTime.setDate(guamDateTime.getDate() + 1);
-  }
+  // 비행시간을 더하고 시차 반영 (+1시간)
+  guamDateTime.setHours(guamDateTime.getHours() + flight.hours + 1);
   
   return {
     date: guamDateTime.toISOString().split('T')[0],
-    time: flight.arrival_time
+    time: guamDateTime.toTimeString().slice(0, 5)
   };
 }
 
@@ -401,16 +395,16 @@ router.get('/api/flights/:id', async (req, res) => {
 router.post('/api/flights', async (req, res) => {
   const pool = req.app.locals.pool;
   const { 
-    flight_number, airline, departure_time, arrival_time,
+    flight_number, airline, departure_time, arrival_time, flight_hours,
     departure_airport, arrival_airport, days_of_week, notes, is_active 
   } = req.body;
   
   try {
     const result = await pool.query(
       `INSERT INTO pickup_flights 
-       (flight_number, airline, departure_time, arrival_time, departure_airport, arrival_airport, days_of_week, notes, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [flight_number, airline, departure_time, arrival_time, departure_airport, arrival_airport, days_of_week || '1,2,3,4,5,6,7', notes, is_active !== false]
+       (flight_number, airline, departure_time, arrival_time, flight_hours, departure_airport, arrival_airport, days_of_week, notes, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [flight_number, airline, departure_time, arrival_time, flight_hours, departure_airport, arrival_airport, days_of_week || '1,2,3,4,5,6,7', notes, is_active !== false]
     );
     
     // 캐시 갱신
@@ -432,17 +426,17 @@ router.put('/api/flights/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
   const { 
-    flight_number, airline, departure_time, arrival_time,
+    flight_number, airline, departure_time, arrival_time, flight_hours,
     departure_airport, arrival_airport, days_of_week, notes, is_active 
   } = req.body;
   
   try {
     const result = await pool.query(
       `UPDATE pickup_flights 
-       SET flight_number = $1, airline = $2, departure_time = $3, arrival_time = $4,
-           departure_airport = $5, arrival_airport = $6, days_of_week = $7, notes = $8, is_active = $9, updated_at = NOW()
-       WHERE id = $10 RETURNING *`,
-      [flight_number, airline, departure_time, arrival_time, departure_airport, arrival_airport, days_of_week, notes, is_active, id]
+       SET flight_number = $1, airline = $2, departure_time = $3, arrival_time = $4, flight_hours = $5,
+           departure_airport = $6, arrival_airport = $7, days_of_week = $8, notes = $9, is_active = $10, updated_at = NOW()
+       WHERE id = $11 RETURNING *`,
+      [flight_number, airline, departure_time, arrival_time, flight_hours, departure_airport, arrival_airport, days_of_week, notes, is_active, id]
     );
     
     if (result.rows.length === 0) {

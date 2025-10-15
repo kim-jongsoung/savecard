@@ -37,6 +37,7 @@
                 <th>도착공항</th>
                 <th>출발시간</th>
                 <th>도착시간</th>
+                <th>비행시간</th>
                 <th>운항요일</th>
                 <th>상태</th>
                 <th>관리</th>
@@ -112,14 +113,19 @@
             </div>
 
             <div class="row">
-              <div class="col-md-6 mb-3">
+              <div class="col-md-4 mb-3">
                 <label class="form-label">출발시간 *</label>
                 <input type="time" class="form-control" id="departureTime" required>
               </div>
-              <div class="col-md-6 mb-3">
+              <div class="col-md-4 mb-3">
                 <label class="form-label">도착시간 *</label>
                 <input type="time" class="form-control" id="arrivalTime" required>
                 <small class="text-muted">현지 시간 기준</small>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">비행시간 (시간) *</label>
+                <input type="number" class="form-control" id="flightHours" step="0.5" min="1" max="12" value="4" required>
+                <small class="text-muted">날짜 계산용</small>
               </div>
             </div>
 
@@ -189,7 +195,7 @@
         
         const tbody = document.getElementById('flightsBody');
         if (flights.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" class="text-center">등록된 항공편이 없습니다</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="10" class="text-center">등록된 항공편이 없습니다</td></tr>';
           return;
         }
 
@@ -201,6 +207,7 @@
             <td><small>${f.arrival_airport || '-'}</small></td>
             <td>${f.departure_time?.substring(0,5) || '-'}</td>
             <td>${f.arrival_time?.substring(0,5) || '-'}</td>
+            <td>${f.flight_hours || '-'}시간</td>
             <td>${formatDaysOfWeek(f.days_of_week)}</td>
             <td>
               ${f.is_active 
@@ -261,6 +268,7 @@
         document.getElementById('arrivalAirport').value = flight.arrival_airport || '';
         document.getElementById('departureTime').value = flight.departure_time?.substring(0,5) || '';
         document.getElementById('arrivalTime').value = flight.arrival_time?.substring(0,5) || '';
+        document.getElementById('flightHours').value = flight.flight_hours || 4;
         document.getElementById('notes').value = flight.notes || '';
         document.getElementById('isActive').checked = flight.is_active;
         
@@ -300,6 +308,7 @@
         arrival_airport: document.getElementById('arrivalAirport').value,
         departure_time: document.getElementById('departureTime').value,
         arrival_time: document.getElementById('arrivalTime').value,
+        flight_hours: parseFloat(document.getElementById('flightHours').value),
         days_of_week: days.length > 0 ? days.join(',') : '1,2,3,4,5,6,7',
         notes: document.getElementById('notes').value,
         is_active: document.getElementById('isActive').checked
