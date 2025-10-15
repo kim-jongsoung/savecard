@@ -548,7 +548,7 @@ router.put('/api/agencies/:id', async (req, res) => {
     // 부분 업데이트 지원 (제공된 값만 업데이트)
     const result = await pool.query(
       `UPDATE pickup_agencies 
-       SET agency_name = $1, contact_person = $2, phone = $3, email = $4, is_active = $5, updated_at = NOW()
+       SET agency_name = $1, contact_person = $2, phone = $3, email = $4, is_active = $5
        WHERE id = $6 RETURNING *`,
       [
         agency_name !== undefined ? agency_name : current.agency_name,
@@ -699,7 +699,7 @@ router.put('/api/flights/:id', async (req, res) => {
     const result = await pool.query(
       `UPDATE pickup_flights 
        SET flight_number = $1, airline = $2, departure_time = $3, arrival_time = $4, flight_hours = $5,
-           departure_airport = $6, arrival_airport = $7, days_of_week = $8, notes = $9, is_active = $10, updated_at = NOW()
+           departure_airport = $6, arrival_airport = $7, days_of_week = $8, notes = $9, is_active = $10
        WHERE id = $11 RETURNING *`,
       [flight_number, airline, departure_time, arrival_time, flight_hours, departure_airport, arrival_airport, days_of_week, notes, is_active, id]
     );
@@ -748,7 +748,7 @@ router.delete('/api/flights/:id', async (req, res) => {
     if (usageCount > 0) {
       // 사용 중인 항공편은 비활성화만 가능
       await pool.query(
-        `UPDATE pickup_flights SET is_active = false, updated_at = NOW() WHERE id = $1`,
+        `UPDATE pickup_flights SET is_active = false WHERE id = $1`,
         [id]
       );
       
