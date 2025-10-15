@@ -31,7 +31,6 @@
           <table class="table table-hover" id="flightsTable">
             <thead>
               <tr>
-                <th>항공사</th>
                 <th>편명</th>
                 <th>출발공항</th>
                 <th>도착공항</th>
@@ -65,62 +64,47 @@
             <input type="hidden" id="flightId">
             
             <div class="mb-3">
-              <label class="form-label">항공사 *</label>
-              <select class="form-select" id="airline" required>
-                <option value="">선택</option>
-                <option value="대한항공">대한항공 (KE)</option>
-                <option value="아시아나">아시아나 (OZ)</option>
-                <option value="진에어">진에어 (LJ)</option>
-                <option value="티웨이">티웨이 (TW)</option>
-                <option value="유나이티드">유나이티드 (UA)</option>
-                <option value="일본항공">일본항공 (JL)</option>
-                <option value="ANA">ANA (NH)</option>
-              </select>
-            </div>
-
-            <div class="mb-3">
               <label class="form-label">편명 *</label>
-              <input type="text" class="form-control" id="flightNumber" placeholder="예: KE111" required>
-              <small class="text-muted">항공사 코드 + 숫자 (예: KE111, OZ456)</small>
+              <input type="text" class="form-control" id="flightNumber" placeholder="예: KE111, OZ456" required style="text-transform: uppercase;">
+              <small class="text-muted">항공사 코드 + 숫자</small>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">출발공항 *</label>
-              <input type="text" class="form-control" id="departureAirport" placeholder="예: 인천국제공항(ICN)" list="departureAirports" required>
-              <datalist id="departureAirports">
-                <option value="인천국제공항(ICN)">
-                <option value="괌국제공항(GUM)">
-                <option value="나리타공항(NRT)">
-                <option value="김포공항(GMP)">
-                <option value="제주공항(CJU)">
-                <option value="후쿠오카공항(FUK)">
-              </datalist>
-              <small class="text-muted">공항명과 코드를 입력하세요</small>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">도착공항 *</label>
-              <input type="text" class="form-control" id="arrivalAirport" placeholder="예: 괌국제공항(GUM)" list="arrivalAirports" required>
-              <datalist id="arrivalAirports">
-                <option value="괌국제공항(GUM)">
-                <option value="인천국제공항(ICN)">
-                <option value="나리타공항(NRT)">
-                <option value="김포공항(GMP)">
-                <option value="사이판공항(SPN)">
-                <option value="팔라우공항(ROR)">
-              </datalist>
-              <small class="text-muted">공항명과 코드를 입력하세요</small>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">출발공항 (코드) *</label>
+                <input type="text" class="form-control" id="departureAirport" placeholder="ICN" maxlength="3" required style="text-transform: uppercase;" list="depAirports">
+                <datalist id="depAirports">
+                  <option value="ICN">인천</option>
+                  <option value="GUM">괌</option>
+                  <option value="NRT">나리타</option>
+                  <option value="GMP">김포</option>
+                  <option value="CJU">제주</option>
+                  <option value="FUK">후쿠오카</option>
+                </datalist>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">도착공항 (코드) *</label>
+                <input type="text" class="form-control" id="arrivalAirport" placeholder="GUM" maxlength="3" required style="text-transform: uppercase;" list="arrAirports">
+                <datalist id="arrAirports">
+                  <option value="GUM">괌</option>
+                  <option value="ICN">인천</option>
+                  <option value="NRT">나리타</option>
+                  <option value="SPN">사이판</option>
+                  <option value="ROR">팔라우</option>
+                </datalist>
+              </div>
             </div>
 
             <div class="row">
               <div class="col-md-4 mb-3">
                 <label class="form-label">출발시간 *</label>
-                <input type="time" class="form-control" id="departureTime" required>
+                <input type="text" class="form-control" id="departureTime" placeholder="07:30" pattern="[0-2][0-9]:[0-5][0-9]" required list="timeSuggestions">
+                <small class="text-muted">00:00~24:00 (24시간제)</small>
               </div>
               <div class="col-md-4 mb-3">
                 <label class="form-label">도착시간 *</label>
-                <input type="time" class="form-control" id="arrivalTime" required>
-                <small class="text-muted">현지 시간 기준</small>
+                <input type="text" class="form-control" id="arrivalTime" placeholder="12:30" pattern="[0-2][0-9]:[0-5][0-9]" required list="timeSuggestions">
+                <small class="text-muted">현지시간 00:00~24:00</small>
               </div>
               <div class="col-md-4 mb-3">
                 <label class="form-label">비행시간 (시간) *</label>
@@ -128,6 +112,24 @@
                 <small class="text-muted">날짜 계산용</small>
               </div>
             </div>
+            
+            <datalist id="timeSuggestions">
+              <option value="00:00"></option>
+              <option value="01:00"></option>
+              <option value="03:30"></option>
+              <option value="07:00"></option>
+              <option value="07:30"></option>
+              <option value="10:00"></option>
+              <option value="12:30"></option>
+              <option value="13:00"></option>
+              <option value="13:20"></option>
+              <option value="15:00"></option>
+              <option value="15:30"></option>
+              <option value="17:00"></option>
+              <option value="20:00"></option>
+              <option value="22:00"></option>
+              <option value="23:59"></option>
+            </datalist>
 
             <div class="mb-3">
               <label class="form-label">운항요일</label>
@@ -195,19 +197,18 @@
         
         const tbody = document.getElementById('flightsBody');
         if (flights.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="10" class="text-center">등록된 항공편이 없습니다</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center">등록된 항공편이 없습니다</td></tr>';
           return;
         }
 
         tbody.innerHTML = flights.map(f => `
           <tr>
-            <td>${f.airline || '-'}</td>
             <td><strong>${f.flight_number}</strong></td>
-            <td><small>${f.departure_airport || '-'}</small></td>
-            <td><small>${f.arrival_airport || '-'}</small></td>
+            <td><span class="badge bg-info">${f.departure_airport || '-'}</span></td>
+            <td><span class="badge bg-info">${f.arrival_airport || '-'}</span></td>
             <td>${f.departure_time?.substring(0,5) || '-'}</td>
             <td>${f.arrival_time?.substring(0,5) || '-'}</td>
-            <td>${f.flight_hours || '-'}시간</td>
+            <td>${f.flight_hours || '-'}h</td>
             <td>${formatDaysOfWeek(f.days_of_week)}</td>
             <td>
               ${f.is_active 
@@ -262,7 +263,6 @@
         editingId = id;
         document.getElementById('modalTitle').textContent = '항공편 수정';
         document.getElementById('flightId').value = id;
-        document.getElementById('airline').value = flight.airline || '';
         document.getElementById('flightNumber').value = flight.flight_number;
         document.getElementById('departureAirport').value = flight.departure_airport || '';
         document.getElementById('arrivalAirport').value = flight.arrival_airport || '';
@@ -301,11 +301,14 @@
         }
       }
 
+      const flightNumber = document.getElementById('flightNumber').value.toUpperCase();
+      const airline = flightNumber.match(/^[A-Z]+/)?.[0] || '';
+      
       const data = {
-        airline: document.getElementById('airline').value,
-        flight_number: document.getElementById('flightNumber').value.toUpperCase(),
-        departure_airport: document.getElementById('departureAirport').value,
-        arrival_airport: document.getElementById('arrivalAirport').value,
+        airline: airline,
+        flight_number: flightNumber,
+        departure_airport: document.getElementById('departureAirport').value.toUpperCase(),
+        arrival_airport: document.getElementById('arrivalAirport').value.toUpperCase(),
         departure_time: document.getElementById('departureTime').value,
         arrival_time: document.getElementById('arrivalTime').value,
         flight_hours: parseFloat(document.getElementById('flightHours').value),
