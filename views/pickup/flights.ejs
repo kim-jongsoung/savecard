@@ -33,9 +33,10 @@
               <tr>
                 <th>항공사</th>
                 <th>편명</th>
+                <th>출발공항</th>
+                <th>도착공항</th>
                 <th>출발시간</th>
-                <th>비행시간</th>
-                <th>노선</th>
+                <th>도착시간</th>
                 <th>운항요일</th>
                 <th>상태</th>
                 <th>관리</th>
@@ -83,25 +84,43 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">출발시간 *</label>
-              <input type="time" class="form-control" id="departureTime" required>
+              <label class="form-label">출발공항 *</label>
+              <input type="text" class="form-control" id="departureAirport" placeholder="예: 인천국제공항(ICN)" list="departureAirports" required>
+              <datalist id="departureAirports">
+                <option value="인천국제공항(ICN)">
+                <option value="괌국제공항(GUM)">
+                <option value="나리타공항(NRT)">
+                <option value="김포공항(GMP)">
+                <option value="제주공항(CJU)">
+                <option value="후쿠오카공항(FUK)">
+              </datalist>
+              <small class="text-muted">공항명과 코드를 입력하세요</small>
             </div>
 
             <div class="mb-3">
-              <label class="form-label">비행시간 (시간) *</label>
-              <input type="number" class="form-control" id="flightHours" step="0.5" min="1" max="12" value="4" required>
-              <small class="text-muted">인천→괌: 보통 4시간, 도쿄→괌: 3시간</small>
+              <label class="form-label">도착공항 *</label>
+              <input type="text" class="form-control" id="arrivalAirport" placeholder="예: 괌국제공항(GUM)" list="arrivalAirports" required>
+              <datalist id="arrivalAirports">
+                <option value="괌국제공항(GUM)">
+                <option value="인천국제공항(ICN)">
+                <option value="나리타공항(NRT)">
+                <option value="김포공항(GMP)">
+                <option value="사이판공항(SPN)">
+                <option value="팔라우공항(ROR)">
+              </datalist>
+              <small class="text-muted">공항명과 코드를 입력하세요</small>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">노선 *</label>
-              <select class="form-select" id="route" required>
-                <option value="">선택</option>
-                <option value="인천→괌">인천 → 괌 (도착)</option>
-                <option value="괌→인천">괌 → 인천 (출발)</option>
-                <option value="나리타→괌">나리타 → 괌</option>
-                <option value="괌→나리타">괌 → 나리타</option>
-              </select>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">출발시간 *</label>
+                <input type="time" class="form-control" id="departureTime" required>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">도착시간 *</label>
+                <input type="time" class="form-control" id="arrivalTime" required>
+                <small class="text-muted">현지 시간 기준</small>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -170,7 +189,7 @@
         
         const tbody = document.getElementById('flightsBody');
         if (flights.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="text-center">등록된 항공편이 없습니다</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center">등록된 항공편이 없습니다</td></tr>';
           return;
         }
 
@@ -178,9 +197,10 @@
           <tr>
             <td>${f.airline || '-'}</td>
             <td><strong>${f.flight_number}</strong></td>
+            <td><small>${f.departure_airport || '-'}</small></td>
+            <td><small>${f.arrival_airport || '-'}</small></td>
             <td>${f.departure_time?.substring(0,5) || '-'}</td>
-            <td>${f.flight_hours}시간</td>
-            <td>${f.route || '-'}</td>
+            <td>${f.arrival_time?.substring(0,5) || '-'}</td>
             <td>${formatDaysOfWeek(f.days_of_week)}</td>
             <td>
               ${f.is_active 
@@ -237,9 +257,10 @@
         document.getElementById('flightId').value = id;
         document.getElementById('airline').value = flight.airline || '';
         document.getElementById('flightNumber').value = flight.flight_number;
+        document.getElementById('departureAirport').value = flight.departure_airport || '';
+        document.getElementById('arrivalAirport').value = flight.arrival_airport || '';
         document.getElementById('departureTime').value = flight.departure_time?.substring(0,5) || '';
-        document.getElementById('flightHours').value = flight.flight_hours;
-        document.getElementById('route').value = flight.route || '';
+        document.getElementById('arrivalTime').value = flight.arrival_time?.substring(0,5) || '';
         document.getElementById('notes').value = flight.notes || '';
         document.getElementById('isActive').checked = flight.is_active;
         
@@ -275,9 +296,10 @@
       const data = {
         airline: document.getElementById('airline').value,
         flight_number: document.getElementById('flightNumber').value.toUpperCase(),
+        departure_airport: document.getElementById('departureAirport').value,
+        arrival_airport: document.getElementById('arrivalAirport').value,
         departure_time: document.getElementById('departureTime').value,
-        flight_hours: parseFloat(document.getElementById('flightHours').value),
-        route: document.getElementById('route').value,
+        arrival_time: document.getElementById('arrivalTime').value,
         days_of_week: days.length > 0 ? days.join(',') : '1,2,3,4,5,6,7',
         notes: document.getElementById('notes').value,
         is_active: document.getElementById('isActive').checked
