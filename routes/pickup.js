@@ -572,27 +572,41 @@ router.delete('/api/agencies/:id', async (req, res) => {
   const { id } = req.params;
   
   try {
-    // 해당 업체를 사용하는 픽업건이 있는지 확인
+    // 해당 업체를 사용하는 픽업건이 있는지 확인 (모든 상태 포함)
     const checkResult = await pool.query(
-      `SELECT COUNT(*) as count FROM airport_pickups WHERE agency_id = $1 AND status = 'active'`,
+      `SELECT COUNT(*) as count FROM airport_pickups WHERE agency_id = $1`,
       [id]
     );
     
     const usageCount = parseInt(checkResult.rows[0].count);
     
     if (usageCount > 0) {
-      // 사용 중인 업체는 비활성화만 가능
+      // 픽업건이 하나라도 있으면 비활성화만 가능 (취소된 것 포함)
       await pool.query(
         `UPDATE pickup_agencies SET is_active = false WHERE id = $1`,
         [id]
       );
+      
+      // 활성/취소 상태별 카운트
+      const statusCount = await pool.query(
+        `SELECT status, COUNT(*) as count 
+         FROM airport_pickups 
+         WHERE agency_id = $1 
+         GROUP BY status`,
+        [id]
+      );
+      
+      const statusInfo = statusCount.rows.map(r => `${r.status}: ${r.count}건`).join(', ');
+      
       res.json({ 
         success: true, 
-        message: `해당 업체를 사용하는 픽업건이 ${usageCount}건 있어 비활성화 처리되었습니다.`,
-        deactivated: true
+        message: `해당 업체를 사용하는 픽업건이 ${usageCount}건 있어 비활성화 처리되었습니다.\n(${statusInfo})`,
+        deactivated: true,
+        usageCount,
+        statusInfo
       });
     } else {
-      // 사용 중이지 않은 업체는 완전 삭제
+      // 픽업건이 전혀 없으면 완전 삭제
       await pool.query(`DELETE FROM pickup_agencies WHERE id = $1`, [id]);
       res.json({ success: true, message: '업체가 삭제되었습니다.', deleted: true });
     }
