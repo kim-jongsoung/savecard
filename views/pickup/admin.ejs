@@ -84,8 +84,8 @@
           <form id="addForm">
             <!-- 픽업 유형 -->
             <div class="mb-3">
-              <label class="form-label">픽업 유형</label>
-              <select class="form-select" id="pickupType" onchange="toggleFields()">
+              <label class="form-label">픽업 유형 *</label>
+              <select class="form-select" id="pickupType" onchange="toggleFields()" required>
                 <option value="airport_to_hotel">공항 → 호텔 (도착)</option>
                 <option value="hotel_to_airport">호텔 → 공항 (출국)</option>
                 <option value="roundtrip">왕복</option>
@@ -94,26 +94,17 @@
             
             <!-- 도착 정보 -->
             <div id="arrivalFields">
-              <h6 class="text-primary">🇰🇷 한국 출발 (도착 픽업)</h6>
+              <h6 class="text-primary mb-3">✈️ 항공편 정보</h6>
               <div class="row">
-                <div class="col-md-4">
-                  <label class="form-label">날짜</label>
-                  <input type="date" class="form-control" id="krDate" onchange="autoCalculate()">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">출발일 *</label>
+                  <input type="date" class="form-control" id="krDate" onchange="autoCalculate()" required>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">편명</label>
-                  <select class="form-select" id="krFlight" onchange="autoCalculate()">
-                    <option value="">선택</option>
-                    <option value="KE111">KE111 (07:30)</option>
-                    <option value="KE123">KE123 (22:00) ⚠️ 다음날 도착</option>
-                    <option value="OZ456">OZ456 (10:00)</option>
-                    <option value="OZ789">OZ789 (15:30)</option>
-                    <option value="UA873">UA873 (13:20)</option>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">편명 *</label>
+                  <select class="form-select" id="krFlight" onchange="autoCalculate()" required>
+                    <option value="">편명 선택</option>
                   </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">시간</label>
-                  <input type="text" class="form-control" id="krTime" readonly>
                 </div>
               </div>
               <div id="arrivalResult" class="alert alert-info mt-2" style="display:none;"></div>
@@ -121,23 +112,17 @@
             
             <!-- 출발 정보 -->
             <div id="departureFields" style="display:none;">
-              <h6 class="text-danger">🇬🇺 괌 출발 (출국 픽업)</h6>
+              <h6 class="text-danger mb-3">🏨 호텔 픽업 정보</h6>
               <div class="row">
-                <div class="col-md-4">
-                  <label class="form-label">날짜</label>
-                  <input type="date" class="form-control" id="guamDepDate" onchange="autoCalculatePickup()">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">출발일 *</label>
+                  <input type="date" class="form-control" id="guamDepDate" onchange="autoCalculatePickup()" required>
                 </div>
-                <div class="col-md-4">
-                  <label class="form-label">편명</label>
-                  <select class="form-select" id="depFlight" onchange="autoCalculatePickup()">
-                    <option value="">선택</option>
-                    <option value="KE124">KE124</option>
-                    <option value="OZ458">OZ458</option>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">편명 *</label>
+                  <select class="form-select" id="depFlight" onchange="autoCalculatePickup()" required>
+                    <option value="">편명 선택</option>
                   </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">시간</label>
-                  <input type="text" class="form-control" id="guamDepTime" readonly>
                 </div>
               </div>
               <div id="pickupResult" class="alert alert-warning mt-2" style="display:none;"></div>
@@ -215,15 +200,7 @@
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const FLIGHTS = {
-      'KE111': { time: '07:30', hours: 4 },
-      'KE123': { time: '22:00', hours: 4 },
-      'KE124': { time: '01:00', hours: 4 },
-      'OZ456': { time: '10:00', hours: 4 },
-      'OZ458': { time: '03:30', hours: 4 },
-      'OZ789': { time: '15:30', hours: 4 },
-      'UA873': { time: '13:20', hours: 4 }
-    };
+    let FLIGHTS = {}; // DB에서 로드
     
     let addModalInstance;
     let detailModalInstance;
@@ -236,9 +213,59 @@
     document.addEventListener('DOMContentLoaded', () => {
       addModalInstance = new bootstrap.Modal(document.getElementById('addModal'));
       detailModalInstance = new bootstrap.Modal(document.getElementById('detailModal'));
+      loadFlights();
       loadAgencies();
       loadCalendar(); // 달력을 기본으로 로드
     });
+    
+    // 항공편 목록 로드
+    async function loadFlights() {
+      try {
+        const res = await fetch('/pickup/api/flights/all');
+        const flights = await res.json();
+        
+        // FLIGHTS 객체 구성
+        flights.forEach(f => {
+          FLIGHTS[f.flight_number] = {
+            time: f.departure_time?.substring(0, 5) || '00:00',
+            arrival_time: f.arrival_time?.substring(0, 5) || '00:00',
+            hours: parseFloat(f.flight_hours) || 4,
+            departure_airport: f.departure_airport,
+            arrival_airport: f.arrival_airport,
+            airline: f.airline
+          };
+        });
+        
+        // 도착편 드롭다운 구성 (ICN → GUM)
+        const arrivalFlights = flights.filter(f => 
+          f.departure_airport === 'ICN' && f.arrival_airport === 'GUM' && f.is_active
+        );
+        const krFlightSelect = document.getElementById('krFlight');
+        krFlightSelect.innerHTML = '<option value="">편명 선택</option>' + 
+          arrivalFlights.map(f => {
+            const depTime = f.departure_time?.substring(0, 5);
+            const arrTime = f.arrival_time?.substring(0, 5);
+            const isOvernight = parseInt(arrTime.split(':')[0]) < parseInt(depTime.split(':')[0]);
+            return `<option value="${f.flight_number}">${f.flight_number} (${depTime} → ${arrTime}${isOvernight ? ' +1일' : ''})</option>`;
+          }).join('');
+        
+        // 출발편 드롭다운 구성 (GUM → ICN)
+        const departureFlights = flights.filter(f => 
+          f.departure_airport === 'GUM' && f.arrival_airport === 'ICN' && f.is_active
+        );
+        const depFlightSelect = document.getElementById('depFlight');
+        depFlightSelect.innerHTML = '<option value="">편명 선택</option>' + 
+          departureFlights.map(f => {
+            const depTime = f.departure_time?.substring(0, 5);
+            return `<option value="${f.flight_number}">${f.flight_number} (${depTime} 출발)</option>`;
+          }).join('');
+        
+        console.log('✅ 항공편 로드 완료:', Object.keys(FLIGHTS).length, '개');
+      } catch (error) {
+        console.error('❌ 항공편 로드 실패:', error);
+        alert('항공편 정보를 불러올 수 없습니다.');
+      }
+    }
     
     // 인원 계산
     function updateTotal() {
@@ -372,6 +399,8 @@
     // 모달 열기
     function showAddModal() {
       document.getElementById('addForm').reset();
+      document.getElementById('arrivalResult').style.display = 'none';
+      document.getElementById('pickupResult').style.display = 'none';
       toggleFields();
       addModalInstance.show();
     }
@@ -394,11 +423,10 @@
       const flight = FLIGHTS[flightNum];
       if (!flight) return;
       
-      document.getElementById('krTime').value = flight.time;
-      
+      // 비행시간 기준으로 도착일시 계산
       const krDateTime = new Date(`${date}T${flight.time}:00+09:00`);
       const guamDateTime = new Date(krDateTime);
-      guamDateTime.setHours(guamDateTime.getHours() + flight.hours + 1);
+      guamDateTime.setHours(guamDateTime.getHours() + flight.hours + 1); // +1시간은 시차
       
       const guamDate = guamDateTime.toISOString().split('T')[0];
       const guamTime = guamDateTime.toTimeString().slice(0, 5);
@@ -407,10 +435,18 @@
       
       const result = document.getElementById('arrivalResult');
       result.style.display = 'block';
-      result.className = dateChanged ? 'alert alert-warning' : 'alert alert-info';
-      result.innerHTML = dateChanged 
-        ? `⚠️ 날짜 변경!<br>한국: ${date} ${flight.time} 출발<br>괌: <strong>${guamDate} ${guamTime} 도착</strong>`
-        : `괌 도착: ${guamDate} ${guamTime}`;
+      result.className = 'alert alert-success';
+      result.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>✅ 출도착 정보 확인</strong><br>
+            <i class="bi bi-airplane-fill"></i> ${flight.airline} ${flightNum}<br>
+            ${flight.departure_airport} ${date} ${flight.time} 출발 → ${flight.arrival_airport} ${guamDate} ${guamTime} 도착
+            ${dateChanged ? '<br><span class="badge bg-warning text-dark">다음날 도착</span>' : ''}
+          </div>
+          <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #198754;"></i>
+        </div>
+      `;
     }
     
     // 자동 계산 (호텔 픽업)
@@ -421,8 +457,6 @@
       
       const flight = FLIGHTS[flightNum];
       if (!flight) return;
-      
-      document.getElementById('guamDepTime').value = flight.time;
       
       const flightDateTime = new Date(`${date}T${flight.time}:00+10:00`);
       const hour = flightDateTime.getHours();
@@ -446,10 +480,18 @@
       
       const result = document.getElementById('pickupResult');
       result.style.display = 'block';
-      result.className = isEarly ? 'alert alert-danger' : 'alert alert-info';
-      result.innerHTML = isEarly 
-        ? `🌙 새벽 비행기 특별 규칙!<br>비행기: ${date} ${flight.time} 출발<br>픽업: <strong>${pickupDate} ${pickupTime}</strong> (전날 밤)`
-        : `호텔 픽업: ${pickupDate} ${pickupTime} (3시간 전)`;
+      result.className = 'alert alert-success';
+      result.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>✅ 호텔 픽업 정보 확인</strong><br>
+            <i class="bi bi-airplane-fill"></i> ${flight.airline} ${flightNum} - ${date} ${flight.time} 출발<br>
+            <i class="bi bi-alarm-fill"></i> 호텔 픽업: ${pickupDate} ${pickupTime}
+            ${isEarly ? '<br><span class="badge bg-danger">🌙 전날 밤 픽업</span>' : '<br><span class="badge bg-info">3시간 전 픽업</span>'}
+          </div>
+          <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #198754;"></i>
+        </div>
+      `;
     }
     
     // 모달에서 수정
