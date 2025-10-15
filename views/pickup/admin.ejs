@@ -631,22 +631,24 @@
       const flightNum = pickup.flight_number || '';
       
       return `
-        <div class="card mb-2" style="border-left: 4px solid ${borderColor}; background: ${bgColor}; cursor: pointer;" onclick="showPickupDetail(${pickup.id})">
+        <div class="card mb-2" style="border-left: 4px solid ${borderColor}; background: ${bgColor};">
           <div class="card-body p-2">
             <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <strong>${flightNum} (${time})</strong><br>
-                <small>${pickup.customer_name} | ${pickup.hotel_name}</small><br>
+              <div style="flex: 1;">
+                <strong>${flightNum} (${time})</strong>
+                <span class="badge bg-info ms-2">${pickup.passenger_count}명</span>
+                ${pickup.agency_name ? `<span class="badge bg-secondary ms-1">${pickup.agency_name}</span>` : ''}
+                <br>
+                <small>👤 ${pickup.customer_name} | 🏨 ${pickup.hotel_name}</small><br>
                 <small class="text-muted">
                   성인: ${pickup.adult_count || 0} | 소아: ${pickup.child_count || 0} | 유아: ${pickup.infant_count || 0} | 짐: ${pickup.luggage_count || 0}
-                </small>
-              </div>
-              <div class="text-end">
-                <span class="badge bg-info">${pickup.passenger_count}명</span><br>
-                ${pickup.agency_name ? `<small class="text-muted">${pickup.agency_name}</small>` : ''}
+                </small><br>
+                ${pickup.phone ? `<small>📞 ${pickup.phone}</small>` : ''}
+                ${pickup.phone && pickup.kakao_id ? '<small> | </small>' : ''}
+                ${pickup.kakao_id ? `<small>💬 ${pickup.kakao_id}</small>` : ''}
               </div>
             </div>
-            ${pickup.memo ? `<div class="mt-1"><small>📝 ${pickup.memo}</small></div>` : ''}
+            ${pickup.memo ? `<div class="mt-2 p-2" style="background: rgba(255,255,255,0.5); border-radius: 4px;"><small>📝 ${pickup.memo}</small></div>` : ''}
           </div>
         </div>
       `;
