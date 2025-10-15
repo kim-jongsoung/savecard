@@ -1,19 +1,55 @@
 const express = require('express');
 const router = express.Router();
 
-// 비행편 데이터
-const FLIGHTS = {
-  'KE111': { time: '07:30', hours: 4 },
-  'KE123': { time: '22:00', hours: 4 },
-  'OZ456': { time: '10:00', hours: 4 },
-  'OZ789': { time: '15:30', hours: 4 },
-  'UA873': { time: '13:20', hours: 4 },
-  'OZ678': { time: '11:00', hours: 3 } // 도쿄발
-};
+// 비행편 데이터 (DB에서 로드하도록 변경)
+let FLIGHTS_CACHE = {};
+let FLIGHTS_LAST_LOAD = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5분
+
+// DB에서 항공편 로드
+async function loadFlightsFromDB(pool) {
+  try {
+    const result = await pool.query(
+      `SELECT flight_number, departure_time, flight_hours 
+       FROM pickup_flights 
+       WHERE is_active = true`
+    );
+    
+    const flights = {};
+    result.rows.forEach(f => {
+      flights[f.flight_number] = {
+        time: f.departure_time?.substring(0, 5) || '00:00',
+        hours: parseFloat(f.flight_hours) || 4
+      };
+    });
+    
+    FLIGHTS_CACHE = flights;
+    FLIGHTS_LAST_LOAD = Date.now();
+    return flights;
+  } catch (error) {
+    console.error('❌ 항공편 로드 실패:', error);
+    // 실패 시 기본값 사용
+    return {
+      'KE111': { time: '07:30', hours: 4 },
+      'KE123': { time: '22:00', hours: 4 },
+      'OZ456': { time: '10:00', hours: 4 },
+      'OZ789': { time: '15:30', hours: 4 },
+      'UA873': { time: '13:20', hours: 4 }
+    };
+  }
+}
+
+// 캐시된 항공편 가져오기
+async function getFlights(pool) {
+  if (Date.now() - FLIGHTS_LAST_LOAD > CACHE_DURATION) {
+    return await loadFlightsFromDB(pool);
+  }
+  return FLIGHTS_CACHE;
+}
 
 // 날짜/시간 계산 헬퍼
-function calculateArrival(krDate, krTime, flightNum) {
-  const flight = FLIGHTS[flightNum];
+function calculateArrival(krDate, krTime, flightNum, flightData) {
+  const flight = flightData[flightNum];
   if (!flight) return null;
   
   const krDateTime = new Date(`${krDate}T${krTime}:00+09:00`);
@@ -64,6 +100,8 @@ router.post('/api/create', async (req, res) => {
   } = req.body;
   
   try {
+    const FLIGHTS = await getFlights(pool);
+    
     let data = {
       pickup_type, agency_id,
       customer_name, hotel_name,
@@ -82,7 +120,7 @@ router.post('/api/create', async (req, res) => {
         return res.status(400).json({ error: '비행편 정보를 찾을 수 없습니다' });
       }
       
-      const arrival = calculateArrival(kr_departure_date, flight.time, kr_flight_number);
+      const arrival = calculateArrival(kr_departure_date, flight.time, kr_flight_number, FLIGHTS);
       data.kr_departure_date = kr_departure_date;
       data.kr_departure_time = flight.time;
       data.kr_flight_number = kr_flight_number;
@@ -304,9 +342,129 @@ router.delete('/api/agencies/:id', async (req, res) => {
   }
 });
 
-// API: 비행편 자동완성 데이터
-router.get('/api/flights', (req, res) => {
-  res.json(FLIGHTS);
+// API: 비행편 자동완성 데이터 (활성 항공편만)
+router.get('/api/flights', async (req, res) => {
+  const pool = req.app.locals.pool;
+  try {
+    const flights = await getFlights(pool);
+    res.json(flights);
+  } catch (error) {
+    console.error('❌ 항공편 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 항공편 전체 목록 (관리용)
+router.get('/api/flights/all', async (req, res) => {
+  const pool = req.app.locals.pool;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM pickup_flights ORDER BY airline, departure_time`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ 항공편 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 항공편 상세
+router.get('/api/flights/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM pickup_flights WHERE id = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '항공편을 찾을 수 없습니다' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ 항공편 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 항공편 추가
+router.post('/api/flights', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { 
+    flight_number, airline, departure_time, flight_hours, 
+    route, days_of_week, notes, is_active 
+  } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `INSERT INTO pickup_flights 
+       (flight_number, airline, departure_time, flight_hours, route, days_of_week, notes, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [flight_number, airline, departure_time, flight_hours, route, days_of_week || '1,2,3,4,5,6,7', notes, is_active !== false]
+    );
+    
+    // 캐시 갱신
+    await loadFlightsFromDB(pool);
+    
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('❌ 항공편 추가 실패:', error);
+    if (error.code === '23505') { // unique violation
+      res.status(400).json({ error: '이미 존재하는 편명입니다' });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+});
+
+// API: 항공편 수정
+router.put('/api/flights/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  const { 
+    flight_number, airline, departure_time, flight_hours, 
+    route, days_of_week, notes, is_active 
+  } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `UPDATE pickup_flights 
+       SET flight_number = $1, airline = $2, departure_time = $3, flight_hours = $4,
+           route = $5, days_of_week = $6, notes = $7, is_active = $8, updated_at = NOW()
+       WHERE id = $9 RETURNING *`,
+      [flight_number, airline, departure_time, flight_hours, route, days_of_week, notes, is_active, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '항공편을 찾을 수 없습니다' });
+    }
+    
+    // 캐시 갱신
+    await loadFlightsFromDB(pool);
+    
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('❌ 항공편 수정 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 항공편 삭제
+router.delete('/api/flights/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  
+  try {
+    await pool.query(`DELETE FROM pickup_flights WHERE id = $1`, [id]);
+    
+    // 캐시 갱신
+    await loadFlightsFromDB(pool);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 항공편 삭제 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // API: 기사 화면

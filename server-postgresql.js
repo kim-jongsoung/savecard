@@ -726,6 +726,13 @@ app.get('/pickup/agencies', requireAuth, (req, res) => {
     });
 });
 
+app.get('/pickup/flights', requireAuth, (req, res) => {
+    res.render('pickup/flights', {
+        title: '항공편 관리',
+        adminUsername: req.session.adminUsername
+    });
+});
+
 app.get('/pickup/driver', (req, res) => {
     res.render('pickup/driver', {
         title: '기사 화면'
