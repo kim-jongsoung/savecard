@@ -521,7 +521,7 @@
     
     // 예약 카드 렌더링 (출발편만 표시)
     function renderPickupCard(p) {
-      // 예약 상태 배지 결정 (픽업 예약: 검수대기 → 확정 → 정산완료)
+      // 예약 상태 배지 및 카드 스타일 결정
       const getReservationStatusBadge = (pickup) => {
         // 정산 완료
         if (pickup.status === 'settled' || pickup.settlement_status === 'completed') {
@@ -535,14 +535,41 @@
         return '<span class="badge bg-warning" style="font-size: 0.85rem;">📋 검수대기</span>';
       };
       
+      // 상태에 따른 카드 스타일 결정
+      const getCardStyle = (pickup) => {
+        // 정산 완료 - 녹색
+        if (pickup.status === 'settled' || pickup.settlement_status === 'completed') {
+          return {
+            borderColor: '#28a745',
+            bgColor: '#d4edda',
+            textColor: '#28a745'
+          };
+        }
+        // 확정 - 파란색
+        if (pickup.confirmation_status === 'confirmed' || pickup.vehicle_ready || pickup.status === 'confirmed' || pickup.status === 'pending_vehicle') {
+          return {
+            borderColor: '#2196f3',
+            bgColor: '#e3f2fd',
+            textColor: '#2196f3'
+          };
+        }
+        // 검수 대기 - 노란색
+        return {
+          borderColor: '#ffc107',
+          bgColor: '#fff3cd',
+          textColor: '#856404'
+        };
+      };
+      
       const depAirport = p.departure_airport || 'GUM';
       const depCity = getAirportName(depAirport);
+      const cardStyle = getCardStyle(p);
       
       return `
-        <div class="pickup-card" style="border-left: 4px solid #2196f3; background: #e3f2fd;">
+        <div class="pickup-card" style="border-left: 4px solid ${cardStyle.borderColor}; background: ${cardStyle.bgColor};">
           <div class="d-flex justify-content-between align-items-start mb-2">
             <div>
-              <h6 class="mb-1" style="color: #2196f3;">✈️ <strong>${depCity}출발</strong></h6>
+              <h6 class="mb-1" style="color: ${cardStyle.textColor};">✈️ <strong>${depCity}출발</strong></h6>
               <div class="mt-1">
                 <span class="badge bg-secondary me-2">📅 ${formatDate(p.display_date)}</span>
                 <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
