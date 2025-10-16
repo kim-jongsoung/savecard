@@ -405,10 +405,8 @@
       return dateStr;
     }
     
-    // 예약 카드 렌더링 (왕복 통합)
+    // 예약 카드 렌더링 (출발편만 표시)
     function renderPickupCard(p) {
-      const hasRoundtrip = p.arrival_record;
-      
       // 예약 상태 배지 결정 (픽업 예약: 검수대기 → 확정 → 정산완료)
       const getReservationStatusBadge = (pickup) => {
         // 정산 완료
@@ -423,88 +421,33 @@
         return '<span class="badge bg-warning" style="font-size: 0.85rem;">📋 검수대기</span>';
       };
       
-      // 왕복 예약
-      if (hasRoundtrip) {
-        const arrival = p.arrival_record;
-        const depAirport = p.departure_airport || 'GUM';
-        const arrAirport = p.arrival_airport || 'ICN';
-        const depCity = getAirportName(depAirport);
-        const arrCity = getAirportName(arrAirport);
-        
-        return `
-          <div class="pickup-card" style="border-left: 4px solid #9c27b0; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); box-shadow: 0 2px 6px rgba(156,39,176,0.2);">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <h5 class="mb-1" style="color: #9c27b0; font-size: 1.1rem;">
-                  <i class="bi bi-airplane-engines"></i> <strong>${depCity}출발</strong>
-                </h5>
-                <div class="mt-2">
-                  <span class="badge bg-secondary me-2">📅 ${formatDate(p.display_date)}</span>
-                  <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
-                  <span class="badge bg-info">👤 ${p.customer_name}</span>
-                </div>
+      const depAirport = p.departure_airport || 'GUM';
+      const depCity = getAirportName(depAirport);
+      
+      return `
+        <div class="pickup-card" style="border-left: 4px solid #2196f3; background: #e3f2fd;">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h6 class="mb-1" style="color: #2196f3;">✈️ <strong>${depCity}출발</strong></h6>
+              <div class="mt-1">
+                <span class="badge bg-secondary me-2">📅 ${formatDate(p.display_date)}</span>
+                <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
+                <span class="badge bg-info">👤 ${p.customer_name}</span>
               </div>
-              ${getReservationStatusBadge(p)}
             </div>
-            
-            <!-- 출발편 -->
-            <div class="alert alert-info mb-2 p-2" style="background: #e3f2fd; border-left: 3px solid #2196f3;">
-              <strong style="color: #1976d2;">✈️ ${depCity}출발</strong><br>
-              <small class="text-muted">
-                📅 ${p.display_date} ${p.display_time}<br>
-                🏨 ${p.hotel_name}<br>
-                👥 ${p.passenger_count}명 (성인:${p.adult_count}, 소아:${p.child_count}, 유아:${p.infant_count})
-              </small>
-            </div>
-            
-            <!-- 도착편 -->
-            <div class="alert alert-danger mb-2 p-2" style="background: #ffebee; border-left: 3px solid #f44336;">
-              <strong style="color: #c62828;">🛬 ${arrCity}도착</strong><br>
-              <small class="text-muted">
-                📅 ${arrival.display_date} ${arrival.display_time}<br>
-                🏨 ${arrival.hotel_name}<br>
-                👥 ${arrival.passenger_count}명
-              </small>
-            </div>
-            
-            ${p.memo ? `<div class="text-muted small">📝 ${p.memo}</div>` : ''}
+            ${getReservationStatusBadge(p)}
           </div>
-        `;
-      } 
-      // 단독 예약
-      else {
-        const isArrival = p.record_type === 'arrival';
-        const typeColor = isArrival ? '#f44336' : '#2196f3';
-        const typeBg = isArrival ? '#ffebee' : '#e3f2fd';
-        const typeIcon = isArrival ? '🛬' : '✈️';
-        const depAirport = p.departure_airport || 'GUM';
-        const arrAirport = p.arrival_airport || 'ICN';
-        const depCity = getAirportName(depAirport);
-        const arrCity = getAirportName(arrAirport);
-        const typeLabel = isArrival ? `${arrCity}도착` : `${depCity}출발`;
-
-        return `
-          <div class="pickup-card" style="border-left: 4px solid ${typeColor}; background: ${typeBg};">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h6 class="mb-1" style="color: ${typeColor};">${typeIcon} <strong>${typeLabel}</strong></h6>
-                <div class="mt-1">
-                  <span class="badge bg-secondary me-2">📅 ${formatDate(p.display_date)}</span>
-                  <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
-                  <span class="badge bg-info">👤 ${p.customer_name}</span>
-                </div>
-              </div>
-              ${getReservationStatusBadge(p)}
-            </div>
-            <div class="text-muted small">
-              📅 ${p.display_date} ${p.display_time}<br>
-              🏨 ${p.hotel_name}<br>
-              👥 ${p.passenger_count}명 (성인:${p.adult_count}, 소아:${p.child_count}, 유아:${p.infant_count})<br>
-              ${p.memo ? `📝 ${p.memo}` : ''}
-            </div>
+          <div class="text-muted small">
+            📅 ${p.display_date} ${p.display_time}<br>
+            🏨 ${p.hotel_name}<br>
+            👥 ${p.passenger_count}명 (성인:${p.adult_count}, 소아:${p.child_count}, 유아:${p.infant_count})<br>
+            🧳 ${p.luggage_count}개<br>
+            ${p.phone ? `📞 ${p.phone}<br>` : ''}
+            ${p.kakao_id ? `💬 ${p.kakao_id}<br>` : ''}
+            ${p.memo ? `📝 ${p.memo}` : ''}
           </div>
-        `;
-      }
+        </div>
+      `;
     }
   </script>
 </body>
