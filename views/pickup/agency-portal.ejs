@@ -395,19 +395,40 @@
       return airportNames[code] || code;
     }
     
+    // 날짜 포맷 (YYYY-MM-DD만 추출)
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      // ISO 형식이면 날짜만 추출
+      if (dateStr.includes('T') || dateStr.includes('Z')) {
+        return dateStr.split('T')[0];
+      }
+      return dateStr;
+    }
+    
     // 예약 카드 렌더링 (왕복 통합)
     function renderPickupCard(p) {
       const hasRoundtrip = p.arrival_record;
       
-      // 상태 배지 결정
-      const getStatusBadge = (pickup) => {
-        if (pickup.vehicle_ready) {
-          return '<span class="badge bg-success" style="font-size: 0.9rem;">✅ 차량배정 완료</span>';
-        } else if (pickup.status === 'confirmed' || pickup.status === 'pending_vehicle') {
-          return '<span class="badge bg-info" style="font-size: 0.9rem;">⏰ 배정 대기중</span>';
-        } else {
-          return '<span class="badge bg-warning" style="font-size: 0.9rem;">📋 검수 대기</span>';
+      // 예약 상태 배지 결정 (업체 확인용)
+      const getReservationStatusBadge = (pickup) => {
+        // 정산 완료
+        if (pickup.status === 'settled' || pickup.settlement_status === 'completed') {
+          return '<span class="badge bg-success" style="font-size: 0.85rem;">💰 정산완료</span>';
         }
+        // 바우처 전송 완료
+        if (pickup.status === 'voucher_sent') {
+          return '<span class="badge bg-info" style="font-size: 0.85rem;">📧 바우처전송</span>';
+        }
+        // 확정 (차량 배정 완료)
+        if (pickup.vehicle_ready || pickup.status === 'confirmed') {
+          return '<span class="badge bg-primary" style="font-size: 0.85rem;">✅ 확정</span>';
+        }
+        // 미확정
+        if (pickup.status === 'rejected') {
+          return '<span class="badge bg-danger" style="font-size: 0.85rem;">❌ 미확정</span>';
+        }
+        // 검수 대기 (신규)
+        return '<span class="badge bg-warning" style="font-size: 0.85rem;">📋 검수대기</span>';
       };
       
       // 왕복 예약
@@ -426,12 +447,12 @@
                   <i class="bi bi-airplane-engines"></i> <strong>${depCity}출발</strong>
                 </h5>
                 <div class="mt-2">
-                  <span class="badge bg-secondary me-2">📅 ${p.display_date}</span>
+                  <span class="badge bg-secondary me-2">📅 ${formatDate(p.display_date)}</span>
                   <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
                   <span class="badge bg-info">👤 ${p.customer_name}</span>
                 </div>
               </div>
-              ${getStatusBadge(p)}
+              ${getReservationStatusBadge(p)}
             </div>
             
             <!-- 출발편 -->
@@ -476,12 +497,12 @@
               <div>
                 <h6 class="mb-1" style="color: ${typeColor};">${typeIcon} <strong>${typeLabel}</strong></h6>
                 <div class="mt-1">
-                  <span class="badge bg-secondary me-2">📅 ${p.display_date}</span>
+                  <span class="badge bg-secondary me-2">📅 ${formatDate(p.display_date)}</span>
                   <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
                   <span class="badge bg-info">👤 ${p.customer_name}</span>
                 </div>
               </div>
-              ${getStatusBadge(p)}
+              ${getReservationStatusBadge(p)}
             </div>
             <div class="text-muted small">
               📅 ${p.display_date} ${p.display_time}<br>
