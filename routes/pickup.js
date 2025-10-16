@@ -191,7 +191,7 @@ router.post('/api/create', async (req, res) => {
       arrival_airport: flight.arrival_airport,
       record_type: 'arrival',
       display_date: arrivalDate,
-      display_time: arrivalTime,
+      display_time: flight.arrival_time, // 실제 항공편 도착시간 표시 (날짜만 시간대 반영)
       linked_id: depResult.rows[0].id
     };
     
@@ -383,7 +383,7 @@ router.put('/api/:id', async (req, res) => {
         [
           pickup_type, flight_date, flight.time, flight.departure_airport,
           arrivalDate, arrivalTime, flight.arrival_airport, flight_number,
-          arrivalDate, arrivalTime, 'arrival',
+          arrivalDate, flight.arrival_time, 'arrival', // 실제 항공편 도착시간 표시
           customer_name, hotel_name, phone, kakao_id, memo,
           adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id,
           depResult.rows[0].id
