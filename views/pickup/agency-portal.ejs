@@ -409,25 +409,17 @@
     function renderPickupCard(p) {
       const hasRoundtrip = p.arrival_record;
       
-      // 예약 상태 배지 결정 (업체 확인용)
+      // 예약 상태 배지 결정 (픽업 예약: 검수대기 → 확정 → 정산완료)
       const getReservationStatusBadge = (pickup) => {
         // 정산 완료
         if (pickup.status === 'settled' || pickup.settlement_status === 'completed') {
           return '<span class="badge bg-success" style="font-size: 0.85rem;">💰 정산완료</span>';
         }
-        // 바우처 전송 완료
-        if (pickup.status === 'voucher_sent') {
-          return '<span class="badge bg-info" style="font-size: 0.85rem;">📧 바우처전송</span>';
-        }
         // 확정 (차량 배정 완료)
-        if (pickup.vehicle_ready || pickup.status === 'confirmed') {
+        if (pickup.vehicle_ready || pickup.status === 'confirmed' || pickup.status === 'pending_vehicle') {
           return '<span class="badge bg-primary" style="font-size: 0.85rem;">✅ 확정</span>';
         }
-        // 미확정
-        if (pickup.status === 'rejected') {
-          return '<span class="badge bg-danger" style="font-size: 0.85rem;">❌ 미확정</span>';
-        }
-        // 검수 대기 (신규)
+        // 검수 대기 (신규, pending, new)
         return '<span class="badge bg-warning" style="font-size: 0.85rem;">📋 검수대기</span>';
       };
       
