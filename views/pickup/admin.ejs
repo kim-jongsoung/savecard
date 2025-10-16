@@ -383,10 +383,24 @@
       const depAirport = pickup.departure_airport || '';
       const arrAirport = pickup.arrival_airport || '';
       const flightNum = pickup.flight_number || '';
-      const depDate = pickup.departure_date || '';
-      const depTime = pickup.departure_time?.substring(0, 5) || '';
-      const arrDate = pickup.arrival_date || '';
-      const arrTime = pickup.arrival_time?.substring(0, 5) || '';
+      
+      // 날짜 포맷팅 함수
+      const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr + 'T00:00:00Z');
+        const year = d.getUTCFullYear();
+        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(d.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const depDate = formatDate(pickup.departure_date);
+      const arrDate = formatDate(pickup.arrival_date);
+      
+      // 항공편 마스터 데이터에서 시간 가져오기
+      const flight = FLIGHTS[flightNum];
+      const depTime = flight ? flight.time : (pickup.departure_time?.substring(0, 5) || '');
+      const arrTime = flight ? flight.arrival_time : (pickup.arrival_time?.substring(0, 5) || '');
       
       // 공항명 매핑
       const airportNames = {
