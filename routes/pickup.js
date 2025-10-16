@@ -823,6 +823,11 @@ router.get('/test', (req, res) => {
   res.render('pickup/test');
 });
 
+// 일반 고객 직접 예약 페이지
+router.get('/booking', (req, res) => {
+  res.render('pickup/customer-booking');
+});
+
 // 정산 관리 화면
 router.get('/settlement', (req, res) => {
   res.render('pickup/settlement');
@@ -1288,6 +1293,103 @@ router.post('/api/agency-register', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ 업체 예약 등록 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 일반 고객 직접 예약 등록 (괌 출발편만)
+router.post('/api/customer-booking', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const {
+    flight_date, flight_number, customer_name, hotel_name,
+    adult_count, child_count, infant_count, luggage_count,
+    phone, kakao_id, memo
+  } = req.body;
+  
+  try {
+    // 항공편 정보 가져오기
+    const flights = await getFlights(pool);
+    const flight = flights[flight_number];
+    
+    if (!flight) {
+      return res.status(400).json({ error: '유효하지 않은 편명입니다' });
+    }
+    
+    // 괌 출발편만 허용
+    if (flight.departure_airport !== 'GUM') {
+      return res.status(400).json({ error: '괌 출발편만 예약 가능합니다' });
+    }
+    
+    const passenger_count = (adult_count || 0) + (child_count || 0) + (infant_count || 0);
+    
+    // 도착일시 계산
+    const depTZ = '+10:00'; // 괌 시간
+    const arrTZ = 9; // 한국 시간
+    
+    const depDateTime = new Date(`${flight_date}T${flight.time}:00${depTZ}`);
+    const arrMillis = depDateTime.getTime() + (flight.hours * 3600000);
+    const arrDateTime = new Date(arrMillis);
+    
+    const utcHours = arrDateTime.getUTCHours();
+    const utcMinutes = arrDateTime.getUTCMinutes();
+    const utcDate = arrDateTime.getUTCDate();
+    const utcMonth = arrDateTime.getUTCMonth();
+    const utcYear = arrDateTime.getUTCFullYear();
+    
+    let arrHours = utcHours + arrTZ;
+    let arrDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
+    
+    if (arrHours >= 24) {
+      arrHours -= 24;
+      arrDateObj.setUTCDate(arrDateObj.getUTCDate() + 1);
+    }
+    
+    const arrivalDate = arrDateObj.toISOString().split('T')[0];
+    const arrivalTime = String(arrHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
+    
+    // 출발 레코드 생성 (괌 → 한국)
+    const pickupData = {
+      pickup_type: 'airport',
+      flight_number,
+      customer_name,
+      hotel_name,
+      phone,
+      kakao_id,
+      memo,
+      adult_count,
+      child_count,
+      infant_count,
+      luggage_count,
+      passenger_count,
+      departure_date: flight_date,
+      departure_time: flight.time,
+      departure_airport: flight.departure_airport,
+      arrival_date: arrivalDate,
+      arrival_time: arrivalTime,
+      arrival_airport: flight.arrival_airport,
+      record_type: 'departure',
+      display_date: flight_date,
+      display_time: flight.time,
+      status: 'active',
+      confirmation_status: 'pending',
+      agency_id: null // 일반 고객은 agency_id 없음
+    };
+    
+    const columns = Object.keys(pickupData).join(', ');
+    const values = Object.values(pickupData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const result = await pool.query(
+      `INSERT INTO airport_pickups (${columns}) VALUES (${placeholders}) RETURNING *`,
+      values
+    );
+    
+    res.json({ 
+      success: true, 
+      pickup: result.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ 고객 예약 등록 실패:', error);
     res.status(500).json({ error: error.message });
   }
 });

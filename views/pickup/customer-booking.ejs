@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>괌 공항 픽업 서비스 예약 - 호텔에서 공항까지</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .header-brand {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 0;
+      margin-bottom: 30px;
+    }
+    .info-box {
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 8px;
+    }
+    .price-badge {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .step-box {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      transition: all 0.3s;
+    }
+    .step-box:hover {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    .step-number {
+      width: 40px;
+      height: 40px;
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .highlight {
+      background: #fff3cd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-brand">
+    <div class="container text-center">
+      <h1><i class="bi bi-airplane-engines"></i> 괌 공항 픽업 서비스</h1>
+      <p class="lead mb-0">호텔에서 공항까지 편안하게 모셔다 드립니다</p>
+      <div class="price-badge mt-3">$8 / 1인</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 서비스 안내 -->
+    <div class="info-box">
+      <h4><i class="bi bi-info-circle"></i> 서비스 안내</h4>
+      <ul class="mb-0">
+        <li><strong>출발 시간:</strong> 출국 <span class="highlight">3시간 전</span> 호텔 로비에서 픽업</li>
+        <li><strong>사전 연락:</strong> 픽업 당일 아침 <span class="highlight">카카오톡</span>으로 정확한 픽업 시간을 안내해 드립니다</li>
+        <li><strong>요금:</strong> 1인당 $8 (현장 결제)</li>
+        <li><strong>예약 방법:</strong> 아래 양식을 작성하시면 예약이 완료됩니다</li>
+      </ul>
+    </div>
+
+    <!-- 예약 방법 안내 -->
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="step-box">
+          <div class="d-flex align-items-center mb-3">
+            <div class="step-number me-3">1</div>
+            <h5 class="mb-0">출국 날짜 확인</h5>
+          </div>
+          <p class="mb-0">항공권에 있는 <strong>출국 날짜</strong>를 확인하세요. 예약 날짜는 출국 날짜와 동일해야 합니다.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-box">
+          <div class="d-flex align-items-center mb-3">
+            <div class="step-number me-3">2</div>
+            <h5 class="mb-0">편명 확인</h5>
+          </div>
+          <p class="mb-0">항공권에 있는 <strong>편명</strong>(예: KE111, OZ123)을 확인하세요.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="step-box">
+          <div class="d-flex align-items-center mb-3">
+            <div class="step-number me-3">3</div>
+            <h5 class="mb-0">호텔 정보 입력</h5>
+          </div>
+          <p class="mb-0">현재 숙박 중인 <strong>호텔명</strong>을 정확히 입력하세요.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 예약 폼 -->
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="card-title mb-4"><i class="bi bi-calendar-check"></i> 픽업 예약하기</h4>
+        
+        <form id="bookingForm">
+          <!-- 항공편 정보 -->
+          <h5 class="mb-3"><i class="bi bi-airplane"></i> 항공편 정보</h5>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">출국 날짜 (항공권과 동일) *</label>
+              <input type="date" class="form-control" id="flightDate" required>
+              <small class="text-muted">항공권에 표시된 출국 날짜를 선택하세요</small>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">편명 (항공권 확인) *</label>
+              <select class="form-select" id="flightNumber" required>
+                <option value="">편명을 선택하세요</option>
+              </select>
+              <small class="text-muted">예: KE111, OZ123, UA456</small>
+            </div>
+          </div>
+
+          <!-- 고객 정보 -->
+          <h5 class="mt-4 mb-3"><i class="bi bi-person"></i> 예약자 정보</h5>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">예약자명 (한글) *</label>
+              <input type="text" class="form-control" id="customerName" placeholder="홍길동" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">호텔명 *</label>
+              <input type="text" class="form-control" id="hotelName" list="hotels" placeholder="투숙 중인 호텔명을 입력하세요" required>
+              <datalist id="hotels">
+                <option value="Hilton Guam Resort & Spa">힐튼 괌 리조트 & 스파</option>
+                <option value="Dusit Thani Guam Resort">두짓타니 괌 리조트</option>
+                <option value="Lotte Hotel Guam">롯데호텔 괌</option>
+                <option value="Hyatt Regency Guam">하얏트 리젠시 괌</option>
+                <option value="The Westin Resort Guam">웨스틴 리조트 괌</option>
+                <option value="Pacific Islands Club Guam">PIC 괌</option>
+                <option value="Onward Beach Resort">온워드 비치 리조트</option>
+                <option value="Outrigger Guam Beach Resort">아웃리거 괌 비치 리조트</option>
+              </datalist>
+            </div>
+          </div>
+
+          <!-- 인원 정보 -->
+          <h5 class="mt-4 mb-3"><i class="bi bi-people"></i> 인원 정보</h5>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">성인</label>
+              <input type="number" class="form-control" id="adultCount" min="1" value="1" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">소아 (만 2-11세)</label>
+              <input type="number" class="form-control" id="childCount" min="0" value="0">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">유아 (만 0-1세)</label>
+              <input type="number" class="form-control" id="infantCount" min="0" value="0">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">짐 개수 (캐리어, 큰 가방)</label>
+            <input type="number" class="form-control" id="luggageCount" min="0" value="0">
+          </div>
+
+          <!-- 연락처 정보 -->
+          <h5 class="mt-4 mb-3"><i class="bi bi-chat-dots"></i> 연락처 정보</h5>
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> 픽업 당일 아침 카카오톡으로 정확한 픽업 시간을 안내해 드립니다.
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">전화번호 *</label>
+              <input type="tel" class="form-control" id="phone" placeholder="010-1234-5678" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">카카오톡 ID *</label>
+              <input type="text" class="form-control" id="kakaoId" placeholder="카카오톡 ID를 입력하세요" required>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">특이사항 (선택)</label>
+            <textarea class="form-control" id="memo" rows="3" placeholder="특별히 전달하실 내용이 있으시면 입력해주세요"></textarea>
+          </div>
+
+          <!-- 총 요금 표시 -->
+          <div class="alert alert-success">
+            <h5 class="mb-2"><i class="bi bi-calculator"></i> 예상 요금</h5>
+            <div class="d-flex justify-content-between align-items-center">
+              <span>총 인원: <strong id="totalPassengers">1</strong>명</span>
+              <span class="h4 mb-0">총 <strong id="totalPrice">$8</strong></span>
+            </div>
+            <small class="text-muted">* 현장에서 현금 또는 카드로 결제 가능합니다</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-check-circle"></i> 예약하기
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 추가 안내사항 -->
+    <div class="card mt-4 mb-5">
+      <div class="card-body">
+        <h5><i class="bi bi-question-circle"></i> 자주 묻는 질문</h5>
+        <div class="accordion" id="faqAccordion">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                픽업 시간은 어떻게 되나요?
+              </button>
+            </h2>
+            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                출국 항공편 출발 시간 <strong>3시간 전</strong>에 호텔 로비에서 픽업해 드립니다. 
+                예를 들어 비행기가 오후 3시에 출발한다면 낮 12시에 호텔 로비에서 만나게 됩니다.
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                카카오톡 연락은 언제 오나요?
+              </button>
+            </h2>
+            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                픽업 당일 아침에 카카오톡으로 정확한 픽업 시간과 차량 정보를 안내해 드립니다.
+                미리 카카오톡 ID를 정확히 입력해 주세요.
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                결제는 어떻게 하나요?
+              </button>
+            </h2>
+            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                현장에서 현금(USD) 또는 신용카드로 결제하실 수 있습니다. 
+                1인당 $8 × 인원수로 계산됩니다.
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                예약 취소는 어떻게 하나요?
+              </button>
+            </h2>
+            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                예약하신 카카오톡 ID로 연락주시면 취소 처리해 드립니다.
+                가능한 빠르게 연락 주시면 감사하겠습니다.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // 항공편 로드
+    async function loadFlights() {
+      try {
+        const res = await fetch('/pickup/api/flights/all');
+        const flights = await res.json();
+        
+        const select = document.getElementById('flightNumber');
+        select.innerHTML = '<option value="">편명을 선택하세요</option>';
+        
+        // 괌 출발 항공편만 필터링
+        Object.keys(flights).forEach(flightNum => {
+          const flight = flights[flightNum];
+          if (flight.departure_airport === 'GUM') {
+            select.innerHTML += `<option value="${flightNum}">${flightNum} (${flight.time} 출발)</option>`;
+          }
+        });
+      } catch (error) {
+        console.error('항공편 로드 실패:', error);
+      }
+    }
+
+    // 인원 변경 시 총 요금 계산
+    function updatePrice() {
+      const adults = parseInt(document.getElementById('adultCount').value) || 0;
+      const children = parseInt(document.getElementById('childCount').value) || 0;
+      const infants = parseInt(document.getElementById('infantCount').value) || 0;
+      
+      const totalPassengers = adults + children + infants;
+      const totalPrice = totalPassengers * 8;
+      
+      document.getElementById('totalPassengers').textContent = totalPassengers;
+      document.getElementById('totalPrice').textContent = `$${totalPrice}`;
+    }
+
+    // 인원 입력 필드에 이벤트 리스너 추가
+    document.getElementById('adultCount').addEventListener('input', updatePrice);
+    document.getElementById('childCount').addEventListener('input', updatePrice);
+    document.getElementById('infantCount').addEventListener('input', updatePrice);
+
+    // 폼 제출
+    document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = {
+        flight_date: document.getElementById('flightDate').value,
+        flight_number: document.getElementById('flightNumber').value,
+        customer_name: document.getElementById('customerName').value,
+        hotel_name: document.getElementById('hotelName').value,
+        adult_count: parseInt(document.getElementById('adultCount').value) || 0,
+        child_count: parseInt(document.getElementById('childCount').value) || 0,
+        infant_count: parseInt(document.getElementById('infantCount').value) || 0,
+        luggage_count: parseInt(document.getElementById('luggageCount').value) || 0,
+        phone: document.getElementById('phone').value,
+        kakao_id: document.getElementById('kakaoId').value,
+        memo: document.getElementById('memo').value
+      };
+
+      try {
+        const res = await fetch('/pickup/api/customer-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          alert('✅ 예약이 완료되었습니다!\n\n픽업 당일 아침에 카카오톡으로 정확한 픽업 시간을 안내해 드립니다.\n즐거운 여행 되세요!');
+          document.getElementById('bookingForm').reset();
+          updatePrice();
+        } else {
+          alert('❌ 예약 실패: ' + (result.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('예약 오류:', error);
+        alert('❌ 예약 실패: ' + error.message);
+      }
+    });
+
+    // 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFlights();
+      updatePrice();
+    });
+  </script>
+</body>
+</html>
