@@ -980,7 +980,7 @@ router.get('/api/calendar', async (req, res) => {
     const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
     const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
     
-    // display_date 기준으로 모든 레코드 조회 (해당 월만)
+    // display_date 기준으로 모든 레코드 조회 (해당 월만, 확정된 예약만)
     const pickups = await pool.query(`
       SELECT 
         ap.*,
@@ -989,6 +989,7 @@ router.get('/api/calendar', async (req, res) => {
       LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
       WHERE ap.display_date >= $1 AND ap.display_date < $2
         AND ap.status = 'active'
+        AND ap.confirmation_status = 'confirmed'
       ORDER BY ap.display_date, ap.display_time
     `, [startDate, endDate]);
     
@@ -1222,7 +1223,8 @@ router.post('/api/agency-register', async (req, res) => {
     const baseData = {
       pickup_type, flight_number, customer_name, hotel_name, phone, kakao_id, memo,
       adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id,
-      status: 'active'
+      status: 'active',
+      confirmation_status: 'pending'  // 업체 예약은 검수 대기 상태
     };
     
     // 1. 출발 레코드
@@ -1297,7 +1299,7 @@ router.get('/api/agency-pickups', async (req, res) => {
   try {
     let query = `
       SELECT * FROM airport_pickups 
-      WHERE agency_id = $1 AND status = 'active'
+      WHERE agency_id = $1 AND status = 'active' AND confirmation_status = 'confirmed'
     `;
     const params = [agency_id];
     let paramIndex = 2;
@@ -1320,6 +1322,211 @@ router.get('/api/agency-pickups', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ 업체 예약 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== 신규예약 확정 관리 ====================
+
+// API: 신규예약 카운트
+router.get('/api/pending-count', async (req, res) => {
+  const pool = req.app.locals.pool;
+  
+  try {
+    const result = await pool.query(`
+      SELECT COUNT(*) as count 
+      FROM airport_pickups 
+      WHERE status = 'active' AND confirmation_status = 'pending'
+    `);
+    
+    res.json({ pending: parseInt(result.rows[0].count) });
+  } catch (error) {
+    console.error('❌ 카운트 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 신규예약 리스트 (pending, rejected)
+router.get('/api/pending-reservations', async (req, res) => {
+  const pool = req.app.locals.pool;
+  
+  try {
+    const pendingResult = await pool.query(`
+      SELECT * FROM airport_pickups 
+      WHERE status = 'active' AND confirmation_status = 'pending'
+      ORDER BY created_at DESC
+    `);
+    
+    const rejectedResult = await pool.query(`
+      SELECT * FROM airport_pickups 
+      WHERE status = 'active' AND confirmation_status = 'rejected'
+      ORDER BY created_at DESC
+    `);
+    
+    res.json({
+      pending: pendingResult.rows,
+      rejected: rejectedResult.rows
+    });
+  } catch (error) {
+    console.error('❌ 예약 리스트 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 예약 확정 (달력 표시)
+router.post('/api/confirm-reservation', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id, linkedId } = req.body;
+  
+  try {
+    // 본인 확정
+    await pool.query(
+      `UPDATE airport_pickups SET confirmation_status = 'confirmed' WHERE id = $1`,
+      [id]
+    );
+    
+    // 연결된 예약도 확정
+    if (linkedId) {
+      await pool.query(
+        `UPDATE airport_pickups SET confirmation_status = 'confirmed' WHERE id = $1`,
+        [linkedId]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 예약 확정 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 예약 미확정
+router.post('/api/reject-reservation', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id, linkedId, reason } = req.body;
+  
+  try {
+    // 메모에 미확정 사유 추가
+    if (reason) {
+      await pool.query(
+        `UPDATE airport_pickups 
+         SET confirmation_status = 'rejected', 
+             memo = CASE 
+               WHEN memo IS NULL OR memo = '' THEN $1 
+               ELSE memo || '\n[미확정 사유] ' || $1 
+             END 
+         WHERE id = $2`,
+        [reason, id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE airport_pickups SET confirmation_status = 'rejected' WHERE id = $1`,
+        [id]
+      );
+    }
+    
+    // 연결된 예약도 미확정
+    if (linkedId) {
+      if (reason) {
+        await pool.query(
+          `UPDATE airport_pickups 
+           SET confirmation_status = 'rejected', 
+               memo = CASE 
+                 WHEN memo IS NULL OR memo = '' THEN $1 
+                 ELSE memo || '\n[미확정 사유] ' || $1 
+               END 
+           WHERE id = $2`,
+          [reason, linkedId]
+        );
+      } else {
+        await pool.query(
+          `UPDATE airport_pickups SET confirmation_status = 'rejected' WHERE id = $1`,
+          [linkedId]
+        );
+      }
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 예약 미확정 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 예약 삭제
+router.post('/api/delete-reservation', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id, linkedId } = req.body;
+  
+  try {
+    // 소프트 삭제 (status = 'deleted')
+    await pool.query(
+      `UPDATE airport_pickups SET status = 'deleted' WHERE id = $1`,
+      [id]
+    );
+    
+    // 연결된 예약도 삭제
+    if (linkedId) {
+      await pool.query(
+        `UPDATE airport_pickups SET status = 'deleted' WHERE id = $1`,
+        [linkedId]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 예약 삭제 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 예약 상세 조회
+router.get('/api/pickup/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query(
+      `SELECT * FROM airport_pickups WHERE id = $1`,
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '예약을 찾을 수 없습니다' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ 예약 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 예약 수정
+router.put('/api/pickup/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  const {
+    customer_name, hotel_name, phone, kakao_id,
+    adult_count, child_count, infant_count, luggage_count,
+    passenger_count, memo
+  } = req.body;
+  
+  try {
+    await pool.query(
+      `UPDATE airport_pickups 
+       SET customer_name = $1, hotel_name = $2, phone = $3, kakao_id = $4,
+           adult_count = $5, child_count = $6, infant_count = $7, luggage_count = $8,
+           passenger_count = $9, memo = $10
+       WHERE id = $11`,
+      [customer_name, hotel_name, phone, kakao_id,
+       adult_count, child_count, infant_count, luggage_count,
+       passenger_count, memo, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 예약 수정 실패:', error);
     res.status(500).json({ error: error.message });
   }
 });
