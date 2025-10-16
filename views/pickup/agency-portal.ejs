@@ -69,15 +69,6 @@
             <h5 class="card-title mb-4"><i class="bi bi-plus-circle"></i> 새 픽업 예약 등록</h5>
             
             <form id="pickupForm">
-              <!-- 픽업 타입 -->
-              <div class="mb-3">
-                <label class="form-label">픽업 타입 *</label>
-                <select class="form-select" id="pickupType" required>
-                  <option value="arrival">공항 도착 → 호텔</option>
-                  <option value="departure">호텔 → 공항 출발</option>
-                </select>
-              </div>
-
               <!-- 항공편 정보 -->
               <div class="row">
                 <div class="col-md-6 mb-3">
@@ -287,7 +278,7 @@
       e.preventDefault();
 
       const data = {
-        pickup_type: document.getElementById('pickupType').value,
+        pickup_type: 'arrival',  // 업체 예약은 자동으로 왕복 처리
         flight_date: document.getElementById('flightDate').value,
         flight_number: document.getElementById('flightNumber').value.toUpperCase(),
         customer_name: document.getElementById('customerName').value,
