@@ -463,7 +463,8 @@
     // 업체 목록 로드
     async function loadAgencies() {
       const res = await fetch('/pickup/api/agencies');
-      const agencies = await res.json();
+      const data = await res.json();
+      const agencies = data.agencies || [];
       const select = document.getElementById('agencyId');
       select.innerHTML = agencies.map(a => `<option value="${a.id}">${a.agency_name}</option>`).join('');
     }

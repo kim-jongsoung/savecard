@@ -486,7 +486,7 @@ router.get('/api/agencies', async (req, res) => {
     const result = await pool.query(
       `SELECT * FROM pickup_agencies WHERE is_active = true ORDER BY agency_name`
     );
-    res.json(result.rows);
+    res.json({ agencies: result.rows });
   } catch (error) {
     console.error('❌ 업체 조회 실패:', error);
     res.status(500).json({ error: error.message });
