@@ -1454,11 +1454,15 @@
         const pendingList = data.pending || [];
         const rejectedList = data.rejected || [];
         
-        document.getElementById('pendingTabCount').textContent = pendingList.length;
-        document.getElementById('rejectedTabCount').textContent = rejectedList.length;
+        // 연결된 예약 그룹화 (departure만 표시, arrival은 포함)
+        const groupedPending = groupLinkedReservations(pendingList);
+        const groupedRejected = groupLinkedReservations(rejectedList);
+        
+        document.getElementById('pendingTabCount').textContent = groupedPending.length;
+        document.getElementById('rejectedTabCount').textContent = groupedRejected.length;
         
         // 검수 대기 렌더링
-        if (pendingList.length === 0) {
+        if (groupedPending.length === 0) {
           document.getElementById('pendingReservations').innerHTML = `
             <div class="text-center text-muted py-5">
               <i class="bi bi-inbox" style="font-size: 3rem;"></i>
@@ -1466,11 +1470,11 @@
             </div>
           `;
         } else {
-          document.getElementById('pendingReservations').innerHTML = pendingList.map(p => renderReservationCard(p, 'pending')).join('');
+          document.getElementById('pendingReservations').innerHTML = groupedPending.map(p => renderReservationCard(p, 'pending')).join('');
         }
         
         // 미확정 렌더링
-        if (rejectedList.length === 0) {
+        if (groupedRejected.length === 0) {
           document.getElementById('rejectedReservations').innerHTML = `
             <div class="text-center text-muted py-5">
               <i class="bi bi-inbox" style="font-size: 3rem;"></i>
@@ -1478,7 +1482,7 @@
             </div>
           `;
         } else {
-          document.getElementById('rejectedReservations').innerHTML = rejectedList.map(p => renderReservationCard(p, 'rejected')).join('');
+          document.getElementById('rejectedReservations').innerHTML = groupedRejected.map(p => renderReservationCard(p, 'rejected')).join('');
         }
         
         loadPendingCount();
@@ -1488,63 +1492,191 @@
       }
     }
     
-    // 예약 카드 렌더링
+    // 연결된 예약 그룹화 (출발+도착을 하나로)
+    function groupLinkedReservations(reservations) {
+      const grouped = [];
+      const processedIds = new Set();
+      
+      reservations.forEach(reservation => {
+        // 이미 처리된 예약은 건너뛰기
+        if (processedIds.has(reservation.id)) return;
+        
+        // departure 레코드만 메인으로 표시
+        if (reservation.record_type === 'departure') {
+          // 연결된 arrival 레코드 찾기
+          const linkedArrival = reservations.find(r => r.id === reservation.linked_id);
+          
+          // departure에 arrival 정보 추가
+          reservation.arrival_record = linkedArrival;
+          grouped.push(reservation);
+          
+          processedIds.add(reservation.id);
+          if (linkedArrival) {
+            processedIds.add(linkedArrival.id);
+          }
+        } 
+        // linked_id가 없는 arrival 레코드 (연결 안된 단독 예약)
+        else if (!reservation.linked_id) {
+          grouped.push(reservation);
+          processedIds.add(reservation.id);
+        }
+      });
+      
+      return grouped;
+    }
+    
+    // 예약 카드 렌더링 (왕복 통합)
     function renderReservationCard(pickup, type) {
-      const isArrival = pickup.record_type === 'arrival';
-      const typeColor = isArrival ? '#f44336' : '#2196f3';
-      const typeBg = isArrival ? '#ffebee' : '#e3f2fd';
-      const typeLabel = isArrival ? '🛬 공항 도착' : '✈️ 공항 출발';
+      const hasRoundtrip = pickup.arrival_record; // 왕복 여부
       
-      const linkedText = pickup.linked_id ? '<small class="text-muted">(연결된 예약)</small>' : '';
-      
-      return `
-        <div class="card mb-3" style="border-left: 4px solid ${typeColor};">
-          <div class="card-body" style="background: ${typeBg};">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-              <div>
-                <h6 class="mb-1" style="color: ${typeColor};">${typeLabel} ${linkedText}</h6>
-                <strong>${pickup.flight_number}</strong> | ${pickup.customer_name}
+      // 왕복 예약인 경우
+      if (hasRoundtrip) {
+        const arrival = pickup.arrival_record;
+        const depAirport = pickup.departure_airport;
+        const arrAirport = pickup.arrival_airport;
+        
+        return `
+          <div class="card mb-3" style="border-left: 4px solid #9c27b0; box-shadow: 0 2px 8px rgba(156,39,176,0.2);">
+            <div class="card-body" style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h5 class="mb-1" style="color: #9c27b0;">
+                    <i class="bi bi-arrow-left-right" style="font-size: 1.3rem;"></i> 
+                    <strong>${depAirport} ⇄ ${arrAirport}</strong> 왕복
+                  </h5>
+                  <div class="mt-2">
+                    <span class="badge bg-primary me-2">✈️ ${pickup.flight_number}</span>
+                    <span class="badge bg-info">👤 ${pickup.customer_name}</span>
+                  </div>
+                </div>
+                <span class="badge bg-secondary">ID: ${pickup.id}</span>
               </div>
-              <span class="badge bg-secondary">ID: ${pickup.id}</span>
-            </div>
-            
-            <div class="row mb-3">
-              <div class="col-md-6">
-                📅 ${pickup.display_date} ${pickup.display_time}<br>
-                🏨 ${pickup.hotel_name}<br>
-                👥 ${pickup.passenger_count}명 (성인:${pickup.adult_count}, 소아:${pickup.child_count}, 유아:${pickup.infant_count})<br>
-                🧳 짐 ${pickup.luggage_count}개
+              
+              <!-- 출발편 정보 -->
+              <div class="alert alert-info mb-2" style="background: #e3f2fd; border-left: 3px solid #2196f3;">
+                <div class="row">
+                  <div class="col-md-6">
+                    <strong style="color: #1976d2;">📤 출발편 (${depAirport} → ${arrAirport})</strong><br>
+                    📅 ${pickup.display_date} ${pickup.display_time}<br>
+                    🏨 ${pickup.hotel_name}
+                  </div>
+                  <div class="col-md-6">
+                    👥 ${pickup.passenger_count}명 (성인:${pickup.adult_count}, 소아:${pickup.child_count}, 유아:${pickup.infant_count})<br>
+                    🧳 짐 ${pickup.luggage_count}개
+                  </div>
+                </div>
               </div>
-              <div class="col-md-6">
-                📞 ${pickup.phone || '-'}<br>
-                💬 ${pickup.kakao_id || '-'}<br>
-                📝 ${pickup.memo || '-'}
+              
+              <!-- 도착편 정보 -->
+              <div class="alert alert-danger mb-3" style="background: #ffebee; border-left: 3px solid #f44336;">
+                <div class="row">
+                  <div class="col-md-6">
+                    <strong style="color: #c62828;">📥 도착편 (${arrAirport} → ${depAirport})</strong><br>
+                    📅 ${arrival.display_date} ${arrival.display_time}<br>
+                    🏨 ${arrival.hotel_name}
+                  </div>
+                  <div class="col-md-6">
+                    👥 ${arrival.passenger_count}명<br>
+                    🧳 짐 ${arrival.luggage_count}개
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <div class="btn-group w-100" role="group">
-              ${type === 'pending' ? `
-                <button class="btn btn-primary" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
-                  <i class="bi bi-check-circle"></i> 확정 (달력으로)
+              
+              <!-- 연락처 정보 -->
+              <div class="row mb-3">
+                <div class="col-md-12">
+                  📞 ${pickup.phone || '-'} | 💬 ${pickup.kakao_id || '-'}<br>
+                  📝 ${pickup.memo || '-'}
+                </div>
+              </div>
+              
+              <!-- 버튼 -->
+              <div class="btn-group w-100" role="group">
+                ${type === 'pending' ? `
+                  <button class="btn btn-primary" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                    <i class="bi bi-check-circle-fill"></i> 왕복 확정
+                  </button>
+                  <button class="btn btn-danger" onclick="rejectReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                    <i class="bi bi-x-circle-fill"></i> 미확정
+                  </button>
+                ` : `
+                  <button class="btn btn-success" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                    <i class="bi bi-arrow-clockwise"></i> 확정으로 변경
+                  </button>
+                  <button class="btn btn-danger" onclick="deleteReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                    <i class="bi bi-trash-fill"></i> 왕복 삭제
+                  </button>
+                `}
+                <button class="btn btn-warning" onclick="editReservation(${pickup.id})">
+                  <i class="bi bi-pencil-fill"></i> 수정
                 </button>
-                <button class="btn btn-danger" onclick="rejectReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
-                  <i class="bi bi-x-circle"></i> 미확정
-                </button>
-              ` : `
-                <button class="btn btn-success" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
-                  <i class="bi bi-arrow-clockwise"></i> 확정으로 변경
-                </button>
-                <button class="btn btn-danger" onclick="deleteReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
-                  <i class="bi bi-trash"></i> 삭제
-                </button>
-              `}
-              <button class="btn btn-warning" onclick="editReservation(${pickup.id})">
-                <i class="bi bi-pencil"></i> 수정
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
+        `;
+      } 
+      // 단독 예약 (왕복 아님)
+      else {
+        const isArrival = pickup.record_type === 'arrival';
+        const typeColor = isArrival ? '#f44336' : '#2196f3';
+        const typeBg = isArrival ? '#ffebee' : '#e3f2fd';
+        const typeIcon = isArrival ? '🛬' : '✈️';
+        const typeLabel = isArrival ? '도착만' : '출발만';
+        
+        return `
+          <div class="card mb-3" style="border-left: 4px solid ${typeColor};">
+            <div class="card-body" style="background: ${typeBg};">
+              <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                  <h6 class="mb-1" style="color: ${typeColor};">
+                    ${typeIcon} <strong>${pickup.departure_airport} → ${pickup.arrival_airport}</strong> (${typeLabel})
+                  </h6>
+                  <div class="mt-2">
+                    <span class="badge bg-primary me-2">✈️ ${pickup.flight_number}</span>
+                    <span class="badge bg-info">👤 ${pickup.customer_name}</span>
+                  </div>
+                </div>
+                <span class="badge bg-secondary">ID: ${pickup.id}</span>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  📅 ${pickup.display_date} ${pickup.display_time}<br>
+                  🏨 ${pickup.hotel_name}<br>
+                  👥 ${pickup.passenger_count}명 (성인:${pickup.adult_count}, 소아:${pickup.child_count}, 유아:${pickup.infant_count})<br>
+                  🧳 짐 ${pickup.luggage_count}개
+                </div>
+                <div class="col-md-6">
+                  📞 ${pickup.phone || '-'}<br>
+                  💬 ${pickup.kakao_id || '-'}<br>
+                  📝 ${pickup.memo || '-'}
+                </div>
+              </div>
+              
+              <div class="btn-group w-100" role="group">
+                ${type === 'pending' ? `
+                  <button class="btn btn-primary" onclick="confirmReservation(${pickup.id}, null)">
+                    <i class="bi bi-check-circle-fill"></i> 확정
+                  </button>
+                  <button class="btn btn-danger" onclick="rejectReservation(${pickup.id}, null)">
+                    <i class="bi bi-x-circle-fill"></i> 미확정
+                  </button>
+                ` : `
+                  <button class="btn btn-success" onclick="confirmReservation(${pickup.id}, null)">
+                    <i class="bi bi-arrow-clockwise"></i> 확정으로 변경
+                  </button>
+                  <button class="btn btn-danger" onclick="deleteReservation(${pickup.id}, null)">
+                    <i class="bi bi-trash-fill"></i> 삭제
+                  </button>
+                `}
+                <button class="btn btn-warning" onclick="editReservation(${pickup.id})">
+                  <i class="bi bi-pencil-fill"></i> 수정
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
     }
     
     // 예약 확정 처리
