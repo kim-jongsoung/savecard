@@ -407,9 +407,6 @@
         document.getElementById('pendingTabCount').textContent = groupedPending.length;
         document.getElementById('rejectedTabCount').textContent = groupedRejected.length;
         
-        // 상단 버튼 카운트도 검수대기 수와 동일하게 업데이트
-        document.getElementById('pendingCount').textContent = groupedPending.length;
-        
         // 검수 대기 렌더링
         if (groupedPending.length === 0) {
           document.getElementById('pendingReservations').innerHTML = `

@@ -1328,15 +1328,18 @@ router.get('/api/agency-pickups', async (req, res) => {
 
 // ==================== 신규예약 확정 관리 ====================
 
-// API: 신규예약 카운트
+// API: 신규예약 카운트 (왕복 그룹화 후)
 router.get('/api/pending-count', async (req, res) => {
   const pool = req.app.locals.pool;
   
   try {
+    // departure 레코드만 카운트 (왕복 예약은 1개로 계산)
     const result = await pool.query(`
       SELECT COUNT(*) as count 
       FROM airport_pickups 
-      WHERE status = 'active' AND confirmation_status = 'pending'
+      WHERE status = 'active' 
+        AND confirmation_status = 'pending'
+        AND record_type = 'departure'
     `);
     
     res.json({ pending: parseInt(result.rows[0].count) });
