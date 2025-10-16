@@ -523,8 +523,8 @@
     function renderPickupCard(p) {
       // 예약 상태 배지 및 카드 스타일 결정
       const getReservationStatusBadge = (pickup) => {
-        // 정산 완료
-        if (pickup.status === 'settled' || pickup.settlement_status === 'completed') {
+        // 정산 완료 (settlement_status 또는 settlement_date 존재)
+        if (pickup.status === 'settled' || pickup.settlement_status === 'completed' || pickup.settlement_date) {
           return '<span class="badge bg-success" style="font-size: 0.85rem;">💰 정산완료</span>';
         }
         // 확정 (관리자 확정 또는 차량 배정 완료)
@@ -537,8 +537,8 @@
       
       // 상태에 따른 카드 스타일 결정
       const getCardStyle = (pickup) => {
-        // 정산 완료 - 녹색
-        if (pickup.status === 'settled' || pickup.settlement_status === 'completed') {
+        // 정산 완료 - 녹색 (settlement_status 또는 settlement_date 존재)
+        if (pickup.status === 'settled' || pickup.settlement_status === 'completed' || pickup.settlement_date) {
           return {
             borderColor: '#28a745',
             bgColor: '#d4edda',

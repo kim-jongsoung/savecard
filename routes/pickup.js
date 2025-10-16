@@ -950,7 +950,8 @@ router.post('/api/settlement/complete', async (req, res) => {
     
     const result = await pool.query(`
       UPDATE airport_pickups
-      SET settlement_date = $${ids.length + 1}
+      SET settlement_date = $${ids.length + 1},
+          settlement_status = 'completed'
       WHERE id IN (${placeholders})
         AND settlement_date IS NULL
       RETURNING id
@@ -1328,7 +1329,7 @@ router.get('/api/agency-pickups', async (req, res) => {
     // 상태 검색
     if (status) {
       if (status === 'settled') {
-        query += ` AND settlement_status = 'completed'`;
+        query += ` AND (settlement_status = 'completed' OR settlement_date IS NOT NULL)`;
       } else {
         query += ` AND confirmation_status = $${paramIndex}`;
         params.push(status);
