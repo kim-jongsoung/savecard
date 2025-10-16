@@ -1010,6 +1010,13 @@ router.get('/api/closed-dates', async (req, res) => {
     res.json({ closedDates: result.rows });
   } catch (error) {
     console.error('❌ 마감날짜 조회 실패:', error);
+    
+    // 테이블이 없는 경우 빈 배열 반환
+    if (error.code === '42P01') {
+      console.warn('⚠️ pickup_closed_dates 테이블이 없습니다. 빈 배열을 반환합니다.');
+      return res.json({ closedDates: [] });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 });
@@ -1031,6 +1038,13 @@ router.get('/api/closed-dates/check', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ 마감날짜 확인 실패:', error);
+    
+    // 테이블이 없는 경우 마감되지 않은 것으로 처리
+    if (error.code === '42P01') {
+      console.warn('⚠️ pickup_closed_dates 테이블이 없습니다. 마감되지 않은 것으로 처리합니다.');
+      return res.json({ isClosed: false, data: null });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 });
@@ -1059,12 +1073,20 @@ router.post('/api/closed-dates', async (req, res) => {
   } catch (error) {
     console.error('❌ 마감날짜 등록 실패:', error);
     
+    // 테이블이 없는 경우
+    if (error.code === '42P01') {
+      return res.status(500).json({ 
+        error: '마감날짜 테이블이 생성되지 않았습니다. 관리자에게 문의하세요.',
+        hint: 'Railway 데이터베이스에서 pickup_closed_dates 테이블을 생성해야 합니다.'
+      });
+    }
+    
     // 중복 날짜 에러 처리
     if (error.code === '23505') {
-      res.status(400).json({ error: '이미 마감 처리된 날짜입니다' });
-    } else {
-      res.status(500).json({ error: error.message });
+      return res.status(400).json({ error: '이미 마감 처리된 날짜입니다' });
     }
+    
+    res.status(500).json({ error: error.message });
   }
 });
 
