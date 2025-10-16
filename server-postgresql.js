@@ -14283,6 +14283,29 @@ async function startServer() {
                 // 정산관리 마이그레이션 실행
                 await runSettlementsMigration();
                 console.log('✅ 정산관리 마이그레이션 완료');
+                
+                // 공항픽업 마감날짜 테이블 생성
+                try {
+                    await pool.query(`
+                        CREATE TABLE IF NOT EXISTS pickup_closed_dates (
+                            id SERIAL PRIMARY KEY,
+                            closed_date DATE NOT NULL UNIQUE,
+                            reason TEXT,
+                            created_by VARCHAR(255),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                    `);
+                    
+                    await pool.query(`
+                        CREATE INDEX IF NOT EXISTS idx_closed_date 
+                        ON pickup_closed_dates(closed_date)
+                    `);
+                    
+                    console.log('✅ 공항픽업 마감날짜 테이블 생성 완료');
+                } catch (closedErr) {
+                    console.warn('⚠️ 마감날짜 테이블 생성 경고:', closedErr.message);
+                }
             } catch (error) {
                 console.error('⚠️ 데이터베이스 초기화 실패 (서버는 계속 실행):', error.message);
             }
