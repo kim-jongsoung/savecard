@@ -6,6 +6,9 @@
   <title><%= agencyName %> - 픽업 예약 관리</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Select2 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
   <style>
     .header-brand {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -22,6 +25,15 @@
     }
     .pickup-card:hover {
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    /* Select2 커스텀 스타일 */
+    .select2-container--bootstrap-5 .select2-selection {
+      min-height: 38px;
+      font-size: 1rem;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+      line-height: 38px;
+      padding-left: 12px;
     }
   </style>
 </head>
@@ -74,7 +86,9 @@
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label">편명 *</label>
-                  <input type="text" class="form-control" id="flightNumber" placeholder="예: KE111" required>
+                  <select class="form-select" id="flightNumber" required>
+                    <option value="">편명 선택</option>
+                  </select>
                 </div>
               </div>
 
@@ -86,8 +100,58 @@
                   <input type="text" class="form-control" id="customerName" required>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label">호텔 *</label>
-                  <input type="text" class="form-control" id="hotelName" required>
+                  <label class="form-label">호텔 <small class="text-muted">(입력 시 자동완성)</small></label>
+                  <input type="text" class="form-control" id="hotelName" list="hotels" placeholder="호텔명 입력..." required>
+                  <datalist id="hotels">
+                    <!-- 투몬 지역 주요 호텔 (가나다순) -->
+                    <option value="Alupang Beach Tower">알루팡 비치 타워</option>
+                    <option value="Bay View Hotel Guam">베이 뷰 호텔 괌</option>
+                    <option value="Crowne Plaza Resort Guam">크라운 플라자 리조트 괌</option>
+                    <option value="Days Inn Guam">데이즈인 괌</option>
+                    <option value="Dusit Beach Resort Guam">두짓 비치 리조트 괌</option>
+                    <option value="Dusit Thani Guam Resort">두짓타니 괌 리조트</option>
+                    <option value="Fiesta Resort Guam">피에스타 리조트 괌</option>
+                    <option value="Garden Villa Hotel">가든 빌라 호텔</option>
+                    <option value="Grand Plaza Hotel">그랜드 플라자 호텔</option>
+                    <option value="Guam Plaza Resort & Spa">괌 플라자 리조트 & 스파</option>
+                    <option value="Guam Reef Hotel">괌 리프 호텔</option>
+                    <option value="Hilton Guam Resort & Spa">힐튼 괌 리조트 & 스파</option>
+                    <option value="Holiday Resort & Spa Guam">홀리데이 리조트 & 스파 괌</option>
+                    <option value="Hotel Nikko Guam">호텔 니코 괌</option>
+                    <option value="Hyatt Regency Guam">하얏트 리젠시 괌</option>
+                    <option value="LeoPalace Resort Guam">레오팔레스 리조트 괌</option>
+                    <option value="Lotte Hotel Guam">롯데호텔 괌</option>
+                    <option value="Ohana Bayview Guam">오하나 베이뷰 괌</option>
+                    <option value="Onward Beach Resort">온워드 비치 리조트</option>
+                    <option value="Outrigger Guam Beach Resort">아웃리거 괌 비치 리조트</option>
+                    <option value="Pacific Islands Club (PIC)">퍼시픽 아일랜드 클럽 (PIC)</option>
+                    <option value="Royal Orchid Guam">로열 오키드 괌</option>
+                    <option value="The Westin Resort Guam">웨스틴 리조트 괌</option>
+                    <option value="The Tsubaki Tower">더 츠바키 타워</option>
+                    
+                    <!-- 타무닝 지역 -->
+                    <option value="Guam Airport Hotel">괌 에어포트 호텔</option>
+                    <option value="Hotel Santa Fe Guam">호텔 산타페 괌</option>
+                    <option value="Sheraton Laguna Guam Resort">쉐라톤 라구나 괌 리조트</option>
+                    <option value="Verona Resort & Spa">베로나 리조트 & 스파</option>
+                    <option value="Wyndham Garden Guam">윈덤 가든 괌</option>
+                    
+                    <!-- 하갓냐/타무닝 -->
+                    <option value="Rihga Royal Laguna Guam Resort">리가 로얄 라구나 괌 리조트</option>
+                    
+                    <!-- 유마탁/남부 -->
+                    <option value="Hoshino Resorts Risonare Guam">호시노 리조트 리조나레 괌</option>
+                    <option value="Tano Resort">타노 리조트</option>
+                    
+                    <!-- 투몬베이 캐피탈 -->
+                    <option value="Tumon Bay Capital Hotel">투몬베이 캐피탈 호텔</option>
+                    
+                    <!-- 기타 -->
+                    <option value="Airbnb (민박)">에어비앤비 (민박)</option>
+                    <option value="Private Villa (개인별장)">프라이빗 빌라 (개인별장)</option>
+                    <option value="Vacation Rental (휴가용 숙소)">배케이션 렌탈</option>
+                    <option value="미정 (TBD)">미정</option>
+                  </datalist>
                 </div>
               </div>
               <div class="row">
@@ -169,13 +233,54 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jQuery (Select2 의존성) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- Select2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
   <script>
     const AGENCY_CODE = '<%= agencyCode %>';
     const AGENCY_ID = <%= agencyId %>;
 
     document.addEventListener('DOMContentLoaded', () => {
+      loadFlights();
       loadPickups();
     });
+    
+    // 항공편 로드
+    async function loadFlights() {
+      try {
+        const res = await fetch('/pickup/api/flights/all');
+        const flights = await res.json();
+        
+        const flightSelect = document.getElementById('flightNumber');
+        flightSelect.innerHTML = '<option value="">편명 선택</option>' + 
+          flights.filter(f => f.is_active).map(f => {
+            const depTime = f.departure_time?.substring(0, 5);
+            const arrTime = f.arrival_time?.substring(0, 5);
+            const route = `${f.departure_airport} → ${f.arrival_airport}`;
+            return `<option value="${f.flight_number}">${f.flight_number} (${route} ${depTime} → ${arrTime})</option>`;
+          }).join('');
+        
+        // Select2 초기화
+        $('#flightNumber').select2({
+          theme: 'bootstrap-5',
+          placeholder: '편명을 입력하거나 선택하세요 (예: KE111)',
+          allowClear: true,
+          width: '100%',
+          language: {
+            noResults: function() {
+              return "검색 결과가 없습니다";
+            },
+            searching: function() {
+              return "검색 중...";
+            }
+          }
+        });
+      } catch (error) {
+        console.error('❌ 항공편 로드 실패:', error);
+        alert('항공편 정보를 불러올 수 없습니다.');
+      }
+    }
 
     // 예약 등록
     document.getElementById('pickupForm').addEventListener('submit', async (e) => {
