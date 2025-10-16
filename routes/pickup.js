@@ -1291,7 +1291,7 @@ router.post('/api/agency-register', async (req, res) => {
   }
 });
 
-// API: 업체 예약 내역 조회
+// API: 업체 예약 내역 조회 (모든 상태 포함)
 router.get('/api/agency-pickups', async (req, res) => {
   const pool = req.app.locals.pool;
   const { agency_id, date, name } = req.query;
@@ -1299,7 +1299,7 @@ router.get('/api/agency-pickups', async (req, res) => {
   try {
     let query = `
       SELECT * FROM airport_pickups 
-      WHERE agency_id = $1 AND status = 'active' AND confirmation_status = 'confirmed'
+      WHERE agency_id = $1 AND status = 'active'
     `;
     const params = [agency_id];
     let paramIndex = 2;
