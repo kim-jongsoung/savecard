@@ -340,6 +340,11 @@
       detailModalInstance = new bootstrap.Modal(document.getElementById('detailModal'));
       dayViewModalInstance = new bootstrap.Modal(document.getElementById('dayViewModal'));
       closedDatesModalInstance = new bootstrap.Modal(document.getElementById('closedDatesModal'));
+      
+      // Select2와 Bootstrap 모달 호환성을 위한 설정
+      // enforceFocus를 비활성화하여 Select2 검색창에 입력 가능하도록 함
+      $.fn.modal.Constructor.prototype._enforceFocus = function() {};
+      
       loadFlights();
       loadAgencies();
       loadClosedDates(); // 마감날짜 로드
@@ -381,6 +386,7 @@
           placeholder: '편명을 입력하거나 선택하세요 (예: KE111)',
           allowClear: true,
           width: '100%',
+          dropdownParent: $('#addModal'), // 모달 내부에서 작동하도록 설정
           language: {
             noResults: function() {
               return "검색 결과가 없습니다";
