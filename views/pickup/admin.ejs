@@ -1461,6 +1461,9 @@
         document.getElementById('pendingTabCount').textContent = groupedPending.length;
         document.getElementById('rejectedTabCount').textContent = groupedRejected.length;
         
+        // 상단 버튼 카운트도 검수대기 수와 동일하게 업데이트
+        document.getElementById('pendingCount').textContent = groupedPending.length;
+        
         // 검수 대기 렌더링
         if (groupedPending.length === 0) {
           document.getElementById('pendingReservations').innerHTML = `
@@ -1581,7 +1584,7 @@
             <div class="btn-group w-100" role="group">
               ${type === 'pending' ? `
                 <button class="btn btn-primary" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
-                  <i class="bi bi-check-circle-fill"></i> ${hasRoundtrip ? '왕복 확정' : '확정'}
+                  <i class="bi bi-check-circle-fill"></i> 예약 확정
                 </button>
                 <button class="btn btn-danger" onclick="rejectReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
                   <i class="bi bi-x-circle-fill"></i> 미확정
@@ -1591,7 +1594,7 @@
                   <i class="bi bi-arrow-clockwise"></i> 확정으로 변경
                 </button>
                 <button class="btn btn-danger" onclick="deleteReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
-                  <i class="bi bi-trash-fill"></i> ${hasRoundtrip ? '왕복 삭제' : '삭제'}
+                  <i class="bi bi-trash-fill"></i> 예약 삭제
                 </button>
               `}
               <button class="btn btn-warning" onclick="editReservation(${pickup.id})">
