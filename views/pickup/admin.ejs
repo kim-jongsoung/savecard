@@ -53,6 +53,9 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2>🚗 공항 픽업 관리</h2>
       <div>
+        <button class="btn btn-warning me-2" onclick="showPendingModal()">
+          <i class="bi bi-exclamation-circle"></i> 신규예약 <span class="badge bg-danger" id="pendingCount">0</span>
+        </button>
         <button class="btn btn-outline-primary me-2" onclick="location.href='/pickup/flights'">
           <i class="bi bi-airplane"></i> 항공편 관리
         </button>
@@ -158,6 +161,125 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 신규예약 관리 모달 -->
+  <div class="modal fade" id="pendingModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-exclamation-circle text-warning"></i> 신규예약 확정 관리
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- 탭 네비게이션 -->
+          <ul class="nav nav-tabs mb-3" id="pendingTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pendingList" type="button">
+                <i class="bi bi-clock-history"></i> 검수 대기 <span class="badge bg-warning text-dark" id="pendingTabCount">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejectedList" type="button">
+                <i class="bi bi-x-circle"></i> 미확정 <span class="badge bg-danger" id="rejectedTabCount">0</span>
+              </button>
+            </li>
+          </ul>
+
+          <!-- 탭 내용 -->
+          <div class="tab-content" id="pendingTabContent">
+            <!-- 검수 대기 리스트 -->
+            <div class="tab-pane fade show active" id="pendingList" role="tabpanel">
+              <div id="pendingReservations">
+                <div class="text-center text-muted py-5">
+                  <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                  <p class="mt-2">검수 대기 중인 예약이 없습니다</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 미확정 리스트 -->
+            <div class="tab-pane fade" id="rejectedList" role="tabpanel">
+              <div id="rejectedReservations">
+                <div class="text-center text-muted py-5">
+                  <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                  <p class="mt-2">미확정 예약이 없습니다</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 예약 수정 모달 -->
+  <div class="modal fade" id="editReservationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">예약 수정</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editReservationForm">
+            <input type="hidden" id="editPickupId">
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">고객명</label>
+                <input type="text" class="form-control" id="editCustomerName">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">호텔</label>
+                <input type="text" class="form-control" id="editHotelName">
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label class="form-label">연락처</label>
+                <input type="text" class="form-control" id="editPhone">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">카톡ID</label>
+                <input type="text" class="form-control" id="editKakaoId">
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-3">
+                <label class="form-label">성인</label>
+                <input type="number" class="form-control" id="editAdultCount" min="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">소아</label>
+                <input type="number" class="form-control" id="editChildCount" min="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">유아</label>
+                <input type="number" class="form-control" id="editInfantCount" min="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">짐</label>
+                <input type="number" class="form-control" id="editLuggageCount" min="0">
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">메모</label>
+              <textarea class="form-control" id="editMemo" rows="3"></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" onclick="saveReservationEdit()">저장</button>
         </div>
       </div>
     </div>
@@ -1286,6 +1408,278 @@
       
       // 자동 계산도 함께 실행
       autoCalculate();
+    }
+    
+    // ==================== 신규예약 관리 ====================
+    
+    let pendingModalInstance;
+    let editReservationModalInstance;
+    
+    // 모달 인스턴스 초기화 (기존 DOMContentLoaded에 추가)
+    document.addEventListener('DOMContentLoaded', () => {
+      pendingModalInstance = new bootstrap.Modal(document.getElementById('pendingModal'));
+      editReservationModalInstance = new bootstrap.Modal(document.getElementById('editReservationModal'));
+      
+      // 신규예약 카운트 로드
+      loadPendingCount();
+      
+      // 5초마다 신규예약 카운트 갱신
+      setInterval(loadPendingCount, 5000);
+    });
+    
+    // 신규예약 카운트 로드
+    async function loadPendingCount() {
+      try {
+        const res = await fetch('/pickup/api/pending-count');
+        const data = await res.json();
+        document.getElementById('pendingCount').textContent = data.pending || 0;
+      } catch (error) {
+        console.error('카운트 로드 실패:', error);
+      }
+    }
+    
+    // 신규예약 모달 열기
+    async function showPendingModal() {
+      await loadPendingReservations();
+      pendingModalInstance.show();
+    }
+    
+    // 신규예약 리스트 로드
+    async function loadPendingReservations() {
+      try {
+        const res = await fetch('/pickup/api/pending-reservations');
+        const data = await res.json();
+        
+        // 검수 대기 리스트
+        const pendingList = data.pending || [];
+        const rejectedList = data.rejected || [];
+        
+        document.getElementById('pendingTabCount').textContent = pendingList.length;
+        document.getElementById('rejectedTabCount').textContent = rejectedList.length;
+        
+        // 검수 대기 렌더링
+        if (pendingList.length === 0) {
+          document.getElementById('pendingReservations').innerHTML = `
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+              <p class="mt-2">검수 대기 중인 예약이 없습니다</p>
+            </div>
+          `;
+        } else {
+          document.getElementById('pendingReservations').innerHTML = pendingList.map(p => renderReservationCard(p, 'pending')).join('');
+        }
+        
+        // 미확정 렌더링
+        if (rejectedList.length === 0) {
+          document.getElementById('rejectedReservations').innerHTML = `
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+              <p class="mt-2">미확정 예약이 없습니다</p>
+            </div>
+          `;
+        } else {
+          document.getElementById('rejectedReservations').innerHTML = rejectedList.map(p => renderReservationCard(p, 'rejected')).join('');
+        }
+        
+        loadPendingCount();
+      } catch (error) {
+        console.error('예약 로드 실패:', error);
+        alert('예약 목록을 불러올 수 없습니다.');
+      }
+    }
+    
+    // 예약 카드 렌더링
+    function renderReservationCard(pickup, type) {
+      const isArrival = pickup.record_type === 'arrival';
+      const typeColor = isArrival ? '#f44336' : '#2196f3';
+      const typeBg = isArrival ? '#ffebee' : '#e3f2fd';
+      const typeLabel = isArrival ? '🛬 공항 도착' : '✈️ 공항 출발';
+      
+      const linkedText = pickup.linked_id ? '<small class="text-muted">(연결된 예약)</small>' : '';
+      
+      return `
+        <div class="card mb-3" style="border-left: 4px solid ${typeColor};">
+          <div class="card-body" style="background: ${typeBg};">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h6 class="mb-1" style="color: ${typeColor};">${typeLabel} ${linkedText}</h6>
+                <strong>${pickup.flight_number}</strong> | ${pickup.customer_name}
+              </div>
+              <span class="badge bg-secondary">ID: ${pickup.id}</span>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                📅 ${pickup.display_date} ${pickup.display_time}<br>
+                🏨 ${pickup.hotel_name}<br>
+                👥 ${pickup.passenger_count}명 (성인:${pickup.adult_count}, 소아:${pickup.child_count}, 유아:${pickup.infant_count})<br>
+                🧳 짐 ${pickup.luggage_count}개
+              </div>
+              <div class="col-md-6">
+                📞 ${pickup.phone || '-'}<br>
+                💬 ${pickup.kakao_id || '-'}<br>
+                📝 ${pickup.memo || '-'}
+              </div>
+            </div>
+            
+            <div class="btn-group w-100" role="group">
+              ${type === 'pending' ? `
+                <button class="btn btn-primary" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                  <i class="bi bi-check-circle"></i> 확정 (달력으로)
+                </button>
+                <button class="btn btn-danger" onclick="rejectReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                  <i class="bi bi-x-circle"></i> 미확정
+                </button>
+              ` : `
+                <button class="btn btn-success" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                  <i class="bi bi-arrow-clockwise"></i> 확정으로 변경
+                </button>
+                <button class="btn btn-danger" onclick="deleteReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
+                  <i class="bi bi-trash"></i> 삭제
+                </button>
+              `}
+              <button class="btn btn-warning" onclick="editReservation(${pickup.id})">
+                <i class="bi bi-pencil"></i> 수정
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // 예약 확정 처리
+    async function confirmReservation(id, linkedId) {
+      if (!confirm('이 예약을 확정하시겠습니까?\n\n확정 시 달력에 표시됩니다.')) return;
+      
+      try {
+        const res = await fetch(`/pickup/api/confirm-reservation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, linkedId })
+        });
+        
+        if (res.ok) {
+          alert('✅ 예약이 확정되었습니다!');
+          await loadPendingReservations();
+          loadCalendar(); // 달력 새로고침
+        } else {
+          const error = await res.json();
+          alert('❌ 확정 실패: ' + (error.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('확정 오류:', error);
+        alert('❌ 확정 실패: ' + error.message);
+      }
+    }
+    
+    // 예약 미확정 처리
+    async function rejectReservation(id, linkedId) {
+      const reason = prompt('미확정 사유를 입력하세요 (선택):');
+      
+      try {
+        const res = await fetch(`/pickup/api/reject-reservation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, linkedId, reason })
+        });
+        
+        if (res.ok) {
+          alert('⚠️ 예약이 미확정 처리되었습니다.');
+          loadPendingReservations();
+        } else {
+          const error = await res.json();
+          alert('❌ 처리 실패: ' + (error.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('미확정 오류:', error);
+        alert('❌ 처리 실패: ' + error.message);
+      }
+    }
+    
+    // 예약 삭제
+    async function deleteReservation(id, linkedId) {
+      if (!confirm('이 예약을 완전히 삭제하시겠습니까?\n\n삭제 후 복구할 수 없습니다.')) return;
+      
+      try {
+        const res = await fetch(`/pickup/api/delete-reservation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, linkedId })
+        });
+        
+        if (res.ok) {
+          alert('✅ 예약이 삭제되었습니다.');
+          loadPendingReservations();
+        } else {
+          const error = await res.json();
+          alert('❌ 삭제 실패: ' + (error.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('삭제 오류:', error);
+        alert('❌ 삭제 실패: ' + error.message);
+      }
+    }
+    
+    // 예약 수정 모달 열기
+    async function editReservation(id) {
+      try {
+        const res = await fetch(`/pickup/api/pickup/${id}`);
+        const pickup = await res.json();
+        
+        document.getElementById('editPickupId').value = pickup.id;
+        document.getElementById('editCustomerName').value = pickup.customer_name || '';
+        document.getElementById('editHotelName').value = pickup.hotel_name || '';
+        document.getElementById('editPhone').value = pickup.phone || '';
+        document.getElementById('editKakaoId').value = pickup.kakao_id || '';
+        document.getElementById('editAdultCount').value = pickup.adult_count || 0;
+        document.getElementById('editChildCount').value = pickup.child_count || 0;
+        document.getElementById('editInfantCount').value = pickup.infant_count || 0;
+        document.getElementById('editLuggageCount').value = pickup.luggage_count || 0;
+        document.getElementById('editMemo').value = pickup.memo || '';
+        
+        editReservationModalInstance.show();
+      } catch (error) {
+        console.error('예약 로드 실패:', error);
+        alert('예약 정보를 불러올 수 없습니다.');
+      }
+    }
+    
+    // 예약 수정 저장
+    async function saveReservationEdit() {
+      const id = document.getElementById('editPickupId').value;
+      const data = {
+        customer_name: document.getElementById('editCustomerName').value,
+        hotel_name: document.getElementById('editHotelName').value,
+        phone: document.getElementById('editPhone').value,
+        kakao_id: document.getElementById('editKakaoId').value,
+        adult_count: parseInt(document.getElementById('editAdultCount').value) || 0,
+        child_count: parseInt(document.getElementById('editChildCount').value) || 0,
+        infant_count: parseInt(document.getElementById('editInfantCount').value) || 0,
+        luggage_count: parseInt(document.getElementById('editLuggageCount').value) || 0,
+        memo: document.getElementById('editMemo').value
+      };
+      
+      data.passenger_count = data.adult_count + data.child_count + data.infant_count;
+      
+      try {
+        const res = await fetch(`/pickup/api/pickup/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (res.ok) {
+          alert('✅ 예약이 수정되었습니다.');
+          editReservationModalInstance.hide();
+          loadPendingReservations();
+        } else {
+          const error = await res.json();
+          alert('❌ 수정 실패: ' + (error.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('수정 오류:', error);
+        alert('❌ 수정 실패: ' + error.message);
+      }
     }
   </script>
 </body>
