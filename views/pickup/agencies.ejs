@@ -5,12 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>업체 관리</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body>
   <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>🏢 픽업 업체 관리</h2>
-      <button class="btn btn-primary" onclick="showAddModal()">+ 업체 추가</button>
+      <div>
+        <h2>🏢 픽업 업체 관리</h2>
+        <p class="text-muted mb-0">각 업체는 고유 코드로 직접 예약을 등록할 수 있습니다</p>
+      </div>
+      <div>
+        <button class="btn btn-secondary me-2" onclick="location.href='/pickup'">
+          <i class="bi bi-arrow-left"></i> 픽업 관리로
+        </button>
+        <button class="btn btn-primary" onclick="showAddModal()">+ 업체 추가</button>
+      </div>
     </div>
     
     <div class="table-responsive">
@@ -18,6 +27,7 @@
         <thead>
           <tr>
             <th>업체명</th>
+            <th>업체 코드</th>
             <th>담당자</th>
             <th>연락처</th>
             <th>이메일</th>
@@ -92,6 +102,19 @@
           <td>
             <strong>${a.agency_name}</strong>
             ${!a.is_active ? '<small class="text-muted"> (사용중인 픽업건 있음)</small>' : ''}
+          </td>
+          <td>
+            ${a.agency_code ? `
+              <div class="d-flex align-items-center gap-2">
+                <code class="bg-light px-2 py-1 rounded" style="font-size: 1.1rem; font-weight: bold;">${a.agency_code}</code>
+                <button class="btn btn-sm btn-outline-primary" onclick="copyCode('${a.agency_code}')" title="코드 복사">
+                  <i class="bi bi-clipboard"></i>
+                </button>
+                <a href="/pickup/agency/${a.agency_code}" target="_blank" class="btn btn-sm btn-outline-success" title="예약 페이지 열기">
+                  <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+              </div>
+            ` : '<small class="text-muted">코드 없음</small>'}
           </td>
           <td>${a.contact_person || '-'}</td>
           <td>${a.phone || '-'}</td>
@@ -206,6 +229,16 @@
         console.error('활성화 오류:', error);
         alert('❌ 활성화 실패: ' + error.message);
       }
+    }
+    
+    // 업체 코드 복사
+    function copyCode(code) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert(`✅ 업체 코드 "${code}" 가 복사되었습니다!\n\n업체에게 이 코드를 알려주세요.`);
+      }).catch(err => {
+        console.error('복사 실패:', err);
+        prompt('코드를 복사하세요:', code);
+      });
     }
   </script>
 </body>

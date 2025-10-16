@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= agencyName %> - 픽업 예약 관리</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .header-brand {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 0;
+      margin-bottom: 30px;
+    }
+    .pickup-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      transition: all 0.2s;
+    }
+    .pickup-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="header-brand">
+    <div class="container">
+      <h2><i class="bi bi-building"></i> <%= agencyName %></h2>
+      <p class="mb-0">픽업 예약 관리 시스템 | 업체 코드: <code class="bg-light text-dark px-2 py-1 rounded"><%= agencyCode %></code></p>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 탭 -->
+    <ul class="nav nav-tabs mb-3" id="portalTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="new-tab" data-bs-toggle="tab" data-bs-target="#new" type="button">
+          <i class="bi bi-plus-circle"></i> 새 예약 등록
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="list-tab" data-bs-toggle="tab" data-bs-target="#list" type="button">
+          <i class="bi bi-list-ul"></i> 예약 내역 <span class="badge bg-primary" id="totalCount">0</span>
+        </button>
+      </li>
+    </ul>
+
+    <!-- 탭 내용 -->
+    <div class="tab-content" id="portalTabContent">
+      <!-- 새 예약 등록 -->
+      <div class="tab-pane fade show active" id="new" role="tabpanel">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title mb-4"><i class="bi bi-plus-circle"></i> 새 픽업 예약 등록</h5>
+            
+            <form id="pickupForm">
+              <!-- 픽업 타입 -->
+              <div class="mb-3">
+                <label class="form-label">픽업 타입 *</label>
+                <select class="form-select" id="pickupType" required>
+                  <option value="arrival">공항 도착 → 호텔</option>
+                  <option value="departure">호텔 → 공항 출발</option>
+                </select>
+              </div>
+
+              <!-- 항공편 정보 -->
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">출발일 *</label>
+                  <input type="date" class="form-control" id="flightDate" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">편명 *</label>
+                  <input type="text" class="form-control" id="flightNumber" placeholder="예: KE111" required>
+                </div>
+              </div>
+
+              <!-- 고객 정보 -->
+              <h6 class="mt-4">👤 고객 정보</h6>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">고객명 *</label>
+                  <input type="text" class="form-control" id="customerName" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">호텔 *</label>
+                  <input type="text" class="form-control" id="hotelName" required>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">연락처</label>
+                  <input type="text" class="form-control" id="phone">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">카톡ID</label>
+                  <input type="text" class="form-control" id="kakaoId">
+                </div>
+              </div>
+
+              <!-- 인원 -->
+              <h6 class="mt-4">👥 인원</h6>
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">성인</label>
+                  <input type="number" class="form-control" id="adultCount" min="0" value="0">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">소아</label>
+                  <input type="number" class="form-control" id="childCount" min="0" value="0">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">유아</label>
+                  <input type="number" class="form-control" id="infantCount" min="0" value="0">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label">짐</label>
+                  <input type="number" class="form-control" id="luggageCount" min="0" value="0">
+                </div>
+              </div>
+
+              <!-- 메모 -->
+              <div class="mb-3">
+                <label class="form-label">메모</label>
+                <textarea class="form-control" id="memo" rows="3"></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg w-100">
+                <i class="bi bi-check-circle"></i> 예약 등록
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- 예약 내역 -->
+      <div class="tab-pane fade" id="list" role="tabpanel">
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">출발일 검색</label>
+                <input type="date" class="form-control" id="searchDate">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">고객명 검색</label>
+                <input type="text" class="form-control" id="searchName" placeholder="고객명 입력">
+              </div>
+              <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="loadPickups()">
+                  <i class="bi bi-search"></i> 검색
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="pickupsList">
+          <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+            <p class="mt-2">검색 버튼을 클릭하여 예약 내역을 조회하세요</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const AGENCY_CODE = '<%= agencyCode %>';
+    const AGENCY_ID = <%= agencyId %>;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPickups();
+    });
+
+    // 예약 등록
+    document.getElementById('pickupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = {
+        pickup_type: document.getElementById('pickupType').value,
+        flight_date: document.getElementById('flightDate').value,
+        flight_number: document.getElementById('flightNumber').value.toUpperCase(),
+        customer_name: document.getElementById('customerName').value,
+        hotel_name: document.getElementById('hotelName').value,
+        phone: document.getElementById('phone').value,
+        kakao_id: document.getElementById('kakaoId').value,
+        adult_count: parseInt(document.getElementById('adultCount').value) || 0,
+        child_count: parseInt(document.getElementById('childCount').value) || 0,
+        infant_count: parseInt(document.getElementById('infantCount').value) || 0,
+        luggage_count: parseInt(document.getElementById('luggageCount').value) || 0,
+        memo: document.getElementById('memo').value,
+        agency_id: AGENCY_ID
+      };
+
+      try {
+        const res = await fetch('/pickup/api/agency-register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          alert('✅ 예약이 등록되었습니다!');
+          document.getElementById('pickupForm').reset();
+          loadPickups();
+          // 예약 내역 탭으로 전환
+          document.getElementById('list-tab').click();
+        } else {
+          alert('❌ 등록 실패: ' + (result.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('등록 오류:', error);
+        alert('❌ 등록 실패: ' + error.message);
+      }
+    });
+
+    // 예약 내역 조회
+    async function loadPickups() {
+      try {
+        const searchDate = document.getElementById('searchDate').value;
+        const searchName = document.getElementById('searchName').value;
+
+        let url = `/pickup/api/agency-pickups?agency_id=${AGENCY_ID}`;
+        if (searchDate) url += `&date=${searchDate}`;
+        if (searchName) url += `&name=${encodeURIComponent(searchName)}`;
+
+        const res = await fetch(url);
+        const pickups = await res.json();
+
+        document.getElementById('totalCount').textContent = pickups.length;
+
+        if (pickups.length === 0) {
+          document.getElementById('pickupsList').innerHTML = `
+            <div class="text-center text-muted py-5">
+              <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+              <p class="mt-2">예약 내역이 없습니다</p>
+            </div>
+          `;
+          return;
+        }
+
+        document.getElementById('pickupsList').innerHTML = pickups.map(p => {
+          const isArrival = p.record_type === 'arrival';
+          const typeColor = isArrival ? '#f44336' : '#2196f3';
+          const typeBg = isArrival ? '#ffebee' : '#e3f2fd';
+          const typeLabel = isArrival ? '🛬 공항 도착' : '✈️ 공항 출발';
+
+          return `
+            <div class="pickup-card" style="border-left: 4px solid ${typeColor}; background: ${typeBg};">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h6 class="mb-1" style="color: ${typeColor};">${typeLabel}</h6>
+                  <strong>${p.flight_number}</strong> | ${p.customer_name}
+                </div>
+                <span class="badge ${p.vehicle_ready ? 'bg-success' : 'bg-warning'}" style="font-size: 0.9rem;">
+                  ${p.vehicle_ready ? '✅ 차량배정' : '⏳ 대기중'}
+                </span>
+              </div>
+              <div class="text-muted small">
+                📅 ${p.display_date} ${p.display_time}<br>
+                🏨 ${p.hotel_name}<br>
+                👥 ${p.passenger_count}명 (성인:${p.adult_count}, 소아:${p.child_count}, 유아:${p.infant_count})<br>
+                ${p.memo ? `📝 ${p.memo}` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('조회 오류:', error);
+        document.getElementById('pickupsList').innerHTML = `
+          <div class="alert alert-danger">
+            조회 실패: ${error.message}
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

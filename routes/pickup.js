@@ -1142,4 +1142,186 @@ router.delete('/api/closed-dates/by-date/:date', async (req, res) => {
   }
 });
 
+// ==================== 업체 포털 ====================
+
+// 업체용 예약 페이지
+router.get('/agency/:code', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { code } = req.params;
+  
+  try {
+    const result = await pool.query(
+      `SELECT id, agency_name, agency_code FROM pickup_agencies WHERE agency_code = $1 AND is_active = true`,
+      [code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).send('유효하지 않은 업체 코드입니다.');
+    }
+    
+    const agency = result.rows[0];
+    res.render('pickup/agency-portal', {
+      agencyId: agency.id,
+      agencyName: agency.agency_name,
+      agencyCode: agency.agency_code
+    });
+  } catch (error) {
+    console.error('❌ 업체 포털 로드 실패:', error);
+    res.status(500).send('서버 오류가 발생했습니다.');
+  }
+});
+
+// API: 업체가 예약 등록
+router.post('/api/agency-register', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const {
+    pickup_type, flight_date, flight_number,
+    customer_name, hotel_name, phone, kakao_id, memo,
+    adult_count, child_count, infant_count, luggage_count,
+    agency_id
+  } = req.body;
+  
+  try {
+    // 항공편 정보 조회
+    const flights = await getFlights(pool);
+    const flight = flights[flight_number];
+    
+    if (!flight) {
+      return res.status(400).json({ error: '유효하지 않은 편명입니다' });
+    }
+    
+    const passenger_count = (adult_count || 0) + (child_count || 0) + (infant_count || 0);
+    
+    // 도착일시 계산
+    const isToGuam = flight.arrival_airport === 'GUM';
+    const depTZ = isToGuam ? '+09:00' : '+10:00';
+    const arrTZ = isToGuam ? 10 : 9;
+    
+    const depDateTime = new Date(`${flight_date}T${flight.time}:00${depTZ}`);
+    const arrMillis = depDateTime.getTime() + (flight.hours * 3600000);
+    const arrDateTime = new Date(arrMillis);
+    
+    const utcHours = arrDateTime.getUTCHours();
+    const utcMinutes = arrDateTime.getUTCMinutes();
+    const utcDate = arrDateTime.getUTCDate();
+    const utcMonth = arrDateTime.getUTCMonth();
+    const utcYear = arrDateTime.getUTCFullYear();
+    
+    let arrHours = utcHours + arrTZ;
+    let arrDateObj = new Date(Date.UTC(utcYear, utcMonth, utcDate));
+    
+    if (arrHours >= 24) {
+      arrHours -= 24;
+      arrDateObj.setUTCDate(arrDateObj.getUTCDate() + 1);
+    }
+    
+    const arrivalDate = arrDateObj.toISOString().split('T')[0];
+    const arrivalTime = String(arrHours).padStart(2, '0') + ':' + String(utcMinutes).padStart(2, '0');
+    
+    // 공통 데이터
+    const baseData = {
+      pickup_type, flight_number, customer_name, hotel_name, phone, kakao_id, memo,
+      adult_count, child_count, infant_count, luggage_count, passenger_count, agency_id,
+      status: 'active'
+    };
+    
+    // 1. 출발 레코드
+    const depData = {
+      ...baseData,
+      departure_date: flight_date,
+      departure_time: flight.time,
+      departure_airport: flight.departure_airport,
+      arrival_date: arrivalDate,
+      arrival_time: arrivalTime,
+      arrival_airport: flight.arrival_airport,
+      record_type: 'departure',
+      display_date: flight_date,
+      display_time: flight.time
+    };
+    
+    const depColumns = Object.keys(depData).join(', ');
+    const depValues = Object.values(depData);
+    const depPlaceholders = depValues.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const depResult = await pool.query(
+      `INSERT INTO airport_pickups (${depColumns}) VALUES (${depPlaceholders}) RETURNING *`,
+      depValues
+    );
+    
+    // 2. 도착 레코드
+    const arrivalData = {
+      ...baseData,
+      departure_date: flight_date,
+      departure_time: flight.time,
+      departure_airport: flight.departure_airport,
+      arrival_date: arrivalDate,
+      arrival_time: arrivalTime,
+      arrival_airport: flight.arrival_airport,
+      record_type: 'arrival',
+      display_date: arrivalDate,
+      display_time: flight.arrival_time,
+      linked_id: depResult.rows[0].id
+    };
+    
+    const arrColumns = Object.keys(arrivalData).join(', ');
+    const arrValues = Object.values(arrivalData);
+    const arrPlaceholders = arrValues.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const arrResult = await pool.query(
+      `INSERT INTO airport_pickups (${arrColumns}) VALUES (${arrPlaceholders}) RETURNING *`,
+      arrValues
+    );
+    
+    // linked_id 양방향 연결
+    await pool.query(
+      `UPDATE airport_pickups SET linked_id = $1 WHERE id = $2`,
+      [arrResult.rows[0].id, depResult.rows[0].id]
+    );
+    
+    res.json({ 
+      success: true, 
+      departure: depResult.rows[0],
+      arrival: arrResult.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ 업체 예약 등록 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 업체 예약 내역 조회
+router.get('/api/agency-pickups', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { agency_id, date, name } = req.query;
+  
+  try {
+    let query = `
+      SELECT * FROM airport_pickups 
+      WHERE agency_id = $1 AND status = 'active'
+    `;
+    const params = [agency_id];
+    let paramIndex = 2;
+    
+    if (date) {
+      query += ` AND display_date = $${paramIndex}`;
+      params.push(date);
+      paramIndex++;
+    }
+    
+    if (name) {
+      query += ` AND customer_name ILIKE $${paramIndex}`;
+      params.push(`%${name}%`);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY display_date DESC, display_time DESC`;
+    
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ 업체 예약 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
