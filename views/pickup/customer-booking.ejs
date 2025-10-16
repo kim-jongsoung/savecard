@@ -315,19 +315,33 @@
     // 항공편 로드
     async function loadFlights() {
       try {
+        console.log('항공편 데이터 로딩 시작...');
         const res = await fetch('/pickup/api/flights/all');
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
         const flights = await res.json();
+        console.log('항공편 데이터:', flights);
         
         const select = $('#flightNumber');
         select.html('<option value="">편명을 선택하세요</option>');
         
+        let gumFlightsCount = 0;
+        
         // 괌 출발 항공편만 필터링
         Object.keys(flights).forEach(flightNum => {
           const flight = flights[flightNum];
+          console.log(`편명 ${flightNum}:`, flight);
+          
           if (flight.departure_airport === 'GUM') {
             select.append(`<option value="${flightNum}">${flightNum} (${flight.time} 출발)</option>`);
+            gumFlightsCount++;
           }
         });
+        
+        console.log(`괌 출발 항공편 ${gumFlightsCount}개 로드 완료`);
         
         // Select2 초기화
         select.select2({
@@ -336,8 +350,13 @@
           allowClear: true,
           width: '100%'
         });
+        
+        if (gumFlightsCount === 0) {
+          alert('⚠️ 현재 이용 가능한 괌 출발 항공편이 없습니다.\n관리자에게 문의해주세요.');
+        }
       } catch (error) {
-        console.error('항공편 로드 실패:', error);
+        console.error('❌ 항공편 로드 실패:', error);
+        alert('항공편 정보를 불러올 수 없습니다.\n페이지를 새로고침해주세요.');
       }
     }
     
