@@ -383,6 +383,18 @@
       return grouped;
     }
     
+    // 공항 코드를 도시 이름으로 변환
+    function getAirportName(code) {
+      const airportNames = {
+        'ICN': '인천',
+        'GMP': '김포',
+        'PUS': '부산',
+        'CJU': '제주',
+        'GUM': '괌'
+      };
+      return airportNames[code] || code;
+    }
+    
     // 예약 카드 렌더링 (왕복 통합)
     function renderPickupCard(p) {
       const hasRoundtrip = p.arrival_record;
@@ -403,13 +415,15 @@
         const arrival = p.arrival_record;
         const depAirport = p.departure_airport || 'GUM';
         const arrAirport = p.arrival_airport || 'ICN';
+        const depCity = getAirportName(depAirport);
+        const arrCity = getAirportName(arrAirport);
         
         return `
           <div class="pickup-card" style="border-left: 4px solid #9c27b0; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); box-shadow: 0 2px 6px rgba(156,39,176,0.2);">
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div>
                 <h5 class="mb-1" style="color: #9c27b0; font-size: 1.1rem;">
-                  <i class="bi bi-arrow-left-right"></i> <strong>${depAirport} ⇄ ${arrAirport}</strong> 왕복
+                  <i class="bi bi-airplane-engines"></i> <strong>${depCity}출발</strong>
                 </h5>
                 <div class="mt-2">
                   <span class="badge bg-primary me-2">✈️ ${p.flight_number}</span>
@@ -421,7 +435,7 @@
             
             <!-- 출발편 -->
             <div class="alert alert-info mb-2 p-2" style="background: #e3f2fd; border-left: 3px solid #2196f3;">
-              <strong style="color: #1976d2;">📤 출발편 (${depAirport} → ${arrAirport})</strong><br>
+              <strong style="color: #1976d2;">✈️ ${depCity}출발</strong><br>
               <small class="text-muted">
                 📅 ${p.display_date} ${p.display_time}<br>
                 🏨 ${p.hotel_name}<br>
@@ -431,7 +445,7 @@
             
             <!-- 도착편 -->
             <div class="alert alert-danger mb-2 p-2" style="background: #ffebee; border-left: 3px solid #f44336;">
-              <strong style="color: #c62828;">📥 도착편 (${arrAirport} → ${depAirport})</strong><br>
+              <strong style="color: #c62828;">🛬 ${arrCity}도착</strong><br>
               <small class="text-muted">
                 📅 ${arrival.display_date} ${arrival.display_time}<br>
                 🏨 ${arrival.hotel_name}<br>
@@ -451,7 +465,9 @@
         const typeIcon = isArrival ? '🛬' : '✈️';
         const depAirport = p.departure_airport || 'GUM';
         const arrAirport = p.arrival_airport || 'ICN';
-        const typeLabel = isArrival ? `${arrAirport} → ${depAirport} 도착` : `${depAirport} → ${arrAirport} 출발`;
+        const depCity = getAirportName(depAirport);
+        const arrCity = getAirportName(arrAirport);
+        const typeLabel = isArrival ? `${arrCity}도착` : `${depCity}출발`;
 
         return `
           <div class="pickup-card" style="border-left: 4px solid ${typeColor}; background: ${typeBg};">
