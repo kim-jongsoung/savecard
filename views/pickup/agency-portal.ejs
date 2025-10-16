@@ -196,16 +196,29 @@
         <div class="card mb-3">
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">출발일 검색</label>
-                <input type="date" class="form-control" id="searchDate">
+              <div class="col-md-3">
+                <label class="form-label">출발일 (시작)</label>
+                <input type="date" class="form-control" id="searchDateFrom" onkeypress="handleSearchEnter(event)">
               </div>
-              <div class="col-md-4">
-                <label class="form-label">고객명 검색</label>
-                <input type="text" class="form-control" id="searchName" placeholder="고객명 입력">
+              <div class="col-md-3">
+                <label class="form-label">출발일 (종료)</label>
+                <input type="date" class="form-control" id="searchDateTo" onkeypress="handleSearchEnter(event)">
               </div>
-              <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-primary w-100" onclick="loadPickups()">
+              <div class="col-md-2">
+                <label class="form-label">고객명</label>
+                <input type="text" class="form-control" id="searchName" placeholder="고객명 입력" onkeypress="handleSearchEnter(event)">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">상태</label>
+                <select class="form-select" id="searchStatus" onkeypress="handleSearchEnter(event)">
+                  <option value="">전체</option>
+                  <option value="pending">검수대기</option>
+                  <option value="confirmed">확정</option>
+                  <option value="settled">정산완료</option>
+                </select>
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="loadPickups(1)">
                   <i class="bi bi-search"></i> 검색
                 </button>
               </div>
@@ -219,6 +232,11 @@
             <p class="mt-2">검색 버튼을 클릭하여 예약 내역을 조회하세요</p>
           </div>
         </div>
+        
+        <!-- 페이지네이션 -->
+        <nav aria-label="예약 목록 페이지네이션" id="paginationNav" style="display: none;">
+          <ul class="pagination justify-content-center" id="pagination"></ul>
+        </nav>
       </div>
     </div>
   </div>
@@ -317,21 +335,37 @@
       }
     });
 
-    // 예약 내역 조회
-    async function loadPickups() {
+    // 엔터키로 검색 실행
+    function handleSearchEnter(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        loadPickups(1);
+      }
+    }
+    
+    // 예약 내역 조회 (페이지네이션)
+    let allPickups = []; // 전체 예약 데이터
+    const itemsPerPage = 15;
+    
+    async function loadPickups(page = 1) {
       try {
-        const searchDate = document.getElementById('searchDate').value;
+        const searchDateFrom = document.getElementById('searchDateFrom').value;
+        const searchDateTo = document.getElementById('searchDateTo').value;
         const searchName = document.getElementById('searchName').value;
+        const searchStatus = document.getElementById('searchStatus').value;
 
         let url = `/pickup/api/agency-pickups?agency_id=${AGENCY_ID}`;
-        if (searchDate) url += `&date=${searchDate}`;
+        if (searchDateFrom) url += `&dateFrom=${searchDateFrom}`;
+        if (searchDateTo) url += `&dateTo=${searchDateTo}`;
         if (searchName) url += `&name=${encodeURIComponent(searchName)}`;
+        if (searchStatus) url += `&status=${searchStatus}`;
 
         const res = await fetch(url);
         const pickups = await res.json();
         
         // 왕복 예약 그룹화
         const groupedPickups = groupLinkedReservations(pickups);
+        allPickups = groupedPickups;
 
         document.getElementById('totalCount').textContent = groupedPickups.length;
 
@@ -342,10 +376,12 @@
               <p class="mt-2">예약 내역이 없습니다</p>
             </div>
           `;
+          document.getElementById('paginationNav').style.display = 'none';
           return;
         }
 
-        document.getElementById('pickupsList').innerHTML = groupedPickups.map(p => renderPickupCard(p)).join('');
+        // 페이지네이션 적용
+        renderPage(page);
 
       } catch (error) {
         console.error('조회 오류:', error);
@@ -355,6 +391,84 @@
           </div>
         `;
       }
+    }
+    
+    // 페이지 렌더링
+    function renderPage(page) {
+      const totalPages = Math.ceil(allPickups.length / itemsPerPage);
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pagePickups = allPickups.slice(startIndex, endIndex);
+      
+      // 예약 카드 렌더링
+      document.getElementById('pickupsList').innerHTML = pagePickups.map(p => renderPickupCard(p)).join('');
+      
+      // 페이지네이션 렌더링
+      if (totalPages > 1) {
+        renderPagination(page, totalPages);
+        document.getElementById('paginationNav').style.display = 'block';
+      } else {
+        document.getElementById('paginationNav').style.display = 'none';
+      }
+    }
+    
+    // 페이지네이션 UI 렌더링
+    function renderPagination(currentPage, totalPages) {
+      const pagination = document.getElementById('pagination');
+      let html = '';
+      
+      // 이전 버튼
+      html += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="loadPickupsPage(${currentPage - 1}); return false;">이전</a>
+        </li>
+      `;
+      
+      // 페이지 번호
+      const maxVisible = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      
+      if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+      }
+      
+      if (startPage > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadPickupsPage(1); return false;">1</a></li>`;
+        if (startPage > 2) {
+          html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        html += `
+          <li class="page-item ${i === currentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadPickupsPage(${i}); return false;">${i}</a>
+          </li>
+        `;
+      }
+      
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadPickupsPage(${totalPages}); return false;">${totalPages}</a></li>`;
+      }
+      
+      // 다음 버튼
+      html += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+          <a class="page-link" href="#" onclick="loadPickupsPage(${currentPage + 1}); return false;">다음</a>
+        </li>
+      `;
+      
+      pagination.innerHTML = html;
+    }
+    
+    // 페이지 이동
+    function loadPickupsPage(page) {
+      renderPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
     // 연결된 예약 그룹화 (출발+도착을 하나로)

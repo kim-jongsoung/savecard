@@ -1291,10 +1291,10 @@ router.post('/api/agency-register', async (req, res) => {
   }
 });
 
-// API: 업체 예약 내역 조회 (모든 상태 포함)
+// API: 업체 예약 내역 조회 (검색 필터 지원)
 router.get('/api/agency-pickups', async (req, res) => {
   const pool = req.app.locals.pool;
-  const { agency_id, date, name } = req.query;
+  const { agency_id, dateFrom, dateTo, name, status } = req.query;
   
   try {
     let query = `
@@ -1304,16 +1304,36 @@ router.get('/api/agency-pickups', async (req, res) => {
     const params = [agency_id];
     let paramIndex = 2;
     
-    if (date) {
-      query += ` AND display_date = $${paramIndex}`;
-      params.push(date);
+    // 출발일 기간 검색 (시작일)
+    if (dateFrom) {
+      query += ` AND display_date >= $${paramIndex}`;
+      params.push(dateFrom);
       paramIndex++;
     }
     
+    // 출발일 기간 검색 (종료일)
+    if (dateTo) {
+      query += ` AND display_date <= $${paramIndex}`;
+      params.push(dateTo);
+      paramIndex++;
+    }
+    
+    // 고객명 검색
     if (name) {
       query += ` AND customer_name ILIKE $${paramIndex}`;
       params.push(`%${name}%`);
       paramIndex++;
+    }
+    
+    // 상태 검색
+    if (status) {
+      if (status === 'settled') {
+        query += ` AND settlement_status = 'completed'`;
+      } else {
+        query += ` AND confirmation_status = $${paramIndex}`;
+        params.push(status);
+        paramIndex++;
+      }
     }
     
     query += ` ORDER BY display_date DESC, display_time DESC`;
