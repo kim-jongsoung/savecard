@@ -999,4 +999,125 @@ router.get('/api/calendar', async (req, res) => {
   }
 });
 
+// API: 마감날짜 목록 조회
+router.get('/api/closed-dates', async (req, res) => {
+  const pool = req.app.locals.pool;
+  try {
+    const result = await pool.query(`
+      SELECT * FROM pickup_closed_dates 
+      ORDER BY closed_date DESC
+    `);
+    res.json({ closedDates: result.rows });
+  } catch (error) {
+    console.error('❌ 마감날짜 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 특정 날짜 마감 여부 확인
+router.get('/api/closed-dates/check', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { date } = req.query;
+  
+  try {
+    const result = await pool.query(`
+      SELECT * FROM pickup_closed_dates 
+      WHERE closed_date = $1
+    `, [date]);
+    
+    res.json({ 
+      isClosed: result.rows.length > 0,
+      data: result.rows[0] || null
+    });
+  } catch (error) {
+    console.error('❌ 마감날짜 확인 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 마감날짜 등록
+router.post('/api/closed-dates', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { closed_date, reason } = req.body;
+  
+  if (!closed_date) {
+    return res.status(400).json({ error: '마감날짜를 입력해주세요' });
+  }
+  
+  try {
+    const result = await pool.query(`
+      INSERT INTO pickup_closed_dates (closed_date, reason, created_by)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [closed_date, reason || '', req.session?.username || 'admin']);
+    
+    res.json({ 
+      success: true, 
+      data: result.rows[0],
+      message: '마감날짜가 등록되었습니다'
+    });
+  } catch (error) {
+    console.error('❌ 마감날짜 등록 실패:', error);
+    
+    // 중복 날짜 에러 처리
+    if (error.code === '23505') {
+      res.status(400).json({ error: '이미 마감 처리된 날짜입니다' });
+    } else {
+      res.status(500).json({ error: error.message });
+    }
+  }
+});
+
+// API: 마감날짜 삭제 (마감 해제)
+router.delete('/api/closed-dates/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      DELETE FROM pickup_closed_dates 
+      WHERE id = $1
+      RETURNING closed_date
+    `, [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '마감날짜를 찾을 수 없습니다' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `${result.rows[0].closed_date} 마감이 해제되었습니다` 
+    });
+  } catch (error) {
+    console.error('❌ 마감날짜 삭제 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 날짜로 마감날짜 삭제 (마감 해제)
+router.delete('/api/closed-dates/by-date/:date', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { date } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      DELETE FROM pickup_closed_dates 
+      WHERE closed_date = $1
+      RETURNING *
+    `, [date]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '마감날짜를 찾을 수 없습니다' });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `${date} 마감이 해제되었습니다` 
+    });
+  } catch (error) {
+    console.error('❌ 마감날짜 삭제 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

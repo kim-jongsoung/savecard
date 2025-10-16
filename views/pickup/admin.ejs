@@ -14,6 +14,8 @@
     .calendar-day { border: 1px solid #ddd; padding: 8px; border-radius: 8px; min-height: 200px; max-height: 200px; overflow-y: auto; }
     .calendar-day.has-pickup { background: #fafafa; border-color: #2196f3; border-width: 2px; }
     .calendar-day.today { background: #fff3cd; border-color: #ff9800; font-weight: bold; border-width: 2px; }
+    .calendar-day.closed { background: #ffe0e0; border-color: #dc3545; border-width: 2px; position: relative; }
+    .calendar-day.closed::before { content: '🚫 마감'; position: absolute; top: 5px; right: 5px; font-size: 10px; color: #dc3545; font-weight: bold; background: white; padding: 2px 5px; border-radius: 3px; }
     .calendar-header { font-weight: bold; text-align: center; padding: 10px; background: #667eea; color: white; border-radius: 4px; }
     .calendar-date { font-size: 16px; font-weight: bold; margin-bottom: 5px; position: sticky; top: 0; background: white; z-index: 10; padding: 3px 0; }
     .pickup-item { font-size: 11px; padding: 4px 6px; margin: 3px 0; border-radius: 4px; cursor: pointer; border-left: 3px solid; transition: all 0.2s; }
@@ -22,6 +24,7 @@
     .pickup-departure { background: #fce4ec; border-left-color: #e91e63; color: #c2185b; }
     .pickup-early { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left-color: #fbbf24; color: white; }
     .day-summary { font-size: 10px; color: #666; margin-bottom: 5px; padding: 2px 4px; background: #f0f0f0; border-radius: 3px; }
+    .date-input-warning { border: 2px solid #dc3545 !important; background: #ffe0e0 !important; }
   </style>
 </head>
 <body>
@@ -37,6 +40,9 @@
         </button>
         <button class="btn btn-outline-secondary me-2" onclick="location.href='/pickup/agencies'">
           <i class="bi bi-building"></i> 업체 관리
+        </button>
+        <button class="btn btn-outline-warning me-2" onclick="showClosedDatesModal()">
+          <i class="bi bi-calendar-x"></i> 마감날짜 관리
         </button>
         <button class="btn btn-success me-2" onclick="showAddModal()">
           <i class="bi bi-plus-circle"></i> 새 예약 등록
@@ -136,6 +142,58 @@
     </div>
   </div>
   
+  <!-- 마감날짜 관리 모달 -->
+  <div class="modal fade" id="closedDatesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">🚫 마감날짜 관리</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- 마감날짜 등록 폼 -->
+          <div class="card mb-3">
+            <div class="card-header bg-danger text-white">
+              <h6 class="mb-0">새 마감날짜 등록</h6>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <label class="form-label">마감날짜 *</label>
+                  <input type="date" class="form-control" id="newClosedDate" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">사유</label>
+                  <input type="text" class="form-control" id="closedReason" placeholder="예: 차량 부족, 연휴 등">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                  <button class="btn btn-danger w-100" onclick="addClosedDate()">
+                    <i class="bi bi-plus-circle"></i> 등록
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 마감날짜 목록 -->
+          <div class="card">
+            <div class="card-header bg-secondary text-white">
+              <h6 class="mb-0">마감날짜 목록</h6>
+            </div>
+            <div class="card-body">
+              <div id="closedDatesList" class="list-group">
+                <div class="text-center text-muted py-3">로딩중...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <!-- 등록 모달 -->
   <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -151,7 +209,11 @@
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label">출발일 *</label>
-                <input type="date" class="form-control" id="flightDate" onchange="autoCalculate()" required>
+                <input type="date" class="form-control" id="flightDate" onchange="checkClosedDate()" required>
+                <div id="closedDateWarning" class="alert alert-danger mt-2" style="display:none;">
+                  <strong>⚠️ 마감된 날짜입니다!</strong><br>
+                  <span id="closedDateReason"></span>
+                </div>
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">편명 *</label>
@@ -239,19 +301,23 @@
     let addModalInstance;
     let detailModalInstance;
     let dayViewModalInstance;
+    let closedDatesModalInstance;
     let currentCalendarYear = new Date().getFullYear();
     let currentCalendarMonth = new Date().getMonth() + 1;
     let currentPickupData = null;
     let currentDayViewDate = null;
     let allPickups = {}; // ID별 예약 데이터 저장
+    let closedDatesCache = []; // 마감날짜 캐시
     
     // 페이지 로드
     document.addEventListener('DOMContentLoaded', () => {
       addModalInstance = new bootstrap.Modal(document.getElementById('addModal'));
       detailModalInstance = new bootstrap.Modal(document.getElementById('detailModal'));
       dayViewModalInstance = new bootstrap.Modal(document.getElementById('dayViewModal'));
+      closedDatesModalInstance = new bootstrap.Modal(document.getElementById('closedDatesModal'));
       loadFlights();
       loadAgencies();
+      loadClosedDates(); // 마감날짜 로드
       loadCalendar(); // 달력을 기본으로 로드
     });
     
@@ -763,12 +829,18 @@
         const hasPickup = dayPickups.departures.length > 0 || dayPickups.arrivals.length > 0 || dayPickups.hotelPickups.length > 0;
         const isToday = dateStr === today;
         
+        // 마감날짜 확인
+        const isClosed = closedDatesCache.some(item => {
+          const itemDate = new Date(item.closed_date).toISOString().split('T')[0];
+          return itemDate === dateStr;
+        });
+        
         // 통계 계산
         const totalCount = dayPickups.departures.length + dayPickups.arrivals.length + dayPickups.hotelPickups.length;
         const totalPax = [...dayPickups.departures, ...dayPickups.arrivals, ...dayPickups.hotelPickups]
           .reduce((sum, p) => sum + (p.passenger_count || 0), 0);
         
-        html += `<div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''}">`;
+        html += `<div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''} ${isClosed ? 'closed' : ''}">`;
         html += `<div class="calendar-date">${day}일</div>`;
         
         // 요약
@@ -938,6 +1010,165 @@
           window.location.href = '/pickup/login';
         }
       }
+    }
+    
+    // 마감날짜 관리 모달 열기
+    function showClosedDatesModal() {
+      loadClosedDatesList();
+      closedDatesModalInstance.show();
+    }
+    
+    // 마감날짜 목록 로드 (캐시)
+    async function loadClosedDates() {
+      try {
+        const res = await fetch('/pickup/api/closed-dates');
+        const data = await res.json();
+        closedDatesCache = data.closedDates || [];
+        console.log('✅ 마감날짜 로드 완료:', closedDatesCache.length, '건');
+      } catch (error) {
+        console.error('❌ 마감날짜 로드 실패:', error);
+      }
+    }
+    
+    // 마감날짜 목록 표시
+    async function loadClosedDatesList() {
+      try {
+        await loadClosedDates(); // 최신 데이터 로드
+        
+        const container = document.getElementById('closedDatesList');
+        
+        if (closedDatesCache.length === 0) {
+          container.innerHTML = '<div class="text-center text-muted py-3">등록된 마감날짜가 없습니다</div>';
+          return;
+        }
+        
+        let html = '';
+        closedDatesCache.forEach(item => {
+          const date = new Date(item.closed_date);
+          const dateStr = date.toISOString().split('T')[0];
+          const displayDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+          
+          html += `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong class="text-danger">🚫 ${displayDate}</strong>
+                ${item.reason ? `<br><small class="text-muted">${item.reason}</small>` : ''}
+              </div>
+              <button class="btn btn-sm btn-outline-danger" onclick="removeClosedDate(${item.id}, '${dateStr}')">
+                <i class="bi bi-trash"></i> 해제
+              </button>
+            </div>
+          `;
+        });
+        
+        container.innerHTML = html;
+      } catch (error) {
+        console.error('❌ 마감날짜 목록 로드 실패:', error);
+        document.getElementById('closedDatesList').innerHTML = 
+          '<div class="alert alert-danger">목록을 불러올 수 없습니다</div>';
+      }
+    }
+    
+    // 마감날짜 등록
+    async function addClosedDate() {
+      const dateInput = document.getElementById('newClosedDate');
+      const reasonInput = document.getElementById('closedReason');
+      
+      const date = dateInput.value;
+      const reason = reasonInput.value;
+      
+      if (!date) {
+        alert('마감날짜를 선택해주세요');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/pickup/api/closed-dates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ closed_date: date, reason })
+        });
+        
+        if (res.ok) {
+          const result = await res.json();
+          alert('✅ ' + result.message);
+          
+          // 입력 초기화
+          dateInput.value = '';
+          reasonInput.value = '';
+          
+          // 목록 새로고침
+          await loadClosedDatesList();
+          
+          // 달력 새로고침
+          loadCalendar();
+        } else {
+          const err = await res.json();
+          alert('❌ ' + err.error);
+        }
+      } catch (error) {
+        alert('❌ 오류: ' + error.message);
+      }
+    }
+    
+    // 마감날짜 삭제 (해제)
+    async function removeClosedDate(id, dateStr) {
+      if (!confirm(`${dateStr} 마감을 해제하시겠습니까?`)) return;
+      
+      try {
+        const res = await fetch(`/pickup/api/closed-dates/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (res.ok) {
+          const result = await res.json();
+          alert('✅ ' + result.message);
+          
+          // 목록 새로고침
+          await loadClosedDatesList();
+          
+          // 달력 새로고침
+          loadCalendar();
+        } else {
+          const err = await res.json();
+          alert('❌ ' + err.error);
+        }
+      } catch (error) {
+        alert('❌ 오류: ' + error.message);
+      }
+    }
+    
+    // 출발일 선택 시 마감 체크
+    async function checkClosedDate() {
+      const dateInput = document.getElementById('flightDate');
+      const warning = document.getElementById('closedDateWarning');
+      const reasonSpan = document.getElementById('closedDateReason');
+      
+      const selectedDate = dateInput.value;
+      
+      if (!selectedDate) {
+        warning.style.display = 'none';
+        dateInput.classList.remove('date-input-warning');
+        return;
+      }
+      
+      // 캐시에서 확인
+      const closedItem = closedDatesCache.find(item => {
+        const itemDate = new Date(item.closed_date).toISOString().split('T')[0];
+        return itemDate === selectedDate;
+      });
+      
+      if (closedItem) {
+        dateInput.classList.add('date-input-warning');
+        warning.style.display = 'block';
+        reasonSpan.textContent = closedItem.reason ? `사유: ${closedItem.reason}` : '예약 마감된 날짜입니다';
+      } else {
+        dateInput.classList.remove('date-input-warning');
+        warning.style.display = 'none';
+      }
+      
+      // 자동 계산도 함께 실행
+      autoCalculate();
     }
   </script>
 </body>
