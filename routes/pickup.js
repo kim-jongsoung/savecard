@@ -1708,7 +1708,9 @@ router.get('/api/schedule/:date', async (req, res) => {
         pa.agency_name
       FROM airport_pickups ap
       LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
-      WHERE ap.display_date = $1 AND ap.status = 'active'
+      WHERE ap.display_date = $1 
+        AND ap.status = 'active'
+        AND ap.record_type IN ('arrival', 'departure')
       ORDER BY ap.display_time, ap.id
     `, [date]);
     
