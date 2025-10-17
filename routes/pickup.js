@@ -806,11 +806,38 @@ router.get('/login', (req, res) => {
   });
 });
 
-// 픽업 로그인 처리 (POST) - 관리자 로그인 API 재사용
+// 픽업 로그인 처리 (POST)
 router.post('/login', async (req, res) => {
-  // 실제 인증은 /admin/login API를 재사용
-  // 프론트엔드에서 fetch로 처리
-  res.redirect('/pickup');
+  const { username, password } = req.body;
+  
+  // 환경변수에서 관리자 계정 확인
+  const adminUsername = process.env.ADMIN_USERNAME || 'luxfind01';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'vasco01@';
+  
+  if (username === adminUsername && password === adminPassword) {
+    // 세션 설정
+    req.session.admin = {
+      username: username,
+      loginTime: new Date()
+    };
+    
+    // 세션 저장 후 리다이렉트
+    req.session.save((err) => {
+      if (err) {
+        console.error('세션 저장 실패:', err);
+        return res.render('pickup/login', {
+          title: '공항픽업 관리 시스템',
+          error: '로그인 처리 중 오류가 발생했습니다.'
+        });
+      }
+      res.redirect('/pickup/schedule');
+    });
+  } else {
+    res.render('pickup/login', {
+      title: '공항픽업 관리 시스템',
+      error: '아이디 또는 비밀번호가 올바르지 않습니다.'
+    });
+  }
 });
 
 // API: 기사 화면

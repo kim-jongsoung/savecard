@@ -262,56 +262,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
+        // 로그인 버튼 로딩 효과
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
             const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            
-            // 로딩 상태
             submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner-border spinner-border-sm me-2"></i>로그인 중...';
             submitBtn.disabled = true;
-            
-            try {
-                const response = await fetch('/admin/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('서버 응답 오류');
-                }
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    // 성공 시 픽업 대시보드로 리다이렉트
-                    submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>로그인 성공!';
-                    setTimeout(() => {
-                        window.location.href = '/pickup';
-                    }, 500);
-                } else {
-                    alert(result.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
-                    submitBtn.innerHTML = originalText;
-                    submitBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('로그인 오류:', error);
-                alert('로그인 처리 중 오류가 발생했습니다.');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
         });
     </script>
 </body>
