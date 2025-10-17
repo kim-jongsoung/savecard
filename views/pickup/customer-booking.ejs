@@ -330,16 +330,19 @@
         
         let gumFlightsCount = 0;
         
-        // 괌 출발 항공편만 필터링
-        Object.keys(flights).forEach(flightNum => {
-          const flight = flights[flightNum];
-          console.log(`편명 ${flightNum}:`, flight);
-          
-          if (flight.departure_airport === 'GUM') {
-            select.append(`<option value="${flightNum}">${flightNum} (${flight.time} 출발)</option>`);
-            gumFlightsCount++;
-          }
-        });
+        // 배열로 받은 항공편 데이터 처리
+        if (Array.isArray(flights)) {
+          // 괌 출발 항공편만 필터링
+          flights.forEach(flight => {
+            console.log(`편명 ${flight.flight_number}:`, flight);
+            
+            if (flight.departure_airport === 'GUM' && flight.is_active) {
+              const departureTime = flight.departure_time ? flight.departure_time.substring(0, 5) : '';
+              select.append(`<option value="${flight.flight_number}">${flight.flight_number} (${departureTime} 출발)</option>`);
+              gumFlightsCount++;
+            }
+          });
+        }
         
         console.log(`괌 출발 항공편 ${gumFlightsCount}개 로드 완료`);
         
