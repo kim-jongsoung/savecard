@@ -1866,6 +1866,15 @@ router.delete('/api/manual-pickup/:id', async (req, res) => {
 
 // ==================== 스케줄 페이지 라우트 ====================
 
+// 공개 스케줄 페이지 (로그인 불필요) - 먼저 정의!
+router.get('/schedule/public/:date?', (req, res) => {
+  const date = req.params.date || 'today';
+  res.render('pickup/schedule-public', { 
+    title: 'HKT Daily Schedule',
+    initialDate: date
+  });
+});
+
 // 관리자 스케줄 페이지 (로그인 필요)
 router.get('/schedule', (req, res) => {
   if (!req.session || !req.session.admin) {
@@ -1874,15 +1883,6 @@ router.get('/schedule', (req, res) => {
   res.render('pickup/schedule', { 
     title: 'Pickup Schedule Management',
     admin: req.session.admin
-  });
-});
-
-// 공개 스케줄 페이지 (로그인 불필요)
-router.get('/schedule/public/:date?', (req, res) => {
-  const date = req.params.date || 'today';
-  res.render('pickup/schedule-public', { 
-    title: 'HKT Daily Schedule',
-    initialDate: date
   });
 });
 
