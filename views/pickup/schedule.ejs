@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HKT 픽업 스케줄 관리</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    
+    .header .date-display {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .nav-buttons button {
+      background: rgba(255,255,255,0.2);
+      border: 2px solid white;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .nav-buttons button:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.05);
+    }
+    
+    .input-section {
+      background: #f8f9fa;
+      padding: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .input-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: white;
+      cursor: pointer;
+      border-radius: 5px 5px 0 0;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .tab-btn.active {
+      background: #667eea;
+      color: white;
+    }
+    
+    .tab-content {
+      background: white;
+      padding: 20px;
+      border-radius: 0 5px 5px 5px;
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .ai-parse-area {
+      width: 100%;
+      min-height: 100px;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 5px;
+      font-size: 14px;
+      font-family: monospace;
+      resize: vertical;
+    }
+    
+    .ai-parse-area:focus {
+      border-color: #667eea;
+      outline: none;
+    }
+    
+    .manual-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .form-group label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: #555;
+    }
+    
+    .form-group input,
+    .form-group select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: #667eea;
+      outline: none;
+    }
+    
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 10px;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .info-bar {
+      background: #f8f9fa;
+      padding: 20px;
+      border-bottom: 2px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .summary {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .summary-item {
+      background: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: 2px solid #e0e0e0;
+    }
+    
+    .summary-item strong {
+      color: #667eea;
+      font-size: 20px;
+    }
+    
+    .edit-hint {
+      color: #666;
+      font-size: 14px;
+      font-style: italic;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+      padding: 20px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    
+    thead {
+      background: #6B8E23;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    th {
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+      border-right: 1px solid rgba(255,255,255,0.2);
+      white-space: nowrap;
+    }
+    
+    th:last-child {
+      border-right: none;
+    }
+    
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: middle;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    td.editable:hover {
+      background: #fff3cd;
+    }
+    
+    td input {
+      width: 100%;
+      padding: 6px;
+      border: 2px solid #667eea;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+    
+    tbody tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .status-badge:hover {
+      transform: scale(1.1);
+    }
+    
+    .status-contacted {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .time-col {
+      font-weight: bold;
+      font-size: 15px;
+      color: #667eea;
+    }
+    
+    .source-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: bold;
+      margin-left: 5px;
+    }
+    
+    .source-system {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+    
+    .source-manual {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+    
+    .delete-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.3s;
+    }
+    
+    .delete-btn:hover {
+      background: #c82333;
+      transform: scale(1.05);
+    }
+    
+    .delete-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    
+    .empty-state h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: #667eea;
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      padding: 15px 25px;
+      border-radius: 5px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .toast.error {
+      background: #dc3545;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚗 HKT 픽업 스케줄 관리</h1>
+      <div class="date-display" id="dateDisplay">Loading...</div>
+      <div class="nav-buttons">
+        <button onclick="changeDate(-1)">◀ Prev Day</button>
+        <button onclick="goToday()">📅 Today</button>
+        <button onclick="changeDate(1)">Next Day ▶</button>
+      </div>
+    </div>
+    
+    <div class="input-section">
+      <div class="input-tabs">
+        <button class="tab-btn active" onclick="switchTab('ai')">🤖 AI 파싱 추가</button>
+        <button class="tab-btn" onclick="switchTab('manual')">✏️ 수동 입력</button>
+      </div>
+      
+      <div id="aiTab" class="tab-content active">
+        <textarea 
+          id="aiParseText" 
+          class="ai-parse-area" 
+          placeholder="픽업 정보를 붙여넣으세요...&#10;&#10;예시:&#10;2월 2일 15:00 힐튼호텔 김철수 3명 K5 12가3456 3시간&#10;KE111 도착 공항→힐튼&#10;연락처: 010-1234-5678"
+        ></textarea>
+        <button class="btn-primary" onclick="parseAndAdd()">🤖 AI 파싱하여 추가</button>
+      </div>
+      
+      <div id="manualTab" class="tab-content">
+        <div class="manual-form">
+          <div class="form-group">
+            <label>픽업 날짜 *</label>
+            <input type="date" id="manualDate" required>
+          </div>
+          <div class="form-group">
+            <label>픽업 시간 *</label>
+            <input type="time" id="manualTime" required>
+          </div>
+          <div class="form-group">
+            <label>호텔명</label>
+            <input type="text" id="manualHotel" placeholder="Hilton">
+          </div>
+          <div class="form-group">
+            <label>고객명 *</label>
+            <input type="text" id="manualName" required placeholder="김철수">
+          </div>
+          <div class="form-group">
+            <label>영문명</label>
+            <input type="text" id="manualEngName" placeholder="KIM CHUL SOO">
+          </div>
+          <div class="form-group">
+            <label>인원</label>
+            <input type="number" id="manualPerson" placeholder="3">
+          </div>
+          <div class="form-group">
+            <label>차량명 (VEHICLE)</label>
+            <input type="text" id="manualVehicle" placeholder="K5">
+          </div>
+          <div class="form-group">
+            <label>차량번호 (NUM)</label>
+            <input type="text" id="manualNumber" placeholder="12가3456">
+          </div>
+          <div class="form-group">
+            <label>대여시간 (DER)</label>
+            <input type="text" id="manualDuration" placeholder="3시간">
+          </div>
+          <div class="form-group">
+            <label>항공편</label>
+            <input type="text" id="manualFlight" placeholder="KE111">
+          </div>
+          <div class="form-group">
+            <label>연락처</label>
+            <input type="text" id="manualPhone" placeholder="010-1234-5678">
+          </div>
+          <div class="form-group">
+            <label>비고</label>
+            <input type="text" id="manualRemark" placeholder="특이사항">
+          </div>
+        </div>
+        <button class="btn-primary" onclick="addManualPickup()">➕ 수동 추가</button>
+      </div>
+    </div>
+    
+    <div class="info-bar">
+      <div class="summary" id="summary">
+        <div class="summary-item">Total: <strong id="totalCount">0</strong></div>
+        <div class="summary-item">✅ Contacted: <strong id="contactedCount">0</strong></div>
+        <div class="summary-item">⏳ Pending: <strong id="pendingCount">0</strong></div>
+        <div class="summary-item">👥 Passengers: <strong id="passengerCount">0</strong></div>
+      </div>
+      <div class="edit-hint">💡 셀을 클릭하면 수정할 수 있습니다</div>
+    </div>
+    
+    <div id="loadingIndicator" class="loading">
+      Loading schedule...
+    </div>
+    
+    <div class="table-container" id="tableContainer" style="display: none;">
+      <table>
+        <thead>
+          <tr>
+            <th>STATUS</th>
+            <th>TIME</th>
+            <th>HOTEL</th>
+            <th>PERSON</th>
+            <th>VEHICLE</th>
+            <th>NUM</th>
+            <th>DER</th>
+            <th>NAME</th>
+            <th>ENG NAME</th>
+            <th>CONTACT</th>
+            <th>FLIGHT</th>
+            <th>AGENCY</th>
+            <th>PAY</th>
+            <th>REQUEST</th>
+            <th>REMARK</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleBody">
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <h2>📭 No pickups scheduled for this date</h2>
+      <p>Add pickups using AI parsing or manual input above</p>
+    </div>
+  </div>
+
+  <script>
+    let currentDate = new Date().toISOString().split('T')[0];
+    let editingCell = null;
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSchedule(currentDate);
+      // 오늘 날짜 자동 설정
+      document.getElementById('manualDate').value = currentDate;
+    });
+    
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      if (tab === 'ai') {
+        document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+        document.getElementById('aiTab').classList.add('active');
+      } else {
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        document.getElementById('manualTab').classList.add('active');
+      }
+    }
+    
+    function changeDate(days) {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() + days);
+      currentDate = date.toISOString().split('T')[0];
+      loadSchedule(currentDate);
+    }
+    
+    function goToday() {
+      currentDate = new Date().toISOString().split('T')[0];
+      loadSchedule(currentDate);
+    }
+    
+    async function loadSchedule(date) {
+      try {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        const response = await fetch(`/pickup/api/schedule/${date}`);
+        const data = await response.json();
+        
+        updateDateDisplay(date);
+        updateSummary(data.summary);
+        
+        if (data.pickups && data.pickups.length > 0) {
+          renderScheduleTable(data.pickups);
+          document.getElementById('tableContainer').style.display = 'block';
+        } else {
+          document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'none';
+        
+      } catch (error) {
+        console.error('스케줄 로드 실패:', error);
+        showToast('스케줄 로드 실패', 'error');
+      }
+    }
+    
+    function updateDateDisplay(dateStr) {
+      const date = new Date(dateStr);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = days[date.getDay()];
+      document.getElementById('dateDisplay').textContent = `${dateStr} (${dayName})`;
+    }
+    
+    function updateSummary(summary) {
+      document.getElementById('totalCount').textContent = summary.total || 0;
+      document.getElementById('contactedCount').textContent = summary.contacted || 0;
+      document.getElementById('pendingCount').textContent = summary.pending || 0;
+      document.getElementById('passengerCount').textContent = summary.total_passengers || 0;
+    }
+    
+    function renderScheduleTable(pickups) {
+      const tbody = document.getElementById('scheduleBody');
+      tbody.innerHTML = '';
+      
+      pickups.forEach(pickup => {
+        const row = document.createElement('tr');
+        row.dataset.id = pickup.id;
+        row.dataset.source = pickup.pickup_source;
+        
+        const statusClass = pickup.contact_status === 'CONTACTED' ? 'status-contacted' : 'status-pending';
+        const statusText = pickup.contact_status === 'CONTACTED' ? 'CONTACTED' : 'PENDING';
+        
+        const sourceClass = pickup.pickup_source === 'manual' ? 'source-manual' : 'source-system';
+        const sourceText = pickup.pickup_source === 'manual' ? '✏️ Manual' : 'System';
+        
+        const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
+        const rentalVehicle = pickup.rental_vehicle || '-';
+        const rentalNumber = pickup.rental_number || '-';
+        const rentalDuration = pickup.rental_duration || '-';
+        
+        let flightWithRoute = pickup.flight_number || '-';
+        if (pickup.flight_number && pickup.hotel_name) {
+          if (pickup.record_type === 'departure') {
+            flightWithRoute = `${pickup.flight_number} (${pickup.hotel_name} → AIRPORT)`;
+          } else if (pickup.record_type === 'arrival') {
+            flightWithRoute = `${pickup.flight_number} (AIRPORT → ${pickup.hotel_name})`;
+          }
+        }
+        
+        const canDelete = pickup.pickup_source === 'manual' && pickup.record_type === 'manual';
+        
+        row.innerHTML = `
+          <td onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </td>
+          <td class="time-col editable" data-field="actual_pickup_time">${timeDisplay.substring(0, 5)}</td>
+          <td class="editable" data-field="hotel_name">${pickup.hotel_name || '-'}</td>
+          <td class="editable" data-field="passenger_count">${pickup.passenger_count || '-'}</td>
+          <td class="editable" data-field="rental_vehicle">${rentalVehicle}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td class="editable" data-field="rental_number">${rentalNumber}</td>
+          <td class="editable" data-field="rental_duration">${rentalDuration}</td>
+          <td>${pickup.customer_name || '-'}</td>
+          <td>${pickup.english_name || '-'}</td>
+          <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
+          <td>${flightWithRoute}</td>
+          <td>${pickup.agency_name || '-'}</td>
+          <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
+          <td>${pickup.special_request || '-'}</td>
+          <td class="editable" data-field="remark">${pickup.remark || ''}</td>
+          <td>
+            <button class="delete-btn" onclick="deletePickup(${pickup.id})" ${!canDelete ? 'disabled' : ''}>
+              ${canDelete ? '❌' : '🔒'}
+            </button>
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+      
+      // 편집 가능한 셀에 이벤트 추가
+      document.querySelectorAll('td.editable').forEach(cell => {
+        cell.addEventListener('click', function() {
+          makeEditable(this);
+        });
+      });
+    }
+    
+    function makeEditable(cell) {
+      if (editingCell) return;
+      
+      editingCell = cell;
+      const currentValue = cell.textContent.trim();
+      const field = cell.dataset.field;
+      const row = cell.closest('tr');
+      const id = row.dataset.id;
+      
+      // 배지 제거
+      const badge = cell.querySelector('.source-badge');
+      const cleanValue = badge ? currentValue.replace(badge.textContent, '').trim() : currentValue;
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = cleanValue === '-' ? '' : cleanValue;
+      
+      input.addEventListener('blur', async function() {
+        const newValue = this.value.trim();
+        await updateField(id, field, newValue);
+        editingCell = null;
+      });
+      
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          this.blur();
+        }
+      });
+      
+      cell.innerHTML = '';
+      cell.appendChild(input);
+      input.focus();
+    }
+    
+    async function updateField(id, field, value) {
+      try {
+        const response = await fetch(`/pickup/api/${id}/update-field`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ field, value })
+        });
+        
+        if (response.ok) {
+          showToast('수정되었습니다');
+          loadSchedule(currentDate);
+        } else {
+          throw new Error('Update failed');
+        }
+      } catch (error) {
+        showToast('수정 실패', 'error');
+        loadSchedule(currentDate);
+      }
+    }
+    
+    async function toggleStatus(id, currentStatus) {
+      const newStatus = currentStatus === 'CONTACTED' ? 'PENDING' : 'CONTACTED';
+      await updateField(id, 'contact_status', newStatus);
+    }
+    
+    async function parseAndAdd() {
+      const text = document.getElementById('aiParseText').value.trim();
+      if (!text) {
+        showToast('텍스트를 입력해주세요', 'error');
+        return;
+      }
+      
+      // 향후 OpenAI API 연동
+      showToast('AI 파싱 기능은 곧 구현됩니다', 'error');
+    }
+    
+    async function addManualPickup() {
+      const data = {
+        pickup_date: document.getElementById('manualDate').value,
+        pickup_time: document.getElementById('manualTime').value,
+        hotel_name: document.getElementById('manualHotel').value,
+        customer_name: document.getElementById('manualName').value,
+        english_name: document.getElementById('manualEngName').value,
+        passenger_count: document.getElementById('manualPerson').value,
+        rental_vehicle: document.getElementById('manualVehicle').value,
+        rental_number: document.getElementById('manualNumber').value,
+        rental_duration: document.getElementById('manualDuration').value,
+        flight_number: document.getElementById('manualFlight').value,
+        phone: document.getElementById('manualPhone').value,
+        remark: document.getElementById('manualRemark').value
+      };
+      
+      if (!data.pickup_date || !data.pickup_time || !data.customer_name) {
+        showToast('필수 항목을 입력해주세요', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/pickup/api/manual-pickup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          showToast('픽업이 추가되었습니다');
+          clearManualForm();
+          loadSchedule(currentDate);
+        } else {
+          throw new Error('Add failed');
+        }
+      } catch (error) {
+        showToast('추가 실패', 'error');
+      }
+    }
+    
+    async function deletePickup(id) {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      
+      try {
+        const response = await fetch(`/pickup/api/manual-pickup/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          showToast('삭제되었습니다');
+          loadSchedule(currentDate);
+        } else {
+          const result = await response.json();
+          throw new Error(result.error || 'Delete failed');
+        }
+      } catch (error) {
+        showToast(error.message || '삭제 실패', 'error');
+      }
+    }
+    
+    function clearManualForm() {
+      document.getElementById('manualHotel').value = '';
+      document.getElementById('manualName').value = '';
+      document.getElementById('manualEngName').value = '';
+      document.getElementById('manualPerson').value = '';
+      document.getElementById('manualVehicle').value = '';
+      document.getElementById('manualNumber').value = '';
+      document.getElementById('manualDuration').value = '';
+      document.getElementById('manualFlight').value = '';
+      document.getElementById('manualPhone').value = '';
+      document.getElementById('manualRemark').value = '';
+    }
+    
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
