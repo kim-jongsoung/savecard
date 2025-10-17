@@ -1657,4 +1657,219 @@ router.put('/api/pickup/:id', async (req, res) => {
   }
 });
 
+// ==================== 스케줄 관리 API ====================
+
+// API: 통합 스케줄 조회 (시스템 + 수동)
+router.get('/api/schedule/:date', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { date } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id, pickup_source, pickup_type, route_type, record_type,
+        display_date, display_time, actual_pickup_time,
+        departure_date, departure_time, arrival_date, arrival_time,
+        departure_airport, arrival_airport, flight_number,
+        customer_name, english_name, phone, kakao_id,
+        passenger_count, adult_count, child_count, infant_count, luggage_count,
+        hotel_name, agency_id,
+        contact_status, driver_name, driver_vehicle,
+        payment_status, special_request, remark,
+        status, created_at
+      FROM airport_pickups
+      WHERE display_date = $1 AND status = 'active'
+      ORDER BY display_time, id
+    `, [date]);
+    
+    // 통계 계산
+    const pickups = result.rows;
+    const summary = {
+      total: pickups.length,
+      contacted: pickups.filter(p => p.contact_status === 'CONTACTED').length,
+      pending: pickups.filter(p => p.contact_status === 'PENDING').length,
+      total_passengers: pickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0)
+    };
+    
+    res.json({
+      date,
+      pickups,
+      summary
+    });
+  } catch (error) {
+    console.error('❌ 스케줄 조회 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: AI 파싱
+router.post('/api/parse-manual', async (req, res) => {
+  const { raw_text } = req.body;
+  
+  if (!raw_text) {
+    return res.status(400).json({ error: '파싱할 텍스트가 필요합니다' });
+  }
+  
+  try {
+    // OpenAI 파싱 (나중에 구현)
+    // 지금은 간단한 응답만
+    res.json({
+      success: true,
+      data: {
+        pickup_time: null,
+        customer_name: null,
+        route_type: null,
+        phone: null,
+        passenger_count: null
+      },
+      message: 'AI 파싱 기능은 다음 단계에서 구현됩니다'
+    });
+  } catch (error) {
+    console.error('❌ AI 파싱 오류:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 수동 픽업 추가
+router.post('/api/manual-pickup', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const {
+    pickup_date,
+    pickup_time,
+    route_type,
+    customer_name,
+    english_name,
+    phone,
+    passenger_count,
+    adult_count,
+    child_count,
+    infant_count,
+    luggage_count,
+    driver_name,
+    driver_vehicle,
+    flight_number,
+    remark,
+    parsed_by
+  } = req.body;
+  
+  try {
+    const result = await pool.query(`
+      INSERT INTO airport_pickups (
+        pickup_source, pickup_type, route_type,
+        display_date, display_time, actual_pickup_time,
+        customer_name, english_name, phone,
+        passenger_count, adult_count, child_count, infant_count, luggage_count,
+        driver_name, driver_vehicle, flight_number, remark,
+        contact_status, status, parsed_by,
+        record_type
+      ) VALUES (
+        'manual', 'other', $1,
+        $2, $3, $3,
+        $4, $5, $6,
+        $7, $8, $9, $10, $11,
+        $12, $13, $14, $15,
+        'PENDING', 'active', $16,
+        'manual'
+      ) RETURNING *
+    `, [
+      route_type, pickup_date, pickup_time,
+      customer_name, english_name, phone,
+      passenger_count || 0, adult_count || 0, child_count || 0, infant_count || 0, luggage_count || 0,
+      driver_name, driver_vehicle, flight_number, remark,
+      parsed_by || 'manual'
+    ]);
+    
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('❌ 수동 픽업 추가 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 필드 업데이트 (인라인 편집)
+router.put('/api/:id/update-field', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  const { field, value } = req.body;
+  
+  // 허용된 필드만 업데이트
+  const allowedFields = [
+    'contact_status', 'actual_pickup_time', 'driver_name', 'driver_vehicle',
+    'payment_status', 'remark', 'phone', 'passenger_count'
+  ];
+  
+  if (!allowedFields.includes(field)) {
+    return res.status(400).json({ error: '허용되지 않은 필드입니다' });
+  }
+  
+  try {
+    // linked_id가 있으면 함께 업데이트
+    const linkedResult = await pool.query(
+      'SELECT linked_id FROM airport_pickups WHERE id = $1',
+      [id]
+    );
+    
+    const query = `UPDATE airport_pickups SET ${field} = $1, updated_at = NOW() WHERE id = $2`;
+    await pool.query(query, [value, id]);
+    
+    // 연결된 레코드도 업데이트
+    if (linkedResult.rows[0]?.linked_id) {
+      await pool.query(query, [value, linkedResult.rows[0].linked_id]);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 필드 업데이트 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API: 수동 픽업 삭제
+router.delete('/api/manual-pickup/:id', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  
+  try {
+    // 수동 픽업만 삭제 가능
+    const result = await pool.query(
+      `UPDATE airport_pickups 
+       SET status = 'cancelled', updated_at = NOW()
+       WHERE id = $1 AND pickup_source = 'manual' AND record_type = 'manual'
+       RETURNING *`,
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: '수동 픽업만 삭제할 수 있습니다' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 삭제 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== 스케줄 페이지 라우트 ====================
+
+// 관리자 스케줄 페이지 (로그인 필요)
+router.get('/schedule', (req, res) => {
+  if (!req.session || !req.session.admin) {
+    return res.redirect('/pickup/login');
+  }
+  res.render('pickup/schedule', { 
+    title: 'Pickup Schedule Management',
+    admin: req.session.admin
+  });
+});
+
+// 공개 스케줄 페이지 (로그인 불필요)
+router.get('/schedule/public/:date?', (req, res) => {
+  const date = req.params.date || 'today';
+  res.render('pickup/schedule-public', { 
+    title: 'HKT Daily Schedule',
+    initialDate: date
+  });
+});
+
 module.exports = router;

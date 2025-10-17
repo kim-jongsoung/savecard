@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HKT Daily Pickup Schedule</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    
+    .header .date-display {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .nav-buttons button {
+      background: rgba(255,255,255,0.2);
+      border: 2px solid white;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .nav-buttons button:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.05);
+    }
+    
+    .info-bar {
+      background: #f8f9fa;
+      padding: 20px;
+      border-bottom: 2px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .summary {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .summary-item {
+      background: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      border: 2px solid #e0e0e0;
+    }
+    
+    .summary-item strong {
+      color: #667eea;
+      font-size: 20px;
+    }
+    
+    .last-updated {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+      padding: 20px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    
+    thead {
+      background: #6B8E23;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    
+    th {
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+      border-right: 1px solid rgba(255,255,255,0.2);
+      white-space: nowrap;
+    }
+    
+    th:last-child {
+      border-right: none;
+    }
+    
+    td {
+      padding: 12px 8px;
+      border-bottom: 1px solid #e0e0e0;
+      vertical-align: middle;
+    }
+    
+    tbody tr:hover {
+      background: #f8f9fa;
+      cursor: pointer;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .status-contacted {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .time-col {
+      font-weight: bold;
+      font-size: 16px;
+      color: #667eea;
+    }
+    
+    .source-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 5px;
+    }
+    
+    .source-system {
+      background: #e3f2fd;
+      color: #1976d2;
+    }
+    
+    .source-manual {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    
+    .empty-state h2 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .footer {
+      background: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      border-top: 2px solid #e0e0e0;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      font-size: 18px;
+      color: #667eea;
+    }
+    
+    @media print {
+      .nav-buttons, .footer {
+        display: none;
+      }
+      
+      body {
+        padding: 0;
+      }
+      
+      .container {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚗 HKT Daily Pickup Schedule</h1>
+      <div class="date-display" id="dateDisplay">Loading...</div>
+      <div class="nav-buttons">
+        <button onclick="changeDate(-1)">◀ Prev Day</button>
+        <button onclick="goToday()">📅 Today</button>
+        <button onclick="changeDate(1)">Next Day ▶</button>
+      </div>
+    </div>
+    
+    <div class="info-bar">
+      <div class="summary" id="summary">
+        <div class="summary-item">Total: <strong id="totalCount">0</strong></div>
+        <div class="summary-item">✅ Contacted: <strong id="contactedCount">0</strong></div>
+        <div class="summary-item">⏳ Pending: <strong id="pendingCount">0</strong></div>
+        <div class="summary-item">👥 Passengers: <strong id="passengerCount">0</strong></div>
+      </div>
+      <div class="last-updated" id="lastUpdated">Last updated: ...</div>
+    </div>
+    
+    <div id="loadingIndicator" class="loading">
+      Loading schedule...
+    </div>
+    
+    <div class="table-container" id="tableContainer" style="display: none;">
+      <table>
+        <thead>
+          <tr>
+            <th>STATUS</th>
+            <th>TIME</th>
+            <th>ROUTE</th>
+            <th>PERSON</th>
+            <th>DRIVER/VEHICLE</th>
+            <th>NAME</th>
+            <th>ENG NAME</th>
+            <th>CONTACT</th>
+            <th>FLIGHT</th>
+            <th>HOTEL</th>
+            <th>REMARK</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleBody">
+        </tbody>
+      </table>
+    </div>
+    
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <h2>📭 No pickups scheduled for this date</h2>
+      <p>Check another date using the navigation buttons above</p>
+    </div>
+    
+    <div class="footer">
+      <p>🔗 Bookmark this page for quick access</p>
+      <p>Auto-refresh: Every 30 seconds</p>
+    </div>
+  </div>
+
+  <script>
+    let currentDate = '<%= initialDate %>';
+    let autoRefreshInterval;
+    
+    // 페이지 로드 시 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+      if (currentDate === 'today') {
+        currentDate = getTodayDate();
+      }
+      loadSchedule(currentDate);
+      startAutoRefresh();
+    });
+    
+    // 오늘 날짜 구하기
+    function getTodayDate() {
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    }
+    
+    // 날짜 변경
+    function changeDate(days) {
+      const date = new Date(currentDate);
+      date.setDate(date.getDate() + days);
+      currentDate = date.toISOString().split('T')[0];
+      loadSchedule(currentDate);
+      
+      // URL 업데이트 (히스토리)
+      window.history.pushState({}, '', `/pickup/schedule/public/${currentDate}`);
+    }
+    
+    // 오늘로 이동
+    function goToday() {
+      currentDate = getTodayDate();
+      loadSchedule(currentDate);
+      window.history.pushState({}, '', `/pickup/schedule/public/today`);
+    }
+    
+    // 스케줄 로드
+    async function loadSchedule(date) {
+      try {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        const response = await fetch(`/pickup/api/schedule/${date}`);
+        const data = await response.json();
+        
+        // 날짜 표시 업데이트
+        updateDateDisplay(date);
+        
+        // 통계 업데이트
+        updateSummary(data.summary);
+        
+        // 테이블 업데이트
+        if (data.pickups && data.pickups.length > 0) {
+          renderScheduleTable(data.pickups);
+          document.getElementById('tableContainer').style.display = 'block';
+        } else {
+          document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'none';
+        
+        // 마지막 업데이트 시간
+        updateLastUpdatedTime();
+        
+      } catch (error) {
+        console.error('스케줄 로드 실패:', error);
+        document.getElementById('loadingIndicator').innerHTML = 
+          '<p style="color: red;">❌ Failed to load schedule. Please try again.</p>';
+      }
+    }
+    
+    // 날짜 표시 업데이트
+    function updateDateDisplay(dateStr) {
+      const date = new Date(dateStr);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = days[date.getDay()];
+      document.getElementById('dateDisplay').textContent = 
+        `${dateStr} (${dayName})`;
+    }
+    
+    // 통계 업데이트
+    function updateSummary(summary) {
+      document.getElementById('totalCount').textContent = summary.total || 0;
+      document.getElementById('contactedCount').textContent = summary.contacted || 0;
+      document.getElementById('pendingCount').textContent = summary.pending || 0;
+      document.getElementById('passengerCount').textContent = summary.total_passengers || 0;
+    }
+    
+    // 테이블 렌더링
+    function renderScheduleTable(pickups) {
+      const tbody = document.getElementById('scheduleBody');
+      tbody.innerHTML = '';
+      
+      pickups.forEach(pickup => {
+        const row = document.createElement('tr');
+        
+        // STATUS
+        const statusClass = pickup.contact_status === 'CONTACTED' ? 'status-contacted' : 'status-pending';
+        const statusText = pickup.contact_status === 'CONTACTED' ? 'CONTACTED' : 'PENDING';
+        
+        // SOURCE BADGE
+        const sourceClass = pickup.pickup_source === 'manual' ? 'source-manual' : 'source-system';
+        const sourceText = pickup.pickup_source === 'manual' ? '✏️ Manual' : 'System';
+        
+        // TIME
+        const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
+        
+        // ROUTE
+        const routeDisplay = pickup.route_type || '-';
+        
+        // DRIVER/VEHICLE
+        let driverVehicle = '-';
+        if (pickup.driver_name && pickup.driver_vehicle) {
+          driverVehicle = `${pickup.driver_name} (${pickup.driver_vehicle})`;
+        } else if (pickup.driver_name) {
+          driverVehicle = pickup.driver_name;
+        } else if (pickup.driver_vehicle) {
+          driverVehicle = pickup.driver_vehicle;
+        }
+        
+        row.innerHTML = `
+          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+          <td class="time-col">${timeDisplay.substring(0, 5)}</td>
+          <td>${routeDisplay}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td>${pickup.passenger_count || '-'}</td>
+          <td>${driverVehicle}</td>
+          <td>${pickup.customer_name || '-'}</td>
+          <td>${pickup.english_name || '-'}</td>
+          <td>${pickup.phone ? maskPhone(pickup.phone) : '-'}</td>
+          <td>${pickup.flight_number || '-'}</td>
+          <td>${pickup.hotel_name || '-'}</td>
+          <td>${pickup.remark || ''}</td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+    }
+    
+    // 전화번호 마스킹 (보안)
+    function maskPhone(phone) {
+      if (!phone) return '-';
+      if (phone.length > 4) {
+        return phone.substring(0, phone.length - 4) + '****';
+      }
+      return phone;
+    }
+    
+    // 마지막 업데이트 시간
+    function updateLastUpdatedTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ko-KR');
+      document.getElementById('lastUpdated').textContent = `Last updated: ${timeStr}`;
+    }
+    
+    // 자동 새로고침 (30초마다)
+    function startAutoRefresh() {
+      autoRefreshInterval = setInterval(() => {
+        loadSchedule(currentDate);
+      }, 30000); // 30초
+    }
+    
+    // 페이지 언로드 시 인터벌 정리
+    window.addEventListener('beforeunload', () => {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+    });
+  </script>
+</body>
+</html>
