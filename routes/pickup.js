@@ -1676,6 +1676,7 @@ router.get('/api/schedule/:date', async (req, res) => {
         ap.hotel_name, ap.agency_id,
         ap.contact_status, ap.driver_name, ap.driver_vehicle,
         ap.payment_status, ap.special_request, ap.remark,
+        ap.rental_vehicle, ap.rental_number, ap.rental_duration,
         ap.status, ap.created_at,
         pa.agency_name
       FROM airport_pickups ap
@@ -1750,6 +1751,10 @@ router.post('/api/manual-pickup', async (req, res) => {
     driver_name,
     driver_vehicle,
     flight_number,
+    rental_vehicle,
+    rental_number,
+    rental_duration,
+    hotel_name,
     remark,
     parsed_by
   } = req.body;
@@ -1761,7 +1766,9 @@ router.post('/api/manual-pickup', async (req, res) => {
         display_date, display_time, actual_pickup_time,
         customer_name, english_name, phone,
         passenger_count, adult_count, child_count, infant_count, luggage_count,
-        driver_name, driver_vehicle, flight_number, remark,
+        driver_name, driver_vehicle, flight_number,
+        rental_vehicle, rental_number, rental_duration,
+        hotel_name, remark,
         contact_status, status, parsed_by,
         record_type
       ) VALUES (
@@ -1769,15 +1776,19 @@ router.post('/api/manual-pickup', async (req, res) => {
         $2, $3, $3,
         $4, $5, $6,
         $7, $8, $9, $10, $11,
-        $12, $13, $14, $15,
-        'PENDING', 'active', $16,
+        $12, $13, $14,
+        $15, $16, $17,
+        $18, $19,
+        'PENDING', 'active', $20,
         'manual'
       ) RETURNING *
     `, [
       route_type, pickup_date, pickup_time,
       customer_name, english_name, phone,
       passenger_count || 0, adult_count || 0, child_count || 0, infant_count || 0, luggage_count || 0,
-      driver_name, driver_vehicle, flight_number, remark,
+      driver_name, driver_vehicle, flight_number,
+      rental_vehicle, rental_number, rental_duration,
+      hotel_name, remark,
       parsed_by || 'manual'
     ]);
     
@@ -1797,7 +1808,8 @@ router.put('/api/:id/update-field', async (req, res) => {
   // 허용된 필드만 업데이트
   const allowedFields = [
     'contact_status', 'actual_pickup_time', 'driver_name', 'driver_vehicle',
-    'payment_status', 'remark', 'phone', 'passenger_count'
+    'payment_status', 'remark', 'phone', 'passenger_count',
+    'rental_vehicle', 'rental_number', 'rental_duration', 'hotel_name'
   ];
   
   if (!allowedFields.includes(field)) {
