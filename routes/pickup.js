@@ -1667,19 +1667,21 @@ router.get('/api/schedule/:date', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        id, pickup_source, pickup_type, route_type, record_type,
-        display_date, display_time, actual_pickup_time,
-        departure_date, departure_time, arrival_date, arrival_time,
-        departure_airport, arrival_airport, flight_number,
-        customer_name, english_name, phone, kakao_id,
-        passenger_count, adult_count, child_count, infant_count, luggage_count,
-        hotel_name, agency_id,
-        contact_status, driver_name, driver_vehicle,
-        payment_status, special_request, remark,
-        status, created_at
-      FROM airport_pickups
-      WHERE display_date = $1 AND status = 'active'
-      ORDER BY display_time, id
+        ap.id, ap.pickup_source, ap.pickup_type, ap.route_type, ap.record_type,
+        ap.display_date, ap.display_time, ap.actual_pickup_time,
+        ap.departure_date, ap.departure_time, ap.arrival_date, ap.arrival_time,
+        ap.departure_airport, ap.arrival_airport, ap.flight_number,
+        ap.customer_name, ap.english_name, ap.phone, ap.kakao_id,
+        ap.passenger_count, ap.adult_count, ap.child_count, ap.infant_count, ap.luggage_count,
+        ap.hotel_name, ap.agency_id,
+        ap.contact_status, ap.driver_name, ap.driver_vehicle,
+        ap.payment_status, ap.special_request, ap.remark,
+        ap.status, ap.created_at,
+        pa.agency_name
+      FROM airport_pickups ap
+      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
+      WHERE ap.display_date = $1 AND ap.status = 'active'
+      ORDER BY ap.display_time, ap.id
     `, [date]);
     
     // 통계 계산

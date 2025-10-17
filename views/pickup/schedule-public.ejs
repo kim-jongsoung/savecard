@@ -260,14 +260,17 @@
           <tr>
             <th>STATUS</th>
             <th>TIME</th>
-            <th>ROUTE</th>
+            <th>HOTEL</th>
             <th>PERSON</th>
-            <th>DRIVER/VEHICLE</th>
+            <th>DER VEHICLE</th>
+            <th>NUM</th>
             <th>NAME</th>
             <th>ENG NAME</th>
             <th>CONTACT</th>
             <th>FLIGHT</th>
-            <th>HOTEL</th>
+            <th>AGENCY</th>
+            <th>PAY</th>
+            <th>REQUEST</th>
             <th>REMARK</th>
           </tr>
         </thead>
@@ -409,17 +412,35 @@
           driverVehicle = pickup.driver_vehicle;
         }
         
+        // DER VEHICLE: 경로 정보 표시 (Luke → AIRPORT 형식)
+        const derVehicle = pickup.route_type || driverVehicle;
+        
+        // NUM: 예약 ID
+        const numDisplay = pickup.id || '-';
+        
+        // AGENCY: 업체명 표시
+        const agencyDisplay = pickup.agency_name || '-';
+        
+        // PAY: payment_status
+        const payDisplay = pickup.payment_status || '-';
+        
+        // REQUEST: special_request
+        const requestDisplay = pickup.special_request || '-';
+        
         row.innerHTML = `
           <td><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="time-col">${timeDisplay.substring(0, 5)}</td>
-          <td>${routeDisplay}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td>${pickup.hotel_name || '-'}</td>
           <td>${pickup.passenger_count || '-'}</td>
-          <td>${driverVehicle}</td>
+          <td>${derVehicle}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td>${numDisplay}</td>
           <td>${pickup.customer_name || '-'}</td>
           <td>${pickup.english_name || '-'}</td>
           <td>${pickup.phone ? maskPhone(pickup.phone) : '-'}</td>
           <td>${pickup.flight_number || '-'}</td>
-          <td>${pickup.hotel_name || '-'}</td>
+          <td>${agencyDisplay}</td>
+          <td>${payDisplay}</td>
+          <td>${requestDisplay}</td>
           <td>${pickup.remark || ''}</td>
         `;
         
