@@ -1710,7 +1710,16 @@ router.get('/api/schedule/:date', async (req, res) => {
       LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
       WHERE ap.display_date = $1 
         AND ap.status = 'active'
-        AND ap.record_type IN ('arrival', 'departure')
+        AND (
+          -- 괌 도착편 (한국→괌): 괌 공항 도착만 표시
+          (ap.record_type = 'arrival' AND ap.arrival_airport = 'GUM')
+          OR
+          -- 괌 출발편 (괌→한국): 괌 공항 출발만 표시  
+          (ap.record_type = 'departure' AND ap.departure_airport = 'GUM')
+          OR
+          -- 수동 입력 픽업 (괌 현지 픽업)
+          ap.record_type = 'manual'
+        )
       ORDER BY ap.display_time, ap.id
     `, [date]);
     
