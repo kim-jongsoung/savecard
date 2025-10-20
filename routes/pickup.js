@@ -530,107 +530,106 @@ router.get('/api/agencies', async (req, res) => {
   }
 });
 
-// API: AI 파싱하여 픽업 추가
+// API: AI 파싱하여 픽업 추가 (엑셀 데이터 순서대로)
 router.post('/api/ai-parse', async (req, res) => {
   const pool = req.app.locals.pool;
-  const { text } = req.body;
+  const { text, date } = req.body;
   
   if (!text || text.trim().length === 0) {
     return res.status(400).json({ error: '텍스트를 입력해주세요' });
   }
   
   try {
-    // 간단한 패턴 매칭 파싱 (향후 OpenAI API로 업그레이드 가능)
+    // 날짜 설정: 사용자가 선택한 날짜 또는 오늘 날짜
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    
+    // 엑셀에서 복사한 데이터는 줄바꿈으로 행이 구분되고, 탭으로 열이 구분됨
     const lines = text.split('\n').filter(line => line.trim());
     const pickups = [];
     
     for (const line of lines) {
+      // 탭으로 분리 (엑셀 복사 시 탭으로 구분됨)
+      const columns = line.split('\t').map(col => col.trim());
+      
+      // 엑셀 컬럼 순서: STATUS, TIME, HOTEL, PERSON, DER, VEHICLE, NUM, NAME, ENG NAME, CONTACT, FLIGHT, AGENCY, PAY, REQUEST, REMARK
+      const [
+        status,           // 0: STATUS (연락상태)
+        time,             // 1: TIME (픽업시간)
+        hotel,            // 2: HOTEL (호텔명)
+        person,           // 3: PERSON (인원수)
+        der,              // 4: DER (렌탈시간)
+        vehicle,          // 5: VEHICLE (차량 + 루팅정보)
+        num,              // 6: NUM (차량번호)
+        name,             // 7: NAME (한글명)
+        engName,          // 8: ENG NAME (영문명)
+        contact,          // 9: CONTACT (연락처)
+        flight,           // 10: FLIGHT (항공편)
+        agency,           // 11: AGENCY (업체명)
+        pay,              // 12: PAY (결제상태)
+        request,          // 13: REQUEST (특별요청)
+        remark            // 14: REMARK (비고)
+      ] = columns;
+      
+      // 필수 필드 검증
+      if (!time || !name) {
+        continue; // 시간이나 이름이 없으면 스킵
+      }
+      
+      // vehicle 필드에서 루팅 정보 추출 (예: "K5 (AIRPORT → HOTEL)")
+      let vehicleType = vehicle || '';
+      let routeInfo = '';
+      const routeMatch = vehicle?.match(/\(([^)]+)\)/);
+      if (routeMatch) {
+        routeInfo = routeMatch[1]; // "AIRPORT → HOTEL"
+        vehicleType = vehicle.replace(/\s*\([^)]+\)/, '').trim(); // "K5"
+      }
+      
+      // 업체명으로 agency_id 찾기
+      let agencyId = null;
+      if (agency) {
+        const agencyResult = await pool.query(
+          `SELECT id FROM pickup_agencies WHERE agency_name ILIKE $1 LIMIT 1`,
+          [`%${agency}%`]
+        );
+        if (agencyResult.rows.length > 0) {
+          agencyId = agencyResult.rows[0].id;
+        }
+      }
+      
       const pickup = {
-        pickup_source: 'ai_parsed',
+        pickup_source: 'excel_import',
         record_type: 'manual',
         status: 'active',
-        contact_status: 'pending'
+        contact_status: status || 'pending',
+        display_date: targetDate,
+        actual_pickup_time: time,
+        hotel_name: hotel || null,
+        passenger_count: person ? parseInt(person) : null,
+        rental_duration: der || null,
+        rental_vehicle: vehicleType || null,
+        rental_number: num || null,
+        customer_name: name,
+        english_name: engName || null,
+        phone: contact || null,
+        flight_number: flight || null,
+        agency_id: agencyId,
+        payment_status: pay || null,
+        special_request: request || null,
+        remark: remark || null
       };
       
-      // 날짜 파싱 (10/20, 2025-10-20, 10월 20일 등)
-      const dateMatch = line.match(/(\d{1,2})[\/\-월](\d{1,2})/);
-      if (dateMatch) {
-        const month = dateMatch[1].padStart(2, '0');
-        const day = dateMatch[2].padStart(2, '0');
-        pickup.display_date = `2025-${month}-${day}`;
-      }
-      
-      // 시간 파싱 (15:00, 오후 3시 등)
-      const timeMatch = line.match(/(\d{1,2}):(\d{2})/);
-      if (timeMatch) {
-        pickup.actual_pickup_time = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
-      }
-      
-      // 호텔명 파싱
-      const hotelMatch = line.match(/(힐튼|하얏트|PIC|아웃리거|웨스틴|두짓타니|레오팔래스|니코|롯데|온워드|피쉬아이|타무닝)/i);
-      if (hotelMatch) {
-        pickup.hotel_name = hotelMatch[0];
-      }
-      
-      // 이름 파싱 (한글 2-4자)
-      const nameMatch = line.match(/([가-힣]{2,4})/);
-      if (nameMatch && !pickup.hotel_name) {
-        pickup.customer_name = nameMatch[0];
-      } else if (nameMatch) {
-        pickup.customer_name = nameMatch[0];
-      }
-      
-      // 인원수 파싱
-      const personMatch = line.match(/(\d+)\s*명/);
-      if (personMatch) {
-        pickup.passenger_count = parseInt(personMatch[1]);
-      }
-      
-      // 차량 파싱
-      const vehicleMatch = line.match(/([A-Z]\d)/);
-      if (vehicleMatch) {
-        pickup.rental_vehicle = vehicleMatch[0];
-      }
-      
-      // 차량번호 파싱
-      const numberMatch = line.match(/(\d{2,3}[가-힣]\d{4})/);
-      if (numberMatch) {
-        pickup.rental_number = numberMatch[0];
-      }
-      
-      // 시간(렌탈 시간) 파싱
-      const durationMatch = line.match(/(\d+)\s*시간/);
-      if (durationMatch) {
-        pickup.rental_duration = `${durationMatch[1]}시간`;
-      }
-      
-      // 항공편 파싱
-      const flightMatch = line.match(/(KE|OZ|UA|DL|AA|JL)\s*\d{2,4}/i);
-      if (flightMatch) {
-        pickup.flight_number = flightMatch[0].toUpperCase();
-      }
-      
-      // 연락처 파싱
-      const phoneMatch = line.match(/(\d{2,3}[-\s]?\d{3,4}[-\s]?\d{4})/);
-      if (phoneMatch) {
-        pickup.phone = phoneMatch[0];
-      }
-      
-      // 최소 필수 정보가 있는 경우에만 추가
-      if (pickup.display_date && pickup.customer_name) {
-        pickups.push(pickup);
-      }
+      pickups.push(pickup);
     }
     
     if (pickups.length === 0) {
-      return res.status(400).json({ error: '파싱 가능한 픽업 정보를 찾을 수 없습니다' });
+      return res.status(400).json({ error: '파싱 가능한 데이터가 없습니다. 시간과 이름은 필수입니다.' });
     }
     
     // DB에 저장
     const savedPickups = [];
     for (const pickup of pickups) {
-      const columns = Object.keys(pickup);
-      const values = Object.values(pickup);
+      const columns = Object.keys(pickup).filter(key => pickup[key] !== null);
+      const values = columns.map(key => pickup[key]);
       const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
       
       const result = await pool.query(
@@ -642,11 +641,11 @@ router.post('/api/ai-parse', async (req, res) => {
       savedPickups.push(result.rows[0]);
     }
     
-    console.log(`✅ AI 파싱 완료: ${savedPickups.length}건`);
+    console.log(`✅ 엑셀 데이터 파싱 완료: ${savedPickups.length}건`);
     res.json({ success: true, count: savedPickups.length, data: savedPickups });
     
   } catch (error) {
-    console.error('❌ AI 파싱 실패:', error);
+    console.error('❌ 데이터 파싱 실패:', error);
     res.status(500).json({ error: error.message });
   }
 });

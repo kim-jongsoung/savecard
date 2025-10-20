@@ -410,17 +410,28 @@
     
     <div class="input-section">
       <div class="input-tabs">
-        <button class="tab-btn active" onclick="switchTab('ai')">🤖 AI 파싱 추가</button>
+        <button class="tab-btn active" onclick="switchTab('ai')">📊 엑셀 가져오기</button>
         <button class="tab-btn" onclick="switchTab('manual')">✏️ 수동 입력</button>
       </div>
       
       <div id="aiTab" class="tab-content active">
+        <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
+          📋 <strong>엑셀 데이터 붙여넣기 안내</strong><br>
+          엑셀에서 행 전체를 선택하여 복사(Ctrl+C) 후 아래에 붙여넣기(Ctrl+V)하세요.<br>
+          <strong>컬럼 순서:</strong> STATUS → TIME → HOTEL → PERSON → DER → VEHICLE → NUM → NAME → ENG NAME → CONTACT → FLIGHT → AGENCY → PAY → REQUEST → REMARK<br>
+          <em>※ VEHICLE 컬럼에 "K5 (AIRPORT → HOTEL)" 형식으로 루팅 정보가 포함됩니다.</em>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <label style="font-weight: bold; margin-right: 10px;">픽업 날짜:</label>
+          <input type="date" id="excelImportDate" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+          <span style="margin-left: 10px; color: #666; font-size: 13px;">※ 선택하지 않으면 오늘 날짜로 저장됩니다.</span>
+        </div>
         <textarea 
           id="aiParseText" 
           class="ai-parse-area" 
-          placeholder="픽업 정보를 붙여넣으세요...&#10;&#10;예시:&#10;2월 2일 15:00 힐튼호텔 김철수 3명 K5 12가3456 3시간&#10;KE111 도착 공항→힐튼&#10;연락처: 010-1234-5678"
+          placeholder="엑셀에서 복사한 데이터를 여기에 붙여넣으세요...&#10;&#10;예시 (탭으로 구분):&#10;pending	15:00	힐튼호텔	3	3시간	K5 (AIRPORT→HOTEL)	12가3456	김철수	KIM CS	010-1234-5678	KE111	한국투어	미결제	휠체어 필요	비고사항"
         ></textarea>
-        <button class="btn-primary" onclick="parseAndAdd()">🤖 AI 파싱하여 추가</button>
+        <button class="btn-primary" onclick="parseAndAdd()">📊 엑셀 데이터 추가</button>
       </div>
       
       <div id="manualTab" class="tab-content">
@@ -835,31 +846,37 @@
     async function parseAndAdd() {
       const text = document.getElementById('aiParseText').value.trim();
       if (!text) {
-        showToast('텍스트를 입력해주세요', 'error');
+        showToast('엑셀 데이터를 붙여넣어주세요', 'error');
         return;
       }
       
+      const selectedDate = document.getElementById('excelImportDate').value;
+      
       try {
-        showToast('AI 파싱 중...', 'info');
+        showToast('엑셀 데이터 처리 중...', 'info');
         
         const response = await fetch('/pickup/api/ai-parse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
+          body: JSON.stringify({ 
+            text,
+            date: selectedDate || null  // 선택된 날짜 전송 (없으면 null)
+          })
         });
         
         if (response.ok) {
           const result = await response.json();
           showToast(`✅ ${result.count || 1}건의 픽업이 추가되었습니다`);
           document.getElementById('aiParseText').value = '';
+          document.getElementById('excelImportDate').value = '';
           loadSchedule(currentDate);
         } else {
           const error = await response.json();
           showToast('파싱 실패: ' + (error.error || '알 수 없는 오류'), 'error');
         }
       } catch (error) {
-        console.error('AI 파싱 오류:', error);
-        showToast('AI 파싱 실패', 'error');
+        console.error('엑셀 파싱 오류:', error);
+        showToast('엑셀 데이터 처리 실패', 'error');
       }
     }
     
