@@ -406,6 +406,14 @@
         <button onclick="loadMultipleDays(1, 2)" style="background: #2196F3; border-color: #2196F3;">📅 내일+모레</button>
         <button onclick="loadMultipleDays(0, 2)" style="background: #FF9800; border-color: #FF9800;">📅 오늘+내일+모레</button>
       </div>
+      <div class="nav-buttons" style="margin-top: 15px; border-top: 2px solid rgba(255,255,255,0.3); padding-top: 15px;">
+        <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">
+          📥 엑셀 다운로드
+        </button>
+        <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">
+          🔗 운전수 공유 링크
+        </button>
+      </div>
     </div>
     
     <div class="input-section">
@@ -957,6 +965,108 @@
       document.getElementById('manualFlight').value = '';
       document.getElementById('manualPhone').value = '';
       document.getElementById('manualRemark').value = '';
+    }
+    
+    // 엑셀 다운로드
+    function downloadExcel() {
+      const date = currentDate;
+      showToast('엑셀 파일 생성 중...', 'info');
+      
+      // 현재 테이블 데이터를 CSV 형식으로 변환
+      const table = document.getElementById('scheduleTable');
+      let csv = '\uFEFF'; // UTF-8 BOM for Excel
+      
+      // 헤더
+      csv += 'STATUS,TIME,HOTEL,PERSON,DER,VEHICLE,NUM,NAME,ENG NAME,CONTACT,FLIGHT,AGENCY,PAY,REQUEST,REMARK\n';
+      
+      // 데이터 행
+      const rows = table.querySelectorAll('tbody tr');
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length > 0) {
+          const rowData = [
+            cells[0]?.textContent.trim() || '', // STATUS
+            cells[1]?.textContent.trim() || '', // TIME
+            cells[2]?.textContent.trim() || '', // HOTEL
+            cells[3]?.textContent.trim() || '', // PERSON
+            cells[4]?.textContent.trim() || '', // DER
+            cells[5]?.textContent.replace(/✏️ Manual|System/g, '').trim() || '', // VEHICLE (배지 제거)
+            cells[6]?.textContent.trim() || '', // NUM
+            cells[7]?.textContent.trim() || '', // NAME
+            cells[8]?.textContent.trim() || '', // ENG NAME
+            cells[9]?.textContent.trim() || '', // CONTACT
+            cells[10]?.textContent.trim() || '', // FLIGHT
+            cells[11]?.textContent.trim() || '', // AGENCY
+            cells[12]?.textContent.trim() || '', // PAY
+            cells[13]?.textContent.trim() || '', // REQUEST
+            cells[14]?.textContent.trim() || ''  // REMARK
+          ];
+          
+          // CSV 이스케이프 처리
+          const escapedRow = rowData.map(cell => {
+            if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+              return '"' + cell.replace(/"/g, '""') + '"';
+            }
+            return cell;
+          });
+          
+          csv += escapedRow.join(',') + '\n';
+        }
+      });
+      
+      // 다운로드
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `pickup_schedule_${date}.csv`;
+      link.click();
+      
+      showToast('✅ 엑셀 파일 다운로드 완료');
+    }
+    
+    // 공개 링크 공유
+    function sharePublicLink() {
+      const date = currentDate;
+      const publicUrl = `${window.location.origin}/pickup/schedule/public/${date}`;
+      
+      // 클립보드에 복사
+      navigator.clipboard.writeText(publicUrl).then(() => {
+        showToast('📋 링크가 클립보드에 복사되었습니다');
+        
+        // 링크를 모달로 표시
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 10000; max-width: 500px;';
+        modal.innerHTML = `
+          <h3 style="margin: 0 0 15px 0; color: #333;">🔗 운전수 공유 링크</h3>
+          <p style="margin: 0 0 10px 0; color: #666;">이 링크를 운전수들에게 공유하세요:</p>
+          <div style="background: #f5f5f5; padding: 10px; border-radius: 5px; word-break: break-all; margin-bottom: 15px; font-size: 14px;">
+            ${publicUrl}
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="window.open('${publicUrl}', '_blank')" style="flex: 1; padding: 10px; background: #3B82F6; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+              새 창에서 열기
+            </button>
+            <button onclick="this.closest('div').parentElement.remove(); document.querySelector('.modal-backdrop').remove();" style="flex: 1; padding: 10px; background: #6B7280; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+              닫기
+            </button>
+          </div>
+        `;
+        
+        // 배경 오버레이
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;';
+        backdrop.onclick = () => {
+          modal.remove();
+          backdrop.remove();
+        };
+        
+        document.body.appendChild(backdrop);
+        document.body.appendChild(modal);
+      }).catch(() => {
+        showToast('클립보드 복사 실패. 수동으로 복사해주세요.', 'error');
+        alert(`운전수 공유 링크:\n${publicUrl}`);
+      });
     }
     
     function showToast(message, type = 'success') {
