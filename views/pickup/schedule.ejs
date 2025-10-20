@@ -734,6 +734,9 @@
         
         const canDelete = pickup.pickup_source === 'manual' && pickup.record_type === 'manual';
         
+        // row에 data-id 추가
+        row.dataset.id = pickup.id;
+        
         row.innerHTML = `
           <td onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">
             <span class="status-badge ${statusClass}">${statusText}</span>

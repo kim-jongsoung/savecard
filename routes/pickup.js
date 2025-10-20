@@ -278,6 +278,43 @@ router.put('/api/:id/vehicle', async (req, res) => {
   }
 });
 
+// API: 단일 필드 업데이트 (셀 편집용)
+router.put('/api/:id/update-field', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  const { field, value } = req.body;
+  
+  // 허용된 필드만 업데이트 가능하도록 화이트리스트
+  const allowedFields = [
+    'actual_pickup_time', 'hotel_name', 'customer_name', 'english_name',
+    'passenger_count', 'rental_vehicle', 'rental_number', 'rental_duration',
+    'flight_number', 'phone', 'remark', 'contact_status', 'payment_status'
+  ];
+  
+  if (!allowedFields.includes(field)) {
+    return res.status(400).json({ error: '허용되지 않은 필드입니다' });
+  }
+  
+  try {
+    const result = await pool.query(
+      `UPDATE airport_pickups 
+       SET ${field} = $1, updated_at = NOW()
+       WHERE id = $2 RETURNING *`,
+      [value || null, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '픽업 정보를 찾을 수 없습니다' });
+    }
+    
+    console.log(`✅ 필드 업데이트: ID ${id}, ${field} = ${value}`);
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('❌ 필드 업데이트 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: 예약 수정 (날짜/편명 변경 시 재생성)
 router.put('/api/:id', async (req, res) => {
   const pool = req.app.locals.pool;
