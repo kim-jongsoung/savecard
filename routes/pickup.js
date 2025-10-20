@@ -855,8 +855,16 @@ router.get('/booking', (req, res) => {
   res.render('pickup/customer-booking');
 });
 
-// 정산 관리 화면
+// 정산 관리 화면 (로그인 필요 - ERP 관리자 또는 픽업 관리자)
 router.get('/settlement', (req, res) => {
+  // ERP 관리자 세션 또는 픽업 전용 세션 체크
+  const isMainAdmin = req.session && req.session.adminId;
+  const isPickupAdmin = req.session && req.session.admin;
+  
+  if (!isMainAdmin && !isPickupAdmin) {
+    return res.redirect('/pickup/login');
+  }
+  
   res.render('pickup/settlement');
 });
 
@@ -1913,14 +1921,19 @@ router.get('/schedule/public/:date?', (req, res) => {
   });
 });
 
-// 관리자 스케줄 페이지 (로그인 필요)
+// 관리자 스케줄 페이지 (로그인 필요 - ERP 관리자 또는 픽업 관리자)
 router.get('/schedule', (req, res) => {
-  if (!req.session || !req.session.admin) {
+  // ERP 관리자 세션 또는 픽업 전용 세션 체크
+  const isMainAdmin = req.session && req.session.adminId;
+  const isPickupAdmin = req.session && req.session.admin;
+  
+  if (!isMainAdmin && !isPickupAdmin) {
     return res.redirect('/pickup/login');
   }
+  
   res.render('pickup/schedule', { 
     title: 'Pickup Schedule Management',
-    admin: req.session.admin
+    admin: req.session.admin || { username: req.session.adminUsername || 'admin' }
   });
 });
 
