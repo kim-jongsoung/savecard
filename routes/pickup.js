@@ -1931,9 +1931,13 @@ router.get('/schedule', (req, res) => {
     return res.redirect('/pickup/login');
   }
   
+  // 쿼리 파라미터에서 날짜 가져오기 (없으면 오늘 날짜)
+  const initialDate = req.query.date || 'today';
+  
   res.render('pickup/schedule', { 
     title: 'Pickup Schedule Management',
-    admin: req.session.admin || { username: req.session.adminUsername || 'admin' }
+    admin: req.session.admin || { username: req.session.adminUsername || 'admin' },
+    initialDate: initialDate
   });
 });
 

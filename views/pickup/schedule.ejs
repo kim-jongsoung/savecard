@@ -510,12 +510,14 @@
   </div>
 
   <script>
-    let currentDate = new Date().toISOString().split('T')[0];
+    // 서버에서 전달받은 날짜 사용 (없으면 오늘)
+    let initialDate = '<%= typeof initialDate !== "undefined" ? initialDate : "today" %>';
+    let currentDate = initialDate === 'today' ? new Date().toISOString().split('T')[0] : initialDate;
     let editingCell = null;
     
     document.addEventListener('DOMContentLoaded', () => {
       loadSchedule(currentDate);
-      // 오늘 날짜 자동 설정
+      // 날짜 입력 필드에 현재 날짜 설정
       document.getElementById('manualDate').value = currentDate;
     });
     
