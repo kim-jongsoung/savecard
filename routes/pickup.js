@@ -514,11 +514,32 @@ router.post('/api/agencies', async (req, res) => {
   const { agency_name, contact_person, phone, email, is_active } = req.body;
   
   try {
+    // 4자리 고유 코드 생성
+    let agency_code;
+    let isUnique = false;
+    
+    while (!isUnique) {
+      // 1000-9999 범위의 랜덤 숫자 생성
+      agency_code = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      // 중복 체크
+      const check = await pool.query(
+        'SELECT id FROM pickup_agencies WHERE agency_code = $1',
+        [agency_code]
+      );
+      
+      if (check.rows.length === 0) {
+        isUnique = true;
+      }
+    }
+    
     const result = await pool.query(
-      `INSERT INTO pickup_agencies (agency_name, contact_person, phone, email, is_active)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [agency_name, contact_person, phone, email, is_active !== false]
+      `INSERT INTO pickup_agencies (agency_name, agency_code, contact_person, phone, email, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [agency_name, agency_code, contact_person, phone, email, is_active !== false]
     );
+    
+    console.log(`✅ 신규 업체 등록: ${agency_name} (코드: ${agency_code})`);
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('❌ 업체 추가 실패:', error);
