@@ -511,7 +511,7 @@ router.get('/api/agencies/all', async (req, res) => {
 // API: 업체 추가
 router.post('/api/agencies', async (req, res) => {
   const pool = req.app.locals.pool;
-  const { agency_name, contact_person, phone, email, is_active } = req.body;
+  const { agency_name, cost_price, contact_person, phone, email, is_active } = req.body;
   
   try {
     // 4자리 고유 코드 생성
@@ -534,12 +534,12 @@ router.post('/api/agencies', async (req, res) => {
     }
     
     const result = await pool.query(
-      `INSERT INTO pickup_agencies (agency_name, agency_code, contact_person, phone, email, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [agency_name, agency_code, contact_person, phone, email, is_active !== false]
+      `INSERT INTO pickup_agencies (agency_name, agency_code, cost_price, contact_person, phone, email, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [agency_name, agency_code, cost_price || 0, contact_person, phone, email, is_active !== false]
     );
     
-    console.log(`✅ 신규 업체 등록: ${agency_name} (코드: ${agency_code})`);
+    console.log(`✅ 신규 업체 등록: ${agency_name} (코드: ${agency_code}, 원가: $${cost_price})`);
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('❌ 업체 추가 실패:', error);
@@ -551,7 +551,7 @@ router.post('/api/agencies', async (req, res) => {
 router.put('/api/agencies/:id', async (req, res) => {
   const pool = req.app.locals.pool;
   const { id } = req.params;
-  const { agency_name, contact_person, phone, email, is_active } = req.body;
+  const { agency_name, cost_price, contact_person, phone, email, is_active } = req.body;
   
   try {
     // 기존 데이터 조회
@@ -569,10 +569,11 @@ router.put('/api/agencies/:id', async (req, res) => {
     // 부분 업데이트 지원 (제공된 값만 업데이트)
     const result = await pool.query(
       `UPDATE pickup_agencies 
-       SET agency_name = $1, contact_person = $2, phone = $3, email = $4, is_active = $5
-       WHERE id = $6 RETURNING *`,
+       SET agency_name = $1, cost_price = $2, contact_person = $3, phone = $4, email = $5, is_active = $6
+       WHERE id = $7 RETURNING *`,
       [
         agency_name !== undefined ? agency_name : current.agency_name,
+        cost_price !== undefined ? cost_price : current.cost_price,
         contact_person !== undefined ? contact_person : current.contact_person,
         phone !== undefined ? phone : current.phone,
         email !== undefined ? email : current.email,

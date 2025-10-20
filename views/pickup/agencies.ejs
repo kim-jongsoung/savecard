@@ -31,6 +31,7 @@
           <tr>
             <th>업체명</th>
             <th>업체 코드</th>
+            <th>원가 (USD)</th>
             <th>담당자</th>
             <th>연락처</th>
             <th>이메일</th>
@@ -58,6 +59,15 @@
             <div class="mb-3">
               <label class="form-label">업체명 *</label>
               <input type="text" class="form-control" id="agencyName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">원가 (USD) *</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" id="costPrice" step="0.01" min="0" placeholder="0.00" required>
+                <span class="input-group-text">USD</span>
+              </div>
+              <small class="form-text text-muted">업체로부터 받아야 할 금액</small>
             </div>
             <div class="mb-3">
               <label class="form-label">담당자</label>
@@ -246,6 +256,9 @@
               </div>
             ` : '<small class="text-muted">코드 없음</small>'}
           </td>
+          <td>
+            ${a.cost_price ? `<strong>$${parseFloat(a.cost_price).toFixed(2)}</strong>` : '<span class="text-muted">-</span>'}
+          </td>
           <td>${a.contact_person || '-'}</td>
           <td>${a.phone || '-'}</td>
           <td>${a.email || '-'}</td>
@@ -278,6 +291,7 @@
       document.getElementById('modalTitle').textContent = '업체 수정';
       document.getElementById('agencyId').value = agency.id;
       document.getElementById('agencyName').value = agency.agency_name;
+      document.getElementById('costPrice').value = agency.cost_price || '';
       document.getElementById('contactPerson').value = agency.contact_person || '';
       document.getElementById('phone').value = agency.phone || '';
       document.getElementById('email').value = agency.email || '';
@@ -289,6 +303,7 @@
       const id = document.getElementById('agencyId').value;
       const data = {
         agency_name: document.getElementById('agencyName').value,
+        cost_price: parseFloat(document.getElementById('costPrice').value) || 0,
         contact_person: document.getElementById('contactPerson').value,
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
