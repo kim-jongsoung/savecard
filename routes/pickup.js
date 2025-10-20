@@ -820,6 +820,19 @@ router.delete('/api/flights/:id', async (req, res) => {
   }
 });
 
+// 픽업 루트 경로 - 로그인 페이지로 리다이렉트
+router.get('/', (req, res) => {
+  // 이미 로그인되어 있으면 스케줄로, 아니면 로그인 페이지로
+  const isMainAdmin = req.session && req.session.adminId;
+  const isPickupAdmin = req.session && req.session.admin;
+  
+  if (isMainAdmin || isPickupAdmin) {
+    res.redirect('/pickup/schedule');
+  } else {
+    res.redirect('/pickup/login');
+  }
+});
+
 // 픽업 전용 로그인 페이지
 router.get('/login', (req, res) => {
   res.render('pickup/login', { 
