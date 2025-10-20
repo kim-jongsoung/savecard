@@ -730,18 +730,21 @@
         const sourceText = pickup.pickup_source === 'manual' ? '✏️ Manual' : 'System';
         
         const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
-        const rentalVehicle = pickup.rental_vehicle || '-';
         const rentalNumber = pickup.rental_number || '-';
         const rentalDuration = pickup.rental_duration || '-';
         
-        let flightWithRoute = pickup.flight_number || '-';
-        if (pickup.flight_number && pickup.hotel_name) {
+        // VEHICLE 컬럼: 차량 + 루팅 정보
+        let vehicleWithRoute = pickup.rental_vehicle || '-';
+        if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
-            flightWithRoute = `${pickup.flight_number} (${pickup.hotel_name} → AIRPORT)`;
+            vehicleWithRoute = `${pickup.rental_vehicle || 'Vehicle'} (${pickup.hotel_name} → AIRPORT)`;
           } else if (pickup.record_type === 'arrival') {
-            flightWithRoute = `${pickup.flight_number} (AIRPORT → ${pickup.hotel_name})`;
+            vehicleWithRoute = `${pickup.rental_vehicle || 'Vehicle'} (AIRPORT → ${pickup.hotel_name})`;
           }
         }
+        
+        // FLIGHT 컬럼: 항공편 번호만
+        const flightNumber = pickup.flight_number || '-';
         
         const canDelete = pickup.pickup_source === 'manual' && pickup.record_type === 'manual';
         
@@ -756,12 +759,12 @@
           <td class="editable" data-field="hotel_name">${pickup.hotel_name || '-'}</td>
           <td class="editable" data-field="passenger_count">${pickup.passenger_count || '-'}</td>
           <td class="editable" data-field="rental_duration">${rentalDuration}</td>
-          <td class="editable" data-field="rental_vehicle">${rentalVehicle}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
           <td class="editable" data-field="rental_number">${rentalNumber}</td>
           <td>${pickup.customer_name || '-'}</td>
           <td>${pickup.english_name || '-'}</td>
           <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
-          <td>${flightWithRoute}</td>
+          <td>${flightNumber}</td>
           <td>${pickup.agency_name || '-'}</td>
           <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
           <td>${pickup.special_request || '-'}</td>
