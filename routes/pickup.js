@@ -846,8 +846,8 @@ router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   
   // 환경변수에서 관리자 계정 확인
-  const adminUsername = process.env.ADMIN_USERNAME || 'luxfind01';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'vasco01@';
+  const adminUsername = process.env.ADMIN_USERNAME || 'koreatour';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'korea01@';
   
   if (username === adminUsername && password === adminPassword) {
     // 세션 설정
