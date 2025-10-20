@@ -1956,7 +1956,7 @@ router.get('/schedule/public/:date?', (req, res) => {
   });
 });
 
-// 관리자 스케줄 페이지 (로그인 필요 - ERP 관리자 또는 픽업 관리자)
+// 관리자 스케줄 페이지 (로그인 필요 - ERP 관리자 또는 픽업 관리자) - 달력 화면
 router.get('/schedule', (req, res) => {
   // ERP 관리자 세션 또는 픽업 전용 세션 체크
   const isMainAdmin = req.session && req.session.adminId;
@@ -1966,13 +1966,9 @@ router.get('/schedule', (req, res) => {
     return res.redirect('/pickup/login');
   }
   
-  // 쿼리 파라미터에서 날짜 가져오기 (없으면 오늘 날짜)
-  const initialDate = req.query.date || 'today';
-  
-  res.render('pickup/schedule', { 
-    title: 'Pickup Schedule Management',
-    admin: req.session.admin || { username: req.session.adminUsername || 'admin' },
-    initialDate: initialDate
+  res.render('pickup/admin', { 
+    title: 'HKT 픽업 스케줄 관리',
+    admin: req.session.admin || { username: req.session.adminUsername || 'admin' }
   });
 });
 
