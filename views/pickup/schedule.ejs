@@ -271,6 +271,7 @@
       font-size: 10px;
       opacity: 0;
       transition: opacity 0.2s;
+      pointer-events: none; /* 클릭 이벤트를 차단하지 않음 */
     }
     
     td.editable:hover {
@@ -293,6 +294,11 @@
     
     tbody tr:hover {
       background: #f8f9fa;
+    }
+    
+    /* 편집 가능한 셀 hover가 row hover보다 우선되도록 */
+    tbody tr:hover td.editable:hover {
+      background: #fff3cd !important;
     }
     
     .status-badge {
@@ -800,23 +806,34 @@
         tbody.appendChild(row);
       });
       
-      // 편집 가능한 셀에 이벤트 추가
-      const editableCells = document.querySelectorAll('td.editable');
+      // 편집 가능한 셀에 이벤트 추가 (tbody 내의 셀만 선택)
+      const editableCells = tbody.querySelectorAll('td.editable');
       console.log(`✅ ${editableCells.length}개의 편집 가능한 셀에 이벤트 리스너 등록`);
       
-      editableCells.forEach(cell => {
-        cell.style.cursor = 'pointer'; // 커서 스타일 추가
-        cell.addEventListener('click', function(e) {
-          console.log('셀 클릭됨:', this.dataset.field);
+      editableCells.forEach((cell, index) => {
+        cell.style.cursor = 'pointer';
+        
+        // 기존 이벤트 리스너 제거를 위해 새로운 함수 사용
+        const clickHandler = function(e) {
+          e.stopPropagation(); // 이벤트 전파 중지
+          console.log(`셀 클릭됨 [${index}]:`, this.dataset.field, 'ID:', this.closest('tr')?.dataset.id);
           makeEditable(this);
-        });
+        };
+        
+        cell.addEventListener('click', clickHandler);
       });
     }
     
     function makeEditable(cell) {
-      if (editingCell) {
-        console.log('이미 편집 중인 셀이 있습니다.');
+      // 현재 편집 중인지 확인
+      if (editingCell === cell) {
+        console.log('현재 셀이 이미 편집 중입니다.');
         return;
+      }
+      
+      if (editingCell && editingCell !== cell) {
+        console.log('다른 셀이 편집 중입니다. 편집을 종료합니다.');
+        editingCell = null;
       }
       
       editingCell = cell;
@@ -825,31 +842,60 @@
       const row = cell.closest('tr');
       const id = row.dataset.id;
       
-      console.log(`편집 모드 진입: ID=${id}, Field=${field}, Value="${currentValue}"`);
+      console.log(`✏️ 편집 모드 진입: ID=${id}, Field=${field}, Value="${currentValue}"`);
       
       // 배지 제거
       const badge = cell.querySelector('.source-badge');
       const cleanValue = badge ? currentValue.replace(badge.textContent, '').trim() : currentValue;
       
+      console.log(`정제된 값: "${cleanValue}"`);
+      
+      // 원본 HTML 저장
+      const originalHTML = cell.innerHTML;
+      
       const input = document.createElement('input');
       input.type = 'text';
       input.value = cleanValue === '-' ? '' : cleanValue;
+      input.style.width = '100%';
+      input.style.boxSizing = 'border-box';
+      
+      console.log('입력 필드 생성 완료');
       
       input.addEventListener('blur', async function() {
+        console.log('blur 이벤트 발생');
         const newValue = this.value.trim();
-        await updateField(id, field, newValue);
+        
+        if (newValue !== cleanValue && newValue !== (cleanValue === '-' ? '' : cleanValue)) {
+          await updateField(id, field, newValue);
+        } else {
+          console.log('값이 변경되지 않음');
+          cell.innerHTML = originalHTML;
+        }
         editingCell = null;
       });
       
-      input.addEventListener('keypress', function(e) {
+      input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
+          console.log('Enter 키 입력');
           this.blur();
+        } else if (e.key === 'Escape') {
+          console.log('Escape 키 입력 - 취소');
+          cell.innerHTML = originalHTML;
+          editingCell = null;
         }
       });
       
-      cell.innerHTML = '';
-      cell.appendChild(input);
-      input.focus();
+      try {
+        cell.innerHTML = '';
+        cell.appendChild(input);
+        input.focus();
+        input.select(); // 텍스트 전체 선택
+        console.log('✅ 입력 필드 포커스 완료');
+      } catch (error) {
+        console.error('❌ 입력 필드 생성 실패:', error);
+        cell.innerHTML = originalHTML;
+        editingCell = null;
+      }
     }
     
     async function updateField(id, field, value) {
