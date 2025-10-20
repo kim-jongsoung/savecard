@@ -1956,6 +1956,26 @@ router.get('/schedule/public/:date?', (req, res) => {
   });
 });
 
+// 일별 스케줄 페이지 (로그인 필요) - 달력에서 전체보기 클릭시
+router.get('/schedule/daily', (req, res) => {
+  // ERP 관리자 세션 또는 픽업 전용 세션 체크
+  const isMainAdmin = req.session && req.session.adminId;
+  const isPickupAdmin = req.session && req.session.admin;
+  
+  if (!isMainAdmin && !isPickupAdmin) {
+    return res.redirect('/pickup/login');
+  }
+  
+  // 쿼리 파라미터에서 날짜 가져오기 (없으면 오늘 날짜)
+  const initialDate = req.query.date || 'today';
+  
+  res.render('pickup/schedule', { 
+    title: 'HKT 픽업 스케줄 조회',
+    admin: req.session.admin || { username: req.session.adminUsername || 'admin' },
+    initialDate: initialDate
+  });
+});
+
 // 관리자 스케줄 페이지 (로그인 필요 - ERP 관리자 또는 픽업 관리자) - 달력 화면
 router.get('/schedule', (req, res) => {
   // ERP 관리자 세션 또는 픽업 전용 세션 체크
