@@ -609,6 +609,7 @@ router.post('/api/ai-parse', async (req, res) => {
       const pickup = {
         pickup_source: 'excel_import',
         record_type: 'manual',
+        pickup_type: 'manual',  // NOT NULL 제약조건 만족
         status: 'active',
         contact_status: truncate(status, 20, 'contact_status') || 'pending',
         display_date: targetDate,

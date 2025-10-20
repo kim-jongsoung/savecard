@@ -258,8 +258,28 @@
       transition: background 0.2s;
     }
     
+    td.editable {
+      position: relative;
+    }
+    
+    td.editable::after {
+      content: '✏️';
+      position: absolute;
+      right: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
     td.editable:hover {
-      background: #fff3cd;
+      background: #fff3cd !important;
+      cursor: text !important;
+    }
+    
+    td.editable:hover::after {
+      opacity: 0.5;
     }
     
     td input {
@@ -268,6 +288,7 @@
       border: 2px solid #667eea;
       border-radius: 3px;
       font-size: 13px;
+      box-sizing: border-box;
     }
     
     tbody tr:hover {
@@ -423,21 +444,14 @@
       </div>
       
       <div id="aiTab" class="tab-content active">
-        <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 13px;">
-          📋 <strong>엑셀 데이터 붙여넣기 안내</strong><br>
-          엑셀에서 행 전체를 선택하여 복사(Ctrl+C) 후 아래에 붙여넣기(Ctrl+V)하세요.<br>
-          <strong>컬럼 순서:</strong> STATUS → TIME → HOTEL → PERSON → DER → VEHICLE → NUM → NAME → ENG NAME → CONTACT → FLIGHT → AGENCY → PAY → REQUEST → REMARK<br>
-          <em>※ VEHICLE 컬럼에 "K5 (AIRPORT → HOTEL)" 형식으로 루팅 정보가 포함됩니다.</em>
-        </div>
         <div style="margin-bottom: 10px;">
           <label style="font-weight: bold; margin-right: 10px;">픽업 날짜:</label>
           <input type="date" id="excelImportDate" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-          <span style="margin-left: 10px; color: #666; font-size: 13px;">※ 현재 조회 중인 날짜로 자동 설정됩니다. 변경 가능합니다.</span>
         </div>
         <textarea 
           id="aiParseText" 
           class="ai-parse-area" 
-          placeholder="엑셀에서 복사한 데이터를 여기에 붙여넣으세요...&#10;&#10;예시 (탭으로 구분):&#10;pending	15:00	힐튼호텔	3	3시간	K5 (AIRPORT→HOTEL)	12가3456	김철수	KIM CS	010-1234-5678	KE111	한국투어	미결제	휠체어 필요	비고사항"
+          placeholder="엑셀에서 복사한 데이터를 붙여넣으세요..."
         ></textarea>
         <button class="btn-primary" onclick="parseAndAdd()">📊 엑셀 데이터 추가</button>
       </div>
@@ -504,7 +518,7 @@
         <div class="summary-item">⏳ Pending: <strong id="pendingCount">0</strong></div>
         <div class="summary-item">👥 Passengers: <strong id="passengerCount">0</strong></div>
       </div>
-      <div class="edit-hint">💡 셀을 클릭하면 수정할 수 있습니다</div>
+      <div class="edit-hint">💡 노란색으로 표시되는 셀을 클릭하면 수정할 수 있습니다 (연필 아이콘 표시)</div>
     </div>
     
     <div id="loadingIndicator" class="loading">
@@ -791,21 +805,31 @@
       });
       
       // 편집 가능한 셀에 이벤트 추가
-      document.querySelectorAll('td.editable').forEach(cell => {
-        cell.addEventListener('click', function() {
+      const editableCells = document.querySelectorAll('td.editable');
+      console.log(`✅ ${editableCells.length}개의 편집 가능한 셀에 이벤트 리스너 등록`);
+      
+      editableCells.forEach(cell => {
+        cell.style.cursor = 'pointer'; // 커서 스타일 추가
+        cell.addEventListener('click', function(e) {
+          console.log('셀 클릭됨:', this.dataset.field);
           makeEditable(this);
         });
       });
     }
     
     function makeEditable(cell) {
-      if (editingCell) return;
+      if (editingCell) {
+        console.log('이미 편집 중인 셀이 있습니다.');
+        return;
+      }
       
       editingCell = cell;
       const currentValue = cell.textContent.trim();
       const field = cell.dataset.field;
       const row = cell.closest('tr');
       const id = row.dataset.id;
+      
+      console.log(`편집 모드 진입: ID=${id}, Field=${field}, Value="${currentValue}"`);
       
       // 배지 제거
       const badge = cell.querySelector('.source-badge');
