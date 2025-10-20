@@ -29,37 +29,37 @@
     .header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 30px;
+      padding: 8px 15px;
       text-align: center;
     }
     
     .header h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
+      font-size: 16px;
+      margin: 0 0 3px 0;
     }
     
     .header .date-display {
-      font-size: 24px;
+      font-size: 13px;
       font-weight: bold;
-      margin: 15px 0;
+      margin: 0 0 3px 0;
     }
     
     .nav-buttons {
       display: flex;
+      gap: 5px;
       justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
+      flex-wrap: wrap;
     }
     
     .nav-buttons button {
+      padding: 5px 10px;
+      border: 1px solid rgba(255,255,255,0.5);
       background: rgba(255,255,255,0.2);
-      border: 2px solid white;
       color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
+      border-radius: 15px;
       cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
+      font-size: 11px;
+      font-weight: 600;
       transition: all 0.3s;
     }
     
@@ -418,22 +418,18 @@
       <h1>🚗 HKT 픽업 스케줄 관리</h1>
       <div class="date-display" id="dateDisplay">Loading...</div>
       <div class="nav-buttons">
-        <button onclick="changeDate(-1)">◀ Prev Day</button>
-        <button onclick="goToday()">📅 Today</button>
-        <button onclick="changeDate(1)">Next Day ▶</button>
+        <button onclick="changeDate(-1)">◀</button>
+        <button onclick="goToday()">Today</button>
+        <button onclick="changeDate(1)">▶</button>
       </div>
-      <div class="nav-buttons" style="margin-top: 10px;">
-        <button onclick="loadMultipleDays(0, 1)" style="background: #4CAF50; border-color: #4CAF50;">📅 오늘+내일</button>
-        <button onclick="loadMultipleDays(1, 2)" style="background: #2196F3; border-color: #2196F3;">📅 내일+모레</button>
-        <button onclick="loadMultipleDays(0, 2)" style="background: #FF9800; border-color: #FF9800;">📅 오늘+내일+모레</button>
+      <div class="nav-buttons" style="margin-top: 3px;">
+        <button onclick="loadMultipleDays(0, 1)" style="background: #4CAF50; border-color: #4CAF50;">오늘+내일</button>
+        <button onclick="loadMultipleDays(1, 2)" style="background: #2196F3; border-color: #2196F3;">내일+모레</button>
+        <button onclick="loadMultipleDays(0, 2)" style="background: #FF9800; border-color: #FF9800;">3일</button>
       </div>
-      <div class="nav-buttons" style="margin-top: 15px; border-top: 2px solid rgba(255,255,255,0.3); padding-top: 15px;">
-        <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">
-          📥 엑셀 다운로드
-        </button>
-        <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">
-          🔗 운전수 공유 링크
-        </button>
+      <div class="nav-buttons" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px;">
+        <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">엑셀</button>
+        <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">공유링크</button>
       </div>
     </div>
     
