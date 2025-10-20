@@ -424,7 +424,7 @@
         <div style="margin-bottom: 10px;">
           <label style="font-weight: bold; margin-right: 10px;">픽업 날짜:</label>
           <input type="date" id="excelImportDate" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
-          <span style="margin-left: 10px; color: #666; font-size: 13px;">※ 선택하지 않으면 오늘 날짜로 저장됩니다.</span>
+          <span style="margin-left: 10px; color: #666; font-size: 13px;">※ 현재 조회 중인 날짜로 자동 설정됩니다. 변경 가능합니다.</span>
         </div>
         <textarea 
           id="aiParseText" 
@@ -519,6 +519,9 @@
     let editingCell = null;
     
     document.addEventListener('DOMContentLoaded', () => {
+      // 엑셀 가져오기 날짜 필드에 현재 페이지 날짜 자동 설정
+      document.getElementById('excelImportDate').value = currentDate;
+      
       loadSchedule(currentDate);
       // 날짜 입력 필드에 현재 날짜 설정
       document.getElementById('manualDate').value = currentDate;

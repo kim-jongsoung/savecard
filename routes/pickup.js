@@ -596,26 +596,36 @@ router.post('/api/ai-parse', async (req, res) => {
         }
       }
       
+      // 필드 길이 제한 (DB 스키마에 맞게)
+      const truncate = (str, maxLength, fieldName) => {
+        if (!str) return null;
+        if (str.length > maxLength) {
+          console.log(`⚠️ ${fieldName} 필드가 ${maxLength}자로 잘렸습니다: "${str}" → "${str.substring(0, maxLength)}"`);
+          return str.substring(0, maxLength);
+        }
+        return str;
+      };
+      
       const pickup = {
         pickup_source: 'excel_import',
         record_type: 'manual',
         status: 'active',
-        contact_status: status || 'pending',
+        contact_status: truncate(status, 20, 'contact_status') || 'pending',
         display_date: targetDate,
         actual_pickup_time: time,
-        hotel_name: hotel || null,
+        hotel_name: truncate(hotel, 100, 'hotel_name'),
         passenger_count: person ? parseInt(person) : null,
-        rental_duration: der || null,
-        rental_vehicle: vehicleType || null,
-        rental_number: num || null,
-        customer_name: name,
-        english_name: engName || null,
-        phone: contact || null,
-        flight_number: flight || null,
+        rental_duration: truncate(der, 20, 'rental_duration'),
+        rental_vehicle: truncate(vehicleType, 20, 'rental_vehicle'),
+        rental_number: truncate(num, 20, 'rental_number'),
+        customer_name: truncate(name, 50, 'customer_name'),
+        english_name: truncate(engName, 50, 'english_name'),
+        phone: truncate(contact, 20, 'phone'),
+        flight_number: truncate(flight, 20, 'flight_number'),
         agency_id: agencyId,
-        payment_status: pay || null,
-        special_request: request || null,
-        remark: remark || null
+        payment_status: truncate(pay, 20, 'payment_status'),
+        special_request: truncate(request, 200, 'special_request'),
+        remark: truncate(remark, 500, 'remark')
       };
       
       pickups.push(pickup);
