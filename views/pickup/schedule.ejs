@@ -864,7 +864,7 @@
           <td class="editable" data-field="hotel_name">${pickup.hotel_name || '-'}</td>
           <td class="editable" data-field="passenger_count">${pickup.passenger_count || '-'}</td>
           <td class="editable" data-field="rental_duration">${rentalDuration}</td>
-          <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
           <td class="editable" data-field="rental_number">${rentalNumber}</td>
           <td>${pickup.customer_name || '-'}</td>
           <td>${pickup.english_name || '-'}</td>
@@ -1059,7 +1059,7 @@
         if (response.ok) {
           const result = await response.json();
           const count = result.count || 1;
-          showToast(`✅ ${count} Excel record(s) added!\nMarked with 📊 Excel badge at the top.`);
+          showToast(`✅ ${count} Excel record(s) added!\nExternal data shown with gray background at the top.`);
           document.getElementById('aiParseText').value = '';
           document.getElementById('excelImportDate').value = '';
           loadSchedule(currentDate);
