@@ -52,6 +52,104 @@ async function getFlights(pool) {
   return FLIGHTS_CACHE;
 }
 
+// AI 기반 필드 자동 채우기 함수
+function enhanceWithAI(data) {
+  const enhanced = { ...data };
+  
+  // 1. 연락 상태 자동 설정
+  if (!enhanced.contact_status || enhanced.contact_status === '-') {
+    // STATUS 필드 분석
+    const statusUpper = (data.status || '').toUpperCase();
+    if (statusUpper.includes('CONTACT') || statusUpper.includes('확인')) {
+      enhanced.contact_status = 'CONTACTED';
+    } else if (statusUpper.includes('PEND') || statusUpper.includes('대기')) {
+      enhanced.contact_status = 'PENDING';
+    } else {
+      enhanced.contact_status = 'PENDING'; // 기본값
+    }
+  }
+  
+  // 2. 인원수 자동 추출
+  if (!enhanced.person) {
+    // 이름 필드나 비고에서 인원수 추출 (예: "김철수 외 2명", "3인")
+    const personPattern = /(\d+)\s*(?:명|인|pax|persons?)/i;
+    const remarkMatch = (data.remark || '').match(personPattern);
+    const nameMatch = (data.name || '').match(personPattern);
+    
+    if (remarkMatch) {
+      enhanced.person = remarkMatch[1];
+    } else if (nameMatch) {
+      enhanced.person = nameMatch[1];
+    }
+  }
+  
+  // 3. 렌탈 기간 자동 설정
+  if (!enhanced.der || enhanced.der === '-') {
+    // 비고나 요청사항에서 기간 추출 (예: "4시간", "1일")
+    const durationPattern = /(\d+)\s*(?:시간|hours?|hrs?|일|days?)/i;
+    const remarkMatch = (data.remark || '').match(durationPattern);
+    const requestMatch = (data.request || '').match(durationPattern);
+    
+    if (remarkMatch) {
+      const value = remarkMatch[1];
+      const unit = remarkMatch[0].toLowerCase();
+      if (unit.includes('시간') || unit.includes('hour') || unit.includes('hr')) {
+        enhanced.der = `${value}H`;
+      } else if (unit.includes('일') || unit.includes('day')) {
+        enhanced.der = `${value}D`;
+      }
+    } else if (requestMatch) {
+      const value = requestMatch[1];
+      const unit = requestMatch[0].toLowerCase();
+      if (unit.includes('시간') || unit.includes('hour') || unit.includes('hr')) {
+        enhanced.der = `${value}H`;
+      } else if (unit.includes('일') || unit.includes('day')) {
+        enhanced.der = `${value}D`;
+      }
+    } else {
+      // 기본값: 4시간
+      enhanced.der = '4H';
+    }
+  }
+  
+  // 4. 결제 상태 자동 설정
+  if (!enhanced.pay || enhanced.pay === '-') {
+    const payUpper = (data.pay || '').toUpperCase();
+    const remarkUpper = (data.remark || '').toUpperCase();
+    
+    if (payUpper.includes('완료') || payUpper.includes('PAID') || payUpper.includes('결제')) {
+      enhanced.pay = 'PAID';
+    } else if (remarkUpper.includes('현불') || remarkUpper.includes('현장') || remarkUpper.includes('CASH')) {
+      enhanced.pay = 'CASH';
+    } else if (remarkUpper.includes('미수') || remarkUpper.includes('UNPAID')) {
+      enhanced.pay = 'UNPAID';
+    } else {
+      enhanced.pay = 'PENDING';
+    }
+  }
+  
+  // 5. 연락처 형식 정규화
+  if (enhanced.contact) {
+    // 하이픈 제거 및 숫자만 추출
+    enhanced.contact = enhanced.contact.replace(/[^0-9]/g, '');
+  }
+  
+  // 6. 항공편 번호 정규화
+  if (enhanced.flight) {
+    // 공백 제거 및 대문자 변환
+    enhanced.flight = enhanced.flight.replace(/\s+/g, '').toUpperCase();
+  }
+  
+  console.log(`🤖 AI 자동 채우기: 
+    연락상태: ${data.status} → ${enhanced.contact_status}
+    인원수: ${data.person || '없음'} → ${enhanced.person || '추출실패'}
+    렌탈기간: ${data.der || '없음'} → ${enhanced.der}
+    결제상태: ${data.pay || '없음'} → ${enhanced.pay}
+  `);
+  
+  return enhanced;
+}
+
 // 날짜/시간 계산 헬퍼 - 비행시간 사용하여 도착일시 계산
 function calculateArrival(krDate, krTime, flightNum, flightData) {
   const flight = flightData[flightNum];
@@ -649,19 +747,19 @@ router.post('/api/ai-parse', async (req, res) => {
         contact_status: aiEnhanced.contact_status,
         display_date: targetDate,
         actual_pickup_time: aiEnhanced.time,
-        hotel_name: truncate(hotel, 100, 'hotel_name'),
-        passenger_count: person ? parseInt(person) : null,
-        rental_duration: truncate(der, 20, 'rental_duration'),
+        hotel_name: truncate(aiEnhanced.hotel || hotel, 100, 'hotel_name'),
+        passenger_count: aiEnhanced.person ? parseInt(aiEnhanced.person) : null,
+        rental_duration: truncate(aiEnhanced.der, 20, 'rental_duration'),
         rental_vehicle: truncate(vehicleType, 20, 'rental_vehicle'),
-        rental_number: truncate(num, 20, 'rental_number'),
-        customer_name: truncate(name, 50, 'customer_name'),
-        english_name: truncate(engName, 50, 'english_name'),
-        phone: truncate(contact, 20, 'phone'),
-        flight_number: truncate(flight, 20, 'flight_number'),
+        rental_number: truncate(aiEnhanced.num || num, 20, 'rental_number'),
+        customer_name: truncate(aiEnhanced.name || name, 50, 'customer_name'),
+        english_name: truncate(aiEnhanced.engName || engName, 50, 'english_name'),
+        phone: truncate(aiEnhanced.contact, 20, 'phone'),
+        flight_number: truncate(aiEnhanced.flight, 20, 'flight_number'),
         agency_id: agencyId,
-        payment_status: truncate(pay, 20, 'payment_status'),
-        special_request: truncate(request, 200, 'special_request'),
-        remark: truncate(remark, 500, 'remark')
+        payment_status: truncate(aiEnhanced.pay, 20, 'payment_status'),
+        special_request: truncate(aiEnhanced.request || request, 200, 'special_request'),
+        remark: truncate(aiEnhanced.remark || remark, 500, 'remark')
       };
       
       pickups.push(pickup);
