@@ -976,9 +976,8 @@
           const depAirport = p.departure_airport || '';
           const arrAirport = p.arrival_airport || '';
           
-          // 출발공항명 표시
-          const depName = getAirportLabel(depAirport);
-          const label = `✈️ ${depName}출발`;
+          // 출발공항 코드 표시 (3글자 코드 + dep)
+          const label = `✈️ ${depAirport} dep`;
           
           html += `
             <div class="pickup-item" style="background: #e3f2fd; border-left-color: #2196f3; color: #1565c0; cursor: pointer;" onclick="showPickupDetail(${p.id})">
@@ -995,9 +994,8 @@
           const depAirport = p.departure_airport || '';
           const arrAirport = p.arrival_airport || '';
           
-          // 도착공항명 표시
-          const arrName = getAirportLabel(arrAirport);
-          const label = `🛬 ${arrName}도착`;
+          // 도착공항 코드 표시 (3글자 코드 + arr)
+          const label = `🛬 ${arrAirport} arr`;
           
           html += `
             <div class="pickup-item" style="background: #ffebee; border-left-color: #f44336; color: #c62828; cursor: pointer;" onclick="showPickupDetail(${p.id})">
