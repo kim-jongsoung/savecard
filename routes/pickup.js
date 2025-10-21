@@ -548,6 +548,9 @@ router.post('/api/ai-parse', async (req, res) => {
     const pickups = [];
     
     for (const line of lines) {
+      // 빈 줄 스킵
+      if (!line.trim()) continue;
+      
       // 탭으로 분리 (엑셀 복사 시 탭으로 구분됨)
       const columns = line.split('\t').map(col => col.trim());
       
@@ -570,9 +573,25 @@ router.post('/api/ai-parse', async (req, res) => {
         remark            // 14: REMARK (비고)
       ] = columns;
       
+      console.log(`📋 파싱 중: TIME="${time}", NAME="${name}", STATUS="${status}"`);
+      
+      // 헤더 줄 스킵 (TIME 컬럼에 "TIME" 문자열이 있으면 헤더)
+      if (time === 'TIME' || status === 'STATUS') {
+        console.log('⏭️ 헤더 줄 스킵');
+        continue;
+      }
+      
       // 필수 필드 검증
       if (!time || !name) {
-        continue; // 시간이나 이름이 없으면 스킵
+        console.log(`⚠️ 필수 필드 누락 - TIME: "${time}", NAME: "${name}"`);
+        continue;
+      }
+      
+      // TIME 필드 검증 (시간 형식이 맞는지 확인)
+      const timePattern = /^\d{1,2}:\d{2}$/;
+      if (!timePattern.test(time)) {
+        console.log(`⚠️ 잘못된 시간 형식 스킵: "${time}"`);
+        continue;
       }
       
       // vehicle 필드에서 루팅 정보 추출 (예: "K5 (AIRPORT → HOTEL)")
@@ -606,6 +625,11 @@ router.post('/api/ai-parse', async (req, res) => {
         return str;
       };
       
+      // 시간 형식 변환 (HH:MM → HH:MM:00)
+      const formattedTime = time.includes(':') ? 
+        (time.split(':').length === 2 ? `${time}:00` : time) : 
+        null;
+      
       const pickup = {
         pickup_source: 'excel_import',
         record_type: 'manual',
@@ -613,7 +637,7 @@ router.post('/api/ai-parse', async (req, res) => {
         status: 'active',
         contact_status: truncate(status, 20, 'contact_status') || 'pending',
         display_date: targetDate,
-        actual_pickup_time: time,
+        actual_pickup_time: formattedTime,
         hotel_name: truncate(hotel, 100, 'hotel_name'),
         passenger_count: person ? parseInt(person) : null,
         rental_duration: truncate(der, 20, 'rental_duration'),
