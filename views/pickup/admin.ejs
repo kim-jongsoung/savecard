@@ -837,9 +837,9 @@
     
     // 일별 전체보기 - 새 창으로 열기
     function showDayView(date) {
-      // 새 창으로 일별 스케줄 페이지 열기
+      // 새 창으로 일별 스케줄 페이지 열기 (픽업 스케줄 관리 페이지)
       const url = `/pickup/schedule/daily?date=${date}`;
-      window.open(url, '_blank', 'width=1400,height=900');
+      window.open(url, '_blank', 'width=1600,height=900');
     }
     
     function changeMonth(delta) {
@@ -920,23 +920,44 @@
           return itemDate === dateStr;
         });
         
-        // 통계 계산
-        const totalCount = dayPickups.departures.length + dayPickups.arrivals.length + dayPickups.hotelPickups.length;
-        const totalPax = [...dayPickups.departures, ...dayPickups.arrivals, ...dayPickups.hotelPickups]
-          .reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        // 통계 계산 (내부/외부 구분)
+        const allPickups = [...dayPickups.departures, ...dayPickups.arrivals, ...dayPickups.hotelPickups];
+        
+        // 내부 데이터 (pickup_source가 'manual'이 아닌 것 또는 record_type이 'manual'이 아닌 것)
+        const internalPickups = allPickups.filter(p => 
+          p.pickup_source !== 'manual' && p.record_type !== 'manual'
+        );
+        const internalCount = internalPickups.length;
+        const internalPax = internalPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        
+        // 외부 데이터 (pickup_source가 'manual'이거나 record_type이 'manual'인 것)
+        const externalPickups = allPickups.filter(p => 
+          p.pickup_source === 'manual' || p.record_type === 'manual'
+        );
+        const externalCount = externalPickups.length;
+        const externalPax = externalPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
         
         html += `<div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''} ${isClosed ? 'closed' : ''}">`;
         html += `<div class="calendar-date">${day}일</div>`;
         
-        // 요약
+        // 통계 요약 (데이터가 있을 때만)
         if (hasPickup) {
-          html += `
-            <div class="day-summary">📊 ${totalCount}건 | ${totalPax}명</div>
-            <button class="btn btn-sm btn-outline-primary w-100 mb-2" style="font-size: 0.7rem; padding: 2px 4px;" onclick="showDayView('${dateStr}')">
-              📋 전체보기
-            </button>
-          `;
+          html += `<div class="day-summary" style="font-size: 0.65rem; line-height: 1.3;">`;
+          if (internalCount > 0) {
+            html += `내부: ${internalCount}건(${internalPax}명)<br>`;
+          }
+          if (externalCount > 0) {
+            html += `외부: ${externalCount}건(${externalPax}명)`;
+          }
+          html += `</div>`;
         }
+        
+        // 전체보기 버튼 (예약 없어도 표시)
+        html += `
+          <button class="btn btn-sm btn-outline-primary w-100 mb-2" style="font-size: 0.7rem; padding: 2px 4px;" onclick="showDayView('${dateStr}')">
+            📋 전체보기
+          </button>
+        `;
         
         // 공항명 매핑 함수
         const getAirportLabel = (code) => {

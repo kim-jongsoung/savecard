@@ -2124,9 +2124,8 @@ router.get('/schedule/public/:date?', (req, res) => {
   });
 });
 
-// 일별 스케줄 페이지 (로그인 필요) - 달력에서 전체보기 클릭시
+// 일별 상세 스케줄 페이지 (로그인 필요)
 router.get('/schedule/daily', (req, res) => {
-  // ERP 관리자 세션 또는 픽업 전용 세션 체크
   const isMainAdmin = req.session && req.session.adminId;
   const isPickupAdmin = req.session && req.session.admin;
   
