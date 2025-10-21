@@ -70,23 +70,24 @@
     
     .input-section {
       background: #f8f9fa;
-      padding: 20px;
+      padding: 10px;
       border-bottom: 2px solid #e0e0e0;
     }
     
     .input-tabs {
       display: flex;
-      gap: 10px;
-      margin-bottom: 15px;
+      gap: 8px;
+      margin-bottom: 8px;
     }
     
     .tab-btn {
-      padding: 10px 20px;
+      padding: 6px 12px;
       border: none;
       background: white;
       cursor: pointer;
       border-radius: 5px 5px 0 0;
       font-weight: bold;
+      font-size: 12px;
       transition: all 0.3s;
     }
     
@@ -97,7 +98,7 @@
     
     .tab-content {
       background: white;
-      padding: 20px;
+      padding: 12px;
       border-radius: 0 5px 5px 5px;
       display: none;
     }
@@ -108,11 +109,11 @@
     
     .ai-parse-area {
       width: 100%;
-      min-height: 100px;
-      padding: 15px;
+      min-height: 60px;
+      padding: 8px;
       border: 2px solid #e0e0e0;
       border-radius: 5px;
-      font-size: 14px;
+      font-size: 12px;
       font-family: monospace;
       resize: vertical;
     }
@@ -125,7 +126,7 @@
     .manual-form {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+      gap: 10px;
     }
     
     .form-group {
@@ -158,12 +159,12 @@
       background: #667eea;
       color: white;
       border: none;
-      padding: 12px 30px;
+      padding: 8px 20px;
       border-radius: 5px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 13px;
       font-weight: bold;
-      margin-top: 10px;
+      margin-top: 8px;
       transition: all 0.3s;
     }
     
@@ -175,46 +176,47 @@
     
     .info-bar {
       background: #f8f9fa;
-      padding: 20px;
+      padding: 10px;
       border-bottom: 2px solid #e0e0e0;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 15px;
+      gap: 10px;
     }
     
     .summary {
       display: flex;
-      gap: 20px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     
     .summary-item {
       background: white;
-      padding: 10px 20px;
+      padding: 5px 10px;
       border-radius: 5px;
       border: 2px solid #e0e0e0;
+      font-size: 12px;
     }
     
     .summary-item strong {
       color: #667eea;
-      font-size: 20px;
+      font-size: 16px;
     }
     
     .edit-hint {
       color: #666;
-      font-size: 14px;
+      font-size: 11px;
       font-style: italic;
     }
     
     .table-container {
       overflow-x: auto;
-      padding: 20px;
+      padding: 10px;
     }
     
     #multiTableContainer {
-      margin-top: 20px;
+      margin-top: 10px;
     }
     
     #multiTableContainer > div {
@@ -470,18 +472,18 @@
       </div>
       
       <div id="aiTab" class="tab-content active">
-        <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2e7d32;">
-          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 14px;">📊 Import Multiple Excel Data</h4>
-          <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #555;">
+        <div style="background: #e8f5e9; padding: 6px; border-radius: 5px; margin-bottom: 8px; border-left: 3px solid #2e7d32;">
+          <h4 style="margin: 0 0 4px 0; color: #2e7d32; font-size: 11px;">📊 Import Multiple Excel Data</h4>
+          <ul style="margin: 0; padding-left: 16px; font-size: 10px; color: #555;">
             <li>You can paste <strong>multiple lines</strong> at once</li>
             <li>AI automatically <strong>recognizes column order</strong></li>
             <li>Automatically matches time, hotel, flight, contact, etc.</li>
             <li>Handles data with or without headers</li>
           </ul>
         </div>
-        <div style="margin-bottom: 10px;">
-          <label style="font-weight: bold; margin-right: 10px;">📅 Pickup Date:</label>
-          <input type="date" id="excelImportDate" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
+        <div style="margin-bottom: 6px;">
+          <label style="font-weight: bold; margin-right: 8px; font-size: 11px;">📅 Pickup Date:</label>
+          <input type="date" id="excelImportDate" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;">
         </div>
         <textarea 
           id="aiParseText" 
@@ -716,7 +718,7 @@
         
         // 날짜별 섹션 생성
         const section = document.createElement('div');
-        section.style.marginBottom = '30px';
+        section.style.marginBottom = '15px';
         
         // 날짜 헤더
         const dateHeader = document.createElement('h2');
@@ -724,7 +726,7 @@
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[dateObj.getDay()];
         dateHeader.textContent = `📅 ${date} (${dayName}) - ${pickups.length} pickups`;
-        dateHeader.style.cssText = 'background: #6B8E23; color: white; padding: 15px; margin: 0; border-radius: 8px 8px 0 0;';
+        dateHeader.style.cssText = 'background: #6B8E23; color: white; padding: 8px; margin: 0; border-radius: 8px 8px 0 0; font-size: 14px;';
         section.appendChild(dateHeader);
         
         if (pickups.length === 0) {
