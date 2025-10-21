@@ -296,6 +296,15 @@
       background: #f8f9fa;
     }
     
+    /* 외부 데이터 행 배경 (연한 회색) */
+    tbody tr.external-data-row {
+      background: #f5f5f5;
+    }
+    
+    tbody tr.external-data-row:hover {
+      background: #ececec;
+    }
+    
     /* 편집 가능한 셀 hover가 row hover보다 우선되도록 */
     tbody tr:hover td.editable:hover {
       background: #fff3cd !important;
@@ -806,8 +815,10 @@
         // 외부 데이터 삭제 가능 (수동 입력 또는 엑셀 가져오기)
         const canDelete = (pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import') && pickup.record_type === 'manual';
         
-        // row에 data-id 추가
-        row.dataset.id = pickup.id;
+        // 외부 데이터 구분 클래스 추가
+        if (isExternalData) {
+          row.classList.add('external-data-row');
+        }
         
         row.innerHTML = `
           <td onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">

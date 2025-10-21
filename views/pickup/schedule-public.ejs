@@ -144,6 +144,15 @@
       cursor: pointer;
     }
     
+    /* 외부 데이터 행 배경 (연한 회색) */
+    tbody tr.external-data-row {
+      background: #f5f5f5;
+    }
+    
+    tbody tr.external-data-row:hover {
+      background: #ececec;
+    }
+    
     .status-badge {
       display: inline-block;
       padding: 4px 12px;
@@ -386,8 +395,27 @@
       const tbody = document.getElementById('scheduleBody');
       tbody.innerHTML = '';
       
-      pickups.forEach(pickup => {
+      // 외부 데이터와 시스템 데이터 분리 및 정렬
+      const externalData = pickups.filter(p => 
+        p.pickup_source === 'manual' || p.pickup_source === 'excel_import'
+      );
+      const systemData = pickups.filter(p => 
+        p.pickup_source !== 'manual' && p.pickup_source !== 'excel_import'
+      );
+      
+      // 외부 데이터 먼저, 시스템 데이터는 나중에
+      const sortedPickups = [...externalData, ...systemData];
+      
+      console.log(`📊 데이터 정렬: 외부 ${externalData.length}건, 시스템 ${systemData.length}건`);
+      
+      sortedPickups.forEach(pickup => {
+        const isExternalData = pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import';
         const row = document.createElement('tr');
+        
+        // 외부 데이터 구분 클래스 추가
+        if (isExternalData) {
+          row.classList.add('external-data-row');
+        }
         
         // STATUS
         const statusClass = pickup.contact_status === 'CONTACTED' ? 'status-contacted' : 'status-pending';
