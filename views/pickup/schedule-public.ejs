@@ -262,9 +262,9 @@
             <th>TIME</th>
             <th>HOTEL</th>
             <th>PERSON</th>
+            <th>DER</th>
             <th>VEHICLE</th>
             <th>NUM</th>
-            <th>DER</th>
             <th>NAME</th>
             <th>ENG NAME</th>
             <th>CONTACT</th>
@@ -400,25 +400,28 @@
         // TIME
         const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
         
-        // ROUTE
-        const routeDisplay = pickup.route_type || '-';
-        
         // 렌트카 정보
-        const rentalVehicle = pickup.rental_vehicle || '-';
         const rentalNumber = pickup.rental_number || '-';
         const rentalDuration = pickup.rental_duration || '-';
         
-        // FLIGHT: 항공편 + 경로
-        let flightWithRoute = pickup.flight_number || '-';
-        if (pickup.flight_number && pickup.hotel_name) {
+        // VEHICLE 컬럼: 수동 입력값 우선, 없으면 자동 생성된 루팅 정보
+        let vehicleWithRoute = '-';
+        
+        // 1순위: 사용자가 직접 입력한 rental_vehicle 값
+        if (pickup.rental_vehicle && pickup.rental_vehicle.trim() !== '') {
+          vehicleWithRoute = pickup.rental_vehicle;
+        }
+        // 2순위: 자동 생성된 루팅 정보
+        else if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
-            // 괌 출발편: 호텔명 → AIRPORT
-            flightWithRoute = `${pickup.flight_number} (${pickup.hotel_name} → AIRPORT)`;
+            vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
           } else if (pickup.record_type === 'arrival') {
-            // 괌 도착편: AIRPORT → 호텔명
-            flightWithRoute = `${pickup.flight_number} (AIRPORT → ${pickup.hotel_name})`;
+            vehicleWithRoute = `(AIRPORT → ${pickup.hotel_name})`;
           }
         }
+        
+        // FLIGHT 컬럼: 항공편 번호만
+        const flightNumber = pickup.flight_number || '-';
         
         // AGENCY: 업체명 표시
         const agencyDisplay = pickup.agency_name || '-';
@@ -434,13 +437,13 @@
           <td class="time-col">${timeDisplay.substring(0, 5)}</td>
           <td>${pickup.hotel_name || '-'}</td>
           <td>${pickup.passenger_count || '-'}</td>
-          <td>${rentalVehicle}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
-          <td>${rentalNumber}</td>
           <td>${rentalDuration}</td>
+          <td>${vehicleWithRoute}<span class="source-badge ${sourceClass}">${sourceText}</span></td>
+          <td>${rentalNumber}</td>
           <td>${pickup.customer_name || '-'}</td>
           <td>${pickup.english_name || '-'}</td>
           <td>${pickup.phone ? maskPhone(pickup.phone) : '-'}</td>
-          <td>${flightWithRoute}</td>
+          <td>${flightNumber}</td>
           <td>${agencyDisplay}</td>
           <td>${payDisplay}</td>
           <td>${requestDisplay}</td>
