@@ -760,13 +760,13 @@
         const rentalNumber = pickup.rental_number || '-';
         const rentalDuration = pickup.rental_duration || '-';
         
-        // VEHICLE 컬럼: 차량 + 루팅 정보
-        let vehicleWithRoute = pickup.rental_vehicle || '-';
+        // VEHICLE 컬럼: 루팅 정보만 (차량 정보는 NUM 컬럼에)
+        let vehicleWithRoute = '-';
         if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
-            vehicleWithRoute = `${pickup.rental_vehicle || 'Vehicle'} (${pickup.hotel_name} → AIRPORT)`;
+            vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
           } else if (pickup.record_type === 'arrival') {
-            vehicleWithRoute = `${pickup.rental_vehicle || 'Vehicle'} (AIRPORT → ${pickup.hotel_name})`;
+            vehicleWithRoute = `(AIRPORT → ${pickup.hotel_name})`;
           }
         }
         
@@ -861,25 +861,39 @@
       
       console.log('입력 필드 생성 완료');
       
-      input.addEventListener('blur', async function() {
+      let isProcessing = false; // 중복 처리 방지 플래그
+      
+      const handleBlur = async function() {
+        if (isProcessing) {
+          console.log('이미 처리 중입니다. 중복 실행 방지.');
+          return;
+        }
+        
+        isProcessing = true;
         console.log('blur 이벤트 발생');
         const newValue = this.value.trim();
         
         if (newValue !== cleanValue && newValue !== (cleanValue === '-' ? '' : cleanValue)) {
+          console.log(`값 변경 감지: "${cleanValue}" → "${newValue}"`);
           await updateField(id, field, newValue);
         } else {
           console.log('값이 변경되지 않음');
           cell.innerHTML = originalHTML;
         }
         editingCell = null;
-      });
+        isProcessing = false;
+      };
+      
+      input.addEventListener('blur', handleBlur, { once: true }); // once 옵션으로 한 번만 실행
       
       input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
           console.log('Enter 키 입력');
+          e.preventDefault();
           this.blur();
         } else if (e.key === 'Escape') {
           console.log('Escape 키 입력 - 취소');
+          input.removeEventListener('blur', handleBlur); // blur 이벤트 제거
           cell.innerHTML = originalHTML;
           editingCell = null;
         }
@@ -898,7 +912,17 @@
       }
     }
     
+    let isUpdating = false; // 전역 업데이트 진행 중 플래그
+    
     async function updateField(id, field, value) {
+      if (isUpdating) {
+        console.log('⚠️ 이미 업데이트 진행 중입니다. 중복 요청 차단.');
+        return;
+      }
+      
+      isUpdating = true;
+      console.log(`🔄 API 요청 시작: ID=${id}, Field=${field}, Value="${value}"`);
+      
       try {
         const response = await fetch(`/pickup/api/${id}/update-field`, {
           method: 'PUT',
@@ -907,14 +931,20 @@
         });
         
         if (response.ok) {
+          console.log('✅ 업데이트 성공');
           showToast('수정되었습니다');
-          loadSchedule(currentDate);
+          await loadSchedule(currentDate);
         } else {
+          console.error('❌ 업데이트 실패:', response.status);
           throw new Error('Update failed');
         }
       } catch (error) {
+        console.error('❌ 업데이트 오류:', error);
         showToast('수정 실패', 'error');
-        loadSchedule(currentDate);
+        await loadSchedule(currentDate);
+      } finally {
+        isUpdating = false;
+        console.log('🔄 업데이트 완료');
       }
     }
     
