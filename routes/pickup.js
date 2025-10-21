@@ -650,7 +650,19 @@ router.post('/api/ai-parse', async (req, res) => {
       if (!line.trim()) continue;
       
       // 탭으로 분리 (엑셀 복사 시 탭으로 구분됨)
-      const columns = line.split('\t').map(col => col.trim());
+      let columns = line.split('\t').map(col => col.trim());
+      
+      // 첫 번째 컬럼이 날짜 형식(YYYY-MM-DD)이면 DATE 컬럼이 포함된 것으로 판단하고 제거
+      if (columns.length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(columns[0])) {
+        console.log(`📅 DATE 컬럼 감지 및 제거: ${columns[0]}`);
+        columns = columns.slice(1); // 첫 번째 컬럼(DATE) 제거
+      }
+      
+      // 헤더 줄 감지 (DATE 컬럼이 있는 경우도 처리)
+      if (columns[0] === 'DATE' || columns[0] === 'STATUS') {
+        console.log('⏭️ 헤더 줄 스킵');
+        continue;
+      }
       
       // 엑셀 컬럼 순서: STATUS, TIME, HOTEL, PERSON, DER, VEHICLE, NUM, NAME, ENG NAME, CONTACT, FLIGHT, AGENCY, PAY, REQUEST, REMARK
       const [
