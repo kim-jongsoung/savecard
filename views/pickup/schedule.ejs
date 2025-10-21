@@ -359,6 +359,11 @@
       color: #f57c00;
     }
     
+    .source-excel {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
     .delete-btn {
       border: none;
       padding: 5px 10px;
@@ -465,16 +470,25 @@
       </div>
       
       <div id="aiTab" class="tab-content active">
+        <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2e7d32;">
+          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 14px;">📊 엑셀 다중 데이터 가져오기</h4>
+          <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #555;">
+            <li><strong>여러 줄</strong>을 한번에 붙여넣기 가능합니다</li>
+            <li>AI가 자동으로 <strong>컬럼 순서를 인식</strong>합니다</li>
+            <li>시간, 호텔명, 항공편, 연락처 등을 <strong>자동으로 매칭</strong></li>
+            <li>헤더 포함/미포함 모두 처리 가능</li>
+          </ul>
+        </div>
         <div style="margin-bottom: 10px;">
-          <label style="font-weight: bold; margin-right: 10px;">픽업 날짜:</label>
+          <label style="font-weight: bold; margin-right: 10px;">📅 픽업 날짜:</label>
           <input type="date" id="excelImportDate" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
         </div>
         <textarea 
           id="aiParseText" 
           class="ai-parse-area" 
-          placeholder="엑셀에서 복사한 데이터를 붙여넣으세요..."
+          placeholder="엑셀에서 복사한 여러 줄의 데이터를 여기에 붙여넣으세요...&#10;&#10;예시:&#10;23:00  Dusit Beach Resort  김철수  3  KE111  010-1234-5678  4H&#10;14:30  Hilton Hotel  박영희  2  OZ123  010-9876-5432  8H&#10;..."
         ></textarea>
-        <button class="btn-primary" onclick="parseAndAdd()">📊 엑셀 데이터 추가</button>
+        <button class="btn-primary" onclick="parseAndAdd()">📊 엑셀 데이터 추가 (다중 지원)</button>
       </div>
       
       <div id="manualTab" class="tab-content">
@@ -786,8 +800,18 @@
         const statusClass = pickup.contact_status === 'CONTACTED' ? 'status-contacted' : 'status-pending';
         const statusText = pickup.contact_status === 'CONTACTED' ? 'CONTACTED' : 'PENDING';
         
-        const sourceClass = pickup.pickup_source === 'manual' ? 'source-manual' : 'source-system';
-        const sourceText = pickup.pickup_source === 'manual' ? '✏️ Manual' : 'System';
+        // SOURCE 배지: 외부 데이터(수동/엑셀)와 시스템 데이터 구분
+        let sourceClass, sourceText;
+        if (pickup.pickup_source === 'manual') {
+          sourceClass = 'source-manual';
+          sourceText = '✏️ 수동입력';
+        } else if (pickup.pickup_source === 'excel_import') {
+          sourceClass = 'source-excel';
+          sourceText = '📊 엑셀';
+        } else {
+          sourceClass = 'source-system';
+          sourceText = '🤖 예약시스템';
+        }
         
         const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
         const rentalNumber = pickup.rental_number || '-';
@@ -1022,7 +1046,8 @@
         
         if (response.ok) {
           const result = await response.json();
-          showToast(`✅ ${result.count || 1}건의 픽업이 추가되었습니다`);
+          const count = result.count || 1;
+          showToast(`✅ 엑셀 데이터 ${count}건 추가 완료!\n상단에 📊 엑셀 배지로 표시됩니다.`);
           document.getElementById('aiParseText').value = '';
           document.getElementById('excelImportDate').value = '';
           loadSchedule(currentDate);

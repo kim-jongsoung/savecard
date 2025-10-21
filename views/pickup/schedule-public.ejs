@@ -196,6 +196,11 @@
       color: #f57c00;
     }
     
+    .source-excel {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -421,9 +426,18 @@
         const statusClass = pickup.contact_status === 'CONTACTED' ? 'status-contacted' : 'status-pending';
         const statusText = pickup.contact_status === 'CONTACTED' ? 'CONTACTED' : 'PENDING';
         
-        // SOURCE BADGE
-        const sourceClass = pickup.pickup_source === 'manual' ? 'source-manual' : 'source-system';
-        const sourceText = pickup.pickup_source === 'manual' ? '✏️ Manual' : 'System';
+        // SOURCE BADGE: 외부 데이터(수동/엑셀)와 시스템 데이터 구분
+        let sourceClass, sourceText;
+        if (pickup.pickup_source === 'manual') {
+          sourceClass = 'source-manual';
+          sourceText = '✏️ 수동입력';
+        } else if (pickup.pickup_source === 'excel_import') {
+          sourceClass = 'source-excel';
+          sourceText = '📊 엑셀';
+        } else {
+          sourceClass = 'source-system';
+          sourceText = '🤖 예약시스템';
+        }
         
         // TIME
         const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
