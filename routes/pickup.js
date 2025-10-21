@@ -2365,19 +2365,22 @@ router.delete('/api/manual-pickup/:id', async (req, res) => {
   const { id } = req.params;
   
   try {
-    // 수동 픽업만 삭제 가능
+    // 외부 데이터만 삭제 가능 (수동 입력 또는 엑셀 가져오기)
     const result = await pool.query(
       `UPDATE airport_pickups 
        SET status = 'cancelled', updated_at = NOW()
-       WHERE id = $1 AND pickup_source = 'manual' AND record_type = 'manual'
+       WHERE id = $1 
+       AND (pickup_source = 'manual' OR pickup_source = 'excel_import')
+       AND record_type = 'manual'
        RETURNING *`,
       [id]
     );
     
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: '수동 픽업만 삭제할 수 있습니다' });
+      return res.status(400).json({ error: '외부 데이터만 삭제할 수 있습니다 (시스템 데이터는 삭제 불가)' });
     }
     
+    console.log(`✅ 외부 데이터 삭제: ID ${id} (${result.rows[0].pickup_source})`);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ 삭제 실패:', error);
