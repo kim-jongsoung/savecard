@@ -400,7 +400,7 @@
       const tbody = document.getElementById('scheduleBody');
       tbody.innerHTML = '';
       
-      // 외부 데이터와 시스템 데이터 분리 및 정렬
+      // 외부 데이터와 시스템 데이터 분리
       const externalData = pickups.filter(p => 
         p.pickup_source === 'manual' || p.pickup_source === 'excel_import'
       );
@@ -408,10 +408,22 @@
         p.pickup_source !== 'manual' && p.pickup_source !== 'excel_import'
       );
       
+      // 시간 비교 함수
+      const getTimeValue = (pickup) => {
+        const time = pickup.actual_pickup_time || pickup.display_time || '';
+        if (!time) return 9999; // 시간 없으면 맨 뒤로
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes; // 분 단위로 변환
+      };
+      
+      // 각 그룹 내에서 시간순 정렬 (빠른 시간이 위로)
+      externalData.sort((a, b) => getTimeValue(a) - getTimeValue(b));
+      systemData.sort((a, b) => getTimeValue(a) - getTimeValue(b));
+      
       // 외부 데이터 먼저, 시스템 데이터는 나중에
       const sortedPickups = [...externalData, ...systemData];
       
-      console.log(`📊 데이터 정렬: 외부 ${externalData.length}건, 시스템 ${systemData.length}건`);
+      console.log(`📊 데이터 정렬: 외부 ${externalData.length}건, 시스템 ${systemData.length}건 (각 그룹 내 시간순)`);
       
       sortedPickups.forEach(pickup => {
         const isExternalData = pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import';
