@@ -52,6 +52,144 @@ async function getFlights(pool) {
   return FLIGHTS_CACHE;
 }
 
+// AI 스마트 컬럼 매핑 함수
+function smartColumnMapping(columns) {
+  console.log('🤖 AI 스마트 컬럼 매핑 시작:', columns);
+  
+  const result = {
+    status: null,
+    time: null,
+    hotel: null,
+    person: null,
+    der: null,
+    vehicle: null,
+    num: null,
+    name: null,
+    engName: null,
+    contact: null,
+    flight: null,
+    agency: null,
+    pay: null,
+    request: null,
+    remark: null
+  };
+  
+  const usedIndices = new Set();
+  
+  // 1. TIME 찾기 (HH:MM 형식)
+  const timePattern = /^\d{1,2}:\d{2}(?::\d{2})?$/;
+  for (let i = 0; i < columns.length; i++) {
+    if (timePattern.test(columns[i])) {
+      result.time = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ TIME 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 2. HOTEL 찾기 (Resort, Hotel, Inn 등 포함)
+  const hotelPattern = /(resort|hotel|inn|suites?|beach|dusit|hilton|hyatt|marriott|grand)/i;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && hotelPattern.test(columns[i])) {
+      result.hotel = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ HOTEL 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 3. FLIGHT 찾기 (항공편 형식: KE111, OZ123 등)
+  const flightPattern = /^[A-Z]{2}\d{2,4}$/i;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && flightPattern.test(columns[i])) {
+      result.flight = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ FLIGHT 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 4. CONTACT 찾기 (전화번호: 010, +82 등)
+  const contactPattern = /^[\d\-\+\(\)\s]{8,}$/;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && contactPattern.test(columns[i]) && columns[i].length > 7) {
+      result.contact = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ CONTACT 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 5. PERSON 찾기 (단순 숫자 1-99)
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && /^\d{1,2}$/.test(columns[i])) {
+      result.person = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ PERSON 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 6. DER 찾기 (4H, 1D 등)
+  const derPattern = /^\d+[HD]$/i;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && derPattern.test(columns[i])) {
+      result.der = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ DER 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 7. NUM 찾기 (차량번호: 12가3456 형식)
+  const numPattern = /^\d{2}[가-힣]\d{4}$/;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && numPattern.test(columns[i])) {
+      result.num = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ NUM 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 8. STATUS 찾기 (PENDING, CONTACTED 등)
+  const statusPattern = /^(pending|contacted|확인|대기)$/i;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && statusPattern.test(columns[i])) {
+      result.status = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ STATUS 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 9. NAME 찾기 (한글 이름, 영문보다 먼저)
+  const koreanPattern = /[가-힣]{2,}/;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && koreanPattern.test(columns[i]) && columns[i].length < 20) {
+      result.name = columns[i];
+      usedIndices.add(i);
+      console.log(`  ✓ NAME 감지 [${i}]: ${columns[i]}`);
+      break;
+    }
+  }
+  
+  // 10. 나머지 필드들 순서대로 매핑
+  let remainingFields = ['vehicle', 'engName', 'agency', 'pay', 'request', 'remark'];
+  let remainingIndex = 0;
+  for (let i = 0; i < columns.length; i++) {
+    if (!usedIndices.has(i) && columns[i] && columns[i] !== '-' && remainingIndex < remainingFields.length) {
+      const fieldName = remainingFields[remainingIndex];
+      result[fieldName] = columns[i];
+      console.log(`  ✓ ${fieldName.toUpperCase()} 할당 [${i}]: ${columns[i]}`);
+      remainingIndex++;
+    }
+  }
+  
+  console.log('🎯 최종 매핑 결과:', result);
+  return result;
+}
+
 // AI 기반 필드 자동 채우기 함수
 function enhanceWithAI(data) {
   const enhanced = { ...data };
@@ -655,41 +793,35 @@ router.post('/api/ai-parse', async (req, res) => {
       // 첫 번째 컬럼이 날짜 형식(YYYY-MM-DD)이면 DATE 컬럼이 포함된 것으로 판단하고 제거
       if (columns.length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(columns[0])) {
         console.log(`📅 DATE 컬럼 감지 및 제거: ${columns[0]}`);
-        columns = columns.slice(1); // 첫 번째 컬럼(DATE) 제거
+        columns = columns.slice(1);
       }
       
-      // 헤더 줄 감지 (DATE 컬럼이 있는 경우도 처리)
-      if (columns[0] === 'DATE' || columns[0] === 'STATUS') {
+      // 헤더 줄 감지
+      if (columns.some(col => col === 'DATE' || col === 'STATUS' || col === 'TIME' || col === 'HOTEL')) {
         console.log('⏭️ 헤더 줄 스킵');
         continue;
       }
       
-      // 엑셀 컬럼 순서: STATUS, TIME, HOTEL, PERSON, DER, VEHICLE, NUM, NAME, ENG NAME, CONTACT, FLIGHT, AGENCY, PAY, REQUEST, REMARK
-      const [
-        status,           // 0: STATUS (연락상태)
-        time,             // 1: TIME (픽업시간)
-        hotel,            // 2: HOTEL (호텔명)
-        person,           // 3: PERSON (인원수)
-        der,              // 4: DER (렌탈시간)
-        vehicle,          // 5: VEHICLE (차량 + 루팅정보)
-        num,              // 6: NUM (차량번호)
-        name,             // 7: NAME (한글명)
-        engName,          // 8: ENG NAME (영문명)
-        contact,          // 9: CONTACT (연락처)
-        flight,           // 10: FLIGHT (항공편)
-        agency,           // 11: AGENCY (업체명)
-        pay,              // 12: PAY (결제상태)
-        request,          // 13: REQUEST (특별요청)
-        remark            // 14: REMARK (비고)
-      ] = columns;
+      // 🤖 AI 스마트 컬럼 매핑 (순서에 관계없이 내용 분석)
+      const mapped = smartColumnMapping(columns);
       
-      console.log(`📋 파싱 중: TIME="${time}", NAME="${name}", STATUS="${status}"`);
-      
-      // 헤더 줄 스킵 (TIME 컬럼에 "TIME" 문자열이 있으면 헤더)
-      if (time === 'TIME' || status === 'STATUS') {
-        console.log('⏭️ 헤더 줄 스킵');
-        continue;
-      }
+      const {
+        status,
+        time,
+        hotel,
+        person,
+        der,
+        vehicle,
+        num,
+        name,
+        engName,
+        contact,
+        flight,
+        agency,
+        pay,
+        request,
+        remark
+      } = mapped;
       
       // 필수 필드 검증
       if (!time || !name) {
@@ -697,12 +829,7 @@ router.post('/api/ai-parse', async (req, res) => {
         continue;
       }
       
-      // TIME 필드 검증 (시간 형식이 맞는지 확인)
-      const timePattern = /^\d{1,2}:\d{2}$/;
-      if (!timePattern.test(time)) {
-        console.log(`⚠️ 잘못된 시간 형식 스킵: "${time}"`);
-        continue;
-      }
+      console.log(`✅ 파싱 성공: TIME="${time}", NAME="${name}", HOTEL="${hotel}"`)
       
       // vehicle 필드에서 루팅 정보 추출 (예: "K5 (AIRPORT → HOTEL)")
       let vehicleType = vehicle || '';
