@@ -625,19 +625,30 @@ router.post('/api/ai-parse', async (req, res) => {
         return str;
       };
       
-      // 시간 형식 변환 (HH:MM → HH:MM:00)
-      const formattedTime = time.includes(':') ? 
-        (time.split(':').length === 2 ? `${time}:00` : time) : 
-        null;
+      // 시간 형식 정규화 (HH:MM 형식으로만, 초는 제거)
+      let normalizedTime = null;
+      if (time) {
+        // HH:MM:SS → HH:MM, 또는 HH:MM 그대로
+        const timeParts = time.split(':');
+        if (timeParts.length >= 2) {
+          normalizedTime = `${timeParts[0].padStart(2, '0')}:${timeParts[1].padStart(2, '0')}`;
+        }
+      }
+      
+      // AI 기반 필드 자동 채우기
+      const aiEnhanced = enhanceWithAI({
+        status, time: normalizedTime, hotel, person, der, vehicle, num, 
+        name, engName, contact, flight, agency, pay, request, remark
+      });
       
       const pickup = {
         pickup_source: 'excel_import',
         record_type: 'manual',
-        pickup_type: 'manual',  // NOT NULL 제약조건 만족
+        pickup_type: 'manual',
         status: 'active',
-        contact_status: truncate(status, 20, 'contact_status') || 'pending',
+        contact_status: aiEnhanced.contact_status,
         display_date: targetDate,
-        actual_pickup_time: formattedTime,
+        actual_pickup_time: aiEnhanced.time,
         hotel_name: truncate(hotel, 100, 'hotel_name'),
         passenger_count: person ? parseInt(person) : null,
         rental_duration: truncate(der, 20, 'rental_duration'),
