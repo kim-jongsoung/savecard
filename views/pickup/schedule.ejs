@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HKT 픽업 스케줄 관리</title>
+  <title>HKT Pickup Schedule Management</title>
   <style>
     * {
       margin: 0;
@@ -445,7 +445,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚗 HKT 픽업 스케줄 관리</h1>
+      <h1>🚗 HKT Pickup Schedule Management</h1>
       <div class="date-display" id="dateDisplay">Loading...</div>
       <div class="nav-buttons">
         <button onclick="changeDate(-1)">◀</button>
@@ -453,96 +453,96 @@
         <button onclick="changeDate(1)">▶</button>
       </div>
       <div class="nav-buttons" style="margin-top: 3px;">
-        <button onclick="loadMultipleDays(0, 1)" style="background: #4CAF50; border-color: #4CAF50;">오늘+내일</button>
-        <button onclick="loadMultipleDays(1, 2)" style="background: #2196F3; border-color: #2196F3;">내일+모레</button>
-        <button onclick="loadMultipleDays(0, 2)" style="background: #FF9800; border-color: #FF9800;">3일</button>
+        <button onclick="loadMultipleDays(0, 1)" style="background: #4CAF50; border-color: #4CAF50;">Today + Tomorrow</button>
+        <button onclick="loadMultipleDays(1, 2)" style="background: #2196F3; border-color: #2196F3;">Tomorrow + Day After Tomorrow</button>
+        <button onclick="loadMultipleDays(0, 2)" style="background: #FF9800; border-color: #FF9800;">3 Days</button>
       </div>
       <div class="nav-buttons" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px;">
-        <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">엑셀</button>
-        <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">공유링크</button>
+        <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">Excel</button>
+        <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">Share Link</button>
       </div>
     </div>
     
     <div class="input-section">
       <div class="input-tabs">
-        <button class="tab-btn active" onclick="switchTab('ai')">📊 엑셀 가져오기</button>
-        <button class="tab-btn" onclick="switchTab('manual')">✏️ 수동 입력</button>
+        <button class="tab-btn active" onclick="switchTab('ai')">📊 Import Excel Data</button>
+        <button class="tab-btn" onclick="switchTab('manual')">✏️ Manual Input</button>
       </div>
       
       <div id="aiTab" class="tab-content active">
         <div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2e7d32;">
-          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 14px;">📊 엑셀 다중 데이터 가져오기</h4>
+          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 14px;">📊 Import Multiple Excel Data</h4>
           <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: #555;">
-            <li><strong>여러 줄</strong>을 한번에 붙여넣기 가능합니다</li>
-            <li>AI가 자동으로 <strong>컬럼 순서를 인식</strong>합니다</li>
-            <li>시간, 호텔명, 항공편, 연락처 등을 <strong>자동으로 매칭</strong></li>
-            <li>헤더 포함/미포함 모두 처리 가능</li>
+            <li>You can paste <strong>multiple lines</strong> at once</li>
+            <li>AI automatically <strong>recognizes column order</strong></li>
+            <li>Automatically matches time, hotel, flight, contact, etc.</li>
+            <li>Handles data with or without headers</li>
           </ul>
         </div>
         <div style="margin-bottom: 10px;">
-          <label style="font-weight: bold; margin-right: 10px;">📅 픽업 날짜:</label>
+          <label style="font-weight: bold; margin-right: 10px;">📅 Pickup Date:</label>
           <input type="date" id="excelImportDate" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px;">
         </div>
         <textarea 
           id="aiParseText" 
           class="ai-parse-area" 
-          placeholder="엑셀에서 복사한 여러 줄의 데이터를 여기에 붙여넣으세요...&#10;&#10;예시:&#10;23:00  Dusit Beach Resort  김철수  3  KE111  010-1234-5678  4H&#10;14:30  Hilton Hotel  박영희  2  OZ123  010-9876-5432  8H&#10;..."
+          placeholder="Paste multiple lines of data copied from Excel here...&#10;&#10;Example:&#10;23:00  Dusit Beach Resort  John Kim  3  KE111  010-1234-5678  4H&#10;14:30  Hilton Hotel  Sarah Lee  2  OZ123  010-9876-5432  8H&#10;..."
         ></textarea>
-        <button class="btn-primary" onclick="parseAndAdd()">📊 엑셀 데이터 추가 (다중 지원)</button>
+        <button class="btn-primary" onclick="parseAndAdd()">📊 Add Excel Data (Multiple Supported)</button>
       </div>
       
       <div id="manualTab" class="tab-content">
         <div class="manual-form">
           <div class="form-group">
-            <label>픽업 날짜 *</label>
+            <label>Pickup Date *</label>
             <input type="date" id="manualDate" required>
           </div>
           <div class="form-group">
-            <label>픽업 시간 *</label>
+            <label>Pickup Time *</label>
             <input type="time" id="manualTime" required>
           </div>
           <div class="form-group">
-            <label>호텔명</label>
+            <label>Hotel Name</label>
             <input type="text" id="manualHotel" placeholder="Hilton">
           </div>
           <div class="form-group">
-            <label>고객명 *</label>
-            <input type="text" id="manualName" required placeholder="김철수">
+            <label>Customer Name *</label>
+            <input type="text" id="manualName" required placeholder="John Kim">
           </div>
           <div class="form-group">
-            <label>영문명</label>
-            <input type="text" id="manualEngName" placeholder="KIM CHUL SOO">
+            <label>English Name</label>
+            <input type="text" id="manualEngName" placeholder="KIM JOHN">
           </div>
           <div class="form-group">
-            <label>인원</label>
+            <label>Passengers</label>
             <input type="number" id="manualPerson" placeholder="3">
           </div>
           <div class="form-group">
-            <label>차량명 (VEHICLE)</label>
+            <label>Vehicle</label>
             <input type="text" id="manualVehicle" placeholder="K5">
           </div>
           <div class="form-group">
-            <label>차량번호 (NUM)</label>
+            <label>Vehicle Number</label>
             <input type="text" id="manualNumber" placeholder="12가3456">
           </div>
           <div class="form-group">
-            <label>대여시간 (DER)</label>
-            <input type="text" id="manualDuration" placeholder="3시간">
+            <label>Rental Duration</label>
+            <input type="text" id="manualDuration" placeholder="3 hours">
           </div>
           <div class="form-group">
-            <label>항공편</label>
+            <label>Flight</label>
             <input type="text" id="manualFlight" placeholder="KE111">
           </div>
           <div class="form-group">
-            <label>연락처</label>
+            <label>Contact</label>
             <input type="text" id="manualPhone" placeholder="010-1234-5678">
           </div>
           <div class="form-group">
-            <label>비고</label>
-            <input type="text" id="manualRemark" placeholder="특이사항">
+            <label>Remark</label>
+            <input type="text" id="manualRemark" placeholder="Special request">
           </div>
         </div>
-        <button class="btn-primary" onclick="addManualPickup()">➕ 수동 추가</button>
+        <button class="btn-primary" onclick="addManualPickup()">➕ Add Manual Pickup</button>
       </div>
     </div>
     
@@ -553,7 +553,7 @@
         <div class="summary-item">⏳ Pending: <strong id="pendingCount">0</strong></div>
         <div class="summary-item">👥 Passengers: <strong id="passengerCount">0</strong></div>
       </div>
-      <div class="edit-hint">💡 노란색으로 표시되는 셀을 클릭하면 수정할 수 있습니다 (연필 아이콘 표시)</div>
+      <div class="edit-hint">💡 Click on yellow cells to edit (pencil icon)</div>
     </div>
     
     <div id="loadingIndicator" class="loading">
@@ -633,9 +633,9 @@
         
         // 날짜 표시 업데이트
         const dateLabels = dates.map((d, i) => {
-          if (startOffset + i === 0) return '오늘';
-          if (startOffset + i === 1) return '내일';
-          if (startOffset + i === 2) return '모레';
+          if (startOffset + i === 0) return 'Today';
+          if (startOffset + i === 1) return 'Tomorrow';
+          if (startOffset + i === 2) return 'Day After Tomorrow';
           return d;
         });
         document.getElementById('dateDisplay').textContent = dateLabels.join(' + ');
@@ -721,15 +721,15 @@
         // 날짜 헤더
         const dateHeader = document.createElement('h2');
         const dateObj = new Date(date);
-        const days = ['일', '월', '화', '수', '목', '금', '토'];
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[dateObj.getDay()];
-        dateHeader.textContent = `📅 ${date} (${dayName}) - ${pickups.length}건`;
+        dateHeader.textContent = `📅 ${date} (${dayName}) - ${pickups.length} pickups`;
         dateHeader.style.cssText = 'background: #6B8E23; color: white; padding: 15px; margin: 0; border-radius: 8px 8px 0 0;';
         section.appendChild(dateHeader);
         
         if (pickups.length === 0) {
           const emptyMsg = document.createElement('div');
-          emptyMsg.textContent = '예약 없음';
+          emptyMsg.textContent = 'No pickups scheduled';
           emptyMsg.style.cssText = 'padding: 20px; text-align: center; color: #999; background: #f5f5f5;';
           section.appendChild(emptyMsg);
         } else {
@@ -745,17 +745,17 @@
                 <th>STATUS</th>
                 <th>TIME</th>
                 <th>HOTEL</th>
-                <th>PERSON</th>
-                <th>DER</th>
+                <th>PASSENGERS</th>
+                <th>RENTAL DURATION</th>
                 <th>VEHICLE</th>
-                <th>NUM</th>
-                <th>NAME</th>
-                <th>ENG NAME</th>
+                <th>VEHICLE NUMBER</th>
+                <th>CUSTOMER NAME</th>
+                <th>ENGLISH NAME</th>
                 <th>CONTACT</th>
                 <th>FLIGHT</th>
                 <th>AGENCY</th>
-                <th>PAY</th>
-                <th>REQUEST</th>
+                <th>PAYMENT STATUS</th>
+                <th>SPECIAL REQUEST</th>
                 <th>REMARK</th>
                 <th>ACTION</th>
               </tr>
@@ -816,13 +816,13 @@
         let sourceClass, sourceText;
         if (pickup.pickup_source === 'manual') {
           sourceClass = 'source-manual';
-          sourceText = '✏️ 수동입력';
+          sourceText = '✏️ Manual Input';
         } else if (pickup.pickup_source === 'excel_import') {
           sourceClass = 'source-excel';
-          sourceText = '📊 엑셀';
+          sourceText = '📊 Excel Import';
         } else {
           sourceClass = 'source-system';
-          sourceText = '🤖 예약시스템';
+          sourceText = '🤖 System Data';
         }
         
         const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
@@ -879,8 +879,8 @@
               class="delete-btn ${canDelete ? 'can-delete' : 'cannot-delete'}" 
               onclick="deletePickup(${pickup.id})" 
               ${!canDelete ? 'disabled' : ''}
-              title="${canDelete ? '외부 데이터 삭제 가능' : '시스템 데이터는 삭제 불가'}">
-              ${canDelete ? '🗑️ 삭제' : '🔒'}
+              title="${canDelete ? 'External data can be deleted' : 'System data cannot be deleted'}">
+              ${canDelete ? '🗑️ Delete' : '🔒'}
             </button>
           </td>
         `;
@@ -890,7 +890,7 @@
       
       // 편집 가능한 셀에 이벤트 추가 (tbody 내의 셀만 선택)
       const editableCells = tbody.querySelectorAll('td.editable');
-      console.log(`✅ ${editableCells.length}개의 편집 가능한 셀에 이벤트 리스너 등록`);
+      console.log(`✅ ${editableCells.length} editable cells registered with event listeners`);
       
       editableCells.forEach((cell, index) => {
         cell.style.cursor = 'pointer';
@@ -898,7 +898,7 @@
         // 기존 이벤트 리스너 제거를 위해 새로운 함수 사용
         const clickHandler = function(e) {
           e.stopPropagation(); // 이벤트 전파 중지
-          console.log(`셀 클릭됨 [${index}]:`, this.dataset.field, 'ID:', this.closest('tr')?.dataset.id);
+          console.log(`Cell clicked [${index}]:`, this.dataset.field, 'ID:', this.closest('tr')?.dataset.id);
           makeEditable(this);
         };
         
@@ -1013,20 +1013,20 @@
         });
         
         if (response.ok) {
-          console.log('✅ 업데이트 성공');
-          showToast('수정되었습니다');
+          console.log('✅ Update successful');
+          showToast('Updated successfully');
           await loadSchedule(currentDate);
         } else {
-          console.error('❌ 업데이트 실패:', response.status);
+          console.log('❌ Update failed:', response.status);
           throw new Error('Update failed');
         }
       } catch (error) {
-        console.error('❌ 업데이트 오류:', error);
-        showToast('수정 실패', 'error');
+        console.log('❌ Update error:', error);
+        showToast('Update failed', 'error');
         await loadSchedule(currentDate);
       } finally {
         isUpdating = false;
-        console.log('🔄 업데이트 완료');
+        console.log('🔄 Update completed');
       }
     }
     
@@ -1038,14 +1038,14 @@
     async function parseAndAdd() {
       const text = document.getElementById('aiParseText').value.trim();
       if (!text) {
-        showToast('엑셀 데이터를 붙여넣어주세요', 'error');
+        showToast('Please paste Excel data', 'error');
         return;
       }
       
       const selectedDate = document.getElementById('excelImportDate').value;
       
       try {
-        showToast('엑셀 데이터 처리 중...', 'info');
+        showToast('Processing Excel data...', 'info');
         
         const response = await fetch('/pickup/api/ai-parse', {
           method: 'POST',
@@ -1059,17 +1059,17 @@
         if (response.ok) {
           const result = await response.json();
           const count = result.count || 1;
-          showToast(`✅ 엑셀 데이터 ${count}건 추가 완료!\n상단에 📊 엑셀 배지로 표시됩니다.`);
+          showToast(`✅ ${count} Excel record(s) added!\nMarked with 📊 Excel badge at the top.`);
           document.getElementById('aiParseText').value = '';
           document.getElementById('excelImportDate').value = '';
           loadSchedule(currentDate);
         } else {
           const error = await response.json();
-          showToast('파싱 실패: ' + (error.error || '알 수 없는 오류'), 'error');
+          showToast('Parsing failed: ' + (error.error || 'Unknown error'), 'error');
         }
       } catch (error) {
-        console.error('엑셀 파싱 오류:', error);
-        showToast('엑셀 데이터 처리 실패', 'error');
+        console.error('Excel parsing error:', error);
+        showToast('Failed to process Excel data', 'error');
       }
     }
     
@@ -1102,19 +1102,19 @@
         });
         
         if (response.ok) {
-          showToast('픽업이 추가되었습니다');
+          showToast('Pickup added successfully');
           clearManualForm();
           loadSchedule(currentDate);
         } else {
           throw new Error('Add failed');
         }
       } catch (error) {
-        showToast('추가 실패', 'error');
+        showToast('Failed to add pickup', 'error');
       }
     }
     
     async function deletePickup(id) {
-      if (!confirm('정말 삭제하시겠습니까?')) return;
+      if (!confirm('Are you sure you want to delete this pickup?')) return;
       
       try {
         const response = await fetch(`/pickup/api/manual-pickup/${id}`, {
@@ -1122,14 +1122,14 @@
         });
         
         if (response.ok) {
-          showToast('삭제되었습니다');
+          showToast('Deleted successfully');
           loadSchedule(currentDate);
         } else {
           const result = await response.json();
           throw new Error(result.error || 'Delete failed');
         }
       } catch (error) {
-        showToast(error.message || '삭제 실패', 'error');
+        showToast(error.message || 'Delete failed', 'error');
       }
     }
     

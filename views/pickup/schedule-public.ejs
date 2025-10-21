@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HKT Daily Pickup Schedule</title>
+  <title>HKT Pickup Schedule</title>
   <style>
     * {
       margin: 0;
@@ -245,7 +245,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚗 HKT Daily Pickup Schedule</h1>
+      <h1>🚗 HKT Pickup Schedule</h1>
       <div class="date-display" id="dateDisplay">Loading...</div>
       <div class="nav-buttons">
         <button onclick="changeDate(-1)">◀ Prev Day</button>
@@ -256,10 +256,10 @@
     
     <div class="info-bar">
       <div class="summary" id="summary">
-        <div class="summary-item">Total: <strong id="totalCount">0</strong></div>
+        <div class="summary-item">Total Pickups: <strong id="totalCount">0</strong></div>
         <div class="summary-item">✅ Contacted: <strong id="contactedCount">0</strong></div>
         <div class="summary-item">⏳ Pending: <strong id="pendingCount">0</strong></div>
-        <div class="summary-item">👥 Passengers: <strong id="passengerCount">0</strong></div>
+        <div class="summary-item">👥 Total Passengers: <strong id="passengerCount">0</strong></div>
       </div>
       <div class="last-updated" id="lastUpdated">Last updated: ...</div>
     </div>
@@ -275,17 +275,17 @@
             <th>STATUS</th>
             <th>TIME</th>
             <th>HOTEL</th>
-            <th>PERSON</th>
-            <th>DER</th>
+            <th>PASSENGERS</th>
+            <th>RENTAL DURATION</th>
             <th>VEHICLE</th>
-            <th>NUM</th>
-            <th>NAME</th>
-            <th>ENG NAME</th>
+            <th>VEHICLE NUMBER</th>
+            <th>CUSTOMER NAME</th>
+            <th>ENGLISH NAME</th>
             <th>CONTACT</th>
             <th>FLIGHT</th>
             <th>AGENCY</th>
-            <th>PAY</th>
-            <th>REQUEST</th>
+            <th>PAYMENT</th>
+            <th>SPECIAL REQUEST</th>
             <th>REMARK</th>
           </tr>
         </thead>
@@ -295,7 +295,7 @@
     </div>
     
     <div id="emptyState" class="empty-state" style="display: none;">
-      <h2>📭 No pickups scheduled for this date</h2>
+      <h2>📭 No pickups scheduled</h2>
       <p>Check another date using the navigation buttons above</p>
     </div>
     
@@ -442,13 +442,13 @@
         let sourceClass, sourceText;
         if (pickup.pickup_source === 'manual') {
           sourceClass = 'source-manual';
-          sourceText = '✏️ 수동입력';
+          sourceText = '✏️ Manual Input';
         } else if (pickup.pickup_source === 'excel_import') {
           sourceClass = 'source-excel';
-          sourceText = '📊 엑셀';
+          sourceText = '📊 Excel Import';
         } else {
           sourceClass = 'source-system';
-          sourceText = '🤖 예약시스템';
+          sourceText = '🤖 System Data';
         }
         
         // TIME
@@ -520,7 +520,7 @@
     // 마지막 업데이트 시간
     function updateLastUpdatedTime() {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString('ko-KR');
+      const timeStr = now.toLocaleTimeString('en-US');
       document.getElementById('lastUpdated').textContent = `Last updated: ${timeStr}`;
     }
     
