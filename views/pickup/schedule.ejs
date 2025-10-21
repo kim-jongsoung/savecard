@@ -760,9 +760,15 @@
         const rentalNumber = pickup.rental_number || '-';
         const rentalDuration = pickup.rental_duration || '-';
         
-        // VEHICLE 컬럼: 루팅 정보만 (차량 정보는 NUM 컬럼에)
+        // VEHICLE 컬럼: 수동 입력값 우선, 없으면 자동 생성된 루팅 정보
         let vehicleWithRoute = '-';
-        if (pickup.hotel_name) {
+        
+        // 1순위: 사용자가 직접 입력한 rental_vehicle 값
+        if (pickup.rental_vehicle && pickup.rental_vehicle.trim() !== '') {
+          vehicleWithRoute = pickup.rental_vehicle;
+        }
+        // 2순위: 자동 생성된 루팅 정보
+        else if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
             vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
           } else if (pickup.record_type === 'arrival') {
