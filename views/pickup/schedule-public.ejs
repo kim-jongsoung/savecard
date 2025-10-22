@@ -599,23 +599,32 @@
         };
         updateSummary(totalSummary);
         
-        // 모든 픽업 합치기 (날짜순 정렬)
+        // 모든 픽업 합치기 (날짜순 정렬: 어제 → 오늘 → 내일)
         const allPickups = [];
-        allData.forEach((data, index) => {
-          if (data.pickups && data.pickups.length > 0) {
-            allPickups.push(...data.pickups);
-          }
-        });
         
-        // 날짜순 정렬 (날짜 -> 시간 순)
-        allPickups.sort((a, b) => {
-          const dateCompare = (a.display_date || '').localeCompare(b.display_date || '');
-          if (dateCompare !== 0) return dateCompare;
+        // 날짜 순서대로 합치기 (어제[0], 오늘[1], 내일[2])
+        for (let i = 0; i < allData.length; i++) {
+          const data = allData[i];
+          const currentDate = dates[i];
           
-          const timeA = a.actual_pickup_time || a.display_time || '';
-          const timeB = b.actual_pickup_time || b.display_time || '';
-          return timeA.localeCompare(timeB);
-        });
+          if (data.pickups && data.pickups.length > 0) {
+            // 각 픽업에 날짜 보장
+            data.pickups.forEach(pickup => {
+              if (!pickup.display_date) {
+                pickup.display_date = currentDate;
+              }
+            });
+            
+            // 해당 날짜의 픽업들을 시간순으로 정렬
+            const sortedPickups = data.pickups.sort((a, b) => {
+              const timeA = a.actual_pickup_time || a.display_time || '';
+              const timeB = b.actual_pickup_time || b.display_time || '';
+              return timeA.localeCompare(timeB);
+            });
+            
+            allPickups.push(...sortedPickups);
+          }
+        }
         
         // 테이블 렌더링
         if (allPickups.length > 0) {
