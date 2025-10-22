@@ -254,6 +254,9 @@
         <button onclick="goToday()">📅 Today</button>
         <button onclick="changeDate(1)">Next Day ▶</button>
       </div>
+      <div class="nav-buttons" style="margin-top: 10px;">
+        <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800;">📅 3 Days (어제-오늘-내일)</button>
+      </div>
     </div>
     
     <div class="info-bar">
@@ -508,8 +511,9 @@
           pickupLocation = pickup.hotel_name || '-';
         }
         
-        // 날짜 표시 (MM/DD 형식)
-        const dateObj = new Date(currentDate);
+        // 날짜 표시 (MM/DD 형식) - pickup의 display_date 사용
+        const pickupDate = pickup.display_date || currentDate;
+        const dateObj = new Date(pickupDate);
         const dateDisplay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
         
         row.innerHTML = `
@@ -549,6 +553,81 @@
       const now = new Date();
       const timeStr = now.toLocaleTimeString('en-US');
       document.getElementById('lastUpdated').textContent = `Last updated: ${timeStr}`;
+    }
+    
+    // 3일 보기 (어제-오늘-내일) - currentDate 기준
+    async function load3Days() {
+      try {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        const baseDate = new Date(currentDate);
+        const dates = [];
+        
+        // 어제, 오늘, 내일 (currentDate 기준 -1, 0, +1)
+        for (let i = -1; i <= 1; i++) {
+          const date = new Date(baseDate);
+          date.setDate(date.getDate() + i);
+          dates.push(date.toISOString().split('T')[0]);
+        }
+        
+        // 모든 날짜 데이터 로드
+        const allData = await Promise.all(
+          dates.map(date => fetch(`/pickup/api/schedule/${date}`).then(r => r.json()))
+        );
+        
+        // 날짜 표시 업데이트 (어제 + 오늘 + 내일)
+        const yesterday = dates[0];
+        const today = dates[1];
+        const tomorrow = dates[2];
+        
+        document.getElementById('dateDisplay').textContent = 
+          `어제 (${yesterday}) + 오늘 (${today}) + 내일 (${tomorrow})`;
+        
+        // 전체 통계 계산
+        const totalSummary = {
+          total: allData.reduce((sum, d) => sum + (d.summary?.total || 0), 0),
+          contacted: allData.reduce((sum, d) => sum + (d.summary?.contacted || 0), 0),
+          pending: allData.reduce((sum, d) => sum + (d.summary?.pending || 0), 0),
+          total_passengers: allData.reduce((sum, d) => sum + (d.summary?.total_passengers || 0), 0)
+        };
+        updateSummary(totalSummary);
+        
+        // 모든 픽업 합치기 (날짜순 정렬)
+        const allPickups = [];
+        allData.forEach((data, index) => {
+          if (data.pickups && data.pickups.length > 0) {
+            allPickups.push(...data.pickups);
+          }
+        });
+        
+        // 날짜순 정렬 (날짜 -> 시간 순)
+        allPickups.sort((a, b) => {
+          const dateCompare = (a.display_date || '').localeCompare(b.display_date || '');
+          if (dateCompare !== 0) return dateCompare;
+          
+          const timeA = a.actual_pickup_time || a.display_time || '';
+          const timeB = b.actual_pickup_time || b.display_time || '';
+          return timeA.localeCompare(timeB);
+        });
+        
+        // 테이블 렌더링
+        if (allPickups.length > 0) {
+          renderScheduleTable(allPickups);
+          document.getElementById('tableContainer').style.display = 'block';
+        } else {
+          document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'none';
+        updateLastUpdatedTime();
+        
+      } catch (error) {
+        console.error('스케줄 로드 실패:', error);
+        document.getElementById('loadingIndicator').innerHTML = 
+          '<p style="color: red;">❌ Failed to load schedule. Please try again.</p>';
+      }
     }
     
     // 자동 새로고침 (30초마다)

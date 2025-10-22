@@ -455,9 +455,7 @@
         <button onclick="changeDate(1)">▶</button>
       </div>
       <div class="nav-buttons" style="margin-top: 3px;">
-        <button onclick="loadMultipleDays(0, 1)" style="background: #4CAF50; border-color: #4CAF50;">Today + Tomorrow</button>
-        <button onclick="loadMultipleDays(1, 2)" style="background: #2196F3; border-color: #2196F3;">Tomorrow + Day After Tomorrow</button>
-        <button onclick="loadMultipleDays(0, 2)" style="background: #FF9800; border-color: #FF9800;">3 Days</button>
+        <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800;">📅 3 Days (어제-오늘-내일)</button>
       </div>
       <div class="nav-buttons" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px;">
         <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">Excel</button>
@@ -611,19 +609,19 @@
       loadSchedule(currentDate);
     }
     
-    // 여러 날짜를 동시에 로드
-    async function loadMultipleDays(startOffset, endOffset) {
+    // 3일 보기 (어제-오늘-내일) - currentDate 기준
+    async function load3Days() {
       try {
         document.getElementById('loadingIndicator').style.display = 'block';
         document.getElementById('multiTableContainer').innerHTML = '';
         document.getElementById('emptyState').style.display = 'none';
         
-        const today = new Date();
+        const baseDate = new Date(currentDate);
         const dates = [];
         
-        // 날짜 배열 생성
-        for (let i = startOffset; i <= endOffset; i++) {
-          const date = new Date(today);
+        // 어제, 오늘, 내일 (currentDate 기준 -1, 0, +1)
+        for (let i = -1; i <= 1; i++) {
+          const date = new Date(baseDate);
           date.setDate(date.getDate() + i);
           dates.push(date.toISOString().split('T')[0]);
         }
@@ -633,14 +631,13 @@
           dates.map(date => fetch(`/pickup/api/schedule/${date}`).then(r => r.json()))
         );
         
-        // 날짜 표시 업데이트
-        const dateLabels = dates.map((d, i) => {
-          if (startOffset + i === 0) return 'Today';
-          if (startOffset + i === 1) return 'Tomorrow';
-          if (startOffset + i === 2) return 'Day After Tomorrow';
-          return d;
-        });
-        document.getElementById('dateDisplay').textContent = dateLabels.join(' + ');
+        // 날짜 표시 업데이트 (어제 + 오늘 + 내일)
+        const yesterday = dates[0];
+        const today = dates[1];
+        const tomorrow = dates[2];
+        
+        document.getElementById('dateDisplay').textContent = 
+          `어제 (${yesterday}) + 오늘 (${today}) + 내일 (${tomorrow})`;
         
         // 전체 통계 계산
         const totalSummary = {
@@ -651,8 +648,30 @@
         };
         updateSummary(totalSummary);
         
-        // 날짜별 테이블 렌더링
-        renderMultipleDayTables(dates, allData);
+        // 모든 픽업 합치기 (날짜순 정렬)
+        const allPickups = [];
+        allData.forEach((data, index) => {
+          if (data.pickups && data.pickups.length > 0) {
+            allPickups.push(...data.pickups);
+          }
+        });
+        
+        // 날짜순 정렬 (날짜 -> 시간 순)
+        allPickups.sort((a, b) => {
+          const dateCompare = (a.display_date || '').localeCompare(b.display_date || '');
+          if (dateCompare !== 0) return dateCompare;
+          
+          const timeA = a.actual_pickup_time || a.display_time || '';
+          const timeB = b.actual_pickup_time || b.display_time || '';
+          return timeA.localeCompare(timeB);
+        });
+        
+        // 하나의 테이블로 렌더링
+        if (allPickups.length > 0) {
+          render3DaysTable(allPickups, dates);
+        } else {
+          document.getElementById('emptyState').style.display = 'block';
+        }
         
         document.getElementById('loadingIndicator').style.display = 'none';
         
@@ -701,6 +720,133 @@
       document.getElementById('contactedCount').textContent = summary.contacted || 0;
       document.getElementById('pendingCount').textContent = summary.pending || 0;
       document.getElementById('passengerCount').textContent = summary.total_passengers || 0;
+    }
+    
+    // 3일 보기용 단일 테이블 렌더링
+    function render3DaysTable(allPickups, dates) {
+      const container = document.getElementById('multiTableContainer');
+      container.innerHTML = '';
+      
+      const section = document.createElement('div');
+      section.style.marginBottom = '15px';
+      
+      const tableContainer = document.createElement('div');
+      tableContainer.className = 'table-container';
+      tableContainer.style.display = 'block';
+      
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>DATE</th>
+            <th>STATUS</th>
+            <th>TIME</th>
+            <th>Pickup Loc</th>
+            <th>PERSON</th>
+            <th>DER</th>
+            <th>VEHICLE</th>
+            <th>NUM</th>
+            <th>NAME</th>
+            <th>ENG NAME</th>
+            <th>CONTACT</th>
+            <th>FLIGHT</th>
+            <th>AGENCY</th>
+            <th>PAY</th>
+            <th>REQUEST</th>
+            <th>REMARK</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      
+      const tbody = table.querySelector('tbody');
+      
+      // 모든 픽업 렌더링 (이미 날짜순으로 정렬됨)
+      allPickups.forEach(pickup => {
+        const isExternalData = pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import';
+        const row = document.createElement('tr');
+        row.dataset.id = pickup.id;
+        row.dataset.source = pickup.pickup_source;
+        
+        const statusClass = pickup.contact_status === 'CONTACTED' ? 'status-contacted' : 'status-pending';
+        const statusText = pickup.contact_status === 'CONTACTED' ? 'CONTACTED' : 'PENDING';
+        
+        const timeDisplay = pickup.actual_pickup_time || pickup.display_time || '';
+        const rentalNumber = pickup.rental_number || '-';
+        const rentalDuration = pickup.rental_duration || '-';
+        
+        // VEHICLE 컬럼
+        let vehicleWithRoute = '-';
+        if (pickup.rental_vehicle && pickup.rental_vehicle.trim() !== '') {
+          vehicleWithRoute = pickup.rental_vehicle;
+        } else if (pickup.hotel_name) {
+          if (pickup.record_type === 'departure') {
+            vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
+          } else if (pickup.record_type === 'arrival') {
+            vehicleWithRoute = `(AIRPORT → ${pickup.hotel_name})`;
+          }
+        }
+        
+        const flightNumber = pickup.flight_number || '-';
+        
+        // PERSON 컬럼
+        const adultCount = pickup.adult_count || 0;
+        const childCount = pickup.child_count || 0;
+        const infantCount = pickup.infant_count || 0;
+        const personDisplay = `${adultCount}+${childCount}+${infantCount}`;
+        
+        // Pickup Loc 컬럼
+        let pickupLocation = '-';
+        if (pickup.record_type === 'arrival') {
+          pickupLocation = 'AIRPORT';
+        } else if (pickup.record_type === 'departure') {
+          pickupLocation = pickup.hotel_name || '-';
+        } else {
+          pickupLocation = pickup.hotel_name || '-';
+        }
+        
+        const canDelete = (pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import') && pickup.record_type === 'manual';
+        
+        if (isExternalData) {
+          row.classList.add('external-data-row');
+        }
+        
+        // 날짜 표시
+        const pickupDate = pickup.display_date || '';
+        const dateObj = new Date(pickupDate);
+        const dateDisplay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
+        
+        row.innerHTML = `
+          <td>${dateDisplay}</td>
+          <td onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </td>
+          <td class="time-col editable" data-field="actual_pickup_time">${timeDisplay.substring(0, 5)}</td>
+          <td class="editable" data-field="hotel_name">${pickupLocation}</td>
+          <td>${personDisplay}</td>
+          <td class="editable" data-field="rental_duration">${rentalDuration}</td>
+          <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
+          <td class="editable" data-field="rental_number">${rentalNumber}</td>
+          <td>${pickup.customer_name || '-'}</td>
+          <td>${pickup.english_name || '-'}</td>
+          <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
+          <td>${flightNumber}</td>
+          <td>${pickup.agency_name || '-'}</td>
+          <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
+          <td>${pickup.special_request || '-'}</td>
+          <td class="editable" data-field="remark">${pickup.remark || ''}</td>
+          <td>
+            ${canDelete ? `<button class="delete-btn" onclick="deletePickup(${pickup.id})" title="Delete">🗑️</button>` : ''}
+          </td>
+        `;
+        
+        tbody.appendChild(row);
+      });
+      
+      tableContainer.appendChild(table);
+      section.appendChild(tableContainer);
+      container.appendChild(section);
     }
     
     // 여러 날짜의 테이블을 렌더링
@@ -869,8 +1015,9 @@
           row.classList.add('external-data-row');
         }
         
-        // 날짜 표시 (MM/DD 형식)
-        const dateObj = new Date(date);
+        // 날짜 표시 (MM/DD 형식) - pickup의 display_date 사용
+        const pickupDate = pickup.display_date || date;
+        const dateObj = new Date(pickupDate);
         const dateDisplay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
         
         row.innerHTML = `
