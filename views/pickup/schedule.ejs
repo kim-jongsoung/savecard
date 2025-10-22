@@ -720,15 +720,6 @@
         const section = document.createElement('div');
         section.style.marginBottom = '15px';
         
-        // 날짜 헤더
-        const dateHeader = document.createElement('h2');
-        const dateObj = new Date(date);
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dayName = days[dateObj.getDay()];
-        dateHeader.textContent = `📅 ${date} (${dayName}) - ${pickups.length} pickups`;
-        dateHeader.style.cssText = 'background: #6B8E23; color: white; padding: 8px; margin: 0; border-radius: 8px 8px 0 0; font-size: 14px;';
-        section.appendChild(dateHeader);
-        
         if (pickups.length === 0) {
           const emptyMsg = document.createElement('div');
           emptyMsg.textContent = 'No pickups scheduled';
@@ -744,6 +735,7 @@
           table.innerHTML = `
             <thead>
               <tr>
+                <th>DATE</th>
                 <th>STATUS</th>
                 <th>TIME</th>
                 <th>Pickup Loc</th>
@@ -766,7 +758,7 @@
           `;
           
           const tbody = table.querySelector('tbody');
-          renderPickupsToTbody(tbody, pickups);
+          renderPickupsToTbody(tbody, pickups, date);
           
           tableContainer.appendChild(table);
           section.appendChild(tableContainer);
@@ -777,7 +769,7 @@
     }
     
     // tbody에 픽업 데이터 렌더링 (재사용 가능)
-    function renderPickupsToTbody(tbody, pickups) {
+    function renderPickupsToTbody(tbody, pickups, date) {
       tbody.innerHTML = '';
       
       // 외부 데이터와 시스템 데이터 분리
@@ -877,7 +869,12 @@
           row.classList.add('external-data-row');
         }
         
+        // 날짜 표시 (MM/DD 형식)
+        const dateObj = new Date(date);
+        const dateDisplay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
+        
         row.innerHTML = `
+          <td>${dateDisplay}</td>
           <td onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">
             <span class="status-badge ${statusClass}">${statusText}</span>
           </td>

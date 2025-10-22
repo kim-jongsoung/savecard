@@ -274,6 +274,7 @@
       <table>
         <thead>
           <tr>
+            <th>DATE</th>
             <th>STATUS</th>
             <th>TIME</th>
             <th>Pickup Loc</th>
@@ -507,7 +508,12 @@
           pickupLocation = pickup.hotel_name || '-';
         }
         
+        // 날짜 표시 (MM/DD 형식)
+        const dateObj = new Date(currentDate);
+        const dateDisplay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
+        
         row.innerHTML = `
+          <td>${dateDisplay}</td>
           <td><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="time-col">${timeDisplay.substring(0, 5)}</td>
           <td>${pickupLocation}</td>
