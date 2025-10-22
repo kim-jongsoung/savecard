@@ -506,12 +506,12 @@
             <input type="text" id="manualHotel" placeholder="Hilton">
           </div>
           <div class="form-group">
-            <label>Customer Name *</label>
-            <input type="text" id="manualName" required placeholder="John Kim">
+            <label>Customer Name (한글) *</label>
+            <input type="text" id="manualName" required placeholder="김철수">
           </div>
           <div class="form-group">
-            <label>English Name</label>
-            <input type="text" id="manualEngName" placeholder="KIM JOHN">
+            <label>English Name (자동생성/수정가능)</label>
+            <input type="text" id="manualEngName" placeholder="KIM CHEOLSU" style="background: #e8f4f8;">
           </div>
           <div class="form-group">
             <label>Passengers</label>
@@ -582,7 +582,67 @@
       loadSchedule(currentDate);
       // 날짜 입력 필드에 현재 날짜 설정
       document.getElementById('manualDate').value = currentDate;
+      
+      // 한글 이름 자동 영어 변환
+      const nameInput = document.getElementById('manualName');
+      const engNameInput = document.getElementById('manualEngName');
+      
+      nameInput.addEventListener('input', (e) => {
+        const koreanName = e.target.value;
+        if (koreanName) {
+          const englishName = koreanToEnglish(koreanName);
+          engNameInput.value = englishName;
+        }
+      });
     });
+    
+    // 한글을 영어 로마자 표기로 변환
+    function koreanToEnglish(koreanText) {
+      // 초성
+      const CHO = [
+        'g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '',
+        'j', 'jj', 'ch', 'k', 't', 'p', 'h'
+      ];
+      // 중성
+      const JUNG = [
+        'a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae',
+        'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'
+      ];
+      // 종성
+      const JONG = [
+        '', 'k', 'k', 'k', 'n', 'n', 'n', 'l', 'l', 'l', 'l', 'l', 'l',
+        'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'
+      ];
+      
+      let result = '';
+      
+      for (let i = 0; i < koreanText.length; i++) {
+        const char = koreanText[i];
+        const code = char.charCodeAt(0);
+        
+        // 한글 유니코드 범위: 0xAC00 ~ 0xD7A3
+        if (code >= 0xAC00 && code <= 0xD7A3) {
+          const hangulCode = code - 0xAC00;
+          
+          const choIndex = Math.floor(hangulCode / 588);
+          const jungIndex = Math.floor((hangulCode % 588) / 28);
+          const jongIndex = hangulCode % 28;
+          
+          result += CHO[choIndex];
+          result += JUNG[jungIndex];
+          if (JONG[jongIndex]) {
+            result += JONG[jongIndex];
+          }
+        } else if (char === ' ') {
+          result += ' ';
+        } else {
+          // 영문이나 다른 문자는 그대로
+          result += char;
+        }
+      }
+      
+      return result.toUpperCase();
+    }
     
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
