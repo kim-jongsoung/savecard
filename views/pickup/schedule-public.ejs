@@ -251,7 +251,7 @@
       <div class="date-display" id="dateDisplay">Loading...</div>
       <div class="nav-buttons">
         <button onclick="changeDate(-1)">◀ Prev Day</button>
-        <button onclick="goToday()">📅 Today</button>
+        <button onclick="loadSingleDate()">📆 단일날짜</button>
         <button onclick="changeDate(1)">Next Day ▶</button>
       </div>
       <div class="nav-buttons" style="margin-top: 10px;">
@@ -320,7 +320,8 @@
       if (currentDate === 'today') {
         currentDate = getTodayDate();
       }
-      loadSchedule(currentDate);
+      // 기본으로 3일 보기 (어제-오늘-내일)
+      load3Days();
       startAutoRefresh();
     });
     
@@ -344,8 +345,12 @@
     // 오늘로 이동
     function goToday() {
       currentDate = getTodayDate();
-      loadSchedule(currentDate);
+      load3Days();
       window.history.pushState({}, '', `/pickup/schedule/public/today`);
+    }
+    
+    function loadSingleDate() {
+      loadSchedule(currentDate);
     }
     
     // 스케줄 로드
@@ -630,10 +635,10 @@
       }
     }
     
-    // 자동 새로고침 (30초마다)
+    // 자동 새로고침 (30초마다) - 3일 보기 유지
     function startAutoRefresh() {
       autoRefreshInterval = setInterval(() => {
-        loadSchedule(currentDate);
+        load3Days();
       }, 30000); // 30초
     }
     

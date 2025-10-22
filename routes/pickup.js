@@ -2445,6 +2445,92 @@ router.delete('/api/manual-pickup/:id', async (req, res) => {
   }
 });
 
+// ==================== 한글 이름 자동 영어 변환 ====================
+
+// 한글을 영어 로마자로 변환하는 함수
+function koreanToEnglish(koreanText) {
+  const CHO = [
+    'g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '',
+    'j', 'jj', 'ch', 'k', 't', 'p', 'h'
+  ];
+  const JUNG = [
+    'a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae',
+    'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'
+  ];
+  const JONG = [
+    '', 'k', 'k', 'k', 'n', 'n', 'n', 'l', 'l', 'l', 'l', 'l', 'l',
+    'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'
+  ];
+  
+  let result = '';
+  
+  for (let i = 0; i < koreanText.length; i++) {
+    const char = koreanText[i];
+    const code = char.charCodeAt(0);
+    
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const hangulCode = code - 0xAC00;
+      
+      const choIndex = Math.floor(hangulCode / 588);
+      const jungIndex = Math.floor((hangulCode % 588) / 28);
+      const jongIndex = hangulCode % 28;
+      
+      result += CHO[choIndex];
+      result += JUNG[jungIndex];
+      if (JONG[jongIndex]) {
+        result += JONG[jongIndex];
+      }
+    } else if (char === ' ') {
+      result += ' ';
+    } else {
+      result += char;
+    }
+  }
+  
+  return result.toUpperCase();
+}
+
+// 기존 데이터의 한글 이름을 영어로 변환
+router.post('/api/convert-korean-names', async (req, res) => {
+  const pool = req.app.locals.pool;
+  
+  try {
+    // customer_name이 있고 english_name이 비어있거나 null인 레코드 찾기
+    const result = await pool.query(
+      `SELECT id, customer_name 
+       FROM pickup_schedule 
+       WHERE customer_name IS NOT NULL 
+       AND customer_name != ''
+       AND (english_name IS NULL OR english_name = '')`
+    );
+    
+    let updatedCount = 0;
+    
+    for (const row of result.rows) {
+      const englishName = koreanToEnglish(row.customer_name);
+      
+      await pool.query(
+        `UPDATE pickup_schedule 
+         SET english_name = $1, updated_at = NOW() 
+         WHERE id = $2`,
+        [englishName, row.id]
+      );
+      
+      updatedCount++;
+      console.log(`✅ 변환 완료: ${row.customer_name} → ${englishName}`);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `${updatedCount}개의 이름 변환 완료`,
+      count: updatedCount 
+    });
+  } catch (error) {
+    console.error('❌ 이름 변환 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== 스케줄 페이지 라우트 ====================
 
 // 공개 스케줄 페이지 (로그인 불필요) - 먼저 정의!

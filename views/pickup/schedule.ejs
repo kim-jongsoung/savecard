@@ -451,7 +451,7 @@
       <div class="date-display" id="dateDisplay">Loading...</div>
       <div class="nav-buttons">
         <button onclick="changeDate(-1)">◀</button>
-        <button onclick="goToday()">Today</button>
+        <button onclick="loadSingleDate()">📆 단일날짜</button>
         <button onclick="changeDate(1)">▶</button>
       </div>
       <div class="nav-buttons" style="margin-top: 3px;">
@@ -460,6 +460,7 @@
       <div class="nav-buttons" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px;">
         <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">Excel</button>
         <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">Share Link</button>
+        <button onclick="convertKoreanNames()" style="background: #9333EA; border-color: #9333EA;">🔄 한글→영어 변환</button>
       </div>
     </div>
     
@@ -579,7 +580,8 @@
       // 엑셀 가져오기 날짜 필드에 현재 페이지 날짜 자동 설정
       document.getElementById('excelImportDate').value = currentDate;
       
-      loadSchedule(currentDate);
+      // 기본으로 3일 보기 (어제-오늘-내일)
+      load3Days();
       // 날짜 입력 필드에 현재 날짜 설정
       document.getElementById('manualDate').value = currentDate;
       
@@ -666,6 +668,10 @@
     
     function goToday() {
       currentDate = new Date().toISOString().split('T')[0];
+      load3Days();
+    }
+    
+    function loadSingleDate() {
       loadSchedule(currentDate);
     }
     
@@ -888,8 +894,8 @@
           <td class="editable" data-field="rental_duration">${rentalDuration}</td>
           <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
           <td class="editable" data-field="rental_number">${rentalNumber}</td>
-          <td>${pickup.customer_name || '-'}</td>
-          <td>${pickup.english_name || '-'}</td>
+          <td class="editable" data-field="customer_name">${pickup.customer_name || '-'}</td>
+          <td class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
           <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
           <td>${flightNumber}</td>
           <td>${pickup.agency_name || '-'}</td>
@@ -1091,8 +1097,8 @@
           <td class="editable" data-field="rental_duration">${rentalDuration}</td>
           <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
           <td class="editable" data-field="rental_number">${rentalNumber}</td>
-          <td>${pickup.customer_name || '-'}</td>
-          <td>${pickup.english_name || '-'}</td>
+          <td class="editable" data-field="customer_name">${pickup.customer_name || '-'}</td>
+          <td class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
           <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
           <td>${flightNumber}</td>
           <td>${pickup.agency_name || '-'}</td>
@@ -1509,6 +1515,35 @@
         showToast('클립보드 복사 실패. 수동으로 복사해주세요.', 'error');
         alert(`운전수 공유 링크:\n${publicUrl}`);
       });
+    }
+    
+    // 기존 한글 이름 자동 영어 변환
+    async function convertKoreanNames() {
+      if (!confirm('기존 데이터의 한글 이름을 영어로 변환하시겠습니까?\n(English Name이 비어있는 데이터만 변환됩니다)')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/pickup/api/convert-korean-names', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast(`✅ ${result.count}개의 이름이 변환되었습니다!`);
+          // 현재 화면 새로고침
+          load3Days();
+        } else {
+          showToast('변환 실패', 'error');
+        }
+      } catch (error) {
+        console.error('변환 오류:', error);
+        showToast('변환 중 오류가 발생했습니다', 'error');
+      }
     }
     
     function showToast(message, type = 'success') {
