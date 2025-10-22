@@ -488,11 +488,17 @@
         // REQUEST: special_request
         const requestDisplay = pickup.special_request || '-';
         
+        // PERSON 컬럼: 성인+소아+유아 형식 (예: 2+1+3)
+        const adultCount = pickup.adult_count || 0;
+        const childCount = pickup.child_count || 0;
+        const infantCount = pickup.infant_count || 0;
+        const personDisplay = `${adultCount}+${childCount}+${infantCount}`;
+        
         row.innerHTML = `
           <td><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="time-col">${timeDisplay.substring(0, 5)}</td>
           <td>${pickup.hotel_name || '-'}</td>
-          <td>${pickup.passenger_count || '-'}</td>
+          <td>${personDisplay}</td>
           <td>${rentalDuration}</td>
           <td>${vehicleWithRoute}</td>
           <td>${rentalNumber}</td>
