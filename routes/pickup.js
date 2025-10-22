@@ -2498,7 +2498,7 @@ router.post('/api/convert-korean-names', async (req, res) => {
     // customer_name이 있고 english_name이 비어있거나 null인 레코드 찾기
     const result = await pool.query(
       `SELECT id, customer_name 
-       FROM pickup_schedule 
+       FROM airport_pickups 
        WHERE customer_name IS NOT NULL 
        AND customer_name != ''
        AND (english_name IS NULL OR english_name = '')`
@@ -2510,7 +2510,7 @@ router.post('/api/convert-korean-names', async (req, res) => {
       const englishName = koreanToEnglish(row.customer_name);
       
       await pool.query(
-        `UPDATE pickup_schedule 
+        `UPDATE airport_pickups 
          SET english_name = $1, updated_at = NOW() 
          WHERE id = $2`,
         [englishName, row.id]
