@@ -40,8 +40,15 @@
 <body>
   <div class="header-brand">
     <div class="container">
-      <h2><i class="bi bi-building"></i> <%= agencyName %></h2>
-      <p class="mb-0">픽업 예약 관리 시스템 | 업체 코드: <code class="bg-light text-dark px-2 py-1 rounded"><%= agencyCode %></code></p>
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2><i class="bi bi-building"></i> <%= agencyName %></h2>
+          <p class="mb-0">픽업 예약 관리 시스템 | 업체 코드: <code class="bg-light text-dark px-2 py-1 rounded"><%= agencyCode %></code></p>
+        </div>
+        <button class="btn btn-light" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+      </div>
     </div>
   </div>
 
@@ -589,6 +596,26 @@
           </div>
         </div>
       `;
+    }
+    
+    // 로그아웃 함수
+    async function logout() {
+      if (!confirm('로그아웃 하시겠습니까?')) return;
+      
+      try {
+        await fetch('/pickup/api/agency-logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        // 로그인 페이지로 리다이렉트
+        window.location.href = '/pickup/agency-login';
+      } catch (error) {
+        console.error('Logout error:', error);
+        alert('로그아웃에 실패했습니다.');
+      }
     }
   </script>
 </body>

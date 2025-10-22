@@ -1661,10 +1661,66 @@ router.delete('/api/closed-dates/by-date/:date', async (req, res) => {
 
 // ==================== 업체 포털 ====================
 
-// 업체용 예약 페이지
+// 에이전트 로그인 페이지
+router.get('/agency-login', (req, res) => {
+  res.render('pickup/agency-login');
+});
+
+// 에이전트 로그인 처리
+router.post('/api/agency-login', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { agency_code } = req.body;
+  
+  try {
+    const result = await pool.query(
+      `SELECT id, agency_name, agency_code FROM pickup_agencies WHERE agency_code = $1 AND is_active = true`,
+      [agency_code]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Invalid access code' });
+    }
+    
+    const agency = result.rows[0];
+    
+    // 세션에 인증 정보 저장
+    req.session.agencyAuth = {
+      id: agency.id,
+      name: agency.agency_name,
+      code: agency.agency_code,
+      loginAt: new Date()
+    };
+    
+    console.log(`✅ 에이전트 로그인: ${agency.agency_name} (${agency.agency_code})`);
+    res.json({ 
+      success: true, 
+      redirectUrl: `/pickup/agency/${agency.agency_code}`
+    });
+  } catch (error) {
+    console.error('❌ 에이전트 로그인 실패:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// 에이전트 로그아웃
+router.post('/api/agency-logout', (req, res) => {
+  if (req.session.agencyAuth) {
+    console.log(`🚪 에이전트 로그아웃: ${req.session.agencyAuth.name}`);
+    req.session.destroy();
+  }
+  res.json({ success: true });
+});
+
+// 업체용 예약 페이지 (인증 필요)
 router.get('/agency/:code', async (req, res) => {
   const pool = req.app.locals.pool;
   const { code } = req.params;
+  
+  // 세션 체크
+  if (!req.session.agencyAuth || req.session.agencyAuth.code !== code) {
+    console.log(`🔒 인증 실패: 코드 ${code}`);
+    return res.redirect('/pickup/agency-login');
+  }
   
   try {
     const result = await pool.query(
@@ -1673,6 +1729,7 @@ router.get('/agency/:code', async (req, res) => {
     );
     
     if (result.rows.length === 0) {
+      req.session.destroy();
       return res.status(404).send('유효하지 않은 업체 코드입니다.');
     }
     
