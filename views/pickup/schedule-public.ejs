@@ -276,7 +276,7 @@
           <tr>
             <th>STATUS</th>
             <th>TIME</th>
-            <th>HOTEL</th>
+            <th>Pickup Loc</th>
             <th>PERSON</th>
             <th>DER</th>
             <th>VEHICLE</th>
@@ -494,10 +494,23 @@
         const infantCount = pickup.infant_count || 0;
         const personDisplay = `${adultCount}+${childCount}+${infantCount}`;
         
+        // Pickup Loc 컬럼: 운전수 픽업 장소
+        let pickupLocation = '-';
+        if (pickup.record_type === 'arrival') {
+          // 괌 도착 → 공항에서 픽업
+          pickupLocation = 'AIRPORT';
+        } else if (pickup.record_type === 'departure') {
+          // 괌 출발 → 호텔에서 픽업
+          pickupLocation = pickup.hotel_name || '-';
+        } else {
+          // 수동 입력 → 호텔 이름
+          pickupLocation = pickup.hotel_name || '-';
+        }
+        
         row.innerHTML = `
           <td><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="time-col">${timeDisplay.substring(0, 5)}</td>
-          <td>${pickup.hotel_name || '-'}</td>
+          <td>${pickupLocation}</td>
           <td>${personDisplay}</td>
           <td>${rentalDuration}</td>
           <td>${vehicleWithRoute}</td>
