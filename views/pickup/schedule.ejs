@@ -593,6 +593,7 @@
         const koreanName = e.target.value;
         if (koreanName) {
           const englishName = koreanToEnglish(koreanName);
+          console.log('🔄 한글→영어 변환:', koreanName, '→', englishName);
           engNameInput.value = englishName;
         }
       });
@@ -655,6 +656,11 @@
           const choIndex = Math.floor(hangulCode / 588);
           const jungIndex = Math.floor((hangulCode % 588) / 28);
           const jongIndex = hangulCode % 28;
+          
+          // 디버깅: 종성이 ㅇ(ng)인 경우 로그 출력
+          if (jongIndex === 20) {
+            console.log(`📝 "${char}" 변환: 종성인덱스=${jongIndex}, 종성="${JONG[jongIndex]}"`);
+          }
           
           result += CHO[choIndex];
           result += JUNG[jungIndex];

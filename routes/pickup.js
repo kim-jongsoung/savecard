@@ -2502,6 +2502,11 @@ function koreanToEnglish(koreanText) {
       const jungIndex = Math.floor((hangulCode % 588) / 28);
       const jongIndex = hangulCode % 28;
       
+      // 디버깅: 종성이 ㅇ(ng)인 경우 로그 출력
+      if (jongIndex === 20) {
+        console.log(`📝 서버 "${char}" 변환: 종성인덱스=${jongIndex}, 종성="${JONG[jongIndex]}"`);
+      }
+      
       result += CHO[choIndex];
       result += JUNG[jungIndex];
       if (JONG[jongIndex]) {
