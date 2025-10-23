@@ -951,6 +951,23 @@
         tbody.appendChild(row);
       });
       
+      // 편집 가능한 셀에 이벤트 추가 (tbody 내의 셀만 선택)
+      const editableCells = tbody.querySelectorAll('td.editable');
+      console.log(`✅ ${editableCells.length} editable cells registered with event listeners (3 Days View)`);
+      
+      editableCells.forEach((cell, index) => {
+        cell.style.cursor = 'pointer';
+        
+        // 기존 이벤트 리스너 제거를 위해 새로운 함수 사용
+        const clickHandler = function(e) {
+          e.stopPropagation(); // 이벤트 전파 중지
+          console.log(`Cell clicked [${index}]:`, this.dataset.field, 'ID:', this.closest('tr')?.dataset.id);
+          makeEditable(this);
+        };
+        
+        cell.addEventListener('click', clickHandler);
+      });
+      
       tableContainer.appendChild(table);
       section.appendChild(tableContainer);
       container.appendChild(section);
