@@ -719,9 +719,13 @@
         }
       }
       
-      // 후처리: ng 뒤의 빈 초성(ㅇ)이 t로 잘못 변환되는 경우 수정
-      // 예: "영어" → "YEONGT" → "YEONGEO"
-      result = result.replace(/NG([AEIOU])/gi, 'NG$1').replace(/NGT/g, 'NG');
+      // 후처리: 잘못된 T 제거
+      // 1. NGT → NG (예: "형" HYEONGT → HYEONG)
+      result = result.replace(/NGT/gi, 'NG');
+      
+      // 2. 단어 끝의 T를 NG으로 변환 (종성 ㅇ이 T로 잘못 변환된 경우)
+      // "조형" → JOHYEOT → JOHYEONG
+      result = result.replace(/([AEIOU])T(\s|$)/gi, '$1NG$2');
       
       return result.toUpperCase();
     }
