@@ -719,6 +719,10 @@
         }
       }
       
+      // 후처리: ng 뒤의 빈 초성(ㅇ)이 t로 잘못 변환되는 경우 수정
+      // 예: "영어" → "YEONGT" → "YEONGEO"
+      result = result.replace(/NG([AEIOU])/gi, 'NG$1').replace(/NGT/g, 'NG');
+      
       return result.toUpperCase();
     }
     
