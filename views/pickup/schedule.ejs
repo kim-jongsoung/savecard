@@ -298,6 +298,28 @@
       background: #f8f9fa;
     }
     
+    /* 날짜 구분선 스타일 */
+    tr.date-separator {
+      height: 4px !important;
+      background: transparent !important;
+    }
+    
+    tr.date-separator td {
+      padding: 0 !important;
+      height: 4px !important;
+      background: linear-gradient(90deg, #FF5722 0%, #FF9800 100%) !important;
+      border: none !important;
+      box-shadow: 0 2px 4px rgba(255, 87, 34, 0.3);
+    }
+    
+    tr.date-separator:hover {
+      background: transparent !important;
+    }
+    
+    tr.date-separator:hover td {
+      background: linear-gradient(90deg, #FF5722 0%, #FF9800 100%) !important;
+    }
+    
     /* 외부 데이터 행 배경 (연한 회색) */
     tbody tr.external-data-row {
       background: #f5f5f5;
@@ -457,6 +479,13 @@
       <div class="nav-buttons" style="margin-top: 3px;">
         <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800;">📅 3 Days (어제-오늘-내일)</button>
       </div>
+      <div class="nav-buttons" style="margin-top: 3px; gap: 5px; display: flex; align-items: center; justify-content: center;">
+        <label style="color: white; font-size: 14px;">📆 기간 선택:</label>
+        <input type="date" id="dateRangeStart" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        <span style="color: white;">~</span>
+        <input type="date" id="dateRangeEnd" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        <button onclick="loadDateRange()" style="background: #8B5CF6; border-color: #8B5CF6;">조회</button>
+      </div>
       <div class="nav-buttons" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px;">
         <button onclick="downloadExcel()" style="background: #10B981; border-color: #10B981;">Excel</button>
         <button onclick="sharePublicLink()" style="background: #3B82F6; border-color: #3B82F6;">Share Link</button>
@@ -597,6 +626,14 @@
           engNameInput.value = englishName;
         }
       });
+      
+      // 날짜 범위 선택기 기본값 설정 (오늘 ~ 7일 후)
+      const today = new Date();
+      const weekLater = new Date(today);
+      weekLater.setDate(weekLater.getDate() + 7);
+      
+      document.getElementById('dateRangeStart').value = today.toISOString().split('T')[0];
+      document.getElementById('dateRangeEnd').value = weekLater.toISOString().split('T')[0];
     });
     
     // 한글을 영어 로마자 표기로 변환
@@ -788,6 +825,105 @@
       }
     }
     
+    // 날짜 범위 로드 (커스텀 기간)
+    async function loadDateRange() {
+      try {
+        const startDate = document.getElementById('dateRangeStart').value;
+        const endDate = document.getElementById('dateRangeEnd').value;
+        
+        if (!startDate || !endDate) {
+          showToast('시작일과 종료일을 모두 선택해주세요', 'error');
+          return;
+        }
+        
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        if (start > end) {
+          showToast('시작일이 종료일보다 늦을 수 없습니다', 'error');
+          return;
+        }
+        
+        // 날짜 차이 계산
+        const dayDiff = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        
+        if (dayDiff > 30) {
+          showToast('최대 30일까지만 조회할 수 있습니다', 'error');
+          return;
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('multiTableContainer').innerHTML = '';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        // 날짜 배열 생성
+        const dates = [];
+        const currentDate = new Date(start);
+        
+        while (currentDate <= end) {
+          dates.push(currentDate.toISOString().split('T')[0]);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        // 모든 날짜 데이터 로드
+        const allData = await Promise.all(
+          dates.map(date => fetch(`/pickup/api/schedule/${date}`).then(r => r.json()))
+        );
+        
+        // 날짜 표시 업데이트
+        document.getElementById('dateDisplay').textContent = 
+          `${startDate} ~ ${endDate} (${dayDiff}일)`;
+        
+        // 전체 통계 계산
+        const totalSummary = {
+          total: allData.reduce((sum, d) => sum + (d.summary?.total || 0), 0),
+          contacted: allData.reduce((sum, d) => sum + (d.summary?.contacted || 0), 0),
+          pending: allData.reduce((sum, d) => sum + (d.summary?.pending || 0), 0),
+          total_passengers: allData.reduce((sum, d) => sum + (d.summary?.total_passengers || 0), 0)
+        };
+        updateSummary(totalSummary);
+        
+        // 모든 픽업 합치기 (날짜순 정렬)
+        const allPickups = [];
+        
+        for (let i = 0; i < allData.length; i++) {
+          const data = allData[i];
+          const currentDate = dates[i];
+          
+          if (data.pickups && data.pickups.length > 0) {
+            // 각 픽업에 날짜 보장
+            data.pickups.forEach(pickup => {
+              if (!pickup.display_date) {
+                pickup.display_date = currentDate;
+              }
+            });
+            
+            // 해당 날짜의 픽업들을 시간순으로 정렬
+            const sortedPickups = data.pickups.sort((a, b) => {
+              const timeA = a.actual_pickup_time || a.display_time || '';
+              const timeB = b.actual_pickup_time || b.display_time || '';
+              return timeA.localeCompare(timeB);
+            });
+            
+            allPickups.push(...sortedPickups);
+          }
+        }
+        
+        // 하나의 테이블로 렌더링
+        if (allPickups.length > 0) {
+          render3DaysTable(allPickups, dates);
+        } else {
+          document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'none';
+        
+      } catch (error) {
+        console.error('스케줄 로드 실패:', error);
+        showToast('스케줄 로드 실패', 'error');
+      }
+    }
+    
     // 단일 날짜 로드 (기존 기능)
     async function loadSchedule(date) {
       try {
@@ -870,7 +1006,21 @@
       const tbody = table.querySelector('tbody');
       
       // 모든 픽업 렌더링 (이미 날짜순으로 정렬됨)
-      allPickups.forEach(pickup => {
+      let previousDate = null;
+      
+      allPickups.forEach((pickup, index) => {
+        const currentDate = pickup.display_date || '';
+        
+        // 날짜가 바뀌는 지점에 구분선 추가
+        if (previousDate && previousDate !== currentDate) {
+          const separatorRow = document.createElement('tr');
+          separatorRow.className = 'date-separator';
+          separatorRow.innerHTML = '<td colspan="17" style="height: 3px; padding: 0; background: #FF5722; border: none;"></td>';
+          tbody.appendChild(separatorRow);
+        }
+        
+        previousDate = currentDate;
+        
         const isExternalData = pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import';
         const row = document.createElement('tr');
         row.dataset.id = pickup.id;
