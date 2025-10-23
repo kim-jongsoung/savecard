@@ -605,6 +605,13 @@
     let currentDate = initialDate === 'today' ? new Date().toISOString().split('T')[0] : initialDate;
     let editingCell = null;
     
+    // 현재 보기 모드 및 날짜 범위 저장
+    let currentViewMode = '3days'; // 'single', '3days', 'dateRange'
+    let selectedDateRange = {
+      start: null,
+      end: null
+    };
+    
     document.addEventListener('DOMContentLoaded', () => {
       // 엑셀 가져오기 날짜 필드에 현재 페이지 날짜 자동 설정
       document.getElementById('excelImportDate').value = currentDate;
@@ -732,6 +739,7 @@
       const date = new Date(currentDate);
       date.setDate(date.getDate() + days);
       currentDate = date.toISOString().split('T')[0];
+      currentViewMode = 'single'; // 날짜 이동 시 단일 날짜 모드로 변경
       loadSchedule(currentDate);
     }
     
@@ -741,12 +749,39 @@
     }
     
     function loadSingleDate() {
+      currentViewMode = 'single'; // 현재 모드 저장
       loadSchedule(currentDate);
+    }
+    
+    // 현재 보기 모드를 유지하며 데이터 새로고침
+    async function refreshCurrentView() {
+      console.log('🔄 현재 보기 모드 유지하며 새로고침:', currentViewMode);
+      
+      if (currentViewMode === '3days') {
+        await load3Days();
+      } else if (currentViewMode === 'dateRange') {
+        // 저장된 날짜 범위로 다시 로드
+        if (selectedDateRange.start && selectedDateRange.end) {
+          // 날짜 입력 필드도 복원
+          document.getElementById('dateRangeStart').value = selectedDateRange.start;
+          document.getElementById('dateRangeEnd').value = selectedDateRange.end;
+          await loadDateRange();
+        } else {
+          await load3Days(); // 날짜 범위가 없으면 3일 보기로
+        }
+      } else if (currentViewMode === 'single') {
+        await loadSchedule(currentDate);
+      } else {
+        // 기본값
+        await load3Days();
+      }
     }
     
     // 3일 보기 (어제-오늘-내일) - currentDate 기준
     async function load3Days() {
       try {
+        currentViewMode = '3days'; // 현재 모드 저장
+        
         document.getElementById('loadingIndicator').style.display = 'block';
         document.getElementById('multiTableContainer').innerHTML = '';
         document.getElementById('emptyState').style.display = 'none';
@@ -835,6 +870,13 @@
           showToast('시작일과 종료일을 모두 선택해주세요', 'error');
           return;
         }
+        
+        // 현재 모드 및 날짜 범위 저장
+        currentViewMode = 'dateRange';
+        selectedDateRange = {
+          start: startDate,
+          end: endDate
+        };
         
         const start = new Date(startDate);
         const end = new Date(endDate);
@@ -1454,7 +1496,7 @@
         if (response.ok) {
           console.log('✅ Update successful');
           showToast('Updated successfully');
-          await loadSchedule(currentDate);
+          await refreshCurrentView();
         } else {
           console.log('❌ Update failed:', response.status);
           throw new Error('Update failed');
@@ -1462,7 +1504,7 @@
       } catch (error) {
         console.log('❌ Update error:', error);
         showToast('Update failed', 'error');
-        await loadSchedule(currentDate);
+        await refreshCurrentView();
       } finally {
         isUpdating = false;
         console.log('🔄 Update completed');
@@ -1501,7 +1543,7 @@
           showToast(`✅ ${count} Excel record(s) added!\nExternal data shown with gray background at the top.`);
           document.getElementById('aiParseText').value = '';
           document.getElementById('excelImportDate').value = '';
-          loadSchedule(currentDate);
+          refreshCurrentView();
         } else {
           const error = await response.json();
           showToast('Parsing failed: ' + (error.error || 'Unknown error'), 'error');
@@ -1543,7 +1585,7 @@
         if (response.ok) {
           showToast('Pickup added successfully');
           clearManualForm();
-          loadSchedule(currentDate);
+          refreshCurrentView();
         } else {
           throw new Error('Add failed');
         }
@@ -1562,7 +1604,7 @@
         
         if (response.ok) {
           showToast('Deleted successfully');
-          loadSchedule(currentDate);
+          refreshCurrentView();
         } else {
           const result = await response.json();
           throw new Error(result.error || 'Delete failed');
