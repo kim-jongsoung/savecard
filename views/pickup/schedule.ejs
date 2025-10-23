@@ -723,11 +723,15 @@
       // 1. NGT → NG (예: "형" HYEONGT → HYEONG)
       result = result.replace(/NGT/gi, 'NG');
       
-      // 2. 모음+T+자음 → 모음+NG+자음 (중간에 있는 종성 ㅇ)
+      // 2. 모음+T+모음 → 모음+NG+모음 (중간 종성 ㅇ, 빈 초성 앞)
+      // "동우" → DOTU → DONGWU, "영어" → YEOTEO → YEONGEO
+      result = result.replace(/([AEIOU])T([AEIOU])/gi, '$1NG$2');
+      
+      // 3. 모음+T+자음 → 모음+NG+자음 (중간에 있는 종성 ㅇ)
       // "영희" → YEOTHUI → YEONGHUI
       result = result.replace(/([AEIOU])T([BCDFGHJKLMNPQRSTVWXYZ])/gi, '$1NG$2');
       
-      // 3. 단어 끝의 T를 NG으로 변환 (종성 ㅇ이 T로 잘못 변환된 경우)
+      // 4. 단어 끝의 T를 NG으로 변환 (종성 ㅇ이 T로 잘못 변환된 경우)
       // "조형" → JOHYEOT → JOHYEONG
       result = result.replace(/([AEIOU])T(\s|$)/gi, '$1NG$2');
       
