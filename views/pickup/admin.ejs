@@ -14,14 +14,20 @@
     .early-morning { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
     .pickup-card { margin-bottom: 15px; padding: 15px; border: 2px solid #ddd; border-radius: 8px; }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-    .calendar-day { border: 1px solid #ddd; padding: 8px; border-radius: 8px; min-height: 200px; max-height: 200px; overflow-y: auto; }
+    .calendar-day { border: 1px solid #ddd; padding: 8px; border-radius: 8px; min-height: 250px; max-height: 250px; overflow-y: auto; }
+    .calendar-day-split { display: flex; gap: 4px; }
+    .calendar-day-column { flex: 1; overflow-y: auto; max-height: 150px; padding: 2px; }
+    .calendar-day-column-header { font-size: 0.65rem; font-weight: bold; text-align: center; padding: 2px; border-radius: 3px; margin-bottom: 3px; position: sticky; top: 0; z-index: 5; }
+    .column-korea { border-right: 2px solid #ddd; }
+    .column-korea .calendar-day-column-header { background: #e8f5e9; color: #2e7d32; }
+    .column-guam .calendar-day-column-header { background: #fff3e0; color: #e65100; }
     .calendar-day.has-pickup { background: #fafafa; border-color: #2196f3; border-width: 2px; }
     .calendar-day.today { background: #fff3cd; border-color: #ff9800; font-weight: bold; border-width: 2px; }
     .calendar-day.closed { background: #ffe0e0; border-color: #dc3545; border-width: 2px; position: relative; }
     .calendar-day.closed::before { content: '🚫 마감'; position: absolute; top: 5px; right: 5px; font-size: 10px; color: #dc3545; font-weight: bold; background: white; padding: 2px 5px; border-radius: 3px; }
     .calendar-header { font-weight: bold; text-align: center; padding: 10px; background: #667eea; color: white; border-radius: 4px; }
     .calendar-date { font-size: 16px; font-weight: bold; margin-bottom: 5px; position: sticky; top: 0; background: white; z-index: 10; padding: 3px 0; }
-    .pickup-item { font-size: 11px; padding: 4px 6px; margin: 3px 0; border-radius: 4px; cursor: pointer; border-left: 3px solid; transition: all 0.2s; }
+    .pickup-item { font-size: 10px; padding: 3px 4px; margin: 2px 0; border-radius: 3px; cursor: pointer; border-left: 3px solid; transition: all 0.2s; line-height: 1.3; }
     .pickup-item:hover { transform: translateX(3px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .pickup-arrival { background: #e3f2fd; border-left-color: #2196f3; color: #1565c0; }
     .pickup-departure { background: #fce4ec; border-left-color: #e91e63; color: #c2185b; }
@@ -923,19 +929,22 @@
         // 통계 계산 (내부/외부 구분)
         const allPickups = [...dayPickups.departures, ...dayPickups.arrivals, ...dayPickups.hotelPickups];
         
-        // 내부 데이터 (pickup_source가 'manual'이 아닌 것 또는 record_type이 'manual'이 아닌 것)
-        const internalPickups = allPickups.filter(p => 
-          p.pickup_source !== 'manual' && p.record_type !== 'manual'
-        );
-        const internalCount = internalPickups.length;
-        const internalPax = internalPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        // 한국 공항 리스트
+        const koreaAirports = ['ICN', 'PUS', 'GMP', 'TAE', 'CJU'];
         
-        // 외부 데이터 (pickup_source가 'manual'이거나 record_type이 'manual'인 것)
-        const externalPickups = allPickups.filter(p => 
-          p.pickup_source === 'manual' || p.record_type === 'manual'
+        // 한국 기준 픽업 (한국 공항 출발 또는 도착)
+        const koreaPickups = allPickups.filter(p => 
+          koreaAirports.includes(p.departure_airport) || koreaAirports.includes(p.arrival_airport)
         );
-        const externalCount = externalPickups.length;
-        const externalPax = externalPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        const koreaCount = koreaPickups.length;
+        const koreaPax = koreaPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
+        
+        // 괌 기준 픽업 (괌 공항 출발 또는 도착)
+        const guamPickups = allPickups.filter(p => 
+          p.departure_airport === 'GUM' || p.arrival_airport === 'GUM'
+        );
+        const guamCount = guamPickups.length;
+        const guamPax = guamPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
         
         html += `<div class="calendar-day ${hasPickup ? 'has-pickup' : ''} ${isToday ? 'today' : ''} ${isClosed ? 'closed' : ''}">`;
         html += `<div class="calendar-date">${day}일</div>`;
@@ -943,11 +952,11 @@
         // 통계 요약 (데이터가 있을 때만)
         if (hasPickup) {
           html += `<div class="day-summary" style="font-size: 0.65rem; line-height: 1.3;">`;
-          if (internalCount > 0) {
-            html += `내부: ${internalCount}건(${internalPax}명)<br>`;
+          if (koreaCount > 0) {
+            html += `🇰🇷 ${koreaCount}건(${koreaPax}명) `;
           }
-          if (externalCount > 0) {
-            html += `외부: ${externalCount}건(${externalPax}명)`;
+          if (guamCount > 0) {
+            html += `🇬🇺 ${guamCount}건(${guamPax}명)`;
           }
           html += `</div>`;
         }
@@ -959,51 +968,60 @@
           </button>
         `;
         
-        // 공항명 매핑 함수
-        const getAirportLabel = (code) => {
-          const names = {
-            'ICN': '인천', 'PUS': '부산', 'TAE': '대구',
-            'GMP': '김포', 'CJU': '제주', 'GUM': '괌',
-            'NRT': '나리타', 'FUK': '후쿠오카', 'SPN': '사이판', 'ROR': '팔라우'
-          };
-          return names[code] || code;
-        };
+        // 픽업 데이터를 한국/괌으로 시간순 정렬 (이미 위에서 분류됨)
+        const sortByTime = (a, b) => (a.display_time || '').localeCompare(b.display_time || '');
+        koreaPickups.sort(sortByTime);
+        guamPickups.sort(sortByTime);
         
-        // record_type에 따라 구분하여 표시
-        dayPickups.departures.forEach(p => {
+        // 양쪽 컬럼으로 분할 표시
+        html += `<div class="calendar-day-split">`;
+        
+        // 왼쪽: 한국 기준
+        html += `<div class="calendar-day-column column-korea">`;
+        html += `<div class="calendar-day-column-header">🇰🇷 한국</div>`;
+        
+        koreaPickups.forEach(p => {
           const time = p.display_time?.substring(0, 5) || '';
           const flightNum = p.flight_number || '';
-          const depAirport = p.departure_airport || '';
-          const arrAirport = p.arrival_airport || '';
-          
-          // 출발공항 코드 표시 (3글자 코드 + dep)
-          const label = `✈️ ${depAirport} dep`;
+          const isDeparture = p.record_type === 'departure';
+          const bgColor = isDeparture ? '#e3f2fd' : '#ffebee';
+          const borderColor = isDeparture ? '#2196f3' : '#f44336';
+          const textColor = isDeparture ? '#1565c0' : '#c62828';
+          const icon = isDeparture ? '✈️' : '🛬';
           
           html += `
-            <div class="pickup-item" style="background: #e3f2fd; border-left-color: #2196f3; color: #1565c0; cursor: pointer;" onclick="showPickupDetail(${p.id})">
-              <div style="font-size: 0.75rem; font-weight: bold;">${label}</div>
-              <div>${flightNum}(${time}) ${p.customer_name} (${p.passenger_count}명)</div>
+            <div class="pickup-item" style="background: ${bgColor}; border-left-color: ${borderColor}; color: ${textColor}; cursor: pointer;" onclick="showPickupDetail(${p.id})">
+              <div style="font-weight: bold;">${icon} ${flightNum} ${time}</div>
+              <div style="font-size: 0.85em;">${p.customer_name} (${p.passenger_count}명)</div>
             </div>
           `;
         });
         
-        // 도착 레코드
-        dayPickups.arrivals.forEach(p => {
+        html += `</div>`;
+        
+        // 오른쪽: 괌 기준
+        html += `<div class="calendar-day-column column-guam">`;
+        html += `<div class="calendar-day-column-header">🇬🇺 괌</div>`;
+        
+        guamPickups.forEach(p => {
           const time = p.display_time?.substring(0, 5) || '';
           const flightNum = p.flight_number || '';
-          const depAirport = p.departure_airport || '';
-          const arrAirport = p.arrival_airport || '';
-          
-          // 도착공항 코드 표시 (3글자 코드 + arr)
-          const label = `🛬 ${arrAirport} arr`;
+          const isDeparture = p.record_type === 'departure';
+          const bgColor = isDeparture ? '#e3f2fd' : '#ffebee';
+          const borderColor = isDeparture ? '#2196f3' : '#f44336';
+          const textColor = isDeparture ? '#1565c0' : '#c62828';
+          const icon = isDeparture ? '✈️' : '🛬';
           
           html += `
-            <div class="pickup-item" style="background: #ffebee; border-left-color: #f44336; color: #c62828; cursor: pointer;" onclick="showPickupDetail(${p.id})">
-              <div style="font-size: 0.75rem; font-weight: bold;">${label}</div>
-              <div>${flightNum}(${time}) ${p.customer_name} (${p.passenger_count}명)</div>
+            <div class="pickup-item" style="background: ${bgColor}; border-left-color: ${borderColor}; color: ${textColor}; cursor: pointer;" onclick="showPickupDetail(${p.id})">
+              <div style="font-weight: bold;">${icon} ${flightNum} ${time}</div>
+              <div style="font-size: 0.85em;">${p.customer_name} (${p.passenger_count}명)</div>
             </div>
           `;
         });
+        
+        html += `</div>`;
+        html += `</div>`;
         
         html += `</div>`;
       }
