@@ -932,17 +932,33 @@
         // 한국 공항 리스트
         const koreaAirports = ['ICN', 'PUS', 'GMP', 'TAE', 'CJU'];
         
-        // 한국 기준 픽업 (한국 공항 출발 또는 도착)
-        const koreaPickups = allPickups.filter(p => 
-          koreaAirports.includes(p.departure_airport) || koreaAirports.includes(p.arrival_airport)
-        );
+        // 한국 컬럼: 한국에서 출발하거나 한국으로 도착하는 항공편 (한국 관점)
+        const koreaPickups = allPickups.filter(p => {
+          // 한국 출발 (departure record)
+          if (p.record_type === 'departure' && koreaAirports.includes(p.departure_airport)) {
+            return true;
+          }
+          // 한국 도착 (arrival record)
+          if (p.record_type === 'arrival' && koreaAirports.includes(p.arrival_airport)) {
+            return true;
+          }
+          return false;
+        });
         const koreaCount = koreaPickups.length;
         const koreaPax = koreaPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
         
-        // 괌 기준 픽업 (괌 공항 출발 또는 도착)
-        const guamPickups = allPickups.filter(p => 
-          p.departure_airport === 'GUM' || p.arrival_airport === 'GUM'
-        );
+        // 괌 컬럼: 괌에서 출발하거나 괌으로 도착하는 항공편 (괌 관점)
+        const guamPickups = allPickups.filter(p => {
+          // 괌 출발 (departure record)
+          if (p.record_type === 'departure' && p.departure_airport === 'GUM') {
+            return true;
+          }
+          // 괌 도착 (arrival record)
+          if (p.record_type === 'arrival' && p.arrival_airport === 'GUM') {
+            return true;
+          }
+          return false;
+        });
         const guamCount = guamPickups.length;
         const guamPax = guamPickups.reduce((sum, p) => sum + (p.passenger_count || 0), 0);
         
