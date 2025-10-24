@@ -643,8 +643,20 @@
       document.getElementById('dateRangeEnd').value = weekLater.toISOString().split('T')[0];
     });
     
-    // 한글을 영어 로마자 표기로 변환
+    // 한글을 영어 로마자 표기로 변환 (연음 규칙 적용)
     function koreanToEnglish(koreanText) {
+      // 한국 성씨 특별 표기 (첫 글자인 경우에만 적용)
+      const KOREAN_SURNAMES = {
+        '김': 'KIM', '이': 'LEE', '박': 'PARK', '최': 'CHOI', '정': 'JUNG',
+        '강': 'KANG', '조': 'CHO', '윤': 'YOON', '장': 'JANG', '임': 'LIM',
+        '한': 'HAN', '오': 'OH', '서': 'SEO', '신': 'SHIN', '권': 'KWON',
+        '황': 'HWANG', '안': 'AHN', '송': 'SONG', '류': 'RYU', '전': 'JEON',
+        '홍': 'HONG', '고': 'KOH', '문': 'MOON', '양': 'YANG', '손': 'SON',
+        '배': 'BAE', '백': 'BAEK', '허': 'HEO', '남': 'NAM', '심': 'SHIM',
+        '노': 'NOH', '하': 'HA', '곽': 'KWAK', '성': 'SUNG', '차': 'CHA',
+        '주': 'JOO', '우': 'WOO', '구': 'KOO', '민': 'MIN', '라': 'RA'
+      };
+      
       // 초성
       const CHO = [
         'g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '',
@@ -687,6 +699,52 @@
         ''    // 27: 사용 안 함
       ];
       
+      // 첫 글자가 성씨인지 확인
+      const firstChar = koreanText.trim()[0];
+      if (KOREAN_SURNAMES[firstChar]) {
+        // 성씨 + 나머지 이름 처리
+        const surname = KOREAN_SURNAMES[firstChar];
+        const restName = koreanText.slice(1).trim();
+        
+        if (restName.length === 0) {
+          return surname; // 성씨만 있는 경우
+        }
+        
+        // 나머지 이름은 일반 변환
+        let result = '';
+        for (let i = 0; i < restName.length; i++) {
+          const char = restName[i];
+          const code = char.charCodeAt(0);
+          
+          // 한글 유니코드 범위: 0xAC00 ~ 0xD7A3
+          if (code >= 0xAC00 && code <= 0xD7A3) {
+            const hangulCode = code - 0xAC00;
+            const choIndex = Math.floor(hangulCode / 588);
+            const jungIndex = Math.floor((hangulCode % 588) / 28);
+            const jongIndex = hangulCode % 28;
+            
+            result += CHO[choIndex];
+            result += JUNG[jungIndex];
+            if (JONG[jongIndex]) {
+              result += JONG[jongIndex];
+            }
+          } else if (char === ' ') {
+            result += ' ';
+          } else {
+            result += char;
+          }
+        }
+        
+        // 후처리
+        result = result.replace(/NGT/gi, 'NG');
+        result = result.replace(/([AEIOU])T([AEIOU])/gi, '$1NG$2');
+        result = result.replace(/([AEIOU])T([BCDFGHJKLMNPQRSTVWXYZ])/gi, '$1NG$2');
+        result = result.replace(/([AEIOU])T(\s|$)/gi, '$1NG$2');
+        
+        return (surname + ' ' + result.toUpperCase()).trim();
+      }
+      
+      // 성씨가 아니면 일반 변환
       let result = '';
       
       for (let i = 0; i < koreanText.length; i++) {
@@ -700,11 +758,6 @@
           const choIndex = Math.floor(hangulCode / 588);
           const jungIndex = Math.floor((hangulCode % 588) / 28);
           const jongIndex = hangulCode % 28;
-          
-          // 디버깅: 종성이 ㅇ(ng)인 경우 로그 출력
-          if (jongIndex === 20) {
-            console.log(`📝 "${char}" 변환: 종성인덱스=${jongIndex}, 종성="${JONG[jongIndex]}"`);
-          }
           
           result += CHO[choIndex];
           result += JUNG[jungIndex];
