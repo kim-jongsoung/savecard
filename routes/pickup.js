@@ -2593,6 +2593,121 @@ router.get('/schedule/daily', (req, res) => {
   });
 });
 
+// API: 기존 데이터 영문 이름 재변환
+router.post('/api/reconvert-names', async (req, res) => {
+  const pool = req.app.locals.pool;
+  
+  try {
+    // 한국 성씨 특별 표기
+    const KOREAN_SURNAMES = {
+      '김': 'KIM', '이': 'LEE', '박': 'PARK', '최': 'CHOI', '정': 'JUNG',
+      '강': 'KANG', '조': 'CHO', '윤': 'YOON', '장': 'JANG', '임': 'LIM',
+      '한': 'HAN', '오': 'OH', '서': 'SEO', '신': 'SHIN', '권': 'KWON',
+      '황': 'HWANG', '안': 'AHN', '송': 'SONG', '류': 'RYU', '전': 'JEON',
+      '홍': 'HONG', '고': 'KOH', '문': 'MOON', '양': 'YANG', '손': 'SON',
+      '배': 'BAE', '백': 'BAEK', '허': 'HEO', '남': 'NAM', '심': 'SHIM',
+      '노': 'NOH', '하': 'HA', '곽': 'KWAK', '성': 'SUNG', '차': 'CHA',
+      '주': 'JOO', '우': 'WOO', '구': 'KOO', '민': 'MIN', '라': 'RA'
+    };
+    
+    const CHO = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+    const JUNG = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+    const JONG = ['', 'k', 'k', 'k', 'n', 'n', 'n', 'l', 'k', 'm', 'p', 'l', 'l', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't', ''];
+    
+    function koreanToEnglish(text) {
+      if (!text || text.trim() === '') return '';
+      
+      const firstChar = text.trim()[0];
+      if (KOREAN_SURNAMES[firstChar]) {
+        const surname = KOREAN_SURNAMES[firstChar];
+        const restName = text.slice(1).trim();
+        if (restName.length === 0) return surname;
+        
+        let result = '';
+        for (let i = 0; i < restName.length; i++) {
+          const code = restName[i].charCodeAt(0);
+          if (code >= 0xAC00 && code <= 0xD7A3) {
+            const hangulCode = code - 0xAC00;
+            const cho = Math.floor(hangulCode / 588);
+            const jung = Math.floor((hangulCode % 588) / 28);
+            const jong = hangulCode % 28;
+            result += CHO[cho] + JUNG[jung] + (JONG[jong] || '');
+          } else if (restName[i] === ' ') {
+            result += ' ';
+          } else {
+            result += restName[i];
+          }
+        }
+        
+        result = result.replace(/NGT/gi, 'NG');
+        result = result.replace(/([AEIOU])T([AEIOU])/gi, '$1NG$2');
+        result = result.replace(/([AEIOU])T([BCDFGHJKLMNPQRSTVWXYZ])/gi, '$1NG$2');
+        result = result.replace(/([AEIOU])T(\s|$)/gi, '$1NG$2');
+        
+        return (surname + ' ' + result.toUpperCase()).trim();
+      }
+      
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        const code = text[i].charCodeAt(0);
+        if (code >= 0xAC00 && code <= 0xD7A3) {
+          const hangulCode = code - 0xAC00;
+          const cho = Math.floor(hangulCode / 588);
+          const jung = Math.floor((hangulCode % 588) / 28);
+          const jong = hangulCode % 28;
+          result += CHO[cho] + JUNG[jung] + (JONG[jong] || '');
+        } else if (text[i] === ' ') {
+          result += ' ';
+        } else {
+          result += text[i];
+        }
+      }
+      
+      result = result.replace(/NGT/gi, 'NG');
+      result = result.replace(/([AEIOU])T([AEIOU])/gi, '$1NG$2');
+      result = result.replace(/([AEIOU])T([BCDFGHJKLMNPQRSTVWXYZ])/gi, '$1NG$2');
+      result = result.replace(/([AEIOU])T(\s|$)/gi, '$1NG$2');
+      
+      return result.toUpperCase();
+    }
+    
+    // 1. pickup 테이블에서 한글 이름이 있는 데이터 조회
+    const pickupsResult = await pool.query(`
+      SELECT id, customer_name 
+      FROM pickup 
+      WHERE customer_name IS NOT NULL AND customer_name != ''
+    `);
+    
+    let updatedCount = 0;
+    
+    // 2. 각 레코드를 새 방식으로 변환하여 업데이트
+    for (const row of pickupsResult.rows) {
+      const newEnglishName = koreanToEnglish(row.customer_name);
+      
+      await pool.query(`
+        UPDATE pickup 
+        SET customer_name_eng = $1 
+        WHERE id = $2
+      `, [newEnglishName, row.id]);
+      
+      updatedCount++;
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `${updatedCount}건의 영문 이름이 재변환되었습니다.`,
+      count: updatedCount
+    });
+    
+  } catch (error) {
+    console.error('이름 재변환 오류:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // 관리자 스케줄 페이지 (로그인 필요 - ERP 관리자 또는 픽업 관리자) - 달력 화면
 router.get('/schedule', (req, res) => {
   // ERP 관리자 세션 또는 픽업 전용 세션 체크
