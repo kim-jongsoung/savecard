@@ -257,6 +257,13 @@
       <div class="nav-buttons" style="margin-top: 10px;">
         <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800;">📅 3 Days (어제-오늘-내일)</button>
       </div>
+      <div class="nav-buttons" style="margin-top: 10px; gap: 5px; display: flex; align-items: center; justify-content: center;">
+        <label style="color: white; font-size: 14px; font-weight: bold;">📆 기간 선택:</label>
+        <input type="date" id="dateRangeStart" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        <span style="color: white;">~</span>
+        <input type="date" id="dateRangeEnd" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        <button onclick="loadDateRange()" style="background: #8B5CF6; border-color: #8B5CF6;">조회</button>
+      </div>
     </div>
     
     <div class="info-bar">
@@ -644,6 +651,98 @@
       }
     }
     
+    // 기간 선택 기능
+    async function loadDateRange() {
+      const startDate = document.getElementById('dateRangeStart').value;
+      const endDate = document.getElementById('dateRangeEnd').value;
+      
+      if (!startDate || !endDate) {
+        alert('시작일과 종료일을 모두 선택해주세요.');
+        return;
+      }
+      
+      if (startDate > endDate) {
+        alert('시작일이 종료일보다 클 수 없습니다.');
+        return;
+      }
+      
+      // 자동 새로고침 중지
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+      
+      try {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'none';
+        
+        // 날짜 범위 생성
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const dates = [];
+        
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          dates.push(d.toISOString().split('T')[0]);
+        }
+        
+        // 날짜 표시
+        document.getElementById('dateDisplay').textContent = `${startDate} ~ ${endDate} (${dates.length}일)`;
+        
+        // 모든 날짜의 데이터 가져오기
+        const allData = await Promise.all(
+          dates.map(date => fetch(`/pickup/api/schedule/${date}`).then(r => r.json()))
+        );
+        
+        // 전체 통계 계산
+        const totalSummary = {
+          total: allData.reduce((sum, d) => sum + (d.summary?.total || 0), 0),
+          contacted: allData.reduce((sum, d) => sum + (d.summary?.contacted || 0), 0),
+          pending: allData.reduce((sum, d) => sum + (d.summary?.pending || 0), 0),
+          total_passengers: allData.reduce((sum, d) => sum + (d.summary?.total_passengers || 0), 0)
+        };
+        updateSummary(totalSummary);
+        
+        // 모든 픽업 합치기
+        const allPickups = [];
+        for (let i = 0; i < allData.length; i++) {
+          const data = allData[i];
+          const currentDate = dates[i];
+          
+          if (data.pickups && data.pickups.length > 0) {
+            data.pickups.forEach(pickup => {
+              if (!pickup.display_date) {
+                pickup.display_date = currentDate;
+              }
+            });
+            
+            const sortedPickups = data.pickups.sort((a, b) => {
+              const timeA = a.actual_pickup_time || a.display_time || '';
+              const timeB = b.actual_pickup_time || b.display_time || '';
+              return timeA.localeCompare(timeB);
+            });
+            
+            allPickups.push(...sortedPickups);
+          }
+        }
+        
+        // 테이블 렌더링
+        if (allPickups.length > 0) {
+          renderScheduleTable(allPickups);
+          document.getElementById('tableContainer').style.display = 'block';
+        } else {
+          document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        document.getElementById('loadingIndicator').style.display = 'none';
+        updateLastUpdatedTime();
+        
+      } catch (error) {
+        console.error('기간 조회 실패:', error);
+        document.getElementById('loadingIndicator').innerHTML = 
+          '<p style="color: red;">❌ 기간 조회 실패. 다시 시도해주세요.</p>';
+      }
+    }
+    
     // 자동 새로고침 (30초마다) - 3일 보기 유지
     function startAutoRefresh() {
       autoRefreshInterval = setInterval(() => {
@@ -656,6 +755,16 @@
       if (autoRefreshInterval) {
         clearInterval(autoRefreshInterval);
       }
+    });
+    
+    // 페이지 로드 시 기본값 설정
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const weekLater = new Date(today);
+      weekLater.setDate(weekLater.getDate() + 7);
+      
+      document.getElementById('dateRangeStart').value = today.toISOString().split('T')[0];
+      document.getElementById('dateRangeEnd').value = weekLater.toISOString().split('T')[0];
     });
   </script>
 </body>
