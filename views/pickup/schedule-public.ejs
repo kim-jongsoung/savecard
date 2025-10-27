@@ -249,20 +249,15 @@
     <div class="header">
       <h1>🚗 HKT Pickup Schedule</h1>
       <div class="date-display" id="dateDisplay">Loading...</div>
-      <div class="nav-buttons">
-        <button onclick="changeDate(-1)">◀ Prev Day</button>
-        <button onclick="loadSingleDate()">📆 단일날짜</button>
-        <button onclick="changeDate(1)">Next Day ▶</button>
-      </div>
-      <div class="nav-buttons" style="margin-top: 10px;">
-        <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800;">📅 3 Days (어제-오늘-내일)</button>
-      </div>
-      <div class="nav-buttons" style="margin-top: 10px; gap: 5px; display: flex; align-items: center; justify-content: center;">
-        <label style="color: white; font-size: 14px; font-weight: bold;">📆 기간 선택:</label>
-        <input type="date" id="dateRangeStart" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
-        <span style="color: white;">~</span>
-        <input type="date" id="dateRangeEnd" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
-        <button onclick="loadDateRange()" style="background: #8B5CF6; border-color: #8B5CF6;">조회</button>
+      <div class="nav-buttons" style="margin-top: 10px; gap: 10px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+        <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800; padding: 8px 20px;">📅 3 Days</button>
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <label style="color: white; font-size: 14px; font-weight: bold;">📆 기간:</label>
+          <input type="date" id="dateRangeStart" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+          <span style="color: white;">~</span>
+          <input type="date" id="dateRangeEnd" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+          <button onclick="loadDateRange()" style="background: #8B5CF6; border-color: #8B5CF6; padding: 8px 20px;">조회</button>
+        </div>
       </div>
     </div>
     
@@ -335,26 +330,13 @@
       return today.toISOString().split('T')[0];
     }
     
-    // 날짜 변경
-    function changeDate(days) {
-      const date = new Date(currentDate);
-      date.setDate(date.getDate() + days);
-      currentDate = date.toISOString().split('T')[0];
-      loadSchedule(currentDate);
-      
-      // URL 업데이트 (히스토리)
-      window.history.pushState({}, '', `/pickup/schedule/public/${currentDate}`);
-    }
-    
-    // 오늘로 이동
-    function goToday() {
-      currentDate = getTodayDate();
-      load3Days();
-      window.history.pushState({}, '', `/pickup/schedule/public/today`);
-    }
-    
-    function loadSingleDate() {
-      loadSchedule(currentDate);
+    // 날짜 표시 업데이트
+    function updateDateDisplay(dateStr) {
+      const date = new Date(dateStr);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = days[date.getDay()];
+      document.getElementById('dateDisplay').textContent = 
+        `${dateStr} (${dayName})`;
     }
     
     // 스케줄 로드
@@ -366,9 +348,6 @@
         
         const response = await fetch(`/pickup/api/schedule/${date}`);
         const data = await response.json();
-        
-        // 날짜 표시 업데이트
-        updateDateDisplay(date);
         
         // 통계 업데이트
         updateSummary(data.summary);
@@ -391,15 +370,6 @@
         document.getElementById('loadingIndicator').innerHTML = 
           '<p style="color: red;">❌ Failed to load schedule. Please try again.</p>';
       }
-    }
-    
-    // 날짜 표시 업데이트
-    function updateDateDisplay(dateStr) {
-      const date = new Date(dateStr);
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const dayName = days[date.getDay()];
-      document.getElementById('dateDisplay').textContent = 
-        `${dateStr} (${dayName})`;
     }
     
     // 통계 업데이트
@@ -443,22 +413,14 @@
       let lastDate = null;
       sortedPickups.forEach(pickup => {
         const currentDate = pickup.display_date;
-        
-        // 날짜가 바뀌면 구분선 추가
-        if (lastDate && currentDate !== lastDate) {
-          const separatorRow = document.createElement('tr');
-          separatorRow.innerHTML = `<td colspan="16" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; font-weight: bold; padding: 8px; font-size: 16px;">📅 ${currentDate}</td>`;
-          tbody.appendChild(separatorRow);
-        } else if (!lastDate) {
-          // 첫 번째 날짜 헤더
-          const separatorRow = document.createElement('tr');
-          separatorRow.innerHTML = `<td colspan="16" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; font-weight: bold; padding: 8px; font-size: 16px;">📅 ${currentDate}</td>`;
-          tbody.appendChild(separatorRow);
-        }
-        lastDate = currentDate;
-        
         const isExternalData = pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import';
         const row = document.createElement('tr');
+        
+        // 날짜가 바뀔 때 상단에 진한 테두리 추가
+        if (lastDate && currentDate !== lastDate) {
+          row.style.borderTop = '3px solid #667eea';
+        }
+        lastDate = currentDate;
         
         // 외부 데이터 구분 클래스 추가
         if (isExternalData) {
