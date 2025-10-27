@@ -1150,9 +1150,9 @@
           vehicleWithRoute = pickup.rental_vehicle;
         } else if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
-            vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
+            vehicleWithRoute = `${pickup.hotel_name} → AIRPORT`;
           } else if (pickup.record_type === 'arrival') {
-            vehicleWithRoute = `(AIRPORT → ${pickup.hotel_name})`;
+            vehicleWithRoute = `AIRPORT → ${pickup.hotel_name}`;
           }
         }
         
@@ -1364,9 +1364,9 @@
         // 2순위: 자동 생성된 루팅 정보
         else if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
-            vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
+            vehicleWithRoute = `${pickup.hotel_name} → AIRPORT`;
           } else if (pickup.record_type === 'arrival') {
-            vehicleWithRoute = `(AIRPORT → ${pickup.hotel_name})`;
+            vehicleWithRoute = `AIRPORT → ${pickup.hotel_name}`;
           }
         }
         
