@@ -42,6 +42,16 @@
   <div class="container-fluid">
     <h2 class="text-center mb-3">🚗 기사 화면</h2>
     
+    <!-- 기간 선택 -->
+    <div class="mb-3 d-flex justify-content-center align-items-center gap-2">
+      <label class="fw-bold">📆 기간 선택:</label>
+      <input type="date" id="dateRangeStart" class="form-control" style="width: 150px;">
+      <span>~</span>
+      <input type="date" id="dateRangeEnd" class="form-control" style="width: 150px;">
+      <button class="btn btn-primary" onclick="loadDateRange()">조회</button>
+      <button class="btn btn-secondary" onclick="loadToday()">오늘</button>
+    </div>
+    
     <!-- 달력 뷰 (유일한 화면) -->
     <div id="calendarView" class="mb-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -479,6 +489,51 @@
       });
       loadPickups();
     }
+    
+    // 기간 선택 기능
+    function loadDateRange() {
+      const startDate = document.getElementById('dateRangeStart').value;
+      const endDate = document.getElementById('dateRangeEnd').value;
+      
+      if (!startDate || !endDate) {
+        alert('시작일과 종료일을 모두 선택해주세요.');
+        return;
+      }
+      
+      if (startDate > endDate) {
+        alert('시작일이 종료일보다 클 수 없습니다.');
+        return;
+      }
+      
+      // 시작 날짜로 이동
+      const start = new Date(startDate);
+      currentCalendarYear = start.getFullYear();
+      currentCalendarMonth = start.getMonth() + 1;
+      loadCalendar();
+    }
+    
+    // 오늘 버튼
+    function loadToday() {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      document.getElementById('dateRangeStart').value = todayStr;
+      document.getElementById('dateRangeEnd').value = todayStr;
+      
+      currentCalendarYear = today.getFullYear();
+      currentCalendarMonth = today.getMonth() + 1;
+      loadCalendar();
+    }
+    
+    // 페이지 로드 시 기본값 설정 (오늘 ~ 7일 후)
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const weekLater = new Date(today);
+      weekLater.setDate(weekLater.getDate() + 7);
+      
+      document.getElementById('dateRangeStart').value = today.toISOString().split('T')[0];
+      document.getElementById('dateRangeEnd').value = weekLater.toISOString().split('T')[0];
+    });
   </script>
 </body>
 </html>
