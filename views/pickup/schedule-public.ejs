@@ -385,30 +385,19 @@
       const tbody = document.getElementById('scheduleBody');
       tbody.innerHTML = '';
       
-      // 외부 데이터와 시스템 데이터 분리
-      const externalData = pickups.filter(p => 
-        p.pickup_source === 'manual' || p.pickup_source === 'excel_import'
-      );
-      const systemData = pickups.filter(p => 
-        p.pickup_source !== 'manual' && p.pickup_source !== 'excel_import'
-      );
-      
-      // 시간 비교 함수
-      const getTimeValue = (pickup) => {
+      // 날짜+시간 비교 함수
+      const getDateTimeValue = (pickup) => {
+        const date = pickup.display_date || '';
         const time = pickup.actual_pickup_time || pickup.display_time || '';
-        if (!time) return 9999; // 시간 없으면 맨 뒤로
-        const [hours, minutes] = time.split(':').map(Number);
-        return hours * 60 + minutes; // 분 단위로 변환
+        return `${date} ${time}`; // "2025-10-27 14:00" 형식
       };
       
-      // 각 그룹 내에서 시간순 정렬 (빠른 시간이 위로)
-      externalData.sort((a, b) => getTimeValue(a) - getTimeValue(b));
-      systemData.sort((a, b) => getTimeValue(a) - getTimeValue(b));
+      // 전체 픽업을 날짜+시간순으로 정렬 (외부/시스템 구분 없이)
+      const sortedPickups = pickups.sort((a, b) => {
+        return getDateTimeValue(a).localeCompare(getDateTimeValue(b));
+      });
       
-      // 외부 데이터 먼저, 시스템 데이터는 나중에
-      const sortedPickups = [...externalData, ...systemData];
-      
-      console.log(`📊 데이터 정렬: 외부 ${externalData.length}건, 시스템 ${systemData.length}건 (각 그룹 내 시간순)`);
+      console.log(`📊 총 ${sortedPickups.length}건 데이터 (날짜+시간순 정렬)`);
       
       let lastDate = null;
       sortedPickups.forEach(pickup => {
@@ -581,9 +570,10 @@
         };
         updateSummary(totalSummary);
         
-        // 모든 픽업 합치기
+        // 모든 픽업 합치기 (날짜순 정렬: 어제 → 오늘 → 내일)
         const allPickups = [];
         
+        // 날짜 순서대로 합치기 (어제[0], 오늘[1], 내일[2])
         for (let i = 0; i < allData.length; i++) {
           const data = allData[i];
           const currentDate = dates[i];
@@ -596,24 +586,16 @@
               }
             });
             
-            allPickups.push(...data.pickups);
+            // 해당 날짜의 픽업들을 시간순으로 정렬
+            const sortedPickups = data.pickups.sort((a, b) => {
+              const timeA = a.actual_pickup_time || a.display_time || '';
+              const timeB = b.actual_pickup_time || b.display_time || '';
+              return timeA.localeCompare(timeB);
+            });
+            
+            allPickups.push(...sortedPickups);
           }
         }
-        
-        // 전체 픽업을 날짜+시간으로 정렬 (지난 날짜부터 위로)
-        allPickups.sort((a, b) => {
-          const dateA = a.display_date || '';
-          const dateB = b.display_date || '';
-          const timeA = a.actual_pickup_time || a.display_time || '';
-          const timeB = b.actual_pickup_time || b.display_time || '';
-          
-          // 날짜 비교 (오름차순: 지난 날짜가 위)
-          if (dateA !== dateB) {
-            return dateA.localeCompare(dateB);
-          }
-          // 같은 날짜면 시간 비교 (오름차순: 이른 시간이 위)
-          return timeA.localeCompare(timeB);
-        });
         
         // 테이블 렌더링
         if (allPickups.length > 0) {
@@ -679,8 +661,10 @@
         };
         updateSummary(totalSummary);
         
-        // 모든 픽업 합치기
+        // 모든 픽업 합치기 (날짜순 정렬)
         const allPickups = [];
+        
+        // 날짜 순서대로 합치기
         for (let i = 0; i < allData.length; i++) {
           const data = allData[i];
           const currentDate = dates[i];
@@ -692,24 +676,16 @@
               }
             });
             
-            allPickups.push(...data.pickups);
+            // 해당 날짜의 픽업들을 시간순으로 정렬
+            const sortedPickups = data.pickups.sort((a, b) => {
+              const timeA = a.actual_pickup_time || a.display_time || '';
+              const timeB = b.actual_pickup_time || b.display_time || '';
+              return timeA.localeCompare(timeB);
+            });
+            
+            allPickups.push(...sortedPickups);
           }
         }
-        
-        // 전체 픽업을 날짜+시간으로 정렬 (지난 날짜부터 위로)
-        allPickups.sort((a, b) => {
-          const dateA = a.display_date || '';
-          const dateB = b.display_date || '';
-          const timeA = a.actual_pickup_time || a.display_time || '';
-          const timeB = b.actual_pickup_time || b.display_time || '';
-          
-          // 날짜 비교 (오름차순: 지난 날짜가 위)
-          if (dateA !== dateB) {
-            return dateA.localeCompare(dateB);
-          }
-          // 같은 날짜면 시간 비교 (오름차순: 이른 시간이 위)
-          return timeA.localeCompare(timeB);
-        });
         
         // 테이블 렌더링
         if (allPickups.length > 0) {
