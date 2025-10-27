@@ -314,13 +314,11 @@
     
     <div class="footer">
       <p>🔗 Bookmark this page for quick access</p>
-      <p>Auto-refresh: Every 30 seconds</p>
     </div>
   </div>
 
   <script>
     let currentDate = '<%= initialDate %>';
-    let autoRefreshInterval;
     
     // 페이지 로드 시 초기화
     document.addEventListener('DOMContentLoaded', () => {
@@ -329,7 +327,6 @@
       }
       // 기본으로 3일 보기 (어제-오늘-내일)
       load3Days();
-      startAutoRefresh();
     });
     
     // 오늘 날짜 구하기
@@ -443,7 +440,23 @@
       
       console.log(`📊 데이터 정렬: 외부 ${externalData.length}건, 시스템 ${systemData.length}건 (각 그룹 내 시간순)`);
       
+      let lastDate = null;
       sortedPickups.forEach(pickup => {
+        const currentDate = pickup.display_date;
+        
+        // 날짜가 바뀌면 구분선 추가
+        if (lastDate && currentDate !== lastDate) {
+          const separatorRow = document.createElement('tr');
+          separatorRow.innerHTML = `<td colspan="16" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; font-weight: bold; padding: 8px; font-size: 16px;">📅 ${currentDate}</td>`;
+          tbody.appendChild(separatorRow);
+        } else if (!lastDate) {
+          // 첫 번째 날짜 헤더
+          const separatorRow = document.createElement('tr');
+          separatorRow.innerHTML = `<td colspan="16" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; font-weight: bold; padding: 8px; font-size: 16px;">📅 ${currentDate}</td>`;
+          tbody.appendChild(separatorRow);
+        }
+        lastDate = currentDate;
+        
         const isExternalData = pickup.pickup_source === 'manual' || pickup.pickup_source === 'excel_import';
         const row = document.createElement('tr');
         
@@ -486,9 +499,9 @@
         // 2순위: 자동 생성된 루팅 정보
         else if (pickup.hotel_name) {
           if (pickup.record_type === 'departure') {
-            vehicleWithRoute = `(${pickup.hotel_name} → AIRPORT)`;
+            vehicleWithRoute = `${pickup.hotel_name} → AIRPORT`;
           } else if (pickup.record_type === 'arrival') {
-            vehicleWithRoute = `(AIRPORT → ${pickup.hotel_name})`;
+            vehicleWithRoute = `AIRPORT → ${pickup.hotel_name}`;
           }
         }
         
@@ -666,11 +679,6 @@
         return;
       }
       
-      // 자동 새로고침 중지
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-      }
-      
       try {
         document.getElementById('loadingIndicator').style.display = 'block';
         document.getElementById('tableContainer').style.display = 'none';
@@ -742,20 +750,6 @@
           '<p style="color: red;">❌ 기간 조회 실패. 다시 시도해주세요.</p>';
       }
     }
-    
-    // 자동 새로고침 (30초마다) - 3일 보기 유지
-    function startAutoRefresh() {
-      autoRefreshInterval = setInterval(() => {
-        load3Days();
-      }, 30000); // 30초
-    }
-    
-    // 페이지 언로드 시 인터벌 정리
-    window.addEventListener('beforeunload', () => {
-      if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-      }
-    });
     
     // 페이지 로드 시 기본값 설정
     window.addEventListener('DOMContentLoaded', () => {
