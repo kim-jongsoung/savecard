@@ -74,9 +74,6 @@
         <button class="btn btn-outline-warning me-2" onclick="showClosedDatesModal()">
           <i class="bi bi-calendar-x"></i> 마감날짜 관리
         </button>
-        <button class="btn btn-outline-info me-2" onclick="reconvertNames()">
-          <i class="bi bi-arrow-repeat"></i> 영문이름 재변환
-        </button>
         <button class="btn btn-success me-2" onclick="showAddModal()">
           <i class="bi bi-plus-circle"></i> 새 예약 등록
         </button>
@@ -1138,32 +1135,6 @@
       await fetch(`/pickup/api/${id}`, { method: 'DELETE' });
       alert('✅ 취소 완료');
       loadPickups();
-    }
-    
-    // 영문 이름 재변환
-    async function reconvertNames() {
-      if (!confirm('모든 픽업 데이터의 영문 이름을 새로운 변환 방식으로 재변환하시겠습니까?\n\n(예: 김영희 → KIM YEONGHUI, 이조형 → LEE JOHYEONG)\n\n시간이 다소 걸릴 수 있습니다.')) {
-        return;
-      }
-      
-      try {
-        const response = await fetch('/pickup/api/reconvert-names', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          alert(`✅ 완료!\n\n${result.message}\n\n성씨 특별 표기가 적용되었습니다:\n- 김 → KIM\n- 이 → LEE\n- 박 → PARK\n등 40개 성씨`);
-          loadCalendar(); // 달력 새로고침
-        } else {
-          alert('❌ 재변환 실패: ' + result.error);
-        }
-      } catch (error) {
-        console.error('재변환 오류:', error);
-        alert('❌ 재변환 중 오류가 발생했습니다: ' + error.message);
-      }
     }
     
     // 로그아웃

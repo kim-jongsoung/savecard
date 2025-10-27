@@ -2671,10 +2671,10 @@ router.post('/api/reconvert-names', async (req, res) => {
       return result.toUpperCase();
     }
     
-    // 1. pickup 테이블에서 한글 이름이 있는 데이터 조회
+    // 1. airport_pickups 테이블에서 한글 이름이 있는 데이터 조회
     const pickupsResult = await pool.query(`
       SELECT id, customer_name 
-      FROM pickup 
+      FROM airport_pickups 
       WHERE customer_name IS NOT NULL AND customer_name != ''
     `);
     
@@ -2685,8 +2685,8 @@ router.post('/api/reconvert-names', async (req, res) => {
       const newEnglishName = koreanToEnglish(row.customer_name);
       
       await pool.query(`
-        UPDATE pickup 
-        SET customer_name_eng = $1 
+        UPDATE airport_pickups 
+        SET english_name = $1 
         WHERE id = $2
       `, [newEnglishName, row.id]);
       
