@@ -3501,7 +3501,7 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
                 
                 // 사용자 정보 조회 (로깅용)
                 const userResult = await client.query(
-                    'SELECT id, name, customer_name, email, token FROM users WHERE id = $1',
+                    'SELECT id, name, email, token FROM users WHERE id = $1',
                     [userId]
                 );
                 
@@ -3514,7 +3514,7 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
                 }
                 
                 const user = userResult.rows[0];
-                const userName = user.name || user.customer_name || '이름없음';
+                const userName = user.name || '이름없음';
                 console.log(`🗑️ 사용자 삭제 시도: ${userName} (${user.email}) [ID: ${user.id}]`);
                 
                 // 사용 이력 삭제
