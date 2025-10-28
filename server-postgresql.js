@@ -3501,7 +3501,7 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
                 
                 // 사용자 정보 조회 (로깅용)
                 const userResult = await client.query(
-                    'SELECT name, email, token FROM users WHERE id = $1',
+                    'SELECT id, name, customer_name, email, token FROM users WHERE id = $1',
                     [userId]
                 );
                 
@@ -3514,7 +3514,8 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
                 }
                 
                 const user = userResult.rows[0];
-                console.log(`🗑️ 사용자 삭제 시도: ${user.name} (${user.email})`);
+                const userName = user.name || user.customer_name || '이름없음';
+                console.log(`🗑️ 사용자 삭제 시도: ${userName} (${user.email}) [ID: ${user.id}]`);
                 
                 // 사용 이력 삭제
                 const usagesResult = await client.query(
@@ -3530,7 +3531,7 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
                 );
                 
                 await client.query('COMMIT');
-                console.log(`✅ 사용자 삭제 완료: ${user.name}`);
+                console.log(`✅ 사용자 삭제 완료: ${userName} [ID: ${user.id}]`);
                 
                 return res.json({ 
                     success: true, 
@@ -3554,10 +3555,25 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ 사용자 삭제 오류:', error);
+        console.error('오류 상세:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail,
+            constraint: error.constraint
+        });
+        
+        let errorMessage = '카드 삭제 중 오류가 발생했습니다.';
+        
+        // 외래키 제약조건 오류 처리
+        if (error.code === '23503') {
+            errorMessage = '다른 데이터에서 참조 중이어서 삭제할 수 없습니다.';
+        }
+        
         return res.status(500).json({ 
             success: false, 
-            message: '카드 삭제 중 오류가 발생했습니다.',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            message: errorMessage,
+            detail: error.message,
+            code: error.code
         });
     }
 });
