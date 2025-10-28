@@ -2443,6 +2443,45 @@ app.get('/issue', async (req, res) => {
     }
 });
 
+// 이메일 중복 체크 API
+app.get('/api/check-email', async (req, res) => {
+    try {
+        const { email } = req.query;
+        
+        if (!email || !email.trim()) {
+            return res.json({ available: false, message: '이메일을 입력해주세요.' });
+        }
+        
+        const normalizedEmail = email.trim().toLowerCase();
+        
+        if (dbMode === 'postgresql') {
+            const result = await pool.query(
+                'SELECT id FROM users WHERE LOWER(email) = $1',
+                [normalizedEmail]
+            );
+            
+            if (result.rows.length > 0) {
+                return res.json({ 
+                    available: false, 
+                    message: '이미 사용 중인 이메일입니다.' 
+                });
+            }
+        }
+        
+        return res.json({ 
+            available: true, 
+            message: '사용 가능한 이메일입니다.' 
+        });
+        
+    } catch (error) {
+        console.error('이메일 중복 체크 오류:', error);
+        return res.json({ 
+            available: false, 
+            message: '이메일 확인 중 오류가 발생했습니다.' 
+        });
+    }
+});
+
 // 카드 발급 처리
 app.post('/issue', async (req, res) => {
     try {
@@ -2465,6 +2504,24 @@ app.post('/issue', async (req, res) => {
                 errorMessage: codeValidation.message,
                 errorDetails: '발급 코드가 올바른지 확인하거나, 고객센터에 문의해주세요.'
             });
+        }
+
+        // 이메일 중복 체크
+        if (email && email.trim()) {
+            const normalizedEmail = email.trim().toLowerCase();
+            if (dbMode === 'postgresql') {
+                const emailCheck = await pool.query(
+                    'SELECT id, name FROM users WHERE LOWER(email) = $1',
+                    [normalizedEmail]
+                );
+                
+                if (emailCheck.rows.length > 0) {
+                    return res.render('issue-error', {
+                        errorMessage: '이미 사용 중인 이메일입니다.',
+                        errorDetails: '해당 이메일로 이미 카드가 발급되어 있습니다. 다른 이메일을 사용하거나 기존 계정으로 로그인해주세요.'
+                    });
+                }
+            }
         }
 
         // agency_id 우선, 없으면 agency_code로 조회

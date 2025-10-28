@@ -152,6 +152,7 @@
                         <i class="fas fa-info-circle me-1"></i>
                         발급 후 로그인할 때 사용하는 아이디입니다.
                     </div>
+                    <div id="emailCheck" class="mt-1" style="display:none;"></div>
                 </div>
 
                 <!-- 카드 비밀번호 (PIN) 입력 -->
@@ -270,6 +271,15 @@
             const pin = pinInput.value.trim();
             const pinConfirm = pinConfirmInput.value.trim();
             
+            // 이메일 중복 체크 검증
+            const emailInput = document.getElementById('email');
+            if (!emailAvailable && emailInput.value.trim()) {
+                e.preventDefault();
+                alert('이메일 중복 체크를 확인해주세요. 사용 가능한 이메일을 입력해야 합니다.');
+                emailInput.focus();
+                return;
+            }
+            
             // 영문명 검증
             if (customerName && !validateEnglishName(customerName)) {
                 e.preventDefault();
@@ -313,6 +323,61 @@
             const name = this.value.trim();
             const isValid = name === '' || validateEnglishName(name);
             this.classList.toggle('is-invalid', !isValid);
+        });
+
+        // 이메일 중복 체크
+        let emailCheckTimeout;
+        let emailAvailable = false;
+        
+        document.getElementById('email').addEventListener('input', function() {
+            const email = this.value.trim();
+            const emailCheckDiv = document.getElementById('emailCheck');
+            
+            // 입력 취소 시 체크 숨김
+            if (!email) {
+                emailCheckDiv.style.display = 'none';
+                emailAvailable = false;
+                this.classList.remove('is-valid', 'is-invalid');
+                return;
+            }
+            
+            // 기본 이메일 형식 검증
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                emailCheckDiv.innerHTML = '<small class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>올바른 이메일 형식이 아닙니다.</small>';
+                emailCheckDiv.style.display = 'block';
+                emailAvailable = false;
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+                return;
+            }
+            
+            // 디바운스 처리 (500ms)
+            clearTimeout(emailCheckTimeout);
+            emailCheckTimeout = setTimeout(async () => {
+                emailCheckDiv.innerHTML = '<small class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>확인 중...</small>';
+                emailCheckDiv.style.display = 'block';
+                
+                try {
+                    const response = await fetch(`/api/check-email?email=${encodeURIComponent(email)}`);
+                    const data = await response.json();
+                    
+                    if (data.available) {
+                        emailCheckDiv.innerHTML = '<small class="text-success"><i class="fas fa-check-circle me-1"></i>' + data.message + '</small>';
+                        emailAvailable = true;
+                        document.getElementById('email').classList.remove('is-invalid');
+                        document.getElementById('email').classList.add('is-valid');
+                    } else {
+                        emailCheckDiv.innerHTML = '<small class="text-danger"><i class="fas fa-times-circle me-1"></i>' + data.message + '</small>';
+                        emailAvailable = false;
+                        document.getElementById('email').classList.remove('is-valid');
+                        document.getElementById('email').classList.add('is-invalid');
+                    }
+                } catch (error) {
+                    emailCheckDiv.innerHTML = '<small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>확인 중 오류가 발생했습니다.</small>';
+                    emailAvailable = false;
+                }
+            }, 500);
         });
 
         // 실시간 PIN 검증
