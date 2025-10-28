@@ -2453,12 +2453,18 @@ app.post('/issue', async (req, res) => {
 
         // 발급 코드 검증 (필수)
         if (!issue_code || !issue_code.trim()) {
-            return res.json({ success: false, message: '발급 코드를 입력해주세요.' });
+            return res.render('issue-error', {
+                errorMessage: '발급 코드를 입력해주세요.',
+                errorDetails: '괌세이브카드를 발급받으려면 유효한 발급 코드가 필요합니다.'
+            });
         }
 
         const codeValidation = await validateIssueCode(issue_code.trim().toLowerCase());
         if (!codeValidation.valid) {
-            return res.json({ success: false, message: codeValidation.message });
+            return res.render('issue-error', {
+                errorMessage: codeValidation.message,
+                errorDetails: '발급 코드가 올바른지 확인하거나, 고객센터에 문의해주세요.'
+            });
         }
 
         // agency_id 우선, 없으면 agency_code로 조회
@@ -2466,7 +2472,10 @@ app.post('/issue', async (req, res) => {
         if (agency_id) {
             const idNum = Number(agency_id);
             if (!Number.isFinite(idNum)) {
-                return res.json({ success: false, message: '유효하지 않은 여행사 ID입니다.' });
+                return res.render('issue-error', {
+                    errorMessage: '유효하지 않은 여행사 정보입니다.',
+                    errorDetails: '여행사 정보를 다시 선택해주세요.'
+                });
             }
             agency = await dbHelpers.getAgencyById(idNum);
         } else if (agency_code) {
@@ -2479,10 +2488,16 @@ app.post('/issue', async (req, res) => {
 
         // 필수값: name, agency, pin(4자리)
         if (!name || !agency_id || !agency) {
-            return res.json({ success: false, message: '이름과 여행사를 선택해주세요.' });
+            return res.render('issue-error', {
+                errorMessage: '필수 정보를 모두 입력해주세요.',
+                errorDetails: '이름과 여행사 정보를 확인해주세요.'
+            });
         }
         if (!/^[0-9]{4}$/.test(pin)) {
-            return res.json({ success: false, message: '비밀번호는 4자리 숫자여야 합니다.' });
+            return res.render('issue-error', {
+                errorMessage: '로그인 비밀번호 형식이 올바르지 않습니다.',
+                errorDetails: '비밀번호는 4자리 숫자여야 합니다.'
+            });
         }
         
         // 토큰 생성
@@ -2632,10 +2647,9 @@ app.post('/issue', async (req, res) => {
     } catch (error) {
         console.error('카드 발급 오류:', error);
         const expose = String(process.env.EXPOSE_ERROR || '').toLowerCase() === 'true';
-        res.json({
-            success: false,
-            message: '카드 발급 중 오류가 발생했습니다.',
-            ...(expose ? { detail: error.message, code: error.code } : {})
+        return res.render('issue-error', {
+            errorMessage: '카드 발급 중 오류가 발생했습니다.',
+            errorDetails: expose ? `오류 상세: ${error.message}` : '잠시 후 다시 시도해주시거나, 고객센터에 문의해주세요.'
         });
     }
 });
