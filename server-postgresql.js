@@ -9,6 +9,7 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
+const cron = require('node-cron');
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
@@ -1395,6 +1396,55 @@ function formatDate(date) {
     const day = String(d.getDate()).padStart(2, '0');
     const year = String(d.getFullYear()).slice(-2);
     return `${month}/${day}/${year}`;
+}
+
+// 2개월 지난 사용자 이메일 마스킹 함수
+async function maskExpiredEmails() {
+    try {
+        if (dbMode !== 'postgresql') {
+            console.log('⏭️  JSON 모드에서는 이메일 마스킹을 지원하지 않습니다.');
+            return { success: false, message: 'JSON 모드 미지원' };
+        }
+
+        // 2개월 = 60일
+        const twoMonthsAgo = new Date();
+        twoMonthsAgo.setDate(twoMonthsAgo.getDate() - 60);
+
+        const result = await pool.query(`
+            UPDATE users 
+            SET email = 'oo@oo.ooo', updated_at = NOW()
+            WHERE created_at < $1 
+            AND email IS NOT NULL 
+            AND email != '' 
+            AND email != 'oo@oo.ooo'
+            RETURNING id, name, email
+        `, [twoMonthsAgo]);
+
+        const maskedCount = result.rowCount;
+        
+        if (maskedCount > 0) {
+            console.log(`📧 이메일 마스킹 완료: ${maskedCount}명의 이메일을 'oo@oo.ooo'로 변경`);
+            result.rows.forEach(user => {
+                console.log(`  - ${user.name} (ID: ${user.id})`);
+            });
+        } else {
+            console.log('📧 마스킹 대상 없음: 2개월 이상 지난 사용자가 없습니다.');
+        }
+
+        return { 
+            success: true, 
+            maskedCount,
+            message: `${maskedCount}명의 이메일이 마스킹되었습니다.` 
+        };
+
+    } catch (error) {
+        console.error('❌ 이메일 마스킹 오류:', error);
+        return { 
+            success: false, 
+            message: '이메일 마스킹 중 오류가 발생했습니다.',
+            error: error.message 
+        };
+    }
 }
 
 // 발급 코드 전달 상태 업데이트 API
@@ -3408,6 +3458,26 @@ app.get('/admin/users', requireAuth, async (req, res) => {
             users: [],
             success: null,
             error: '사용자 목록을 불러오지 못했습니다.'
+        });
+    }
+});
+
+// 이메일 마스킹 수동 실행 API (관리자용)
+app.post('/admin/mask-emails', requireAuth, async (req, res) => {
+    try {
+        console.log('👤 관리자가 이메일 마스킹을 수동 실행:', req.session.adminUsername);
+        const result = await maskExpiredEmails();
+        
+        return res.json({
+            success: result.success,
+            message: result.message,
+            maskedCount: result.maskedCount || 0
+        });
+    } catch (error) {
+        console.error('이메일 마스킹 API 오류:', error);
+        return res.status(500).json({
+            success: false,
+            message: '이메일 마스킹 실행 중 오류가 발생했습니다.'
         });
     }
 });
@@ -14469,6 +14539,24 @@ async function startServer() {
             } else {
                 console.log('✅ SMTP 설정 완료! 이메일 전송 가능합니다.\n');
             }
+            
+            // 이메일 마스킹 스케줄러 시작 (매일 새벽 3시 실행)
+            console.log('⏰ 이메일 마스킹 스케줄러 시작...');
+            cron.schedule('0 3 * * *', async () => {
+                console.log('\n🕐 [스케줄] 이메일 마스킹 작업 시작:', new Date().toLocaleString('ko-KR'));
+                const result = await maskExpiredEmails();
+                console.log('🕐 [스케줄] 이메일 마스킹 작업 완료:', result.message);
+            }, {
+                timezone: "Asia/Seoul"
+            });
+            console.log('✅ 스케줄러 등록 완료: 매일 새벽 3시에 2개월 지난 이메일 마스킹 실행\n');
+            
+            // 서버 시작 시 즉시 한 번 실행
+            (async () => {
+                console.log('🔄 서버 시작 시 이메일 마스킹 체크 실행...');
+                const result = await maskExpiredEmails();
+                console.log(`✅ 초기 마스킹 완료: ${result.message}\n`);
+            })();
         });
         
         // 서버 시작 후 데이터베이스 초기화 (비동기)
