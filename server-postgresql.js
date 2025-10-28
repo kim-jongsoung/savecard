@@ -3517,14 +3517,21 @@ app.delete('/admin/users/:id', requireAuth, async (req, res) => {
                 const userName = user.name || '이름없음';
                 console.log(`🗑️ 사용자 삭제 시도: ${userName} (${user.email}) [ID: ${user.id}]`);
                 
-                // 사용 이력 삭제
+                // 1. 발급 코드 참조 해제 (used_by_user_id를 NULL로)
+                const issueCodesResult = await client.query(
+                    'UPDATE issue_codes SET used_by_user_id = NULL WHERE used_by_user_id = $1',
+                    [userId]
+                );
+                console.log(`  - 발급 코드 참조 해제: ${issueCodesResult.rowCount}개`);
+                
+                // 2. 사용 이력 삭제
                 const usagesResult = await client.query(
                     'DELETE FROM usages WHERE token = $1',
                     [user.token]
                 );
-                console.log(`  - 사용 이력 ${usagesResult.rowCount}개 삭제`);
+                console.log(`  - 사용 이력 삭제: ${usagesResult.rowCount}개`);
                 
-                // 사용자 삭제
+                // 3. 사용자 삭제
                 const deleteResult = await client.query(
                     'DELETE FROM users WHERE id = $1',
                     [userId]
