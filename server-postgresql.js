@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
@@ -1340,6 +1341,51 @@ const dbHelpers = {
         }
     }
 };
+
+// 발급 코드 검증 함수
+async function validateIssueCode(code) {
+    try {
+        if (dbMode === 'postgresql') {
+            // issue_codes 테이블에서 코드 조회
+            const result = await pool.query(
+                'SELECT * FROM issue_codes WHERE code = $1',
+                [code]
+            );
+            
+            if (result.rows.length === 0) {
+                return { 
+                    valid: false, 
+                    message: '유효하지 않은 발급 코드입니다. 코드를 확인해주세요.' 
+                };
+            }
+            
+            const issueCode = result.rows[0];
+            
+            // 이미 사용된 코드인지 확인
+            if (issueCode.is_used) {
+                return { 
+                    valid: false, 
+                    message: '이미 사용된 발급 코드입니다.' 
+                };
+            }
+            
+            // 유효한 코드
+            return { 
+                valid: true, 
+                codeId: issueCode.id 
+            };
+        } else {
+            // JSON 모드에서는 항상 유효한 것으로 처리
+            return { valid: true, codeId: null };
+        }
+    } catch (error) {
+        console.error('❌ 발급 코드 검증 오류:', error);
+        return { 
+            valid: false, 
+            message: '발급 코드 검증 중 오류가 발생했습니다.' 
+        };
+    }
+}
 
 // 날짜 포맷 함수
 function formatDate(date) {
