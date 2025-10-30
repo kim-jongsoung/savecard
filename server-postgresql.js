@@ -12425,13 +12425,16 @@ app.post('/api/vouchers/send-email/:reservationId', requireAuth, async (req, res
 app.post('/api/vouchers/send-kakao/:reservationId', requireAuth, async (req, res) => {
     try {
         const { reservationId } = req.params;
-        const { voucher_token } = req.body;
         
-        console.log('💬 카카오 알림톡 전송:', reservationId);
+        console.log('💬 바우처 카카오 알림톡 전송:', reservationId);
         
         // 예약 정보 조회
         const result = await pool.query(`
-            SELECT * FROM reservations WHERE id = $1
+            SELECT 
+                r.*,
+                TO_CHAR(r.usage_date, 'YYYY-MM-DD') as formatted_usage_date
+            FROM reservations r
+            WHERE r.id = $1
         `, [reservationId]);
         
         if (result.rows.length === 0) {
@@ -12443,49 +12446,90 @@ app.post('/api/vouchers/send-kakao/:reservationId', requireAuth, async (req, res
         
         const reservation = result.rows[0];
         
-        // TODO: 카카오 알림톡 API 연동
-        // const kakakoSent = await sendKakaoAlimtalk({...});
-        
-        // 전송 기록 저장 (테이블 존재 확인 후)
-        try {
-            const tableExists = await pool.query(`
-                SELECT EXISTS (
-                    SELECT FROM information_schema.tables 
-                    WHERE table_schema = 'public' 
-                    AND table_name = 'voucher_sends'
-                );
-            `);
-            
-            if (tableExists.rows[0].exists) {
-                await pool.query(`
-                    INSERT INTO voucher_sends (
-                        reservation_id, voucher_token, send_method, recipient,
-                        sent_by, status
-                    ) VALUES ($1, $2, 'kakao', $3, $4, 'sent')
-                `, [
-                    reservationId,
-                    voucher_token,
-                    reservation.phone || reservation.kakao_id,
-                    req.session.adminName || req.session.adminUsername
-                ]);
-                console.log('✅ 카카오 전송 기록 저장 완료');
-            } else {
-                console.warn('⚠️ voucher_sends 테이블이 없습니다.');
-            }
-        } catch (historyError) {
-            console.error('⚠️ 전송 기록 저장 실패:', historyError.message);
+        // 바우처 토큰 확인
+        if (!reservation.voucher_token) {
+            return res.status(400).json({
+                success: false,
+                message: '바우처가 아직 생성되지 않았습니다.'
+            });
         }
         
-        res.json({
-            success: true,
-            message: '카카오 알림톡이 전송되었습니다.'
-        });
+        // 전화번호 확인
+        if (!reservation.phone) {
+            return res.status(400).json({
+                success: false,
+                message: '예약자 전화번호가 없습니다.'
+            });
+        }
+        
+        // 비즈온 서비스로 알림톡 전송
+        if (bizonService) {
+            const alimtalkResult = await bizonService.sendVoucherAlimtalk({
+                to: reservation.phone,
+                name: reservation.korean_name || '고객',
+                platformName: reservation.platform_name || '예약업체',
+                productName: reservation.product_name || '상품',
+                usageDate: reservation.formatted_usage_date || reservation.usage_date,
+                voucherToken: reservation.voucher_token
+            });
+            
+            if (alimtalkResult.success) {
+                console.log('✅ 바우처 알림톡 전송 성공:', reservation.korean_name, reservation.phone);
+                
+                // 전송 기록 저장
+                try {
+                    const tableExists = await pool.query(`
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'voucher_sends'
+                        );
+                    `);
+                    
+                    if (tableExists.rows[0].exists) {
+                        await pool.query(`
+                            INSERT INTO voucher_sends (
+                                reservation_id, voucher_token, send_method, recipient,
+                                sent_by, status
+                            ) VALUES ($1, $2, 'kakao', $3, $4, 'sent')
+                        `, [
+                            reservationId,
+                            reservation.voucher_token,
+                            reservation.phone,
+                            req.session.adminName || req.session.adminUsername
+                        ]);
+                        console.log('✅ 카카오 전송 기록 저장 완료');
+                    }
+                } catch (historyError) {
+                    console.error('⚠️ 전송 기록 저장 실패:', historyError.message);
+                }
+                
+                res.json({
+                    success: true,
+                    message: '바우처 알림톡이 전송되었습니다.',
+                    result: alimtalkResult
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    message: alimtalkResult.message || '알림톡 전송에 실패했습니다.'
+                });
+            }
+        } else {
+            // 비즈온 SDK가 없는 경우
+            console.log('⚠️ 비즈온 SDK 미설치 - 알림톡 전송 불가');
+            res.json({
+                success: false,
+                message: '알림톡 기능이 비활성화되어 있습니다. 비즈온 SDK 설치가 필요합니다.',
+                devMode: true
+            });
+        }
         
     } catch (error) {
-        console.error('❌ 카카오 알림톡 전송 오류:', error);
+        console.error('❌ 바우처 알림톡 전송 오류:', error);
         res.status(500).json({
             success: false,
-            message: '카카오 알림톡 API 연동이 필요합니다.'
+            message: '알림톡 전송 중 오류가 발생했습니다: ' + error.message
         });
     }
 });

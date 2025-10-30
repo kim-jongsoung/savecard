@@ -3224,28 +3224,55 @@
         
         // 카카오 알림톡 전송
         async function sendKakaoAlimtalk() {
-            if (!confirm('카카오 알림톡을 전송하시겠습니까?')) return;
+            if (!confirm('💬 고객님께 바우처 알림톡을 전송하시겠습니까?\n\n전송될 내용:\n- 상품명 바우처\n- 예약업체 및 이용일\n- 바우처 링크 버튼')) return;
             
             try {
+                // 로딩 표시
+                const alimtalkCard = document.querySelector('.card.border-warning.voucher-send-card');
+                if (alimtalkCard) {
+                    const originalHtml = alimtalkCard.innerHTML;
+                    alimtalkCard.innerHTML = `
+                        <div class="card-body text-center">
+                            <div class="spinner-border text-warning" role="status"></div>
+                            <h6 class="mt-2 mb-1">전송 중...</h6>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        alimtalkCard.innerHTML = originalHtml;
+                    }, 3000);
+                }
+                
                 const response = await fetch(`/api/vouchers/send-kakao/${window.currentReservationId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        voucher_token: window.currentVoucherToken
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showAlert('✅ 카카오 알림톡이 전송되었습니다!', 'success');
-                    // 히스토리에 자동 기록됨
+                    showAlert('🎉 바우처 알림톡이 성공적으로 전송되었습니다!', 'success');
+                    
+                    // 전송 시각 표시
+                    const lastSentElement = document.getElementById('alimtalk-last-sent');
+                    if (lastSentElement) {
+                        const now = new Date().toLocaleString('ko-KR');
+                        lastSentElement.querySelector('span').textContent = `전송: ${now}`;
+                        lastSentElement.style.display = 'block';
+                    }
+                    
+                    // 바우처 열람 통계 새로고침
+                    loadVoucherViewStats();
                 } else {
-                    showAlert('알림톡 전송 실패: ' + result.message, 'warning');
+                    if (result.devMode) {
+                        showAlert('⚠️ 개발 모드: ' + result.message, 'info');
+                    } else {
+                        showAlert('❌ 알림톡 전송 실패: ' + result.message, 'danger');
+                    }
                 }
             } catch (error) {
                 console.error('❌ 알림톡 전송 오류:', error);
-                showAlert('알림톡 API 연동이 필요합니다.', 'info');
+                showAlert(`❌ 알림톡 전송 중 오류가 발생했습니다. (${error.message})`, 'danger');
             }
         }
         

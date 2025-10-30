@@ -130,6 +130,93 @@ class BizonService {
     }
 
     /**
+     * 바우처 알림톡 전송 (VOUCHER_001 템플릿)
+     * @param {Object} params - 전송 파라미터
+     * @param {string} params.to - 수신자 전화번호 (01012345678)
+     * @param {string} params.name - 예약자명
+     * @param {string} params.platformName - 예약업체명 (NOL, KLOOK 등)
+     * @param {string} params.productName - 상품명
+     * @param {string} params.usageDate - 이용일 (YYYY-MM-DD)
+     * @param {string} params.voucherToken - 바우처 토큰
+     */
+    async sendVoucherAlimtalk({ to, name, platformName, productName, usageDate, voucherToken }) {
+        try {
+            // 토큰이 없으면 초기화
+            if (!this.token) {
+                await this.initialize();
+            }
+
+            // 전화번호 포맷 정리 (하이픈 제거)
+            const phoneNumber = to.replace(/[^0-9]/g, '');
+
+            // 바우처 URL
+            const voucherUrl = `https://www.guamsavecard.com/voucher/${voucherToken}`;
+
+            // 메시지 내용 구성 (템플릿과 동일하게)
+            const messageText = `[${productName} 바우처]
+
+안녕하세요, ${name}님
+
+${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.
+
+▶ 상품명: ${productName}
+▶ 이용일: ${usageDate}
+
+아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`;
+
+            // 알림톡 요청 구성
+            const req = {
+                to: phoneNumber,
+                from: this.senderPhone,
+                alimtalk: {
+                    msgType: "AT",
+                    senderKey: this.senderKey,
+                    templateCode: 'VOUCHER_001',  // 바우처 전송 템플릿
+                    text: messageText,
+                    buttons: [
+                        {
+                            type: "WL",
+                            name: "바우처 보기",
+                            url_mobile: voucherUrl,
+                            url_pc: voucherUrl
+                        },
+                        {
+                            type: "MD",
+                            name: "문의하기"
+                        }
+                    ]
+                }
+            };
+
+            // 알림톡 전송
+            const result = await this.omni.send.Alimtalk(req);
+
+            console.log('✅ 바우처 알림톡 전송 성공:', {
+                to: phoneNumber,
+                name,
+                productName,
+                voucherUrl,
+                result
+            });
+
+            return {
+                success: true,
+                result,
+                message: '바우처 알림톡이 전송되었습니다.'
+            };
+
+        } catch (error) {
+            console.error('❌ 바우처 알림톡 전송 실패:', error);
+            
+            return {
+                success: false,
+                error: error.message,
+                message: '바우처 알림톡 전송에 실패했습니다.'
+            };
+        }
+    }
+
+    /**
      * SMS 대체 발송 (알림톡 실패 시)
      */
     async sendSMS({ to, text }) {
