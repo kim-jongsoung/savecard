@@ -12,7 +12,7 @@ package-lock.json
 .env.development
 
 # 빌드 출력 디렉토리
-dist/
+# dist/ - Railway 배포를 위해 포함
 build/
 out/
 
