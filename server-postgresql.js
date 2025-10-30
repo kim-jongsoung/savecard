@@ -10,7 +10,15 @@ const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const cron = require('node-cron');
-const bizonService = require('./services/bizonService');
+
+// 비즈온 서비스 조건부 로드 (SDK가 있을 때만)
+let bizonService = null;
+try {
+    bizonService = require('./services/bizonService');
+    console.log('✅ 비즈온 알림톡 서비스 로드 성공');
+} catch (error) {
+    console.log('⚠️  비즈온 SDK 미설치 - 알림톡 기능 비활성화');
+}
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
@@ -5389,31 +5397,47 @@ app.post('/admin/issue-codes/send-alimtalk', requireAuth, async (req, res) => {
             expireDate.setDate(expireDate.getDate() + 30);
             const expireDateStr = expireDate.toLocaleDateString('ko-KR');
             
-            // 알림톡 전송
-            const result = await bizonService.sendIssueCodeAlimtalk({
-                to: phone,
-                name: name,
-                code: code,
-                expireDate: expireDateStr
-            });
-            
-            if (result.success) {
-                // 전달 완료 표시 업데이트
+            // 알림톡 전송 (SDK 사용 가능한 경우에만)
+            if (bizonService) {
+                const result = await bizonService.sendIssueCodeAlimtalk({
+                    to: phone,
+                    name: name,
+                    code: code,
+                    expireDate: expireDateStr
+                });
+                
+                if (result.success) {
+                    // 전달 완료 표시 업데이트
+                    await pool.query(
+                        'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), user_name = $1, user_phone = $2 WHERE code = $3',
+                        [name, phone, code]
+                    );
+                    
+                    console.log(`✅ 알림톡 전송 성공: ${name} (${phone}) - 코드: ${code}`);
+                    
+                    res.json({
+                        success: true,
+                        message: '알림톡이 전송되었습니다.'
+                    });
+                } else {
+                    res.status(500).json({
+                        success: false,
+                        message: result.message || '알림톡 전송에 실패했습니다.'
+                    });
+                }
+            } else {
+                // SDK가 없는 경우 - 개발 모드로 처리
+                console.log(`⚠️  알림톡 SDK 미설치 - 코드 정보만 저장: ${name} (${phone}) - 코드: ${code}`);
+                
+                // 코드 정보만 업데이트
                 await pool.query(
-                    'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), user_name = $1, user_phone = $2 WHERE code = $3',
+                    'UPDATE issue_codes SET user_name = $1, user_phone = $2 WHERE code = $3',
                     [name, phone, code]
                 );
                 
-                console.log(`✅ 알림톡 전송 성공: ${name} (${phone}) - 코드: ${code}`);
-                
                 res.json({
                     success: true,
-                    message: '알림톡이 전송되었습니다.'
-                });
-            } else {
-                res.status(500).json({
-                    success: false,
-                    message: result.message || '알림톡 전송에 실패했습니다.'
+                    message: '코드 정보가 저장되었습니다. (알림톡 기능은 비활성화 상태)'
                 });
             }
         } else {
