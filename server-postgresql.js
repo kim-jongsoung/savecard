@@ -5407,10 +5407,11 @@ app.post('/admin/issue-codes/send-alimtalk', requireAuth, async (req, res) => {
                 });
                 
                 if (result.success) {
-                    // 전달 완료 표시 업데이트
+                    // 전달 완료 표시 업데이트 + 메모에 이름/연락처 저장
+                    const memoText = `알림톡 전송: ${name} / ${phone}`;
                     await pool.query(
-                        'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), user_name = $1, user_phone = $2 WHERE code = $3',
-                        [name, phone, code]
+                        'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), user_name = $1, user_phone = $2, notes = $3 WHERE code = $4',
+                        [name, phone, memoText, code]
                     );
                     
                     console.log(`✅ 알림톡 전송 성공: ${name} (${phone}) - 코드: ${code}`);
@@ -5429,10 +5430,11 @@ app.post('/admin/issue-codes/send-alimtalk', requireAuth, async (req, res) => {
                 // SDK가 없는 경우 - 개발 모드로 처리
                 console.log(`⚠️  알림톡 SDK 미설치 - 코드 정보만 저장: ${name} (${phone}) - 코드: ${code}`);
                 
-                // 코드 정보만 업데이트
+                // 코드 정보 + 메모 업데이트
+                const memoText = `코드 전달 예정: ${name} / ${phone}`;
                 await pool.query(
-                    'UPDATE issue_codes SET user_name = $1, user_phone = $2 WHERE code = $3',
-                    [name, phone, code]
+                    'UPDATE issue_codes SET user_name = $1, user_phone = $2, notes = $3 WHERE code = $4',
+                    [name, phone, memoText, code]
                 );
                 
                 res.json({
