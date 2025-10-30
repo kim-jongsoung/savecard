@@ -184,8 +184,8 @@
                                         <td><%= new Date(code.created_at).toLocaleDateString('ko-KR') %></td>
                                         <td>
                                             <% if (!code.is_delivered) { %>
-                                                <button class="btn btn-sm btn-success me-1" onclick="markAsDelivered(<%= code.id %>)" title="전달 완료 표시">
-                                                    <i class="fas fa-paper-plane"></i>
+                                                <button class="btn btn-sm btn-success me-1" onclick="openAlimtalkModal('<%= code.code %>')" title="알림톡 전송">
+                                                    <i class="fas fa-comment-dots"></i>
                                                 </button>
                                             <% } else { %>
                                                 <button class="btn btn-sm btn-outline-secondary me-1" onclick="markAsUndelivered(<%= code.id %>)" title="미전달로 변경">
@@ -272,8 +272,99 @@
         </div>
     </div>
 
+    <!-- 알림톡 전송 모달 -->
+    <div class="modal fade" id="alimtalkModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-comment-dots me-2"></i>알림톡 전송</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="alimtalkForm">
+                        <input type="hidden" id="alimtalkCode">
+                        <div class="mb-3">
+                            <label for="alimtalkName" class="form-label">고객 이름</label>
+                            <input type="text" class="form-control" id="alimtalkName" placeholder="홍길동" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="alimtalkPhone" class="form-label">전화번호</label>
+                            <input type="tel" class="form-control" id="alimtalkPhone" placeholder="01012345678" required>
+                            <div class="form-text">하이픈(-) 없이 입력하세요</div>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>발송될 내용:</strong><br>
+                            발급 코드와 카드 발급 링크가 포함된 알림톡이 전송됩니다.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-success" onclick="sendAlimtalk()">
+                        <i class="fas fa-paper-plane me-1"></i>전송
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 알림톡 모달 열기
+        function openAlimtalkModal(code) {
+            document.getElementById('alimtalkCode').value = code;
+            document.getElementById('alimtalkName').value = '';
+            document.getElementById('alimtalkPhone').value = '';
+            new bootstrap.Modal(document.getElementById('alimtalkModal')).show();
+        }
+
+        // 알림톡 전송
+        async function sendAlimtalk() {
+            const code = document.getElementById('alimtalkCode').value;
+            const name = document.getElementById('alimtalkName').value;
+            const phone = document.getElementById('alimtalkPhone').value;
+
+            if (!name || !phone) {
+                alert('이름과 전화번호를 입력해주세요.');
+                return;
+            }
+
+            // 전화번호 검증 (숫자만, 10-11자리)
+            const phoneRegex = /^[0-9]{10,11}$/;
+            if (!phoneRegex.test(phone.replace(/-/g, ''))) {
+                alert('올바른 전화번호를 입력해주세요. (예: 01012345678)');
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/issue-codes/send-alimtalk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        name: name,
+                        phone: phone.replace(/-/g, '')
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('알림톡이 전송되었습니다!');
+                    bootstrap.Modal.getInstance(document.getElementById('alimtalkModal')).hide();
+                    location.reload();
+                } else {
+                    alert('알림톡 전송 실패: ' + (data.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('알림톡 전송 오류:', error);
+                alert('알림톡 전송 중 오류가 발생했습니다.');
+            }
+        }
+
         // 단일 코드 생성
         function generateSingleCode() {
             fetch('/admin/issue-codes/generate', {

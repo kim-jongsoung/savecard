@@ -23,6 +23,7 @@
   "author": "Guam Save Card Team",
   "license": "MIT",
   "dependencies": {
+    "@infobank/infobank-omni-sdk-js": "file:infobank-omni-sdk-js-main",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "axios": "^1.12.2",

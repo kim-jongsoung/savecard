@@ -10,6 +10,7 @@ const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const cron = require('node-cron');
+const bizonService = require('./services/bizonService');
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
 const nodemailer = require('nodemailer');
@@ -5353,6 +5354,79 @@ app.delete('/admin/issue-codes/:id', requireAuth, async (req, res) => {
         res.status(500).json({
             success: false,
             message: '코드 삭제 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
+// 알림톡 전송 API
+app.post('/admin/issue-codes/send-alimtalk', requireAuth, async (req, res) => {
+    try {
+        const { code, name, phone } = req.body;
+        
+        if (!code || !name || !phone) {
+            return res.status(400).json({
+                success: false,
+                message: '코드, 이름, 전화번호는 필수입니다.'
+            });
+        }
+        
+        if (dbMode === 'postgresql') {
+            // 코드 존재 확인
+            const codeCheck = await pool.query(
+                'SELECT * FROM issue_codes WHERE code = $1',
+                [code]
+            );
+            
+            if (codeCheck.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: '코드를 찾을 수 없습니다.'
+                });
+            }
+            
+            // 유효기간 계산 (30일 후)
+            const expireDate = new Date();
+            expireDate.setDate(expireDate.getDate() + 30);
+            const expireDateStr = expireDate.toLocaleDateString('ko-KR');
+            
+            // 알림톡 전송
+            const result = await bizonService.sendIssueCodeAlimtalk({
+                to: phone,
+                name: name,
+                code: code,
+                expireDate: expireDateStr
+            });
+            
+            if (result.success) {
+                // 전달 완료 표시 업데이트
+                await pool.query(
+                    'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), user_name = $1, user_phone = $2 WHERE code = $3',
+                    [name, phone, code]
+                );
+                
+                console.log(`✅ 알림톡 전송 성공: ${name} (${phone}) - 코드: ${code}`);
+                
+                res.json({
+                    success: true,
+                    message: '알림톡이 전송되었습니다.'
+                });
+            } else {
+                res.status(500).json({
+                    success: false,
+                    message: result.message || '알림톡 전송에 실패했습니다.'
+                });
+            }
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'PostgreSQL 모드에서만 사용 가능합니다.'
+            });
+        }
+    } catch (error) {
+        console.error('❌ 알림톡 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '알림톡 전송 중 오류가 발생했습니다: ' + error.message
         });
     }
 });
