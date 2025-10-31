@@ -12077,15 +12077,25 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
         let usage_instructions = null;
         try {
             const { generateVoucherInstructions } = require('./utils/rag-voucher');
-            usage_instructions = await generateVoucherInstructions(reservation);
+            usage_instructions = await generateVoucherInstructions(
+                reservation.product_name,
+                {
+                    people_adult: reservation.people_adult,
+                    people_child: reservation.people_child,
+                    usage_date: reservation.usage_date,
+                    usage_time: reservation.usage_time,
+                    package_type: reservation.package_type
+                }
+            );
+            console.log(`✅ RAG 가이드 로드 성공: ${reservation.product_name}`);
         } catch (ragError) {
             console.error('⚠️ RAG 이용방법 생성 실패, 기본 템플릿 사용:', ragError.message);
             usage_instructions = null; // 템플릿에서 null 체크
         }
         
-        // 템플릿 렌더링
+        // 템플릿 렌더링 (새로운 공식 문서 스타일)
         const html = await new Promise((resolve, reject) => {
-            res.app.render('voucher-template', {
+            res.app.render('voucher-official', {
                 reservation,
                 confirmation_number: reservation.confirmation_number || null,
                 qr_code_data: reservation.qr_code_data || null,
@@ -14553,8 +14563,29 @@ app.get('/voucher/:token', async (req, res) => {
         
         console.log(`📄 템플릿 렌더링 시작 - 예약ID: ${data.id}, 고객: ${data.korean_name}`);
         
-        // voucher-template.ejs 렌더링
-        res.render('voucher-template', {
+        // RAG 상품 가이드 자동 로드
+        let usageInstructions = null;
+        if (data.product_name) {
+            try {
+                const { generateVoucherInstructions } = require('./utils/rag-voucher');
+                usageInstructions = await generateVoucherInstructions(
+                    data.product_name,
+                    {
+                        people_adult: data.people_adult,
+                        people_child: data.people_child,
+                        usage_date: data.usage_date,
+                        usage_time: data.usage_time,
+                        package_type: data.package_type
+                    }
+                );
+                console.log(`✅ RAG 가이드 로드 성공: ${data.product_name}`);
+            } catch (ragError) {
+                console.error('⚠️ RAG 가이드 로드 실패:', ragError.message);
+            }
+        }
+        
+        // voucher-official.ejs 렌더링 (새로운 공식 문서 스타일)
+        res.render('voucher-official', {
             reservation: data,  // 전체 data 객체 전달
             confirmation_number: data.confirmation_number || null,
             qr_code_data: data.qr_code_data || null,
@@ -14562,7 +14593,7 @@ app.get('/voucher/:token', async (req, res) => {
             vendor_voucher_path: data.vendor_voucher_path || null,
             vendor_name: data.vendor_name || null,
             vendor_contact: data.vendor_contact || null,
-            usage_instructions: null,  // AI 생성 이용방법 (필요시 추가)
+            usage_instructions: usageInstructions,  // RAG 자동 로드된 이용방법
             voucher_token: token,
             formatDate: (date) => {
                 if (!date) return '-';

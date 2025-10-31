@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예약 바우처 | <%= reservation.product_name %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+            line-height: 1.6;
+            color: #212529;
+        }
+        
+        .voucher-document {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* 헤더 */
+        .document-header {
+            background: linear-gradient(135deg, #4FC3F7 0%, #2196F3 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 4px solid #1976D2;
+        }
+        
+        .document-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .document-header .subtitle {
+            font-size: 14px;
+            opacity: 0.95;
+            font-weight: 400;
+        }
+        
+        /* 본문 */
+        .document-body {
+            padding: 40px;
+        }
+        
+        /* 섹션 */
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1976D2;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #E3F2FD;
+        }
+        
+        /* 정보 테이블 */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .info-table tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .info-table tr:last-child {
+            border-bottom: none;
+        }
+        
+        .info-table td {
+            padding: 12px 0;
+            font-size: 14px;
+        }
+        
+        .info-table .label {
+            width: 120px;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .info-table .value {
+            color: #212529;
+            font-weight: 500;
+        }
+        
+        .info-table .value strong {
+            color: #1976D2;
+            font-weight: 700;
+        }
+        
+        /* 확정 방식별 박스 */
+        .confirmation-box {
+            background: #FFF9E6;
+            border: 2px solid #FFC107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .confirmation-box.immediate {
+            background: #E8F5E9;
+            border-color: #4CAF50;
+        }
+        
+        .confirmation-box .label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .confirmation-box .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1976D2;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+        }
+        
+        .confirmation-box .note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        /* QR 코드 */
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .qr-container img {
+            max-width: 250px;
+            border: 3px solid #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* 업체 바우처 */
+        .vendor-voucher {
+            background: #F3E5F5;
+            border: 2px dashed #9C27B0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .vendor-voucher .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        
+        .vendor-voucher .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 12px;
+            transition: transform 0.2s;
+        }
+        
+        .vendor-voucher .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
+        }
+        
+        /* 이용 방법 */
+        .usage-instructions {
+            background: #F5F5F5;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        .usage-instructions h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1976D2;
+            margin-bottom: 12px;
+        }
+        
+        .usage-instructions ul,
+        .usage-instructions ol {
+            margin-left: 20px;
+        }
+        
+        .usage-instructions li {
+            margin-bottom: 8px;
+        }
+        
+        /* 문의사항 */
+        .contact-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .contact-box h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        
+        .contact-box .contact-item {
+            display: inline-block;
+            margin: 0 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .contact-box a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        /* 푸터 */
+        .document-footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .document-footer .logo {
+            font-weight: 700;
+            color: #1976D2;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        /* 뱃지 */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-primary {
+            background: #E3F2FD;
+            color: #1976D2;
+        }
+        
+        .badge-success {
+            background: #E8F5E9;
+            color: #2E7D32;
+        }
+        
+        /* 인쇄 스타일 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .voucher-document {
+                box-shadow: none;
+            }
+            
+            .document-header {
+                background: none;
+                color: #212529;
+                border-bottom: 2px solid #212529;
+            }
+        }
+        
+        /* 반응형 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .document-body {
+                padding: 20px;
+            }
+            
+            .document-header h1 {
+                font-size: 22px;
+            }
+            
+            .info-table .label {
+                width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="voucher-document">
+        <!-- 헤더 -->
+        <div class="document-header">
+            <h1>🎫 예약 바우처</h1>
+            <p class="subtitle">RESERVATION VOUCHER</p>
+        </div>
+        
+        <!-- 본문 -->
+        <div class="document-body">
+            <!-- 1. 예약 정보 -->
+            <div class="section">
+                <h2 class="section-title">📋 예약 정보</h2>
+                <table class="info-table">
+                    <tr>
+                        <td class="label">바우처 번호</td>
+                        <td class="value"><strong><%= voucher_token.substring(0, 12).toUpperCase() %></strong></td>
+                    </tr>
+                    <% if (reservation.platform_name) { %>
+                    <tr>
+                        <td class="label">예약 업체</td>
+                        <td class="value"><span class="badge badge-primary"><%= reservation.platform_name %></span></td>
+                    </tr>
+                    <% } %>
+                    <tr>
+                        <td class="label">예약자명</td>
+                        <td class="value"><%= reservation.korean_name || '-' %></td>
+                    </tr>
+                    <tr>
+                        <td class="label">상품명</td>
+                        <td class="value"><strong><%= reservation.product_name || '-' %></strong></td>
+                    </tr>
+                    <% if (reservation.package_type) { %>
+                    <tr>
+                        <td class="label">옵션</td>
+                        <td class="value"><%= reservation.package_type %></td>
+                    </tr>
+                    <% } %>
+                    <tr>
+                        <td class="label">이용일자</td>
+                        <td class="value"><strong><%= formatDate(reservation.usage_date) %></strong></td>
+                    </tr>
+                    <% if (reservation.usage_time) { %>
+                    <tr>
+                        <td class="label">이용시간</td>
+                        <td class="value"><%= reservation.usage_time %></td>
+                    </tr>
+                    <% } %>
+                    <tr>
+                        <td class="label">인원</td>
+                        <td class="value">
+                            성인 <%= reservation.people_adult || 0 %>명<% if (reservation.people_child > 0) { %>, 아동 <%= reservation.people_child %>명<% } %><% if (reservation.people_infant > 0) { %>, 유아 <%= reservation.people_infant %>명<% } %>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- 2. 확정 방식에 따른 표시 -->
+            <div class="section">
+                <h2 class="section-title">✅ 확정 정보</h2>
+                
+                <% if (confirmation_number) { %>
+                    <!-- 컨펌번호가 있는 경우 -->
+                    <div class="confirmation-box">
+                        <div class="label">Confirmation Number</div>
+                        <div class="value"><%= confirmation_number %></div>
+                        <div class="note">이용 시 반드시 제시해주세요</div>
+                    </div>
+                    
+                <% } else if (vendor_voucher_path) { %>
+                    <!-- 업체 바우처가 있는 경우 -->
+                    <div class="vendor-voucher">
+                        <div class="icon">📄</div>
+                        <p style="font-weight: 600; margin-bottom: 8px;">제공업체 발급 바우처</p>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+                            이용 시 반드시 출력하여 제시하거나 모바일로 보여주세요
+                        </p>
+                        <a href="/api/vouchers/download/<%= vendor_voucher_path.split('/').pop() %>" 
+                           download 
+                           class="download-btn">
+                            📥 업체 바우처 다운로드
+                        </a>
+                    </div>
+                    
+                <% } else if (qr_code_data || qr_image_path) { %>
+                    <!-- QR 코드가 있는 경우 -->
+                    <div class="qr-container">
+                        <p style="font-weight: 600; margin-bottom: 12px; color: #666;">입장 QR 코드</p>
+                        <% if (qr_image_path) { %>
+                            <img src="/<%= qr_image_path %>" alt="QR Code">
+                        <% } else { %>
+                            <div id="qrcode"></div>
+                        <% } %>
+                        <p style="font-size: 12px; color: #666; margin-top: 12px;">
+                            입장 시 QR 코드를 스캔해주세요
+                        </p>
+                    </div>
+                    
+                <% } else { %>
+                    <!-- 즉시 확정 (별도 확정번호 불필요) -->
+                    <div class="confirmation-box immediate">
+                        <div class="label">Instant Confirmation</div>
+                        <div class="value" style="color: #2E7D32; font-size: 18px;">✓ 즉시 확정 완료</div>
+                        <div class="note">본 바우처를 현지에서 제시하시면 됩니다</div>
+                    </div>
+                <% } %>
+            </div>
+            
+            <!-- 3. 바우처 사용법 (RAG 자동 로드) -->
+            <% if (usage_instructions) { %>
+            <div class="section">
+                <h2 class="section-title">📍 이용 방법</h2>
+                <div class="usage-instructions">
+                    <%- usage_instructions %>
+                </div>
+            </div>
+            <% } %>
+            
+            <!-- 4. 문의사항 -->
+            <div class="section">
+                <div class="contact-box">
+                    <h3>💬 문의사항이 있으신가요?</h3>
+                    <div class="contact-item">
+                        카카오톡: <strong>@괌세이브카드</strong>
+                    </div>
+                    <div class="contact-item">
+                        전화: <a href="tel:+16717898989">+1 (671) 789-8989</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 푸터 -->
+        <div class="document-footer">
+            <div class="logo">GUAM SAVE CARD</div>
+            <p>발급일시: <%= new Date().toLocaleString('ko-KR', {timeZone: 'Pacific/Guam'}) %></p>
+            <p>Voucher ID: <%= voucher_token.substring(0, 12).toUpperCase() %></p>
+            <p style="margin-top: 8px;">www.guamsavecard.com</p>
+        </div>
+    </div>
+    
+    <% if (qr_code_data && !qr_image_path) { %>
+    <!-- QR 코드 생성 스크립트 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script>
+        var qr = qrcode(0, 'M');
+        qr.addData('<%= qr_code_data %>');
+        qr.make();
+        document.getElementById('qrcode').innerHTML = qr.createImgTag(4);
+    </script>
+    <% } %>
+</body>
+</html>
