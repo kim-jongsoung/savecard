@@ -130,26 +130,27 @@ ${guideContent}
 /**
  * 메인 함수: 바우처 이용방법 생성
  */
-async function generateVoucherInstructions(reservationData) {
+async function generateVoucherInstructions(productName, reservationData) {
     try {
-        const productName = reservationData.product_name;
-        
         if (!productName) {
-            return getDefaultInstructions();
+            console.log('⚠️ 상품명 없음 - RAG 건너뛰기');
+            return null;
         }
         
         // 1. RAG에서 상품 가이드 찾기
         const guide = await findProductGuide(productName);
         
         if (!guide) {
-            return getDefaultInstructions();
+            console.log('⚠️ RAG 가이드 없음 - 이용방법 섹션 생략');
+            return null;
         }
         
         // 2. 이용방법 섹션 추출
         const usageText = extractUsageInstructions(guide.content);
         
         if (!usageText) {
-            return getDefaultInstructions();
+            console.log('⚠️ 이용방법 섹션 없음 - 섹션 생략');
+            return null;
         }
         
         // 3. AI 기반 맞춤 생성 (또는 HTML 변환)
@@ -159,7 +160,7 @@ async function generateVoucherInstructions(reservationData) {
         
     } catch (error) {
         console.error('❌ 바우처 이용방법 생성 오류:', error);
-        return getDefaultInstructions();
+        return null;
     }
 }
 
