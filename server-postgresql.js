@@ -179,6 +179,7 @@ app.post('/admin/login', async (req, res) => {
         req.session.adminId = user.id;
         req.session.adminUsername = user.username;
         req.session.adminName = user.full_name;
+        req.session.adminEmail = user.email;
         req.session.adminRole = user.role;
         
         // 마지막 로그인 시간 업데이트
@@ -5865,8 +5866,10 @@ app.post('/api/register-reservation', async (req, res) => {
         if (dbMode === 'postgresql') {
             // 로그인한 담당자 정보 가져오기
             const assignedBy = req.session.adminName || req.session.adminUsername || '시스템 (인박스)';
+            const assignedByEmail = req.session.adminEmail || 'support@guamsavecard.com';
             console.log('👤 담당자 정보:', {
                 adminName: req.session.adminName,
+                adminEmail: req.session.adminEmail,
                 adminUsername: req.session.adminUsername,
                 adminId: req.session.adminId,
                 assignedBy: assignedBy
@@ -5880,11 +5883,12 @@ app.post('/api/register-reservation', async (req, res) => {
                     usage_date, usage_time, guest_count,
                     people_adult, people_child, people_infant,
                     package_type, total_amount, adult_unit_price, child_unit_price,
-                    payment_status, code_issued, memo, assigned_to
+                    payment_status, code_issued, memo, assigned_to,
+                    created_by, created_by_email
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                     $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-                    $21, $22, $23, $24
+                    $21, $22, $23, $24, $25, $26
                 ) RETURNING *
             `;
             
@@ -5912,7 +5916,9 @@ app.post('/api/register-reservation', async (req, res) => {
                 parsedData.payment_status || '대기',
                 parsedData.code_issued || false,
                 parsedData.memo,
-                assignedBy
+                assignedBy,
+                assignedBy,
+                assignedByEmail
             ];
             
             try {
@@ -7983,7 +7989,9 @@ app.get('/assignment/:token', async (req, res) => {
                 r.phone as phone_number,
                 r.email,
                 r.package_type,
-                r.memo as special_requests
+                r.memo as special_requests,
+                r.created_by,
+                r.created_by_email
             FROM assignments a
             JOIN reservations r ON a.reservation_id = r.id
             WHERE a.assignment_token = $1
@@ -9097,7 +9105,9 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
                 r.phone as phone_number,
                 r.email,
                 r.package_type,
-                r.memo as special_requests
+                r.memo as special_requests,
+                r.created_by,
+                r.created_by_email
             FROM assignments a
             JOIN reservations r ON a.reservation_id = r.id
             WHERE r.id = $1
@@ -9157,7 +9167,9 @@ app.get('/assignment/preview/:reservationId', requireAuth, async (req, res) => {
                 special_requests: reservation.memo,
                 assignment_vendor: '미지정',
                 vendor_email: null,
-                vendor_phone: null
+                vendor_phone: null,
+                created_by: reservation.created_by,
+                created_by_email: reservation.created_by_email
             };
             
             return res.render('assignment', {

@@ -341,9 +341,19 @@
                                 <% } %>
                             </div>
                             <div class="col-12">
-                                <strong>Emergency Contact (비상 연락처):</strong> 
-                                <i class="bi bi-telephone me-1"></i>+1-671-XXX-XXXX | 
-                                <i class="bi bi-envelope me-1"></i>support@guamsavecard.com
+                                <strong>Contact Information (문의사항):</strong><br>
+                                <div class="mt-2">
+                                    <i class="bi bi-person me-2"></i><strong>한국 담당자:</strong> <%= assignment.created_by || '괌세이브카드 운영팀' %><br>
+                                    <i class="bi bi-envelope me-2"></i><strong>이메일:</strong> <%= assignment.created_by_email || 'support@guamsavecard.com' %>
+                                </div>
+                                <div class="mt-2">
+                                    <i class="bi bi-building me-2"></i><strong>현지 담당자:</strong> <%= assignment.assignment_vendor || assignment.vendor_name || 'Not Assigned' %><br>
+                                    <% if (assignment.vendor_phone) { %>
+                                    <i class="bi bi-telephone me-2"></i><strong>전화번호:</strong> <%= assignment.vendor_phone %>
+                                    <% } else { %>
+                                    <i class="bi bi-telephone me-2"></i><strong>전화번호:</strong> +1 (671) 789-8989
+                                    <% } %>
+                                </div>
                             </div>
                             <% if (assignment.notes) { %>
                             <div class="col-12">

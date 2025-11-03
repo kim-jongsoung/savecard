@@ -150,7 +150,7 @@ async function ensureAllColumns() {
       ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP
     `);
 
-    // reservations - 바우처 관련 컬럼
+    // reservations - 바우처 관련 컬럼 및 담당자 정보
     try {
       await client.query(`
         ALTER TABLE reservations
@@ -158,7 +158,9 @@ async function ensureAllColumns() {
         ADD COLUMN IF NOT EXISTS qr_code_data TEXT,
         ADD COLUMN IF NOT EXISTS qr_image_path VARCHAR(255),
         ADD COLUMN IF NOT EXISTS vendor_voucher_path VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS voucher_sent_at TIMESTAMP
+        ADD COLUMN IF NOT EXISTS voucher_sent_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS created_by VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS created_by_email VARCHAR(255)
       `);
       
       // 인덱스 생성
