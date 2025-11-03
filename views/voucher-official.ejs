@@ -441,11 +441,21 @@
                 <div class="contact-box">
                     <h3>💬 문의사항이 있으신가요?</h3>
                     <div class="contact-item">
-                        카카오톡: <strong>@괌세이브카드</strong>
+                        <strong>한국 담당자:</strong> <%= reservation.created_by || '괌세이브카드 운영팀' %>
                     </div>
                     <div class="contact-item">
-                        전화: <a href="tel:+16717898989">+1 (671) 789-8989</a>
+                        <strong>이메일:</strong> <a href="mailto:<%= reservation.created_by_email || 'support@guamsavecard.com' %>"><%= reservation.created_by_email || 'support@guamsavecard.com' %></a>
                     </div>
+                    <% if (reservation.vendor_name) { %>
+                    <div class="contact-item">
+                        <strong>현지 담당자:</strong> <%= reservation.vendor_name %>
+                    </div>
+                    <% if (reservation.vendor_contact) { %>
+                    <div class="contact-item">
+                        <strong>전화번호:</strong> <a href="tel:<%= reservation.vendor_contact %>"><%= reservation.vendor_contact %></a>
+                    </div>
+                    <% } %>
+                    <% } %>
                 </div>
             </div>
         </div>

@@ -471,9 +471,14 @@
         <!-- 고객센터 -->
         <div class="contact-section">
             <h3>💬 문의사항이 있으신가요?</h3>
-            <p>고객센터: <a href="tel:+16717898989">+1 (671) 789-8989</a></p>
-            <p>이메일: <a href="mailto:support@guamsavecard.com">support@guamsavecard.com</a></p>
-            <p>카카오톡: @괌세이브카드</p>
+            <p><strong>한국 담당자:</strong> <%= reservation.created_by || '괌세이브카드 운영팀' %></p>
+            <p><strong>이메일:</strong> <a href="mailto:<%= reservation.created_by_email || 'support@guamsavecard.com' %>"><%= reservation.created_by_email || 'support@guamsavecard.com' %></a></p>
+            <% if (reservation.vendor_name) { %>
+            <p><strong>현지 담당자:</strong> <%= reservation.vendor_name %></p>
+            <% if (reservation.vendor_contact) { %>
+            <p><strong>전화번호:</strong> <a href="tel:<%= reservation.vendor_contact %>"><%= reservation.vendor_contact %></a></p>
+            <% } %>
+            <% } %>
         </div>
         
         <!-- 푸터 -->

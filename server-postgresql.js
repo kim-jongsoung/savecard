@@ -14422,6 +14422,8 @@ app.get('/voucher/:token', async (req, res) => {
         const voucherQuery = `
             SELECT 
                 r.*,
+                r.created_by,
+                r.created_by_email,
                 a.confirmation_number,
                 a.vendor_name,
                 a.vendor_contact,
