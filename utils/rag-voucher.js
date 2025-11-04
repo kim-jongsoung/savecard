@@ -32,31 +32,58 @@ async function findProductGuide(productName) {
             return null;
         }
         
-        console.log(`🔍 RAG DB 검색: ${productName}`);
+        console.log(`🔍 RAG DB 검색: "${productName}"`);
         
         const dbPool = getPool();
         
-        // 상품명으로 검색 (부분 매칭)
-        const result = await dbPool.query(`
+        // 1차 시도: 정확한 매칭
+        let result = await dbPool.query(`
             SELECT id, product_name, content
             FROM product_guides
-            WHERE product_name ILIKE $1 OR $2 ILIKE '%' || product_name || '%'
-            ORDER BY 
-                CASE 
-                    WHEN product_name = $2 THEN 1
-                    WHEN product_name ILIKE $1 THEN 2
-                    ELSE 3
-                END
+            WHERE LOWER(product_name) = LOWER($1)
             LIMIT 1
-        `, [`%${productName}%`, productName]);
+        `, [productName]);
+        
+        // 2차 시도: 부분 매칭 (앞뒤 공백 제거)
+        if (result.rows.length === 0) {
+            result = await dbPool.query(`
+                SELECT id, product_name, content
+                FROM product_guides
+                WHERE LOWER(TRIM(product_name)) LIKE LOWER(TRIM($1))
+                LIMIT 1
+            `, [`%${productName}%`]);
+        }
+        
+        // 3차 시도: 키워드 기반 매칭
+        if (result.rows.length === 0) {
+            result = await dbPool.query(`
+                SELECT id, product_name, content
+                FROM product_guides
+                WHERE LOWER(product_name) LIKE LOWER($1)
+                   OR LOWER($1) LIKE LOWER('%' || product_name || '%')
+                   OR content ILIKE $1
+                ORDER BY 
+                    CASE 
+                        WHEN LOWER(product_name) LIKE LOWER($1) THEN 1
+                        WHEN LOWER($1) LIKE LOWER('%' || product_name || '%') THEN 2
+                        ELSE 3
+                    END
+                LIMIT 1
+            `, [`%${productName}%`]);
+        }
         
         if (result.rows.length === 0) {
-            console.log('⚠️ 매칭되는 가이드 없음 - 기본 템플릿 사용');
+            console.log(`⚠️ 매칭되는 가이드 없음: "${productName}"`);
+            
+            // 디버깅: 등록된 가이드 목록 출력
+            const allGuides = await dbPool.query(`SELECT product_name FROM product_guides LIMIT 10`);
+            console.log('📋 등록된 가이드:', allGuides.rows.map(r => r.product_name));
+            
             return null;
         }
         
         const guide = result.rows[0];
-        console.log(`✅ 매칭된 가이드: ${guide.product_name}`);
+        console.log(`✅ 매칭 성공! "${productName}" → "${guide.product_name}"`);
         
         return {
             id: guide.id,
@@ -94,16 +121,38 @@ function extractUsageInstructions(content) {
 function convertToHTML(text) {
     if (!text) return '';
     
-    let html = text
-        // 번호 리스트 (1. 2. 3.)
-        .replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-bottom: 10px;"><strong>$1. $2</strong></div>')
-        // 하위 항목 (- 로 시작)
-        .replace(/^\s+-\s+(.+)$/gm, '<div style="margin-left: 15px; margin-bottom: 5px; font-size: 12px;">• $1</div>')
-        // 줄바꿈
-        .replace(/\n\n/g, '<br><br>')
-        .replace(/\n/g, '<br>');
+    // 줄 단위로 처리
+    const lines = text.split('\n');
+    const htmlLines = [];
     
-    return `<div style="line-height: 1.6;">${html}</div>`;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // 빈 줄
+        if (!line.trim()) {
+            htmlLines.push('<br>');
+            continue;
+        }
+        
+        // 숫자 리스트 (1. 2. 3.)
+        const numberMatch = line.match(/^(\d+)\.\s+(.+)$/);
+        if (numberMatch) {
+            htmlLines.push(`<div style="margin-top: 12px; margin-bottom: 8px;"><strong>${numberMatch[1]}. ${numberMatch[2]}</strong></div>`);
+            continue;
+        }
+        
+        // 하위 항목 (- 또는 공백 + -)
+        const bulletMatch = line.match(/^\s*-\s+(.+)$/);
+        if (bulletMatch) {
+            htmlLines.push(`<div style="margin-left: 20px; margin-bottom: 5px; color: #555;">• ${bulletMatch[1]}</div>`);
+            continue;
+        }
+        
+        // 일반 텍스트
+        htmlLines.push(`<div style="margin-bottom: 5px;">${line}</div>`);
+    }
+    
+    return `<div style="line-height: 1.8; font-size: 14px;">${htmlLines.join('')}</div>`;
 }
 
 /**
