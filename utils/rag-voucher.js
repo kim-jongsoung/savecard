@@ -1,61 +1,71 @@
 const fs = require('fs').promises;
 const path = require('path');
+const { Pool } = require('pg');
 
 /**
  * RAG 기반 바우처 이용방법 생성기
- * - 상품별 TXT 파일에서 정보 추출
- * - AI를 통해 바우처에 맞는 이용방법 생성
+ * - 데이터베이스에서 상품 가이드 조회
+ * - AI를 통해 바우챠에 맞는 이용방법 생성
  */
 
 const RAG_DIR = path.join(__dirname, '..', 'rag', 'products');
 
+// DB 연결 풀
+ let pool = null;
+ function getPool() {
+    if (!pool) {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.DATABASE_URL?.includes('localhost') ? false : { rejectUnauthorized: false }
+        });
+    }
+    return pool;
+}
+
 /**
- * 상품명으로 RAG 파일 검색
+ * 상품명으로 RAG 가이드 검색 (데이터베이스)
  */
 async function findProductGuide(productName) {
     try {
-        // RAG 디렉토리 존재 확인 및 생성
-        try {
-            await fs.access(RAG_DIR);
-        } catch {
-            console.log('📁 RAG 디렉토리 생성:', RAG_DIR);
-            await fs.mkdir(RAG_DIR, { recursive: true });
-        }
-        
-        // RAG 디렉토리의 모든 파일 읽기
-        const files = await fs.readdir(RAG_DIR);
-        const txtFiles = files.filter(f => f.endsWith('.txt'));
-        
-        if (txtFiles.length === 0) {
-            console.log('⚠️ RAG 파일 없음 - 기본 템플릿 사용');
+        if (!productName) {
+            console.log('⚠️ 상품명 없음 - RAG 검색 건너뛰기');
             return null;
         }
         
-        console.log(`🔍 RAG 파일 검색: ${productName}`);
+        console.log(`🔍 RAG DB 검색: ${productName}`);
         
-        // 각 파일에서 상품명 매칭
-        for (const file of txtFiles) {
-            const filePath = path.join(RAG_DIR, file);
-            const content = await fs.readFile(filePath, 'utf-8');
-            
-            // 파일에서 상품명 추출
-            const match = content.match(/상품명:\s*(.+)/);
-            if (match) {
-                const registeredName = match[1].trim();
-                
-                // 유사도 검사 (간단한 포함 여부)
-                if (productName && (productName.includes(registeredName) || registeredName.includes(productName))) {
-                    console.log(`✅ 매칭된 가이드: ${file}`);
-                    return { file, content };
-                }
-            }
+        const dbPool = getPool();
+        
+        // 상품명으로 검색 (부분 매칭)
+        const result = await dbPool.query(`
+            SELECT id, product_name, content
+            FROM product_guides
+            WHERE product_name ILIKE $1 OR $2 ILIKE '%' || product_name || '%'
+            ORDER BY 
+                CASE 
+                    WHEN product_name = $2 THEN 1
+                    WHEN product_name ILIKE $1 THEN 2
+                    ELSE 3
+                END
+            LIMIT 1
+        `, [`%${productName}%`, productName]);
+        
+        if (result.rows.length === 0) {
+            console.log('⚠️ 매칭되는 가이드 없음 - 기본 템플릿 사용');
+            return null;
         }
         
-        console.log('⚠️ 매칭되는 가이드 없음 - 기본 템플릿 사용');
-        return null;
+        const guide = result.rows[0];
+        console.log(`✅ 매칭된 가이드: ${guide.product_name}`);
+        
+        return {
+            id: guide.id,
+            name: guide.product_name,
+            content: guide.content
+        };
         
     } catch (error) {
-        console.error('❌ RAG 파일 검색 오류:', error);
+        console.error('❌ RAG DB 검색 오류:', error);
         return null;
     }
 }
@@ -189,60 +199,55 @@ function getDefaultInstructions() {
 }
 
 /**
- * 상품 가이드 등록 (관리자용)
+ * 상품 가이드 등록 (관리자용) - 데이터베이스
  */
-async function registerProductGuide(productName, guideContent) {
+async function registerProductGuide(productName, guideContent, createdBy = 'admin') {
     try {
-        // 파일명 생성 (상품명을 안전한 파일명으로 변환)
-        const safeFileName = productName
-            .replace(/[^a-zA-Z0-9가-힣\s]/g, '')
-            .replace(/\s+/g, '-')
-            .toLowerCase();
+        const dbPool = getPool();
         
-        const filePath = path.join(RAG_DIR, `${safeFileName}.txt`);
+        // 카테고리 추출
+        const categoryMatch = guideContent.match(/카테고리:\s*(.+)/);
+        const category = categoryMatch ? categoryMatch[1].trim() : '미분류';
         
-        // 파일 저장
-        await fs.writeFile(filePath, guideContent, 'utf-8');
+        const result = await dbPool.query(`
+            INSERT INTO product_guides (product_name, category, content, created_by)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, product_name
+        `, [productName, category, guideContent, createdBy]);
         
-        console.log(`✅ 상품 가이드 등록 완료: ${filePath}`);
-        return { success: true, file: filePath };
+        console.log(`✅ 상품 가이드 DB 등록 완료: ${productName}`);
+        return { success: true, guide: result.rows[0] };
         
     } catch (error) {
-        console.error('❌ 상품 가이드 등록 오류:', error);
+        console.error('❌ 상품 가이드 DB 등록 오류:', error);
         return { success: false, error: error.message };
     }
 }
 
 /**
- * 등록된 상품 목록 조회
+ * 등록된 상품 목록 조회 (데이터베이스)
  */
 async function listProductGuides() {
     try {
-        const files = await fs.readdir(RAG_DIR);
-        const txtFiles = files.filter(f => f.endsWith('.txt'));
+        const dbPool = getPool();
         
-        const products = [];
-        for (const file of txtFiles) {
-            const filePath = path.join(RAG_DIR, file);
-            const content = await fs.readFile(filePath, 'utf-8');
-            
-            const nameMatch = content.match(/상품명:\s*(.+)/);
-            const categoryMatch = content.match(/카테고리:\s*(.+)/);
-            
-            if (nameMatch) {
-                products.push({
-                    file,
-                    name: nameMatch[1].trim(),
-                    category: categoryMatch ? categoryMatch[1].trim() : '미분류',
-                    path: filePath
-                });
-            }
-        }
+        const result = await dbPool.query(`
+            SELECT id, product_name, category, content, created_at, updated_at
+            FROM product_guides
+            ORDER BY created_at DESC
+        `);
         
-        return products;
+        return result.rows.map(row => ({
+            id: row.id,
+            name: row.product_name,
+            category: row.category || '미분류',
+            content: row.content,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        }));
         
     } catch (error) {
-        console.error('❌ 상품 목록 조회 오류:', error);
+        console.error('❌ 상품 목록 DB 조회 오류:', error);
         return [];
     }
 }

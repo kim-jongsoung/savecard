@@ -440,6 +440,27 @@ async function initializeDatabase() {
           `);
           console.log('✅ vendors 테이블 생성 완료');
           
+          // 2. product_guides 테이블 (RAG 상품 가이드)
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS product_guides (
+              id SERIAL PRIMARY KEY,
+              product_name VARCHAR(200) NOT NULL,
+              category VARCHAR(50) DEFAULT '미분류',
+              content TEXT NOT NULL,
+              created_by VARCHAR(100),
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          console.log('✅ product_guides 테이블 생성 완료');
+          
+          // 인덱스 생성
+          await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_product_guides_name 
+            ON product_guides(product_name)
+          `);
+          console.log('✅ product_guides 인덱스 생성 완료');
+          
           // 4. platforms 테이블 (예약업체/플랫폼 정보 - 정산 관리용)
           await pool.query(`
             CREATE TABLE IF NOT EXISTS platforms (
@@ -3097,12 +3118,25 @@ app.get('/admin/rag-manager', requireAuth, (req, res) => {
 // RAG 가이드 목록 조회
 app.get('/api/rag/guides', requireAuth, async (req, res) => {
     try {
-        const { listProductGuides } = require('./utils/rag-voucher');
-        const guides = await listProductGuides();
+        // 데이터베이스에서 조회
+        const result = await pool.query(`
+            SELECT id, product_name, category, content, created_at, updated_at
+            FROM product_guides
+            ORDER BY created_at DESC
+        `);
+        
+        const guides = result.rows.map(row => ({
+            id: row.id,
+            name: row.product_name,
+            category: row.category || '미분류',
+            content: row.content,
+            created_at: row.created_at,
+            updated_at: row.updated_at
+        }));
         
         res.json({
             success: true,
-            guides
+            guides: guides
         });
     } catch (error) {
         console.error('❌ RAG 가이드 목록 조회 오류:', error);
@@ -3114,23 +3148,30 @@ app.get('/api/rag/guides', requireAuth, async (req, res) => {
 });
 
 // RAG 가이드 상세 조회
-app.get('/api/rag/guides/:filename', requireAuth, async (req, res) => {
+app.get('/api/rag/guides/:id', requireAuth, async (req, res) => {
     try {
-        const fs = require('fs').promises;
-        const path = require('path');
-        const { filename } = req.params;
+        const { id } = req.params;
         
-        const RAG_DIR = path.join(__dirname, 'rag', 'products');
-        const filePath = path.join(RAG_DIR, filename);
+        const result = await pool.query(`
+            SELECT id, product_name, category, content, created_at, updated_at
+            FROM product_guides
+            WHERE id = $1
+        `, [id]);
         
-        const content = await fs.readFile(filePath, 'utf-8');
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '가이드를 찾을 수 없습니다.'
+            });
+        }
         
         res.json({
             success: true,
-            content
+            content: result.rows[0].content,
+            guide: result.rows[0]
         });
     } catch (error) {
-        console.error('❌ RAG 가이드 조회 오류:', error);
+        console.error('❌ RAG 가이드 상세 조회 오류:', error);
         res.status(500).json({
             success: false,
             message: '가이드 조회 중 오류가 발생했습니다: ' + error.message
@@ -3150,21 +3191,24 @@ app.post('/api/rag/guides', requireAuth, async (req, res) => {
             });
         }
         
-        const { registerProductGuide } = require('./utils/rag-voucher');
-        const result = await registerProductGuide(productName, content);
+        // 카테고리 추출
+        const categoryMatch = content.match(/카테고리:\s*(.+)/);
+        const category = categoryMatch ? categoryMatch[1].trim() : '미분류';
         
-        if (result.success) {
-            res.json({
-                success: true,
-                message: '가이드가 등록되었습니다.',
-                file: result.file
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                message: '가이드 등록 실패: ' + result.error
-            });
-        }
+        // 데이터베이스에 저장
+        const result = await pool.query(`
+            INSERT INTO product_guides (product_name, category, content, created_by)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, product_name
+        `, [productName, category, content, req.session.adminUsername || 'admin']);
+        
+        console.log(`✅ RAG 가이드 DB 저장 완료: ${productName}`);
+        
+        res.json({
+            success: true,
+            message: '가이드가 등록되었습니다.',
+            guide: result.rows[0]
+        });
     } catch (error) {
         console.error('❌ RAG 가이드 생성 오류:', error);
         res.status(500).json({
@@ -3177,22 +3221,27 @@ app.post('/api/rag/guides', requireAuth, async (req, res) => {
 // RAG 가이드 수정
 app.put('/api/rag/guides', requireAuth, async (req, res) => {
     try {
-        const fs = require('fs').promises;
-        const path = require('path');
-        const { productName, content, existingFile } = req.body;
+        const { id, productName, content } = req.body;
         
-        if (!productName || !content || !existingFile) {
+        if (!id || !productName || !content) {
             return res.status(400).json({
                 success: false,
                 message: '필수 정보가 누락되었습니다.'
             });
         }
         
-        const RAG_DIR = path.join(__dirname, 'rag', 'products');
-        const filePath = path.join(RAG_DIR, existingFile);
+        // 카테고리 추출
+        const categoryMatch = content.match(/카테고리:\s*(.+)/);
+        const category = categoryMatch ? categoryMatch[1].trim() : '미분류';
         
-        // 파일 덮어쓰기
-        await fs.writeFile(filePath, content, 'utf-8');
+        // 데이터베이스 업데이트
+        await pool.query(`
+            UPDATE product_guides
+            SET product_name = $1, category = $2, content = $3, updated_at = NOW()
+            WHERE id = $4
+        `, [productName, category, content, id]);
+        
+        console.log(`✅ RAG 가이드 DB 업데이트 완료: ${productName}`);
         
         res.json({
             success: true,
@@ -3208,16 +3257,15 @@ app.put('/api/rag/guides', requireAuth, async (req, res) => {
 });
 
 // RAG 가이드 삭제
-app.delete('/api/rag/guides/:filename', requireAuth, async (req, res) => {
+app.delete('/api/rag/guides/:id', requireAuth, async (req, res) => {
     try {
-        const fs = require('fs').promises;
-        const path = require('path');
-        const { filename } = req.params;
+        const { id } = req.params;
         
-        const RAG_DIR = path.join(__dirname, 'rag', 'products');
-        const filePath = path.join(RAG_DIR, filename);
+        await pool.query(`
+            DELETE FROM product_guides WHERE id = $1
+        `, [id]);
         
-        await fs.unlink(filePath);
+        console.log(`✅ RAG 가이드 DB 삭제 완료: ID ${id}`);
         
         res.json({
             success: true,
