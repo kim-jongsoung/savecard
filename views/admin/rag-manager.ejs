@@ -153,12 +153,12 @@
         <!-- 안내 -->
         <div class="alert alert-custom">
             <i class="bi bi-info-circle me-2"></i>
-            <strong>💡 가이드 등록 방법:</strong> 
+            <strong>💡 가이드 작성 방법:</strong> 
             <ol class="mb-0 mt-2">
-                <li><strong>기본 정보:</strong> 상품명(필수), 카테고리(필수), 키워드, 상품 설명을 입력하세요. 키워드를 입력하면 AI가 더 정확하게 매칭합니다.</li>
-                <li><strong>가이드 내용:</strong> 위치, 운영시간, 이용방법, 주의사항 등을 자유롭게 작성하세요. "=== 이용 방법 ===" 섹션이 바우처에 포함됩니다.</li>
-                <li><strong>미리보기:</strong> 최종 저장 전 생성될 내용을 확인하세요.</li>
-                <li><strong>템플릿 생성:</strong> 빈 상태에서 시작하기 어렵다면 "템플릿 생성" 버튼으로 기본 구조를 생성할 수 있습니다.</li>
+                <li><strong>자유 형식 작성:</strong> <code>=== 원하는 섹션명 ===</code> 형식으로 원하는 만큼 섹션을 추가하세요.</li>
+                <li><strong>필수 섹션:</strong> <code>=== 이용 방법 ===</code> 섹션은 바우처에 자동으로 포함되니 꼭 작성하세요.</li>
+                <li><strong>추천 섹션:</strong> 위치정보, 운영시간, 주의사항, 준비물, 취소규정 등 필요한 섹션을 자유롭게 추가하세요.</li>
+                <li><strong>템플릿:</strong> 처음 작성이 어렵다면 "기본 템플릿" 버튼으로 기본 구조를 생성할 수 있습니다.</li>
             </ol>
         </div>
 
@@ -248,46 +248,48 @@
                         <div class="tab-pane fade" id="content-tab">
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle me-2"></i>
-                                아래 예시를 참고하여 자유롭게 작성해주세요. "=== 이용 방법 ===" 섹션이 바우처에 포함됩니다.
+                                <strong>=== 섹션명 ===</strong> 형식으로 자유롭게 섹션을 추가하세요. <strong>=== 이용 방법 ===</strong> 섹션은 바우처에 자동 포함됩니다.
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-bold">가이드 전체 내용 <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">가이드 내용 <span class="text-danger">*</span></label>
                                 <textarea class="form-control code-editor" id="guide-content" rows="25" 
-placeholder="=== 위치 및 운영 정보 ===
-
-주소: 1172 Pale San Vitores Rd, Tumon, Guam
-운영시간: 매일 10:00 - 18:30 (마지막 입장 18:00)
-연락처: +1 (671) 649-9191
-주차: 무료 주차장 이용 가능
-
-=== 이용 방법 ===
+placeholder="=== 이용 방법 ===
 
 1. 예약 확인
-   - 바우처를 출력하거나 모바일로 지참해주세요
-   - 컨펌번호를 메모해두시면 편리합니다
+   - 바우처 지참
+   - 컨펌번호 확인
 
 2. 현장 도착
    - 예약 시간 10분 전 도착 권장
-   - 주차장 이용 가능
 
-3. 입장 절차
-   - 매표소에서 바우처 제시 및 입장권 교환
-   - 소요시간: 약 5-10분
-   - 신분증 지참 권장
+3. 이용 절차
+   - 매표소에서 바우처 제시
+   - 입장권 교환 후 이용
+
+=== 위치 및 연락처 ===
+
+주소: 
+운영시간: 
+연락처: 
 
 === 주의사항 ===
 
-- 예약 시간 엄수
-- 음식물 반입 금지
-- 어린이는 보호자 동반 필수
+- 
+- 
 
-취소/변경:
-이용일 3일 전까지 무료 취소 가능
+=== 취소 및 환불 ===
 
-준비물: 신분증, 편한한 신발"></textarea>
+- 이용일 기준 
+
+=== 준비물 ===
+
+- 
+- 
+
+💡 팁: === 원하는섹션명 === 으로 섹션을 자유롭게 추가하세요!"></textarea>
                                 <div class="form-text">
-                                    <i class="bi bi-lightbulb me-1"></i>
-                                    "=== 이용 방법 ===" 섹션이 자동으로 바우처에 포함됩니다
+                                    <i class="bi bi-star-fill text-warning me-1"></i>
+                                    <strong>=== 이용 방법 ===</strong> 섹션은 반드시 포함해주세요 (바우처에 자동 표시됨)
                                 </div>
                             </div>
                         </div>
@@ -307,7 +309,10 @@ placeholder="=== 위치 및 운영 정보 ===
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" onclick="generateTemplate()">
-                        <i class="bi bi-file-earmark-code me-1"></i>템플릿 생성
+                        <i class="bi bi-file-earmark-code me-1"></i>기본 템플릿
+                    </button>
+                    <button class="btn btn-outline-info" onclick="addSection()">
+                        <i class="bi bi-plus-circle me-1"></i>섹션 추가 도우미
                     </button>
                     <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
                     <button class="btn btn-primary" onclick="saveGuide()">
@@ -514,31 +519,46 @@ placeholder="=== 위치 및 운영 정보 ===
         
         // 템플릿 생성 (기본값 채우기)
         function generateTemplate() {
-            if (!document.getElementById('product-name').value) {
-                showAlert('상품명을 먼저 입력해주세요', 'warning');
-                return;
-            }
-            
             const productName = document.getElementById('product-name').value;
             
             // 기본 템플릿 값 설정
             if (!document.getElementById('keywords').value) {
-                document.getElementById('keywords').value = '관광, 체험, 가족여행';
+                document.getElementById('keywords').value = '관광, 체험';
             }
             
-            if (!document.getElementById('description').value) {
-                document.getElementById('description').value = `${productName}에 대한 설명입니다.`;
+            if (!document.getElementById('description').value && productName) {
+                document.getElementById('description').value = `${productName} 이용 가이드`;
             }
             
-            // 가이드 내용 템플릿
-            if (!document.getElementById('guide-content').value) {
-                document.getElementById('guide-content').value = `=== 위치 및 운영 정보 ===\n\n주소: \n운영시간: \n연락처: \n\n=== 이용 방법 ===\n\n1. 예약 확인\n   - 바우처를 지참해주세요\n\n2. 현장 도착\n   - \n\n3. 이용 절차\n   - \n\n=== 주의사항 ===\n\n- \n- `;
+            // 가이드 내용 템플릿 - 간단하고 자유로운 형식
+            const currentContent = document.getElementById('guide-content').value;
+            if (!currentContent || currentContent.trim() === '') {
+                document.getElementById('guide-content').value = `=== 이용 방법 ===\n\n1. 예약 확인\n   - 바우처 지참\n\n2. 현장 도착\n   - \n\n3. 이용 절차\n   - \n\n=== 위치 정보 ===\n\n주소: \n운영시간: \n연락처: \n\n=== 주의사항 ===\n\n- \n\n=== 취소/환불 ===\n\n- `;
             }
             
             // 가이드 내용 탭으로 이동
             document.querySelector('[data-bs-target="#content-tab"]').click();
             
-            showAlert('✅ 기본 템플릿이 생성되었습니다. 가이드 내용 탭에서 수정해주세요.', 'success');
+            showAlert('✅ 기본 템플릿이 생성되었습니다!', 'success');
+        }
+        
+        // 섹션 추가 도우미
+        function addSection() {
+            const sectionName = prompt('추가할 섹션명을 입력하세요\n예: 준비물, 교통편, 포함사항, 불포함사항 등');
+            
+            if (!sectionName) return;
+            
+            const textarea = document.getElementById('guide-content');
+            const currentValue = textarea.value;
+            const newSection = `\n\n=== ${sectionName} ===\n\n- \n`;
+            
+            textarea.value = currentValue + newSection;
+            textarea.focus();
+            
+            // 가이드 내용 탭으로 이동
+            document.querySelector('[data-bs-target="#content-tab"]').click();
+            
+            showAlert(`✅ "${sectionName}" 섹션이 추가되었습니다!`, 'success');
         }
 
         // 수정 모달 열기
