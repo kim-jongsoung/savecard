@@ -155,11 +155,10 @@
             <i class="bi bi-info-circle me-2"></i>
             <strong>💡 가이드 등록 방법:</strong> 
             <ol class="mb-0 mt-2">
-                <li><strong>기본 정보:</strong> 상품명과 카테고리는 필수입니다. 키워드를 입력하면 AI가 더 정확하게 매칭합니다.</li>
-                <li><strong>위치 및 운영:</strong> 주소, 운영시간, 연락처 등 고객이 현장에서 필요한 정보를 입력하세요.</li>
-                <li><strong>이용 방법:</strong> 단계별로 구체적인 이용 절차를 작성하세요. 바우처에 자동으로 포함됩니다.</li>
-                <li><strong>주의사항:</strong> 고객이 반드시 알아야 할 주의사항, 취소 규정, 준비물을 입력하세요.</li>
+                <li><strong>기본 정보:</strong> 상품명(필수), 카테고리(필수), 키워드, 상품 설명을 입력하세요. 키워드를 입력하면 AI가 더 정확하게 매칭합니다.</li>
+                <li><strong>가이드 내용:</strong> 위치, 운영시간, 이용방법, 주의사항 등을 자유롭게 작성하세요. "=== 이용 방법 ===" 섹션이 바우처에 포함됩니다.</li>
                 <li><strong>미리보기:</strong> 최종 저장 전 생성될 내용을 확인하세요.</li>
+                <li><strong>템플릿 생성:</strong> 빈 상태에서 시작하기 어렵다면 "템플릿 생성" 버튼으로 기본 구조를 생성할 수 있습니다.</li>
             </ol>
         </div>
 
@@ -194,18 +193,8 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#location-tab" type="button">
-                                <i class="bi bi-geo-alt me-2"></i>위치 및 운영
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#usage-tab" type="button">
-                                <i class="bi bi-card-checklist me-2"></i>이용 방법
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#notice-tab" type="button">
-                                <i class="bi bi-exclamation-triangle me-2"></i>주의사항
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#content-tab" type="button">
+                                <i class="bi bi-file-text me-2"></i>가이드 내용
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -255,93 +244,51 @@
                             </div>
                         </div>
 
-                        <!-- 위치 및 운영 탭 -->
-                        <div class="tab-pane fade" id="location-tab">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">주소</label>
-                                <input type="text" class="form-control" id="address" 
-                                       placeholder="예: 1172 Pale San Vitores Rd, Tumon, Guam">
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">운영 시간</label>
-                                    <input type="text" class="form-control" id="operating-hours" 
-                                           placeholder="예: 매일 10:00 - 18:30">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">연락처</label>
-                                    <input type="text" class="form-control" id="contact" 
-                                           placeholder="예: +1 (671) 649-9191">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">주차 정보</label>
-                                <input type="text" class="form-control" id="parking" 
-                                       placeholder="예: 무료 주차장 이용 가능">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">찾아가는 방법</label>
-                                <textarea class="form-control" id="directions" rows="3" 
-                                          placeholder="현장까지 가는 방법을 상세히 설명해주세요"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- 이용 방법 탭 -->
-                        <div class="tab-pane fade" id="usage-tab">
+                        <!-- 가이드 내용 탭 -->
+                        <div class="tab-pane fade" id="content-tab">
                             <div class="alert alert-info">
                                 <i class="bi bi-info-circle me-2"></i>
-                                이용 방법은 단계별로 작성해주세요. 각 단계마다 - 로 시작하는 세부 항목을 추가할 수 있습니다.
+                                아래 예시를 참고하여 자유롭게 작성해주세요. "=== 이용 방법 ===" 섹션이 바우처에 포함됩니다.
                             </div>
-                            <div id="usage-steps">
-                                <div class="usage-step mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label fw-bold mb-0">1단계: 예약 확인</label>
-                                    </div>
-                                    <input type="text" class="form-control mb-2" placeholder="단계 제목 (예: 예약 확인)" value="예약 확인">
-                                    <textarea class="form-control" rows="3" 
-                                              placeholder="세부 내용을 입력하세요. 각 줄은 자동으로 항목으로 변환됩니다.&#10;예:&#10;바우처를 출력하거나 모바일로 지참해주세요&#10;컨펌번호를 메모해두시면 편리합니다">바우처를 출력하거나 모바일로 지참해주세요
-컨펌번호를 메모해두시면 편리합니다</textarea>
-                                </div>
-                                <div class="usage-step mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label fw-bold mb-0">2단계: 현장 도착</label>
-                                    </div>
-                                    <input type="text" class="form-control mb-2" placeholder="단계 제목" value="현장 도착">
-                                    <textarea class="form-control" rows="3" 
-                                              placeholder="세부 내용을 입력하세요">예약 시간 10분 전 도착 권장
-주차장 이용 안내를 확인하세요</textarea>
-                                </div>
-                                <div class="usage-step mb-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <label class="form-label fw-bold mb-0">3단계: 입장 절차</label>
-                                    </div>
-                                    <input type="text" class="form-control mb-2" placeholder="단계 제목" value="입장 절차">
-                                    <textarea class="form-control" rows="3" 
-                                              placeholder="세부 내용을 입력하세요">매표소에서 바우처 제시
-신분증 지참 권장</textarea>
-                                </div>
-                            </div>
-                            <button class="btn btn-outline-primary btn-sm" onclick="addUsageStep()">
-                                <i class="bi bi-plus-circle me-1"></i>단계 추가
-                            </button>
-                        </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">가이드 전체 내용 <span class="text-danger">*</span></label>
+                                <textarea class="form-control code-editor" id="guide-content" rows="25" 
+placeholder="=== 위치 및 운영 정보 ===
 
-                        <!-- 주의사항 탭 -->
-                        <div class="tab-pane fade" id="notice-tab">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">필수 주의사항</label>
-                                <textarea class="form-control" id="warnings" rows="5" 
-                                          placeholder="각 줄마다 하나의 주의사항을 입력하세요&#10;예:&#10;예약 시간 엄수&#10;음식물 반입 금지&#10;어린이는 보호자 동반 필수"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">취소/변경 규정</label>
-                                <textarea class="form-control" id="cancellation" rows="3" 
-                                          placeholder="취소 및 변경 규정을 입력하세요"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">준비물</label>
-                                <input type="text" class="form-control" id="requirements" 
-                                       placeholder="예: 신분증, 수영복, 타월">
+주소: 1172 Pale San Vitores Rd, Tumon, Guam
+운영시간: 매일 10:00 - 18:30 (마지막 입장 18:00)
+연락처: +1 (671) 649-9191
+주차: 무료 주차장 이용 가능
+
+=== 이용 방법 ===
+
+1. 예약 확인
+   - 바우처를 출력하거나 모바일로 지참해주세요
+   - 컨펌번호를 메모해두시면 편리합니다
+
+2. 현장 도착
+   - 예약 시간 10분 전 도착 권장
+   - 주차장 이용 가능
+
+3. 입장 절차
+   - 매표소에서 바우처 제시 및 입장권 교환
+   - 소요시간: 약 5-10분
+   - 신분증 지참 권장
+
+=== 주의사항 ===
+
+- 예약 시간 엄수
+- 음식물 반입 금지
+- 어린이는 보호자 동반 필수
+
+취소/변경:
+이용일 3일 전까지 무료 취소 가능
+
+준비물: 신분증, 편한한 신발"></textarea>
+                                <div class="form-text">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    "=== 이용 방법 ===" 섹션이 자동으로 바우처에 포함됩니다
+                                </div>
                             </div>
                         </div>
 
@@ -533,40 +480,10 @@
             document.getElementById('keywords').value = '';
             document.getElementById('description').value = '';
             
-            // 위치 및 운영 초기화
-            document.getElementById('address').value = '';
-            document.getElementById('operating-hours').value = '';
-            document.getElementById('contact').value = '';
-            document.getElementById('parking').value = '';
-            document.getElementById('directions').value = '';
-            
-            // 주의사항 초기화
-            document.getElementById('warnings').value = '';
-            document.getElementById('cancellation').value = '';
-            document.getElementById('requirements').value = '';
+            // 가이드 내용 초기화
+            document.getElementById('guide-content').value = '';
             
             new bootstrap.Modal(document.getElementById('guideModal')).show();
-        }
-        
-        // 이용 방법 단계 추가
-        function addUsageStep() {
-            const container = document.getElementById('usage-steps');
-            const stepCount = container.querySelectorAll('.usage-step').length + 1;
-            
-            const stepHtml = `
-                <div class="usage-step mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label fw-bold mb-0">${stepCount}단계</label>
-                        <button class="btn btn-sm btn-outline-danger" onclick="this.closest('.usage-step').remove()">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                    <input type="text" class="form-control mb-2" placeholder="단계 제목">
-                    <textarea class="form-control" rows="3" placeholder="세부 내용을 입력하세요"></textarea>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', stepHtml);
         }
         
         // 폼 데이터를 가이드 텍스트로 변환
@@ -575,62 +492,15 @@
             const category = document.getElementById('category').value.trim();
             const keywords = document.getElementById('keywords').value.trim();
             const description = document.getElementById('description').value.trim();
-            
-            const address = document.getElementById('address').value.trim();
-            const operatingHours = document.getElementById('operating-hours').value.trim();
-            const contact = document.getElementById('contact').value.trim();
-            const parking = document.getElementById('parking').value.trim();
-            const directions = document.getElementById('directions').value.trim();
-            
-            const warnings = document.getElementById('warnings').value.trim();
-            const cancellation = document.getElementById('cancellation').value.trim();
-            const requirements = document.getElementById('requirements').value.trim();
+            const guideContent = document.getElementById('guide-content').value.trim();
             
             let guideText = `상품명: ${productName}\n`;
             guideText += `카테고리: ${category || '미분류'}\n`;
             if (keywords) guideText += `키워드: ${keywords}\n`;
             if (description) guideText += `\n설명: ${description}\n`;
             
-            // 위치 정보
-            if (address || operatingHours || contact || parking) {
-                guideText += `\n=== 위치 및 운영 정보 ===\n\n`;
-                if (address) guideText += `주소: ${address}\n`;
-                if (operatingHours) guideText += `운영시간: ${operatingHours}\n`;
-                if (contact) guideText += `연락처: ${contact}\n`;
-                if (parking) guideText += `주차: ${parking}\n`;
-                if (directions) guideText += `\n찾아가는 방법:\n${directions}\n`;
-            }
-            
-            // 이용 방법
-            guideText += `\n=== 이용 방법 ===\n\n`;
-            const usageSteps = document.querySelectorAll('#usage-steps .usage-step');
-            usageSteps.forEach((step, index) => {
-                const title = step.querySelector('input').value.trim() || `${index + 1}단계`;
-                const content = step.querySelector('textarea').value.trim();
-                
-                guideText += `${index + 1}. ${title}\n`;
-                if (content) {
-                    content.split('\n').forEach(line => {
-                        if (line.trim()) guideText += `   - ${line.trim()}\n`;
-                    });
-                }
-                guideText += '\n';
-            });
-            
-            // 주의사항
-            if (warnings || cancellation || requirements) {
-                guideText += `=== 주의사항 ===\n\n`;
-                if (warnings) {
-                    warnings.split('\n').forEach(line => {
-                        if (line.trim()) guideText += `- ${line.trim()}\n`;
-                    });
-                }
-                if (cancellation) {
-                    guideText += `\n취소/변경:\n${cancellation}\n`;
-                }
-                if (requirements) {
-                    guideText += `\n준비물: ${requirements}\n`;
-                }
+            if (guideContent) {
+                guideText += `\n${guideContent}`;
             }
             
             return guideText;
@@ -660,7 +530,15 @@
                 document.getElementById('description').value = `${productName}에 대한 설명입니다.`;
             }
             
-            showAlert('✅ 기본 템플릿이 생성되었습니다. 각 탭에서 내용을 수정해주세요.', 'success');
+            // 가이드 내용 템플릿
+            if (!document.getElementById('guide-content').value) {
+                document.getElementById('guide-content').value = `=== 위치 및 운영 정보 ===\n\n주소: \n운영시간: \n연락처: \n\n=== 이용 방법 ===\n\n1. 예약 확인\n   - 바우처를 지참해주세요\n\n2. 현장 도착\n   - \n\n3. 이용 절차\n   - \n\n=== 주의사항 ===\n\n- \n- `;
+            }
+            
+            // 가이드 내용 탭으로 이동
+            document.querySelector('[data-bs-target="#content-tab"]').click();
+            
+            showAlert('✅ 기본 템플릿이 생성되었습니다. 가이드 내용 탭에서 수정해주세요.', 'success');
         }
 
         // 수정 모달 열기
@@ -687,56 +565,18 @@
                     document.getElementById('keywords').value = keywordsMatch ? keywordsMatch[1].trim() : '';
                     document.getElementById('description').value = descMatch ? descMatch[1].trim() : '';
                     
-                    // 위치 및 운영
-                    const addressMatch = content.match(/주소:\s*(.+)/);
-                    const hoursMatch = content.match(/운영시간:\s*(.+)/);
-                    const contactMatch = content.match(/연락처:\s*(.+)/);
-                    const parkingMatch = content.match(/주차:\s*(.+)/);
-                    const directionsMatch = content.match(/찾아가는 방법:\n(.+?)(?=\n\n|$)/s);
+                    // 가이드 내용 (기본 정보 제외한 나머지 부분)
+                    // "상품명:", "카테고리:", "키워드:", "설명:" 이후의 내용만 추출
+                    let guideContent = content;
                     
-                    document.getElementById('address').value = addressMatch ? addressMatch[1].trim() : '';
-                    document.getElementById('operating-hours').value = hoursMatch ? hoursMatch[1].trim() : '';
-                    document.getElementById('contact').value = contactMatch ? contactMatch[1].trim() : '';
-                    document.getElementById('parking').value = parkingMatch ? parkingMatch[1].trim() : '';
-                    document.getElementById('directions').value = directionsMatch ? directionsMatch[1].trim() : '';
+                    // 맨 위의 메타 정보들을 제거
+                    guideContent = guideContent.replace(/^상품명:.*\n/, '');
+                    guideContent = guideContent.replace(/^카테고리:.*\n/, '');
+                    guideContent = guideContent.replace(/^키워드:.*\n/, '');
+                    guideContent = guideContent.replace(/^\n*설명:.*\n/, '');
+                    guideContent = guideContent.trim();
                     
-                    // 이용 방법 파싱 (기본 3단계만 채움)
-                    const usageSection = content.match(/=== 이용 방법 ===\n\n(.+?)(?=\n===|$)/s);
-                    if (usageSection) {
-                        const steps = usageSection[1].match(/\d+\.\s+(.+?)\n((?:\s+-\s+.+\n?)*)/g);
-                        if (steps && steps.length > 0) {
-                            const stepElements = document.querySelectorAll('#usage-steps .usage-step');
-                            steps.forEach((stepText, index) => {
-                                if (index < stepElements.length) {
-                                    const titleMatch = stepText.match(/\d+\.\s+(.+)/);
-                                    const itemsMatch = stepText.match(/\s+-\s+(.+)/g);
-                                    
-                                    if (titleMatch) {
-                                        stepElements[index].querySelector('input').value = titleMatch[1].trim();
-                                    }
-                                    if (itemsMatch) {
-                                        const items = itemsMatch.map(item => item.replace(/\s+-\s+/, '').trim()).join('\n');
-                                        stepElements[index].querySelector('textarea').value = items;
-                                    }
-                                }
-                            });
-                        }
-                    }
-                    
-                    // 주의사항
-                    const noticeSection = content.match(/=== 주의사항 ===\n\n(.+?)(?:\n취소\/변경:|$)/s);
-                    if (noticeSection) {
-                        const warnings = noticeSection[1].match(/^-\s+(.+)/gm);
-                        if (warnings) {
-                            document.getElementById('warnings').value = warnings.map(w => w.replace(/^-\s+/, '')).join('\n');
-                        }
-                    }
-                    
-                    const cancelMatch = content.match(/취소\/변경:\n(.+?)(?=\n\n|$)/s);
-                    const reqMatch = content.match(/준비물:\s*(.+)/);
-                    
-                    document.getElementById('cancellation').value = cancelMatch ? cancelMatch[1].trim() : '';
-                    document.getElementById('requirements').value = reqMatch ? reqMatch[1].trim() : '';
+                    document.getElementById('guide-content').value = guideContent;
                     
                     new bootstrap.Modal(document.getElementById('guideModal')).show();
                 }
@@ -765,6 +605,7 @@
         async function saveGuide() {
             const productName = document.getElementById('product-name').value.trim();
             const category = document.getElementById('category').value.trim();
+            const guideContent = document.getElementById('guide-content').value.trim();
             
             if (!productName) {
                 showAlert('상품명을 입력해주세요.', 'warning');
@@ -776,6 +617,12 @@
             if (!category) {
                 showAlert('카테고리를 선택해주세요.', 'warning');
                 document.querySelector('[data-bs-target="#basic-tab"]').click();
+                return;
+            }
+            
+            if (!guideContent) {
+                showAlert('가이드 내용을 입력해주세요.', 'warning');
+                document.querySelector('[data-bs-target="#content-tab"]').click();
                 return;
             }
             
