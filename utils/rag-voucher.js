@@ -191,34 +191,55 @@ ${guideContent}
  */
 async function generateVoucherInstructions(productName, reservationData) {
     try {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('🎯 RAG 바우처 생성 시작');
+        console.log(`📦 상품명: "${productName}"`);
+        
         if (!productName) {
             console.log('⚠️ 상품명 없음 - RAG 건너뛰기');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return null;
         }
         
         // 1. RAG에서 상품 가이드 찾기
+        console.log('📂 1단계: DB에서 가이드 검색 중...');
         const guide = await findProductGuide(productName);
         
         if (!guide) {
-            console.log('⚠️ RAG 가이드 없음 - 이용방법 섹션 생략');
+            console.log('❌ RAG 가이드 없음 - 이용방법 섹션 생략');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return null;
         }
         
+        console.log(`✅ 가이드 발견: "${guide.name}"`);
+        console.log(`📄 가이드 길이: ${guide.content.length}자`);
+        
         // 2. 이용방법 섹션 추출
+        console.log('📝 2단계: 이용방법 섹션 추출 중...');
         const usageText = extractUsageInstructions(guide.content);
         
         if (!usageText) {
-            console.log('⚠️ 이용방법 섹션 없음 - 섹션 생략');
+            console.log('❌ "=== 이용 방법 ===" 섹션 없음');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return null;
         }
         
-        // 3. AI 기반 맞춤 생성 (또는 HTML 변환)
+        console.log(`✅ 이용방법 추출 성공: ${usageText.length}자`);
+        console.log(`📋 추출된 내용 미리보기:\n${usageText.substring(0, 100)}...`);
+        
+        // 3. HTML 변환
+        console.log('🎨 3단계: HTML 변환 중...');
         const htmlInstructions = await generateWithAI(productName, usageText, reservationData);
+        
+        console.log(`✅ HTML 변환 완료: ${htmlInstructions.length}자`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         return htmlInstructions;
         
     } catch (error) {
         console.error('❌ 바우처 이용방법 생성 오류:', error);
+        console.error('스택:', error.stack);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return null;
     }
 }
