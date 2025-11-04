@@ -218,77 +218,57 @@
         
         /* 문의사항 */
         .contact-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
             margin-top: 15px;
         }
         
         .contact-card {
             background: white;
             border: 2px solid #e9ecef;
-            padding: 20px;
+            padding: 15px 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 12px;
+        }
+        
+        .contact-card:last-child {
+            margin-bottom: 0;
         }
         
         .contact-card.korea {
-            border-color: #2196F3;
-            background: linear-gradient(to bottom, #E3F2FD 0%, white 100%);
+            border-left: 4px solid #2196F3;
         }
         
         .contact-card.local {
-            border-color: #764ba2;
-            background: linear-gradient(to bottom, #F3E5F5 0%, white 100%);
+            border-left: 4px solid #764ba2;
         }
         
         .contact-card h4 {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid currentColor;
-        }
-        
-        .contact-card.korea h4 {
-            color: #1976D2;
-        }
-        
-        .contact-card.local h4 {
-            color: #764ba2;
+            margin-bottom: 8px;
+            color: #333;
         }
         
         .contact-card .contact-item {
-            margin-bottom: 8px;
+            display: inline-block;
+            margin-right: 15px;
             font-size: 13px;
             line-height: 1.6;
         }
         
-        .contact-card .contact-item:last-child {
-            margin-bottom: 0;
-        }
-        
         .contact-card .contact-item strong {
-            display: inline-block;
-            width: 80px;
             color: #666;
             font-weight: 600;
+            margin-right: 5px;
         }
         
         .contact-card a {
-            color: inherit;
+            color: #1976D2;
             text-decoration: none;
             font-weight: 500;
         }
         
         .contact-card a:hover {
             text-decoration: underline;
-        }
-        
-        @media (max-width: 600px) {
-            .contact-section {
-                grid-template-columns: 1fr;
-            }
         }
         
         /* 푸터 */
@@ -506,7 +486,7 @@
                     <div class="contact-card korea">
                         <h4>🇰🇷 한국 담당자</h4>
                         <div class="contact-item">
-                            <strong>담당자:</strong> <%= reservation.created_by || '괌세이브카드 운영팀' %>
+                            <strong>담당자:</strong> <%= reservation.created_by || '괄세이브카드 운영팀' %>
                         </div>
                         <div class="contact-item">
                             <strong>이메일:</strong> <a href="mailto:<%= reservation.created_by_email || 'support@guamsavecard.com' %>"><%= reservation.created_by_email || 'support@guamsavecard.com' %></a>
@@ -530,14 +510,6 @@
                             <strong>전화:</strong> <a href="tel:<%= reservation.vendor_phone %>"><%= reservation.vendor_phone %></a>
                         </div>
                         <% } %>
-                    </div>
-                    <% } else { %>
-                    <!-- 현지 담당자 없을 때 -->
-                    <div class="contact-card local">
-                        <h4>🇺🇸 현지 담당자</h4>
-                        <div class="contact-item" style="color: #999; text-align: center; padding: 10px 0;">
-                            현지 업체 배정 대기 중
-                        </div>
                     </div>
                     <% } %>
                 </div>
