@@ -460,11 +460,6 @@
                         <strong>전화번호:</strong> <a href="tel:<%= reservation.vendor_phone %>"><%= reservation.vendor_phone %></a>
                     </div>
                     <% } %>
-                    <% if (reservation.vendor_email || reservation.vendor_notification_email) { %>
-                    <div class="contact-item">
-                        <strong>이메일:</strong> <a href="mailto:<%= reservation.vendor_email || reservation.vendor_notification_email %>"><%= reservation.vendor_email || reservation.vendor_notification_email %></a>
-                    </div>
-                    <% } %>
                     <% } %>
                 </div>
             </div>
