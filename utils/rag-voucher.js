@@ -98,17 +98,49 @@ async function findProductGuide(productName) {
 }
 
 /**
- * 가이드 내용에서 이용방법 섹션 추출
+ * 가이드 내용에서 모든 섹션 추출 (자유 형식 지원)
+ */
+function extractAllSections(content) {
+    try {
+        const sections = [];
+        
+        // === 섹션명 === 패턴으로 모든 섹션 찾기
+        const sectionPattern = /===\s*(.+?)\s*===\n([\s\S]+?)(?=\n===|$)/g;
+        let match;
+        
+        while ((match = sectionPattern.exec(content)) !== null) {
+            const sectionName = match[1].trim();
+            const sectionContent = match[2].trim();
+            
+            sections.push({
+                name: sectionName,
+                content: sectionContent
+            });
+        }
+        
+        console.log(`📑 추출된 섹션 수: ${sections.length}`);
+        sections.forEach(s => console.log(`   - ${s.name}`));
+        
+        return sections;
+    } catch (error) {
+        console.error('❌ 섹션 추출 오류:', error);
+        return [];
+    }
+}
+
+/**
+ * 가이드 내용에서 이용방법 섹션만 추출 (하위 호환성)
  */
 function extractUsageInstructions(content) {
     try {
-        // "=== 이용 방법 ===" 섹션 추출
-        const usageMatch = content.match(/=== 이용 방법 ===\n([\s\S]+?)(?:\n=== |$)/);
-        if (usageMatch) {
-            return usageMatch[1].trim();
-        }
+        const sections = extractAllSections(content);
+        const usageSection = sections.find(s => 
+            s.name.includes('이용 방법') || 
+            s.name.includes('이용방법') ||
+            s.name.includes('How to Use')
+        );
         
-        return null;
+        return usageSection ? usageSection.content : null;
     } catch (error) {
         console.error('❌ 이용방법 추출 오류:', error);
         return null;
@@ -153,6 +185,27 @@ function convertToHTML(text) {
     }
     
     return `<div style="line-height: 1.8; font-size: 14px;">${htmlLines.join('')}</div>`;
+}
+
+/**
+ * 섹션 배열을 HTML로 변환 (여러 섹션 지원)
+ */
+function convertSectionsToHTML(sections) {
+    if (!sections || sections.length === 0) return '';
+    
+    const htmlSections = sections.map(section => {
+        const contentHTML = convertToHTML(section.content);
+        return `
+            <div style="margin-bottom: 24px;">
+                <h4 style="color: #1a237e; font-size: 16px; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;">
+                    ${section.name}
+                </h4>
+                ${contentHTML}
+            </div>
+        `;
+    });
+    
+    return htmlSections.join('');
 }
 
 /**
@@ -214,22 +267,21 @@ async function generateVoucherInstructions(productName, reservationData) {
         console.log(`✅ 가이드 발견: "${guide.name}"`);
         console.log(`📄 가이드 길이: ${guide.content.length}자`);
         
-        // 2. 이용방법 섹션 추출
-        console.log('📝 2단계: 이용방법 섹션 추출 중...');
-        const usageText = extractUsageInstructions(guide.content);
+        // 2. 모든 섹션 추출 (자유 형식 지원)
+        console.log('📝 2단계: 모든 섹션 추출 중...');
+        const sections = extractAllSections(guide.content);
         
-        if (!usageText) {
-            console.log('❌ "=== 이용 방법 ===" 섹션 없음');
+        if (!sections || sections.length === 0) {
+            console.log('❌ 섹션을 찾을 수 없음');
             console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return null;
         }
         
-        console.log(`✅ 이용방법 추출 성공: ${usageText.length}자`);
-        console.log(`📋 추출된 내용 미리보기:\n${usageText.substring(0, 100)}...`);
+        console.log(`✅ 섹션 추출 성공: ${sections.length}개`);
         
         // 3. HTML 변환
         console.log('🎨 3단계: HTML 변환 중...');
-        const htmlInstructions = await generateWithAI(productName, usageText, reservationData);
+        const htmlInstructions = convertSectionsToHTML(sections);
         
         console.log(`✅ HTML 변환 완료: ${htmlInstructions.length}자`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -327,5 +379,7 @@ module.exports = {
     registerProductGuide,
     listProductGuides,
     findProductGuide,
-    convertToHTML
+    convertToHTML,
+    extractAllSections,
+    convertSectionsToHTML
 };

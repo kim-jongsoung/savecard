@@ -190,7 +190,7 @@
             box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
         }
         
-        /* 이용 방법 */
+        /* 이용 안내 (모든 RAG 섹션) */
         .usage-instructions {
             background: #F5F5F5;
             border-left: 4px solid #2196F3;
@@ -198,6 +198,21 @@
             border-radius: 0 8px 8px 0;
             font-size: 14px;
             line-height: 1.8;
+        }
+        
+        /* RAG 섹션 제목 스타일 */
+        .usage-instructions h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a237e;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-top: 24px;
+        }
+        
+        .usage-instructions h4:first-child {
+            margin-top: 0;
         }
         
         .usage-instructions h3 {
@@ -468,10 +483,10 @@
                 <% } %>
             </div>
             
-            <!-- 3. 바우처 사용법 (RAG 자동 로드) -->
+            <!-- 3. 이용 안내 (RAG 모든 섹션 자동 로드) -->
             <% if (usage_instructions) { %>
             <div class="section">
-                <h2 class="section-title">📍 이용 방법</h2>
+                <h2 class="section-title">📋 이용 안내</h2>
                 <div class="usage-instructions">
                     <%- usage_instructions %>
                 </div>
