@@ -12061,9 +12061,18 @@ app.get('/api/vouchers/:voucherToken/preview', async (req, res) => {
         
         // 바우처 정보 조회
         const result = await pool.query(`
-            SELECT r.*, a.confirmation_number, a.vendor_name, a.vendor_contact
+            SELECT 
+                r.*, 
+                a.confirmation_number, 
+                a.vendor_name, 
+                a.vendor_contact,
+                v.email as vendor_email,
+                v.phone as vendor_phone,
+                v.contact_person as vendor_contact_person,
+                v.notification_email as vendor_notification_email
             FROM reservations r
             LEFT JOIN assignments a ON r.id = a.reservation_id
+            LEFT JOIN vendors v ON a.vendor_id = v.id
             WHERE r.voucher_token = $1
         `, [voucherToken]);
         
@@ -14432,9 +14441,14 @@ app.get('/voucher/:token', async (req, res) => {
                 a.response_at,
                 a.created_at as voucher_created_at,
                 a.sent_at as voucher_sent_at,
-                a.viewed_at as voucher_viewed_at
+                a.viewed_at as voucher_viewed_at,
+                v.email as vendor_email,
+                v.phone as vendor_phone,
+                v.contact_person as vendor_contact_person,
+                v.notification_email as vendor_notification_email
             FROM reservations r
             LEFT JOIN assignments a ON r.id = a.reservation_id
+            LEFT JOIN vendors v ON a.vendor_id = v.id
             WHERE r.voucher_token = $1
         `;
         

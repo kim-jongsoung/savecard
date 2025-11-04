@@ -450,9 +450,19 @@
                     <div class="contact-item">
                         <strong>현지 담당자:</strong> <%= reservation.vendor_name %>
                     </div>
-                    <% if (reservation.vendor_contact) { %>
+                    <% if (reservation.vendor_contact_person) { %>
                     <div class="contact-item">
-                        <strong>전화번호:</strong> <a href="tel:<%= reservation.vendor_contact %>"><%= reservation.vendor_contact %></a>
+                        <strong>담당자명:</strong> <%= reservation.vendor_contact_person %>
+                    </div>
+                    <% } %>
+                    <% if (reservation.vendor_phone) { %>
+                    <div class="contact-item">
+                        <strong>전화번호:</strong> <a href="tel:<%= reservation.vendor_phone %>"><%= reservation.vendor_phone %></a>
+                    </div>
+                    <% } %>
+                    <% if (reservation.vendor_email || reservation.vendor_notification_email) { %>
+                    <div class="contact-item">
+                        <strong>이메일:</strong> <a href="mailto:<%= reservation.vendor_email || reservation.vendor_notification_email %>"><%= reservation.vendor_email || reservation.vendor_notification_email %></a>
                     </div>
                     <% } %>
                     <% } %>
