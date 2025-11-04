@@ -8038,13 +8038,15 @@ app.get('/assignment/:token', async (req, res) => {
 
         // 수배업체 정보 추가 조회
         if (assignment.vendor_id) {
-            const vendorQuery = `SELECT vendor_name, email, phone FROM vendors WHERE id = $1`;
+            const vendorQuery = `SELECT vendor_name, email, phone, contact_person, notification_email FROM vendors WHERE id = $1`;
             const vendorResult = await pool.query(vendorQuery, [assignment.vendor_id]);
             if (vendorResult.rows.length > 0) {
                 const vendor = vendorResult.rows[0];
                 assignment.assignment_vendor = vendor.vendor_name;
                 assignment.vendor_email = vendor.email;
                 assignment.vendor_phone = vendor.phone;
+                assignment.vendor_contact_person = vendor.contact_person;
+                assignment.vendor_notification_email = vendor.notification_email;
             }
         }
 

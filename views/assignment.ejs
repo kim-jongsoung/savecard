@@ -341,18 +341,59 @@
                                 <% } %>
                             </div>
                             <div class="col-12">
-                                <strong>Contact Information (문의사항):</strong><br>
-                                <div class="mt-2">
-                                    <i class="bi bi-person me-2"></i><strong>한국 담당자:</strong> <%= assignment.created_by || '괌세이브카드 운영팀' %><br>
-                                    <i class="bi bi-envelope me-2"></i><strong>이메일:</strong> <%= assignment.created_by_email || 'support@guamsavecard.com' %>
-                                </div>
-                                <div class="mt-2">
-                                    <i class="bi bi-building me-2"></i><strong>현지 담당자:</strong> <%= assignment.assignment_vendor || assignment.vendor_name || 'Not Assigned' %><br>
-                                    <% if (assignment.vendor_phone) { %>
-                                    <i class="bi bi-telephone me-2"></i><strong>전화번호:</strong> <%= assignment.vendor_phone %>
-                                    <% } else { %>
-                                    <i class="bi bi-telephone me-2"></i><strong>전화번호:</strong> +1 (671) 789-8989
-                                    <% } %>
+                                <strong>Contact Information (문의사항):</strong>
+                                <div class="row mt-3 g-3">
+                                    <!-- 한국 담당자 -->
+                                    <div class="col-md-6">
+                                        <div class="card h-100" style="border: 2px solid #2196F3; background: linear-gradient(to bottom, #E3F2FD 0%, white 100%);">
+                                            <div class="card-header" style="background: transparent; border-bottom: 2px solid #1976D2; color: #1976D2; font-weight: 700;">
+                                                🇰🇷 한국 담당자
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-2">
+                                                    <strong style="display: inline-block; width: 80px; color: #666;">담당자:</strong>
+                                                    <%= assignment.created_by || '괌세이브카드 운영팀' %>
+                                                </div>
+                                                <div>
+                                                    <strong style="display: inline-block; width: 80px; color: #666;">이메일:</strong>
+                                                    <%= assignment.created_by_email || 'support@guamsavecard.com' %>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 현지 담당자 -->
+                                    <div class="col-md-6">
+                                        <div class="card h-100" style="border: 2px solid #764ba2; background: linear-gradient(to bottom, #F3E5F5 0%, white 100%);">
+                                            <div class="card-header" style="background: transparent; border-bottom: 2px solid #764ba2; color: #764ba2; font-weight: 700;">
+                                                🇺🇸 현지 담당자
+                                            </div>
+                                            <div class="card-body">
+                                                <% if (assignment.assignment_vendor && assignment.assignment_vendor !== '미지정') { %>
+                                                <div class="mb-2">
+                                                    <strong style="display: inline-block; width: 80px; color: #666;">업체명:</strong>
+                                                    <%= assignment.assignment_vendor %>
+                                                </div>
+                                                <% if (assignment.vendor_contact_person) { %>
+                                                <div class="mb-2">
+                                                    <strong style="display: inline-block; width: 80px; color: #666;">담당자:</strong>
+                                                    <%= assignment.vendor_contact_person %>
+                                                </div>
+                                                <% } %>
+                                                <% if (assignment.vendor_phone) { %>
+                                                <div>
+                                                    <strong style="display: inline-block; width: 80px; color: #666;">전화:</strong>
+                                                    <%= assignment.vendor_phone %>
+                                                </div>
+                                                <% } %>
+                                                <% } else { %>
+                                                <div style="color: #999; text-align: center; padding: 10px 0;">
+                                                    현지 업체 배정 대기 중
+                                                </div>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <% if (assignment.notes) { %>
