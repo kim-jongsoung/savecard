@@ -8816,6 +8816,8 @@ app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) =
                 r.usage_date,
                 r.people_adult as adult_count,
                 r.people_child as child_count,
+                r.created_by,
+                r.created_by_email,
                 v.email as vendor_email,
                 v.vendor_name
             FROM assignments a
@@ -8848,7 +8850,9 @@ app.post('/api/assignments/:reservationId/send', requireAuth, async (req, res) =
                     customer_name: assignmentData.customer_name,
                     usage_date: assignmentData.usage_date,
                     adult_count: assignmentData.adult_count,
-                    child_count: assignmentData.child_count
+                    child_count: assignmentData.child_count,
+                    created_by: assignmentData.created_by,
+                    created_by_email: assignmentData.created_by_email
                 },
                 assignmentData.vendor_email
             );

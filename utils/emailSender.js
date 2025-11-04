@@ -22,7 +22,14 @@ function createTransporter() {
 // AI로 정중한 이메일 문구 생성
 async function generateEmailContent(assignmentData) {
     try {
-        const prompt = `당신은 여행사 직원입니다. 현지 수배업체에게 예약 수배를 요청하는 정중한 이메일 문구를 작성해주세요.
+        const senderName = assignmentData.created_by || '괌 예약팀';
+        const senderEmail = assignmentData.created_by_email || 'support@guamsavecard.com';
+        
+        const prompt = `당신은 ${senderName} 담당자입니다. 현지 수배업체에게 예약 수배를 요청하는 정중한 이메일 문구를 작성해주세요.
+
+담당자 정보:
+- 이름: ${senderName}
+- 이메일: ${senderEmail}
 
 예약 정보:
 - 상품명: ${assignmentData.product_name}
@@ -38,6 +45,8 @@ async function generateEmailContent(assignmentData) {
 4. 3-4문장 정도의 간결한 내용
 5. 인사말로 시작하고 감사 인사로 마무리
 6. 한국어로 작성
+7. "세이브카드" 또는 "괌세이브카드" 라는 표현 사용 금지 - 대신 담당자 이름 사용
+8. 담당자 연락처를 포함할 것
 
 출력 형식: JSON
 {
@@ -52,7 +61,7 @@ async function generateEmailContent(assignmentData) {
             messages: [
                 {
                     role: 'system',
-                    content: '당신은 여행사 예약 담당자입니다. 현지 수배업체와의 소통을 위한 정중하고 전문적인 이메일을 작성합니다.'
+                    content: '당신은 예약 담당자입니다. 현지 수배업체와의 소통을 위한 정중하고 전문적인 이메일을 작성합니다. "세이브카드" 또는 "괌세이브카드" 같은 회사명 대신 담당자 개인의 이름으로 서명해야 합니다.'
                 },
                 {
                     role: 'user',
@@ -70,8 +79,9 @@ async function generateEmailContent(assignmentData) {
     } catch (error) {
         console.error('❌ AI 문구 생성 실패:', error);
         // 폴백: 기본 문구 반환
+        const senderName = assignmentData.created_by || '괌 예약팀';
         return {
-            subject: `[괌세이브카드] 수배 요청 - ${assignmentData.product_name}`,
+            subject: `[수배 요청] ${assignmentData.product_name}`,
             greeting: '안녕하세요.',
             body: `${assignmentData.product_name} 예약에 대한 수배를 요청드립니다.\n아래 수배서 링크를 클릭하여 상세 내용을 확인해주시고, 확정 후 회신 부탁드립니다.`,
             closing: '감사합니다.'
@@ -168,7 +178,7 @@ function createEmailHTML(emailContent, assignmentLink, assignmentData) {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏝️ 괌세이브카드 수배 요청</h1>
+            <h1>🏝️ 수배 요청</h1>
         </div>
         
         <div class="content">
@@ -196,11 +206,14 @@ function createEmailHTML(emailContent, assignmentLink, assignmentData) {
             </p>
             
             <p style="margin-top: 30px;">${emailContent.closing}</p>
-            <p><strong>괌세이브카드 예약팀</strong></p>
+            <p><strong>${assignmentData.created_by || '괌 예약팀'}</strong></p>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                <i class="bi bi-envelope"></i> ${assignmentData.created_by_email || 'support@guamsavecard.com'}
+            </p>
         </div>
         
         <div class="footer">
-            <p>본 메일은 괌세이브카드 예약 시스템에서 자동 발송되었습니다.</p>
+            <p>본 메일은 예약 관리 시스템에서 자동 발송되었습니다.</p>
             <p>문의사항이 있으시면 회신 부탁드립니다.</p>
         </div>
     </div>
@@ -227,8 +240,12 @@ async function sendAssignmentEmail(assignmentData, recipientEmail) {
         // 4. 이메일 발송
         const transporter = createTransporter();
         
+        const senderName = assignmentData.created_by || '괌 예약팀';
+        const senderEmail = assignmentData.created_by_email || 'support@guamsavecard.com';
+        
         const mailOptions = {
-            from: `"괌세이브카드 예약팀" <${process.env.SMTP_USER}>`,
+            from: `"${senderName}" <${process.env.SMTP_USER}>`,
+            replyTo: senderEmail,
             to: recipientEmail,
             subject: emailContent.subject,
             html: htmlContent,
@@ -247,7 +264,8 @@ ${emailContent.body}
 
 ${emailContent.closing}
 
-괌세이브카드 예약팀
+${senderName}
+연락처: ${senderEmail}
             `.trim()
         };
         
