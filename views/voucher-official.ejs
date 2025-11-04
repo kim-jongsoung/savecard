@@ -217,31 +217,78 @@
         }
         
         /* 문의사항 */
-        .contact-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
+        .contact-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .contact-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            padding: 20px;
             border-radius: 8px;
-            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
-        .contact-box h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 15px;
+        .contact-card.korea {
+            border-color: #2196F3;
+            background: linear-gradient(to bottom, #E3F2FD 0%, white 100%);
         }
         
-        .contact-box .contact-item {
-            display: inline-block;
-            margin: 0 15px;
+        .contact-card.local {
+            border-color: #764ba2;
+            background: linear-gradient(to bottom, #F3E5F5 0%, white 100%);
+        }
+        
+        .contact-card h4 {
             font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid currentColor;
+        }
+        
+        .contact-card.korea h4 {
+            color: #1976D2;
+        }
+        
+        .contact-card.local h4 {
+            color: #764ba2;
+        }
+        
+        .contact-card .contact-item {
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .contact-card .contact-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .contact-card .contact-item strong {
+            display: inline-block;
+            width: 80px;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .contact-card a {
+            color: inherit;
+            text-decoration: none;
             font-weight: 500;
         }
         
-        .contact-box a {
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
+        .contact-card a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 600px) {
+            .contact-section {
+                grid-template-columns: 1fr;
+            }
         }
         
         /* 푸터 */
@@ -295,6 +342,21 @@
                 background: none;
                 color: #212529;
                 border-bottom: 2px solid #212529;
+            }
+            
+            .contact-card {
+                box-shadow: none;
+                page-break-inside: avoid;
+            }
+            
+            .contact-card.korea {
+                background: white;
+                border-color: #2196F3;
+            }
+            
+            .contact-card.local {
+                background: white;
+                border-color: #764ba2;
             }
         }
         
@@ -438,28 +500,45 @@
             
             <!-- 4. 문의사항 -->
             <div class="section">
-                <div class="contact-box">
-                    <h3>💬 문의사항이 있으신가요?</h3>
-                    <div class="contact-item">
-                        <strong>한국 담당자:</strong> <%= reservation.created_by || '괌세이브카드 운영팀' %>
+                <h2 class="section-title">💬 문의사항</h2>
+                <div class="contact-section">
+                    <!-- 한국 담당자 -->
+                    <div class="contact-card korea">
+                        <h4>🇰🇷 한국 담당자</h4>
+                        <div class="contact-item">
+                            <strong>담당자:</strong> <%= reservation.created_by || '괌세이브카드 운영팀' %>
+                        </div>
+                        <div class="contact-item">
+                            <strong>이메일:</strong> <a href="mailto:<%= reservation.created_by_email || 'support@guamsavecard.com' %>"><%= reservation.created_by_email || 'support@guamsavecard.com' %></a>
+                        </div>
                     </div>
-                    <div class="contact-item">
-                        <strong>이메일:</strong> <a href="mailto:<%= reservation.created_by_email || 'support@guamsavecard.com' %>"><%= reservation.created_by_email || 'support@guamsavecard.com' %></a>
-                    </div>
+                    
                     <% if (reservation.vendor_name) { %>
-                    <div class="contact-item">
-                        <strong>현지 담당자:</strong> <%= reservation.vendor_name %>
+                    <!-- 현지 담당자 -->
+                    <div class="contact-card local">
+                        <h4>🇺🇸 현지 담당자</h4>
+                        <div class="contact-item">
+                            <strong>업체명:</strong> <%= reservation.vendor_name %>
+                        </div>
+                        <% if (reservation.vendor_contact_person) { %>
+                        <div class="contact-item">
+                            <strong>담당자:</strong> <%= reservation.vendor_contact_person %>
+                        </div>
+                        <% } %>
+                        <% if (reservation.vendor_phone) { %>
+                        <div class="contact-item">
+                            <strong>전화:</strong> <a href="tel:<%= reservation.vendor_phone %>"><%= reservation.vendor_phone %></a>
+                        </div>
+                        <% } %>
                     </div>
-                    <% if (reservation.vendor_contact_person) { %>
-                    <div class="contact-item">
-                        <strong>담당자명:</strong> <%= reservation.vendor_contact_person %>
+                    <% } else { %>
+                    <!-- 현지 담당자 없을 때 -->
+                    <div class="contact-card local">
+                        <h4>🇺🇸 현지 담당자</h4>
+                        <div class="contact-item" style="color: #999; text-align: center; padding: 10px 0;">
+                            현지 업체 배정 대기 중
+                        </div>
                     </div>
-                    <% } %>
-                    <% if (reservation.vendor_phone) { %>
-                    <div class="contact-item">
-                        <strong>전화번호:</strong> <a href="tel:<%= reservation.vendor_phone %>"><%= reservation.vendor_phone %></a>
-                    </div>
-                    <% } %>
                     <% } %>
                 </div>
             </div>
