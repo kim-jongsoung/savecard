@@ -16157,10 +16157,10 @@ async function startServer() {
         // 정산 목록 조회 (상태별)
         app.get('/api/settlements/list', requireAuth, async (req, res) => {
             try {
-                const { status, start_date, end_date, search } = req.query;
-                console.log('💰 정산 목록 조회:', { status, start_date, end_date, search });
+                const { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent } = req.query;
+                console.log('💰 정산 목록 조회:', { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent });
                 
-                // settlements 테이블과 reservations 테이블 조인
+                // settlements 테이블과 reservations, assignments, vendors 테이블 조인
                 let query = `
                     SELECT 
                         s.*,
@@ -16168,9 +16168,12 @@ async function startServer() {
                         r.korean_name,
                         r.product_name,
                         r.platform_name,
-                        r.usage_date
+                        r.usage_date,
+                        v.vendor_name
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
+                    LEFT JOIN assignments a ON a.reservation_id = r.id
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
                     WHERE 1=1
                 `;
                 
@@ -16183,23 +16186,50 @@ async function startServer() {
                     query += ' AND s.payment_received_date IS NOT NULL AND s.payment_sent_date IS NOT NULL';
                 }
                 
-                // 기간 필터
+                // 기간 필터 (이용일 기준)
                 if (start_date) {
                     params.push(start_date);
-                    query += ` AND s.created_at >= $${params.length}`;
+                    query += ` AND r.usage_date >= $${params.length}`;
                 }
                 if (end_date) {
                     params.push(end_date);
-                    query += ` AND s.created_at <= $${params.length}`;
+                    query += ` AND r.usage_date <= $${params.length}`;
                 }
                 
-                // 검색 필터
+                // 예약업체 필터
+                if (platform) {
+                    params.push(platform);
+                    query += ` AND r.platform_name = $${params.length}`;
+                }
+                
+                // 수배업체 필터
+                if (vendor) {
+                    params.push(vendor);
+                    query += ` AND v.vendor_name = $${params.length}`;
+                }
+                
+                // 입금상태 필터
+                if (payment_received === 'completed') {
+                    query += ' AND s.payment_received_date IS NOT NULL';
+                } else if (payment_received === 'pending') {
+                    query += ' AND s.payment_received_date IS NULL';
+                }
+                
+                // 송금상태 필터
+                if (payment_sent === 'completed') {
+                    query += ' AND s.payment_sent_date IS NOT NULL';
+                } else if (payment_sent === 'pending') {
+                    query += ' AND s.payment_sent_date IS NULL';
+                }
+                
+                // 검색 필터 (손님이름 또는 상품명)
                 if (search) {
                     params.push(`%${search}%`);
-                    query += ` AND r.reservation_number ILIKE $${params.length}`;
+                    const searchIdx = params.length;
+                    query += ` AND (r.korean_name ILIKE $${searchIdx} OR r.product_name ILIKE $${searchIdx})`;
                 }
                 
-                query += ' ORDER BY s.created_at DESC';
+                query += ' ORDER BY r.usage_date DESC, s.created_at DESC';
                 
                 const result = await pool.query(query, params);
                 
@@ -16277,6 +16307,56 @@ async function startServer() {
                 res.status(500).json({
                     success: false,
                     message: '입금/송금 처리 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 예약업체 목록 조회
+        app.get('/api/settlements/platforms', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT r.platform_name
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    WHERE r.platform_name IS NOT NULL AND r.platform_name != ''
+                    ORDER BY r.platform_name
+                `);
+                
+                res.json({
+                    success: true,
+                    data: result.rows.map(row => row.platform_name)
+                });
+            } catch (error) {
+                console.error('❌ 예약업체 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '예약업체 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 수배업체 목록 조회
+        app.get('/api/settlements/vendors', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT v.vendor_name
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    LEFT JOIN assignments a ON a.reservation_id = r.id
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
+                    WHERE v.vendor_name IS NOT NULL
+                    ORDER BY v.vendor_name
+                `);
+                
+                res.json({
+                    success: true,
+                    data: result.rows.map(row => row.vendor_name)
+                });
+            } catch (error) {
+                console.error('❌ 수배업체 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '수배업체 목록 조회 중 오류가 발생했습니다.'
                 });
             }
         });

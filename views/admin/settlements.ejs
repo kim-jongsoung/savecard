@@ -151,26 +151,56 @@
                                     <input type="date" class="form-control form-control-sm" id="endDate">
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">예약번호 검색</label>
-                                <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="예약번호 입력...">
+                            <div class="col-md-2">
+                                <label class="form-label small">예약업체</label>
+                                <select class="form-select form-select-sm" id="platformFilter">
+                                    <option value="">전체</option>
+                                </select>
                             </div>
                             <div class="col-md-2">
+                                <label class="form-label small">수배업체</label>
+                                <select class="form-select form-select-sm" id="vendorFilter">
+                                    <option value="">전체</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">입금상태</label>
+                                <select class="form-select form-select-sm" id="paymentReceivedFilter">
+                                    <option value="">전체</option>
+                                    <option value="completed">완료</option>
+                                    <option value="pending">미완료</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">송금상태</label>
+                                <select class="form-select form-select-sm" id="paymentSentFilter">
+                                    <option value="">전체</option>
+                                    <option value="completed">완료</option>
+                                    <option value="pending">미완료</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1">
                                 <label class="form-label small">&nbsp;</label>
                                 <button class="btn btn-outline-primary btn-sm w-100" onclick="searchSettlements()">
-                                    <i class="fas fa-search"></i> 검색
+                                    <i class="fas fa-search"></i>
                                 </button>
                             </div>
-                            <div class="col-md-2">
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-10">
+                                <label class="form-label small">손님이름/상품명 검색</label>
+                                <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="손님이름 또는 상품명 입력...">
+                            </div>
+                            <div class="col-md-1">
                                 <label class="form-label small">&nbsp;</label>
                                 <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">
-                                    <i class="fas fa-undo"></i> 초기화
+                                    <i class="fas fa-undo"></i>
                                 </button>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <label class="form-label small">&nbsp;</label>
                                 <button class="btn btn-success btn-sm w-100" onclick="exportSettlements()">
-                                    <i class="fas fa-download"></i> 내보내기
+                                    <i class="fas fa-download"></i>
                                 </button>
                             </div>
                         </div>
@@ -659,12 +689,20 @@
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
                 const searchText = document.getElementById('searchInput').value;
+                const platformFilter = document.getElementById('platformFilter').value;
+                const vendorFilter = document.getElementById('vendorFilter').value;
+                const paymentReceivedFilter = document.getElementById('paymentReceivedFilter').value;
+                const paymentSentFilter = document.getElementById('paymentSentFilter').value;
                 
                 const params = new URLSearchParams({
                     status: status,
                     start_date: startDate || '',
                     end_date: endDate || '',
-                    search: searchText || ''
+                    search: searchText || '',
+                    platform: platformFilter || '',
+                    vendor: vendorFilter || '',
+                    payment_received: paymentReceivedFilter || '',
+                    payment_sent: paymentSentFilter || ''
                 });
                 
                 const response = await fetch(`/api/settlements/list?${params}`);
@@ -697,67 +735,96 @@
                 return;
             }
             
-            const html = settlements.map(s => {
+            // 총액 계산
+            let totalRevenue = 0;
+            let totalCost = 0;
+            let totalMargin = 0;
+            let totalTax = 0;
+            
+            const rows = settlements.map(s => {
                 const isPaymentReceived = !!s.payment_received_date;
                 const isPaymentSent = !!s.payment_sent_date;
                 
+                // 거래액 (KRW 환산)
+                const revenueKRW = s.sale_currency === 'KRW' ? (s.net_revenue || 0) : (s.net_revenue || 0) * (s.exchange_rate || 1330);
+                // 매입액 (KRW 환산)
+                const costKRW = s.cost_krw || 0;
+                // 마진
+                const marginKRW = s.margin_krw || 0;
+                // 부가세 = 마진*10% - 예약업체수수료*10%
+                const saleTax = marginKRW * 0.1;
+                const commissionTax = (s.commission_amount || 0) * 0.1;
+                const tax = saleTax - commissionTax;
+                
+                totalRevenue += revenueKRW;
+                totalCost += costKRW;
+                totalMargin += marginKRW;
+                totalTax += tax;
+                
                 return `
-                    <div class="card mb-3 shadow-sm">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <h6 class="mb-2">
-                                        <i class="fas fa-file-invoice-dollar me-2 text-primary"></i>
-                                        ${s.reservation_number || '예약번호 없음'}
-                                        <small class="text-muted ms-2">${s.product_name || ''}</small>
-                                    </h6>
-                                    <div class="small text-muted mb-2">
-                                        <i class="fas fa-user me-1"></i>${s.korean_name || '-'}
-                                        <i class="fas fa-building ms-3 me-1"></i>${s.platform_name || '-'}
-                                        <i class="fas fa-calendar ms-3 me-1"></i>${s.usage_date || '-'}
-                                    </div>
-                                    <div class="row g-2 mt-2">
-                                        <div class="col-auto">
-                                            <span class="badge bg-success">거래액: ${formatCurrency(s.net_revenue, s.sale_currency)}</span>
-                                        </div>
-                                        <div class="col-auto">
-                                            <span class="badge bg-danger">매입: ${formatCurrency(s.total_cost, s.cost_currency)}</span>
-                                        </div>
-                                        <div class="col-auto">
-                                            <span class="badge bg-primary">마진: ${formatCurrency(s.margin_krw, 'KRW')} (${s.margin_rate || 0}%)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 text-end">
-                                    ${status === 'incomplete' ? `
-                                        <div class="d-grid gap-2">
-                                            <button class="btn btn-sm ${isPaymentReceived ? 'btn-outline-success' : 'btn-success'}" 
-                                                    onclick="processPayment(${s.id}, 'received')" 
-                                                    ${isPaymentReceived ? 'disabled' : ''}>
-                                                <i class="fas ${isPaymentReceived ? 'fa-check' : 'fa-arrow-down'} me-1"></i>
-                                                ${isPaymentReceived ? `입금완료 (${s.payment_received_date})` : '입금처리'}
-                                            </button>
-                                            <button class="btn btn-sm ${isPaymentSent ? 'btn-outline-danger' : 'btn-danger'}" 
-                                                    onclick="processPayment(${s.id}, 'sent')"
-                                                    ${isPaymentSent ? 'disabled' : ''}>
-                                                <i class="fas ${isPaymentSent ? 'fa-check' : 'fa-arrow-up'} me-1"></i>
-                                                ${isPaymentSent ? `송금완료 (${s.payment_sent_date})` : '송금처리'}
-                                            </button>
-                                        </div>
-                                    ` : `
-                                        <div class="text-success mb-2">
-                                            <i class="fas fa-check-circle me-1"></i>입금: ${s.payment_received_date || '-'}
-                                        </div>
-                                        <div class="text-success">
-                                            <i class="fas fa-check-circle me-1"></i>송금: ${s.payment_sent_date || '-'}
-                                        </div>
-                                    `}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <tr>
+                        <td><small>${s.usage_date || '-'}</small></td>
+                        <td><strong>${s.korean_name || '-'}</strong></td>
+                        <td><small>${s.product_name || '-'}</small></td>
+                        <td><small>${s.platform_name || '-'}</small></td>
+                        <td><small>${s.vendor_name || '-'}</small></td>
+                        <td class="text-end"><strong>${formatCurrency(revenueKRW, 'KRW')}</strong></td>
+                        <td class="text-end text-danger"><strong>${formatCurrency(costKRW, 'KRW')}</strong></td>
+                        <td class="text-end text-primary"><strong>${formatCurrency(marginKRW, 'KRW')}</strong></td>
+                        <td class="text-end text-info"><small>${formatCurrency(tax, 'KRW')}</small></td>
+                        <td class="text-center">
+                            ${status === 'incomplete' ? `
+                                <button class="btn btn-sm ${isPaymentReceived ? 'btn-outline-success' : 'btn-success'} btn-sm" 
+                                        onclick="processPayment(${s.id}, 'received')" 
+                                        ${isPaymentReceived ? 'disabled' : ''}>
+                                    <i class="fas fa-arrow-down"></i>
+                                </button>
+                                <button class="btn btn-sm ${isPaymentSent ? 'btn-outline-danger' : 'btn-danger'} btn-sm" 
+                                        onclick="processPayment(${s.id}, 'sent')"
+                                        ${isPaymentSent ? 'disabled' : ''}>
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                            ` : `
+                                <span class="badge bg-success"><i class="fas fa-check"></i></span>
+                            `}
+                        </td>
+                    </tr>
                 `;
             }).join('');
+            
+            const html = `
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>이용일</th>
+                                <th>손님이름</th>
+                                <th>상품명</th>
+                                <th>예약업체</th>
+                                <th>수배업체</th>
+                                <th class="text-end">거래액</th>
+                                <th class="text-end">매입액</th>
+                                <th class="text-end">마진</th>
+                                <th class="text-end">부가세</th>
+                                <th class="text-center">처리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th colspan="5" class="text-end">총액</th>
+                                <th class="text-end">${formatCurrency(totalRevenue, 'KRW')}</th>
+                                <th class="text-end text-danger">${formatCurrency(totalCost, 'KRW')}</th>
+                                <th class="text-end text-primary">${formatCurrency(totalMargin, 'KRW')}</th>
+                                <th class="text-end text-info">${formatCurrency(totalTax, 'KRW')}</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
             
             container.innerHTML = html;
         }
@@ -1441,8 +1508,48 @@
             }).join('');
         }
 
+        // 예약업체 및 수배업체 목록 로드
+        async function loadFilterOptions() {
+            try {
+                // 예약업체 목록 로드
+                const platformsResponse = await fetch('/api/settlements/platforms');
+                if (platformsResponse.ok) {
+                    const platformsData = await platformsResponse.json();
+                    const platformSelect = document.getElementById('platformFilter');
+                    if (platformsData.success && platformsData.data) {
+                        platformsData.data.forEach(platform => {
+                            const option = document.createElement('option');
+                            option.value = platform;
+                            option.textContent = platform;
+                            platformSelect.appendChild(option);
+                        });
+                    }
+                }
+                
+                // 수배업체 목록 로드
+                const vendorsResponse = await fetch('/api/settlements/vendors');
+                if (vendorsResponse.ok) {
+                    const vendorsData = await vendorsResponse.json();
+                    const vendorSelect = document.getElementById('vendorFilter');
+                    if (vendorsData.success && vendorsData.data) {
+                        vendorsData.data.forEach(vendor => {
+                            const option = document.createElement('option');
+                            option.value = vendor;
+                            option.textContent = vendor;
+                            vendorSelect.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('❌ 필터 옵션 로드 실패:', error);
+            }
+        }
+        
         // 요금 RAG 폼 제출 이벤트
         document.addEventListener('DOMContentLoaded', function() {
+            // 필터 옵션 로드
+            loadFilterOptions();
+            
             const priceRagForm = document.getElementById('priceRagForm');
             if (priceRagForm) {
                 priceRagForm.addEventListener('submit', async function(e) {
