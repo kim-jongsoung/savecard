@@ -16487,12 +16487,12 @@ async function startServer() {
                     );
                 `);
                 
-                // 7. settlements 테이블 생성
+                // 7. settlements 테이블 생성 및 컬럼 추가
                 await pool.query(`
                     CREATE TABLE IF NOT EXISTS settlements (
                         id SERIAL PRIMARY KEY,
-                        settlement_period VARCHAR(20) NOT NULL,
-                        reservation_id INTEGER,
+                        reservation_id INTEGER NOT NULL,
+                        settlement_period VARCHAR(20),
                         total_sales DECIMAL(12,2) DEFAULT 0.00,
                         total_purchases DECIMAL(12,2) DEFAULT 0.00,
                         gross_margin DECIMAL(12,2) DEFAULT 0.00,
@@ -16506,8 +16506,69 @@ async function startServer() {
                         created_at TIMESTAMP DEFAULT NOW(),
                         updated_at TIMESTAMP DEFAULT NOW()
                     );
-                    CREATE INDEX IF NOT EXISTS idx_settlements_settlement_period ON settlements(settlement_period);
                 `);
+                
+                // 정산이관 기능을 위한 컬럼 추가
+                const settlementColumns = [
+                    { name: 'sale_currency', type: 'VARCHAR(10)', default: "'KRW'" },
+                    { name: 'sale_adult_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'sale_child_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'sale_infant_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'total_sale', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'commission_rate', type: 'DECIMAL(5, 2)', default: '0' },
+                    { name: 'commission_amount', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'net_revenue', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'cost_currency', type: 'VARCHAR(10)', default: "'USD'" },
+                    { name: 'cost_adult_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'cost_child_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'cost_infant_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'total_cost', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'exchange_rate', type: 'DECIMAL(10, 4)', default: '1330' },
+                    { name: 'cost_krw', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'margin_krw', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'payment_received_date', type: 'DATE', default: 'NULL' },
+                    { name: 'payment_sent_date', type: 'DATE', default: 'NULL' },
+                    { name: 'settlement_status', type: 'VARCHAR(50)', default: "'pending'" },
+                    { name: 'memo', type: 'TEXT', default: 'NULL' }
+                ];
+                
+                for (const col of settlementColumns) {
+                    try {
+                        await pool.query(`
+                            ALTER TABLE settlements 
+                            ADD COLUMN IF NOT EXISTS ${col.name} ${col.type} DEFAULT ${col.default}
+                        `);
+                    } catch (e) {
+                        // 컬럼이 이미 존재하면 무시
+                        if (!e.message.includes('already exists')) {
+                            console.log(`⚠️ ${col.name} 컬럼 추가 중 오류:`, e.message);
+                        }
+                    }
+                }
+                
+                // 인덱스 생성
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_settlements_settlement_period ON settlements(settlement_period);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_reservation_id ON settlements(reservation_id);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_status ON settlements(settlement_status);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_payment_received ON settlements(payment_received_date);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_payment_sent ON settlements(payment_sent_date);
+                `);
+                
+                // UNIQUE 제약 추가 (reservation_id는 한 번만 정산 이관)
+                try {
+                    await pool.query(`
+                        ALTER TABLE settlements 
+                        ADD CONSTRAINT unique_reservation_settlement 
+                        UNIQUE (reservation_id)
+                    `);
+                } catch (e) {
+                    if (!e.message.includes('already exists')) {
+                        console.log('⚠️ UNIQUE 제약 추가 중 오류:', e.message);
+                    }
+                }
+                
+                console.log('✅ settlements 테이블 업데이트 완료');
                 
                 // 6. 기본 field_defs 데이터 삽입 (테이블 존재 확인 후)
                 const fieldDefsCheck = await pool.query(`
