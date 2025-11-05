@@ -16145,6 +16145,135 @@ async function startServer() {
             }
         });
         
+        // ==================== 정산관리 목록 및 처리 API ====================
+        
+        // 정산 목록 조회 (상태별)
+        app.get('/api/settlements/list', requireAuth, async (req, res) => {
+            try {
+                const { status, start_date, end_date, search } = req.query;
+                console.log('💰 정산 목록 조회:', { status, start_date, end_date, search });
+                
+                // settlements 테이블과 reservations 테이블 조인
+                let query = `
+                    SELECT 
+                        s.*,
+                        r.reservation_number,
+                        r.korean_name,
+                        r.product_name,
+                        r.platform_name,
+                        r.usage_date
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    WHERE 1=1
+                `;
+                
+                const params = [];
+                
+                // 상태 필터 (incomplete: 입금 또는 송금 미완료, completed: 둘 다 완료)
+                if (status === 'incomplete') {
+                    query += ' AND (s.payment_received_date IS NULL OR s.payment_sent_date IS NULL)';
+                } else if (status === 'completed') {
+                    query += ' AND s.payment_received_date IS NOT NULL AND s.payment_sent_date IS NOT NULL';
+                }
+                
+                // 기간 필터
+                if (start_date) {
+                    params.push(start_date);
+                    query += ` AND s.created_at >= $${params.length}`;
+                }
+                if (end_date) {
+                    params.push(end_date);
+                    query += ` AND s.created_at <= $${params.length}`;
+                }
+                
+                // 검색 필터
+                if (search) {
+                    params.push(`%${search}%`);
+                    query += ` AND r.reservation_number ILIKE $${params.length}`;
+                }
+                
+                query += ' ORDER BY s.created_at DESC';
+                
+                const result = await pool.query(query, params);
+                
+                // 카운트 계산
+                const countQuery = `
+                    SELECT 
+                        COUNT(*) FILTER (WHERE payment_received_date IS NULL OR payment_sent_date IS NULL) as incomplete,
+                        COUNT(*) FILTER (WHERE payment_received_date IS NOT NULL AND payment_sent_date IS NOT NULL) as completed
+                    FROM settlements
+                `;
+                const countResult = await pool.query(countQuery);
+                
+                res.json({
+                    success: true,
+                    data: result.rows,
+                    counts: {
+                        incomplete: parseInt(countResult.rows[0].incomplete),
+                        completed: parseInt(countResult.rows[0].completed)
+                    }
+                });
+            } catch (error) {
+                console.error('❌ 정산 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 입금/송금 처리 API
+        app.post('/api/settlements/:id/payment', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { type, date } = req.body; // type: 'received' or 'sent'
+                
+                console.log('💰 입금/송금 처리:', { id, type, date });
+                
+                const field = type === 'received' ? 'payment_received_date' : 'payment_sent_date';
+                
+                // 날짜 업데이트
+                await pool.query(`
+                    UPDATE settlements 
+                    SET ${field} = $1, updated_at = NOW()
+                    WHERE id = $2
+                `, [date, id]);
+                
+                // 둘 다 완료되었는지 확인
+                const checkResult = await pool.query(`
+                    SELECT payment_received_date, payment_sent_date
+                    FROM settlements
+                    WHERE id = $1
+                `, [id]);
+                
+                const settlement = checkResult.rows[0];
+                const allCompleted = settlement.payment_received_date && settlement.payment_sent_date;
+                
+                // 둘 다 완료되면 settlement_status 업데이트
+                if (allCompleted) {
+                    await pool.query(`
+                        UPDATE settlements
+                        SET settlement_status = 'completed', updated_at = NOW()
+                        WHERE id = $1
+                    `, [id]);
+                }
+                
+                console.log('✅ 입금/송금 처리 완료:', { id, type, allCompleted });
+                
+                res.json({
+                    success: true,
+                    message: `${type === 'received' ? '입금' : '송금'} 처리가 완료되었습니다.`,
+                    all_completed: allCompleted
+                });
+            } catch (error) {
+                console.error('❌ 입금/송금 처리 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '입금/송금 처리 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // ERP 확장 마이그레이션 함수
         async function runERPMigration() {
             try {
