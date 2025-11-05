@@ -13535,18 +13535,23 @@ app.post('/api/reservations/:id/voucher/resend', requireAuth, async (req, res) =
 
 // 정산 이관 API
 app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
+    const client = await pool.connect();
     try {
         const { id } = req.params;
+        const settlementData = req.body;
 
-        console.log(`💰 정산 이관: 예약 ID ${id}`);
+        console.log(`💰 정산 이관: 예약 ID ${id}`, settlementData);
+
+        await client.query('BEGIN');
 
         // 기존 상태 조회
-        const oldReservation = await pool.query(
+        const oldReservation = await client.query(
             'SELECT payment_status, korean_name, product_name FROM reservations WHERE id = $1',
             [id]
         );
         
         if (oldReservation.rows.length === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({
                 success: false,
                 message: '예약을 찾을 수 없습니다.'
@@ -13557,8 +13562,66 @@ app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
         const customerName = oldReservation.rows[0].korean_name;
         const productName = oldReservation.rows[0].product_name;
 
+        // settlements 테이블에 데이터 저장 (UPSERT)
+        await client.query(`
+            INSERT INTO settlements (
+                reservation_id,
+                sale_currency, sale_adult_price, sale_child_price, sale_infant_price, 
+                total_sale, commission_rate, commission_amount, net_revenue,
+                cost_currency, cost_adult_price, cost_child_price, cost_infant_price, 
+                total_cost,
+                exchange_rate, cost_krw, margin_krw, margin_rate,
+                memo, settlement_status, created_by
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+            )
+            ON CONFLICT (reservation_id) 
+            DO UPDATE SET
+                sale_currency = $2,
+                sale_adult_price = $3,
+                sale_child_price = $4,
+                sale_infant_price = $5,
+                total_sale = $6,
+                commission_rate = $7,
+                commission_amount = $8,
+                net_revenue = $9,
+                cost_currency = $10,
+                cost_adult_price = $11,
+                cost_child_price = $12,
+                cost_infant_price = $13,
+                total_cost = $14,
+                exchange_rate = $15,
+                cost_krw = $16,
+                margin_krw = $17,
+                margin_rate = $18,
+                memo = $19,
+                updated_at = NOW()
+        `, [
+            id,
+            settlementData.sale_currency || 'KRW',
+            settlementData.sale_adult_price || 0,
+            settlementData.sale_child_price || 0,
+            settlementData.sale_infant_price || 0,
+            settlementData.total_sale || 0,
+            settlementData.commission_rate || 0,
+            settlementData.commission_amount || 0,
+            settlementData.net_revenue || 0,
+            settlementData.cost_currency || 'USD',
+            settlementData.cost_adult_price || 0,
+            settlementData.cost_child_price || 0,
+            settlementData.cost_infant_price || 0,
+            settlementData.total_cost || 0,
+            settlementData.exchange_rate || 1330,
+            settlementData.cost_krw || 0,
+            settlementData.margin_krw || 0,
+            settlementData.margin_rate || 0,
+            settlementData.memo || null,
+            'pending',
+            req.session?.user?.username || 'admin'
+        ]);
+
         // 예약 상태를 '정산완료'로 변경 (수배관리에서 제외)
-        await pool.query(
+        await client.query(
             'UPDATE reservations SET payment_status = $1, updated_at = NOW() WHERE id = $2',
             ['settlement_completed', id]
         );
@@ -13576,15 +13639,20 @@ app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
             id,
             '정산',
             '이관',
-            req.session?.username || '관리자',
-            `예약이 정산관리로 이관되었습니다. 고객명: ${customerName || '-'}, 상품: ${productName || '-'}. 이전 상태: ${statusNames[oldStatus] || oldStatus}. 수배관리 화면에서 제외되며, 정산 프로세스가 시작됩니다.`,
+            req.session?.user?.username || '관리자',
+            `정산이관 완료. 매출: ${settlementData.total_sale || 0} ${settlementData.sale_currency}, 매입: ${settlementData.total_cost || 0} ${settlementData.cost_currency}, 마진: ${settlementData.margin_krw || 0}원 (${settlementData.margin_rate || 0}%)`,
             { payment_status: { from: oldStatus, to: 'settlement_completed' } },
             {
                 customer_name: customerName,
                 product_name: productName,
+                total_sale: settlementData.total_sale,
+                total_cost: settlementData.total_cost,
+                margin_krw: settlementData.margin_krw,
                 transferred_at: new Date().toISOString()
             }
         );
+
+        await client.query('COMMIT');
 
         console.log(`✅ 정산 이관 완료: 예약 ID ${id}`);
 
@@ -13594,11 +13662,14 @@ app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
         });
 
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('❌ 정산 이관 오류:', error);
         res.status(500).json({
             success: false,
             message: '정산 이관 중 오류가 발생했습니다: ' + error.message
         });
+    } finally {
+        client.release();
     }
 });
 
