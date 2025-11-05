@@ -16508,67 +16508,11 @@ async function startServer() {
                     );
                 `);
                 
-                // 정산이관 기능을 위한 컬럼 추가
-                const settlementColumns = [
-                    { name: 'sale_currency', type: 'VARCHAR(10)', default: "'KRW'" },
-                    { name: 'sale_adult_price', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'sale_child_price', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'sale_infant_price', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'total_sale', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'commission_rate', type: 'DECIMAL(5, 2)', default: '0' },
-                    { name: 'commission_amount', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'net_revenue', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'cost_currency', type: 'VARCHAR(10)', default: "'USD'" },
-                    { name: 'cost_adult_price', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'cost_child_price', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'cost_infant_price', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'total_cost', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'exchange_rate', type: 'DECIMAL(10, 4)', default: '1330' },
-                    { name: 'cost_krw', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'margin_krw', type: 'DECIMAL(10, 2)', default: '0' },
-                    { name: 'payment_received_date', type: 'DATE', default: 'NULL' },
-                    { name: 'payment_sent_date', type: 'DATE', default: 'NULL' },
-                    { name: 'settlement_status', type: 'VARCHAR(50)', default: "'pending'" },
-                    { name: 'memo', type: 'TEXT', default: 'NULL' }
-                ];
-                
-                for (const col of settlementColumns) {
-                    try {
-                        await pool.query(`
-                            ALTER TABLE settlements 
-                            ADD COLUMN IF NOT EXISTS ${col.name} ${col.type} DEFAULT ${col.default}
-                        `);
-                    } catch (e) {
-                        // 컬럼이 이미 존재하면 무시
-                        if (!e.message.includes('already exists')) {
-                            console.log(`⚠️ ${col.name} 컬럼 추가 중 오류:`, e.message);
-                        }
-                    }
-                }
-                
-                // 인덱스 생성
+                // 기본 인덱스 생성 (추가 컬럼은 마이그레이션 005에서 처리)
                 await pool.query(`
                     CREATE INDEX IF NOT EXISTS idx_settlements_settlement_period ON settlements(settlement_period);
                     CREATE INDEX IF NOT EXISTS idx_settlements_reservation_id ON settlements(reservation_id);
-                    CREATE INDEX IF NOT EXISTS idx_settlements_status ON settlements(settlement_status);
-                    CREATE INDEX IF NOT EXISTS idx_settlements_payment_received ON settlements(payment_received_date);
-                    CREATE INDEX IF NOT EXISTS idx_settlements_payment_sent ON settlements(payment_sent_date);
                 `);
-                
-                // UNIQUE 제약 추가 (reservation_id는 한 번만 정산 이관)
-                try {
-                    await pool.query(`
-                        ALTER TABLE settlements 
-                        ADD CONSTRAINT unique_reservation_settlement 
-                        UNIQUE (reservation_id)
-                    `);
-                } catch (e) {
-                    if (!e.message.includes('already exists')) {
-                        console.log('⚠️ UNIQUE 제약 추가 중 오류:', e.message);
-                    }
-                }
-                
-                console.log('✅ settlements 테이블 업데이트 완료');
                 
                 // 6. 기본 field_defs 데이터 삽입 (테이블 존재 확인 후)
                 const fieldDefsCheck = await pool.query(`
@@ -16769,6 +16713,132 @@ async function startServer() {
             } catch (error) {
                 await pool.query('ROLLBACK');
                 console.error('❌ 정산 필드 마이그레이션 실패:', error);
+                throw error;
+            }
+        }
+        
+        // ==================== 마이그레이션 005: settlements 테이블 정산이관 컬럼 추가 ====================
+        async function runMigration005() {
+            try {
+                console.log('🔍 마이그레이션 005 확인 중...');
+                
+                // 마이그레이션 005 실행 여부 확인
+                const migration005Check = await pool.query(
+                    'SELECT * FROM migration_log WHERE version = $1',
+                    ['005']
+                ).catch(() => ({ rows: [] }));
+                
+                if (migration005Check.rows.length > 0) {
+                    console.log('✅ 마이그레이션 005 이미 실행됨 - 건너뜀');
+                    return;
+                }
+                
+                console.log('🚀 마이그레이션 005 실행 중: settlements 테이블 정산이관 컬럼 추가...');
+                
+                await pool.query('BEGIN');
+                
+                // 정산이관 기능을 위한 컬럼 추가
+                const settlementColumns = [
+                    { name: 'sale_currency', type: 'VARCHAR(10)', default: "'KRW'" },
+                    { name: 'sale_adult_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'sale_child_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'sale_infant_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'total_sale', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'commission_rate', type: 'DECIMAL(5, 2)', default: '0' },
+                    { name: 'commission_amount', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'net_revenue', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'cost_currency', type: 'VARCHAR(10)', default: "'USD'" },
+                    { name: 'cost_adult_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'cost_child_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'cost_infant_price', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'total_cost', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'exchange_rate', type: 'DECIMAL(10, 4)', default: '1330' },
+                    { name: 'cost_krw', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'margin_krw', type: 'DECIMAL(10, 2)', default: '0' },
+                    { name: 'payment_received_date', type: 'DATE', default: 'NULL' },
+                    { name: 'payment_sent_date', type: 'DATE', default: 'NULL' },
+                    { name: 'settlement_status', type: 'VARCHAR(50)', default: "'pending'" },
+                    { name: 'memo', type: 'TEXT', default: 'NULL' }
+                ];
+                
+                console.log(`📝 ${settlementColumns.length}개 컬럼 추가 중...`);
+                
+                for (const col of settlementColumns) {
+                    try {
+                        // 컬럼 존재 여부 확인
+                        const checkColumn = await pool.query(`
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'settlements' AND column_name = $1
+                        `, [col.name]);
+                        
+                        if (checkColumn.rows.length === 0) {
+                            await pool.query(`
+                                ALTER TABLE settlements 
+                                ADD COLUMN ${col.name} ${col.type} DEFAULT ${col.default}
+                            `);
+                            console.log(`   ✅ ${col.name} 추가 완료`);
+                        } else {
+                            console.log(`   ⏭️  ${col.name} 이미 존재 - 건너뜀`);
+                        }
+                    } catch (e) {
+                        console.log(`   ⚠️  ${col.name} 추가 중 오류:`, e.message);
+                    }
+                }
+                
+                // 인덱스 생성
+                console.log('📊 인덱스 생성 중...');
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_settlements_reservation_id ON settlements(reservation_id);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_settlement_status ON settlements(settlement_status);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_payment_received ON settlements(payment_received_date);
+                    CREATE INDEX IF NOT EXISTS idx_settlements_payment_sent ON settlements(payment_sent_date);
+                `);
+                
+                // UNIQUE 제약 추가 (reservation_id는 한 번만 정산 이관)
+                try {
+                    const constraintCheck = await pool.query(`
+                        SELECT constraint_name 
+                        FROM information_schema.table_constraints 
+                        WHERE table_name = 'settlements' AND constraint_name = 'unique_reservation_settlement'
+                    `);
+                    
+                    if (constraintCheck.rows.length === 0) {
+                        await pool.query(`
+                            ALTER TABLE settlements 
+                            ADD CONSTRAINT unique_reservation_settlement 
+                            UNIQUE (reservation_id)
+                        `);
+                        console.log('   ✅ UNIQUE 제약 조건 추가 완료');
+                    }
+                } catch (e) {
+                    console.log('   ⚠️  UNIQUE 제약 추가 중 오류:', e.message);
+                }
+                
+                // 마이그레이션 로그 기록
+                await pool.query(
+                    'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
+                    ['005', 'settlements 테이블 정산이관 컬럼 추가: 매출/매입/환율/마진/입금/송금 필드']
+                );
+                
+                await pool.query('COMMIT');
+                
+                console.log('✅ 마이그레이션 005 완료!');
+                
+                // 추가된 컬럼 확인
+                const columnCheck = await pool.query(`
+                    SELECT column_name, data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'settlements' 
+                    AND column_name IN ('sale_currency', 'sale_adult_price', 'net_revenue', 'cost_currency', 'margin_krw')
+                    ORDER BY column_name
+                `);
+                
+                console.log('📋 추가된 주요 컬럼:', columnCheck.rows.map(r => r.column_name).join(', '));
+                
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                console.error('❌ 마이그레이션 005 실패:', error);
                 throw error;
             }
         }
@@ -17044,8 +17114,12 @@ async function startServer() {
             try {
                 await runERPMigration();
                 console.log('✅ ERP 마이그레이션 완료');
+                
+                // 마이그레이션 005 실행 (settlements 테이블 정산이관 컬럼 추가)
+                await runMigration005();
+                console.log('✅ 정산이관 마이그레이션 완료');
             } catch (error) {
-                console.error('⚠️ ERP 마이그레이션 실패 (서버는 계속 실행):', error.message);
+                console.error('⚠️ 마이그레이션 실패 (서버는 계속 실행):', error.message);
             }
         }, 5000);
         
