@@ -13562,10 +13562,15 @@ app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
         const customerName = oldReservation.rows[0].korean_name;
         const productName = oldReservation.rows[0].product_name;
 
+        // 정산 기간 생성 (YYYY-MM 형식)
+        const now = new Date();
+        const settlementPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
         // settlements 테이블에 데이터 저장 (UPSERT)
         await client.query(`
             INSERT INTO settlements (
                 reservation_id,
+                settlement_period,
                 sale_currency, sale_adult_price, sale_child_price, sale_infant_price, 
                 total_sale, commission_rate, commission_amount, net_revenue,
                 cost_currency, cost_adult_price, cost_child_price, cost_infant_price, 
@@ -13573,31 +13578,33 @@ app.post('/api/reservations/:id/settlement', requireAuth, async (req, res) => {
                 exchange_rate, cost_krw, margin_krw, margin_rate,
                 memo, settlement_status, created_by
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
             )
             ON CONFLICT (reservation_id) 
             DO UPDATE SET
-                sale_currency = $2,
-                sale_adult_price = $3,
-                sale_child_price = $4,
-                sale_infant_price = $5,
-                total_sale = $6,
-                commission_rate = $7,
-                commission_amount = $8,
-                net_revenue = $9,
-                cost_currency = $10,
-                cost_adult_price = $11,
-                cost_child_price = $12,
-                cost_infant_price = $13,
-                total_cost = $14,
-                exchange_rate = $15,
-                cost_krw = $16,
-                margin_krw = $17,
-                margin_rate = $18,
-                memo = $19,
+                settlement_period = $2,
+                sale_currency = $3,
+                sale_adult_price = $4,
+                sale_child_price = $5,
+                sale_infant_price = $6,
+                total_sale = $7,
+                commission_rate = $8,
+                commission_amount = $9,
+                net_revenue = $10,
+                cost_currency = $11,
+                cost_adult_price = $12,
+                cost_child_price = $13,
+                cost_infant_price = $14,
+                total_cost = $15,
+                exchange_rate = $16,
+                cost_krw = $17,
+                margin_krw = $18,
+                margin_rate = $19,
+                memo = $20,
                 updated_at = NOW()
         `, [
             id,
+            settlementPeriod,
             settlementData.sale_currency || 'KRW',
             settlementData.sale_adult_price || 0,
             settlementData.sale_child_price || 0,
