@@ -87,7 +87,7 @@
                         <div class="card stats-card">
                             <div class="card-body text-center">
                                 <i class="fas fa-dollar-sign fa-2x mb-2"></i>
-                                <h5 class="mb-1">총 매출</h5>
+                                <h5 class="mb-1">총 거래액</h5>
                                 <h3 id="totalRevenue">$0</h3>
                                 <small>이번 달</small>
                             </div>
@@ -236,7 +236,7 @@
 
                                             <hr>
 
-                                            <!-- 판매가 (매출) -->
+                                            <!-- 판매가 (거래액) -->
                                             <h6 class="text-primary"><i class="fas fa-arrow-down me-1"></i>판매가 (받을 돈)</h6>
                                             <div class="row g-3 mb-3">
                                                 <div class="col-md-2">
@@ -362,7 +362,7 @@
                         <input type="hidden" id="reservationId">
                         <div class="row">
                             <div class="col-md-6">
-                                <label class="form-label">매출 금액</label>
+                                <label class="form-label">거래액 금액</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control" id="saleAmount" step="0.01" required>
@@ -718,7 +718,7 @@
                                     </div>
                                     <div class="row g-2 mt-2">
                                         <div class="col-auto">
-                                            <span class="badge bg-success">매출: ${formatCurrency(s.net_revenue, s.sale_currency)}</span>
+                                            <span class="badge bg-success">거래액: ${formatCurrency(s.net_revenue, s.sale_currency)}</span>
                                         </div>
                                         <div class="col-auto">
                                             <span class="badge bg-danger">매입: ${formatCurrency(s.total_cost, s.cost_currency)}</span>
@@ -875,7 +875,7 @@
             const settlementNotes = document.getElementById('settlementNotes').value;
             
             if (!saleAmount || !costAmount) {
-                showAlert('매출 금액과 매입 금액을 입력해주세요.', 'warning');
+                showAlert('거래액 금액과 매입 금액을 입력해주세요.', 'warning');
                 return;
             }
             

@@ -943,10 +943,10 @@
                         </div>
                     </div>
                     
-                    <!-- 매출 (받을 돈) -->
+                    <!-- 거래액 (받을 돈) -->
                     <div class="card mb-3">
                         <div class="card-header bg-success text-white">
-                            <h6 class="mb-0"><i class="bi bi-arrow-down me-2"></i>매출 (받을 돈)</h6>
+                            <h6 class="mb-0"><i class="bi bi-arrow-down me-2"></i>거래액 (받을 돈)</h6>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
@@ -3476,7 +3476,7 @@
             const childCount = parseInt(document.getElementById('settlement-child-count').textContent) || 0;
             const infantCount = parseInt(document.getElementById('settlement-infant-count').textContent) || 0;
             
-            // 매출 계산
+            // 거래액 계산
             const saleCurrency = document.getElementById('settlement-sale-currency').value;
             const saleAdult = parseFloat(document.getElementById('settlement-sale-adult').value) || 0;
             const saleChild = parseFloat(document.getElementById('settlement-sale-child').value) || 0;
@@ -3509,7 +3509,7 @@
             let netRevenueKRW = netRevenue;
             let totalCostKRW = totalCost;
             
-            // 매출이 USD면 KRW로 환산
+            // 거래액이 USD면 KRW로 환산
             if (saleCurrency === 'USD') {
                 netRevenueKRW = netRevenue * exchangeRate;
             }
@@ -3573,7 +3573,7 @@
                     
                     console.log('✅ 매칭된 RAG 문서:', matchedDoc);
                     
-                    // 매출 필드 채우기
+                    // 거래액 필드 채우기
                     document.getElementById('settlement-sale-currency').value = matchedDoc.sale_currency || 'KRW';
                     document.getElementById('settlement-sale-adult').value = matchedDoc.sale_adult_price || 0;
                     document.getElementById('settlement-sale-child').value = matchedDoc.sale_child_price || 0;
@@ -3614,14 +3614,14 @@
             const totalCost = parseFloat(document.getElementById('settlement-total-cost').value) || 0;
             
             if (totalSale === 0 && totalCost === 0) {
-                alert('매출 또는 매입 금액을 입력해주세요.');
+                alert('거래액 또는 매입 금액을 입력해주세요.');
                 return;
             }
             
             const settlementData = {
                 reservation_id: reservationId,
                 
-                // 매출 정보
+                // 거래액 정보
                 sale_currency: document.getElementById('settlement-sale-currency').value,
                 sale_adult_price: parseFloat(document.getElementById('settlement-sale-adult').value) || 0,
                 sale_child_price: parseFloat(document.getElementById('settlement-sale-child').value) || 0,
