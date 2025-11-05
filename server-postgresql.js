@@ -16263,18 +16263,47 @@ async function startServer() {
         app.post('/api/settlements/:id/payment', requireAuth, async (req, res) => {
             try {
                 const { id } = req.params;
-                const { type, date } = req.body; // type: 'received' or 'sent'
+                const { type, date, exchange_rate } = req.body; // type: 'received' or 'sent'
                 
-                console.log('💰 입금/송금 처리:', { id, type, date });
+                console.log('💰 입금/송금 처리:', { id, type, date, exchange_rate });
                 
                 const field = type === 'received' ? 'payment_received_date' : 'payment_sent_date';
                 
-                // 날짜 업데이트
-                await pool.query(`
-                    UPDATE settlements 
-                    SET ${field} = $1, updated_at = NOW()
-                    WHERE id = $2
-                `, [date, id]);
+                // 송금 시 환율도 함께 저장
+                if (type === 'sent' && exchange_rate) {
+                    // 정산 정보 조회 (달러 비용 계산)
+                    const settlementInfo = await pool.query(`
+                        SELECT total_cost, cost_currency
+                        FROM settlements
+                        WHERE id = $1
+                    `, [id]);
+                    
+                    if (settlementInfo.rows.length > 0) {
+                        const { total_cost, cost_currency } = settlementInfo.rows[0];
+                        const costKRW = cost_currency === 'USD' ? total_cost * exchange_rate : total_cost;
+                        
+                        await pool.query(`
+                            UPDATE settlements 
+                            SET ${field} = $1, 
+                                payment_sent_exchange_rate = $2,
+                                payment_sent_cost_krw = $3,
+                                updated_at = NOW()
+                            WHERE id = $4
+                        `, [date, exchange_rate, costKRW, id]);
+                    } else {
+                        return res.status(404).json({
+                            success: false,
+                            message: '정산 정보를 찾을 수 없습니다.'
+                        });
+                    }
+                } else {
+                    // 입금 시에는 날짜만 업데이트
+                    await pool.query(`
+                        UPDATE settlements 
+                        SET ${field} = $1, updated_at = NOW()
+                        WHERE id = $2
+                    `, [date, id]);
+                }
                 
                 // 둘 다 완료되었는지 확인
                 const checkResult = await pool.query(`
@@ -16307,6 +16336,102 @@ async function startServer() {
                 res.status(500).json({
                     success: false,
                     message: '입금/송금 처리 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 일괄 입금/송금 처리 API
+        app.post('/api/settlements/bulk-payment', requireAuth, async (req, res) => {
+            try {
+                const { settlement_ids, type, date, exchange_rate } = req.body;
+                
+                if (!settlement_ids || !Array.isArray(settlement_ids) || settlement_ids.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '처리할 정산 항목을 선택해주세요.'
+                    });
+                }
+                
+                console.log('💰 일괄 입금/송금 처리:', { count: settlement_ids.length, type, date, exchange_rate });
+                
+                const field = type === 'received' ? 'payment_received_date' : 'payment_sent_date';
+                
+                // 트랜잭션 시작
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+                    
+                    // 각 정산에 대해 처리
+                    for (const id of settlement_ids) {
+                        if (type === 'sent' && exchange_rate) {
+                            // 송금 시 환율도 저장
+                            const settlementInfo = await client.query(`
+                                SELECT total_cost, cost_currency
+                                FROM settlements
+                                WHERE id = $1
+                            `, [id]);
+                            
+                            if (settlementInfo.rows.length > 0) {
+                                const { total_cost, cost_currency } = settlementInfo.rows[0];
+                                const costKRW = cost_currency === 'USD' ? total_cost * exchange_rate : total_cost;
+                                
+                                await client.query(`
+                                    UPDATE settlements 
+                                    SET ${field} = $1, 
+                                        payment_sent_exchange_rate = $2,
+                                        payment_sent_cost_krw = $3,
+                                        updated_at = NOW()
+                                    WHERE id = $4
+                                `, [date, exchange_rate, costKRW, id]);
+                            }
+                        } else {
+                            // 입금 시에는 날짜만 업데이트
+                            await client.query(`
+                                UPDATE settlements 
+                                SET ${field} = $1, updated_at = NOW()
+                                WHERE id = $2
+                            `, [date, id]);
+                        }
+                        
+                        // 둘 다 완료되었는지 확인하고 상태 업데이트
+                        const checkResult = await client.query(`
+                            SELECT payment_received_date, payment_sent_date
+                            FROM settlements
+                            WHERE id = $1
+                        `, [id]);
+                        
+                        if (checkResult.rows.length > 0) {
+                            const settlement = checkResult.rows[0];
+                            if (settlement.payment_received_date && settlement.payment_sent_date) {
+                                await client.query(`
+                                    UPDATE settlements
+                                    SET settlement_status = 'completed', updated_at = NOW()
+                                    WHERE id = $1
+                                `, [id]);
+                            }
+                        }
+                    }
+                    
+                    await client.query('COMMIT');
+                    
+                    console.log(`✅ 일괄 ${type === 'received' ? '입금' : '송금'} 처리 완료: ${settlement_ids.length}개`);
+                    
+                    res.json({
+                        success: true,
+                        message: `${settlement_ids.length}개 항목의 ${type === 'received' ? '입금' : '송금'} 처리가 완료되었습니다.`,
+                        processed_count: settlement_ids.length
+                    });
+                } catch (error) {
+                    await client.query('ROLLBACK');
+                    throw error;
+                } finally {
+                    client.release();
+                }
+            } catch (error) {
+                console.error('❌ 일괄 입금/송금 처리 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '일괄 입금/송금 처리 중 오류가 발생했습니다.'
                 });
             }
         });
@@ -16929,6 +17054,74 @@ async function startServer() {
                 throw error;
             }
         }
+        
+        // ==================== 마이그레이션 006: 송금 시 환율 저장 컬럼 추가 ====================
+        async function runMigration006() {
+            try {
+                console.log('🔍 마이그레이션 006 확인 중...');
+                
+                // 마이그레이션 006 실행 여부 확인
+                const migration006Check = await pool.query(
+                    'SELECT * FROM migration_log WHERE version = $1',
+                    ['006']
+                ).catch(() => ({ rows: [] }));
+                
+                if (migration006Check.rows.length > 0) {
+                    console.log('✅ 마이그레이션 006 이미 실행됨 - 건너뜀');
+                    return;
+                }
+                
+                console.log('🚀 마이그레이션 006 실행 중: 송금 시 환율 컬럼 추가...');
+                
+                await pool.query('BEGIN');
+                
+                // 송금 시 환율 저장 컬럼 추가
+                const additionalColumns = [
+                    { name: 'payment_sent_exchange_rate', type: 'DECIMAL(10, 4)', default: 'NULL' },
+                    { name: 'payment_sent_cost_krw', type: 'DECIMAL(10, 2)', default: 'NULL' }
+                ];
+                
+                console.log(`📝 ${additionalColumns.length}개 컬럼 추가 중...`);
+                
+                for (const col of additionalColumns) {
+                    try {
+                        // 컬럼 존재 여부 확인
+                        const checkColumn = await pool.query(`
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'settlements' AND column_name = $1
+                        `, [col.name]);
+                        
+                        if (checkColumn.rows.length === 0) {
+                            await pool.query(`
+                                ALTER TABLE settlements 
+                                ADD COLUMN ${col.name} ${col.type} DEFAULT ${col.default}
+                            `);
+                            console.log(`   ✅ ${col.name} 추가 완료`);
+                        } else {
+                            console.log(`   ⏭️  ${col.name} 이미 존재 - 건너뜀`);
+                        }
+                    } catch (e) {
+                        console.log(`   ⚠️  ${col.name} 추가 중 오류:`, e.message);
+                    }
+                }
+                
+                // 마이그레이션 로그 기록
+                await pool.query(
+                    'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
+                    ['006', '송금 시 환율 저장을 위한 컬럼 추가: payment_sent_exchange_rate, payment_sent_cost_krw']
+                );
+                
+                await pool.query('COMMIT');
+                
+                console.log('✅ 마이그레이션 006 완료!');
+                
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                console.error('❌ 마이그레이션 006 실패:', error);
+                throw error;
+            }
+        }
 
         // ❌ 중복 API - 7901번 라인에 정의됨
         // app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (req, res) => {
@@ -17205,6 +17398,10 @@ async function startServer() {
                 // 마이그레이션 005 실행 (settlements 테이블 정산이관 컬럼 추가)
                 await runMigration005();
                 console.log('✅ 정산이관 마이그레이션 완료');
+                
+                // 마이그레이션 006 실행 (송금 시 환율 저장 컬럼 추가)
+                await runMigration006();
+                console.log('✅ 송금 환율 마이그레이션 완료');
             } catch (error) {
                 console.error('⚠️ 마이그레이션 실패 (서버는 계속 실행):', error.message);
             }

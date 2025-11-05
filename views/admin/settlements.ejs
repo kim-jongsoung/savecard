@@ -626,6 +626,17 @@
         let currentStatus = '';
         let currentMonth = '';
         let currentSearch = '';
+        let selectedSettlements = new Set(); // 선택된 정산 ID 관리
+
+        // 날짜 포맷 함수 (ISO → YYYY-MM-DD)
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -761,52 +772,78 @@
                 totalMargin += marginKRW;
                 totalTax += tax;
                 
+                // 거래액 표시 (원화만 입력되면 달러는 0)
+                const revenueDisplay = s.sale_currency === 'KRW' 
+                    ? formatCurrency(revenueKRW, 'KRW')
+                    : `${formatCurrency(revenueKRW, 'KRW')}<br><small class="text-muted">(${formatCurrency(s.net_revenue || 0, 'USD')} × ${s.exchange_rate || 1330})</small>`;
+                
+                // 매입액 표시 (달러 × 환율)
+                const costDisplay = s.cost_currency === 'KRW'
+                    ? formatCurrency(costKRW, 'KRW')
+                    : `${formatCurrency(costKRW, 'KRW')}<br><small class="text-muted">(${formatCurrency(s.total_cost || 0, 'USD')} × ${s.exchange_rate || 1330})</small>`;
+                
                 return `
                     <tr>
-                        <td><small>${s.usage_date || '-'}</small></td>
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input settlement-checkbox" 
+                                   value="${s.id}" 
+                                   onchange="toggleSettlementSelection(${s.id})" 
+                                   ${(isPaymentReceived && isPaymentSent) ? 'disabled' : ''}>
+                        </td>
+                        <td><small>${formatDate(s.usage_date)}</small></td>
                         <td><strong>${s.korean_name || '-'}</strong></td>
                         <td><small>${s.product_name || '-'}</small></td>
                         <td><small>${s.platform_name || '-'}</small></td>
                         <td><small>${s.vendor_name || '-'}</small></td>
-                        <td class="text-end"><strong>${formatCurrency(revenueKRW, 'KRW')}</strong></td>
-                        <td class="text-end text-danger"><strong>${formatCurrency(costKRW, 'KRW')}</strong></td>
+                        <td class="text-end"><strong>${revenueDisplay}</strong></td>
+                        <td class="text-end text-danger"><strong>${costDisplay}</strong></td>
                         <td class="text-end text-primary"><strong>${formatCurrency(marginKRW, 'KRW')}</strong></td>
                         <td class="text-end text-info"><small>${formatCurrency(tax, 'KRW')}</small></td>
                         <td class="text-center">
-                            ${status === 'incomplete' ? `
-                                <button class="btn btn-sm ${isPaymentReceived ? 'btn-outline-success' : 'btn-success'} btn-sm" 
-                                        onclick="processPayment(${s.id}, 'received')" 
-                                        ${isPaymentReceived ? 'disabled' : ''}>
-                                    <i class="fas fa-arrow-down"></i>
-                                </button>
-                                <button class="btn btn-sm ${isPaymentSent ? 'btn-outline-danger' : 'btn-danger'} btn-sm" 
-                                        onclick="processPayment(${s.id}, 'sent')"
-                                        ${isPaymentSent ? 'disabled' : ''}>
-                                    <i class="fas fa-arrow-up"></i>
-                                </button>
-                            ` : `
-                                <span class="badge bg-success"><i class="fas fa-check"></i></span>
-                            `}
+                            ${isPaymentReceived ? `<small class="text-success">${formatDate(s.payment_received_date)}</small>` : `<small class="text-muted">-</small>`}
+                        </td>
+                        <td class="text-center">
+                            ${isPaymentSent ? `<small class="text-success">${formatDate(s.payment_sent_date)}</small>` : `<small class="text-muted">-</small>`}
                         </td>
                     </tr>
                 `;
             }).join('');
             
+            const bulkActionButtons = status === 'incomplete' ? `
+                <div class="d-flex gap-2 mb-3">
+                    <button class="btn btn-success btn-sm" onclick="bulkProcessPayment('received')" id="bulkReceivedBtn">
+                        <i class="fas fa-arrow-down me-1"></i>선택 항목 일괄 입금처리
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="bulkProcessPayment('sent')" id="bulkSentBtn">
+                        <i class="fas fa-arrow-up me-1"></i>선택 항목 일괄 송금처리
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="clearAllSelections()">
+                        <i class="fas fa-times me-1"></i>선택 해제
+                    </button>
+                </div>
+            ` : '';
+            
             const html = `
+                ${bulkActionButtons}
                 <div class="table-responsive">
                     <table class="table table-hover table-sm">
                         <thead class="table-light">
                             <tr>
+                                <th class="text-center">
+                                    <input type="checkbox" class="form-check-input" id="selectAll" 
+                                           onchange="toggleSelectAll()" ${status === 'completed' ? 'style="display:none;"' : ''}>
+                                </th>
                                 <th>이용일</th>
                                 <th>손님이름</th>
                                 <th>상품명</th>
                                 <th>예약업체</th>
                                 <th>수배업체</th>
-                                <th class="text-end">거래액</th>
-                                <th class="text-end">매입액</th>
+                                <th class="text-end">거래액 (KRW)</th>
+                                <th class="text-end">매입액 (KRW)</th>
                                 <th class="text-end">마진</th>
                                 <th class="text-end">부가세</th>
-                                <th class="text-center">처리</th>
+                                <th class="text-center">입금일</th>
+                                <th class="text-center">송금일</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -814,12 +851,12 @@
                         </tbody>
                         <tfoot class="table-secondary">
                             <tr>
-                                <th colspan="5" class="text-end">총액</th>
+                                <th colspan="6" class="text-end">총액</th>
                                 <th class="text-end">${formatCurrency(totalRevenue, 'KRW')}</th>
                                 <th class="text-end text-danger">${formatCurrency(totalCost, 'KRW')}</th>
                                 <th class="text-end text-primary">${formatCurrency(totalMargin, 'KRW')}</th>
                                 <th class="text-end text-info">${formatCurrency(totalTax, 'KRW')}</th>
-                                <th></th>
+                                <th colspan="2"></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -842,7 +879,103 @@
             return `${symbol}${parseFloat(amount).toLocaleString()}`;
         }
         
-        // 입금/송금 처리
+        // 체크박스 선택/해제
+        function toggleSettlementSelection(settlementId) {
+            if (selectedSettlements.has(settlementId)) {
+                selectedSettlements.delete(settlementId);
+            } else {
+                selectedSettlements.add(settlementId);
+            }
+            console.log('선택된 정산:', Array.from(selectedSettlements));
+        }
+        
+        // 전체 선택/해제
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.settlement-checkbox:not(:disabled)');
+            
+            selectedSettlements.clear();
+            
+            if (selectAllCheckbox.checked) {
+                checkboxes.forEach(cb => {
+                    cb.checked = true;
+                    selectedSettlements.add(parseInt(cb.value));
+                });
+            } else {
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+            
+            console.log('전체 선택:', Array.from(selectedSettlements));
+        }
+        
+        // 선택 해제
+        function clearAllSelections() {
+            selectedSettlements.clear();
+            const checkboxes = document.querySelectorAll('.settlement-checkbox');
+            checkboxes.forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) selectAll.checked = false;
+        }
+        
+        // 일괄 입금/송금 처리
+        async function bulkProcessPayment(type) {
+            if (selectedSettlements.size === 0) {
+                alert('처리할 항목을 선택해주세요.');
+                return;
+            }
+            
+            const typeText = type === 'received' ? '입금' : '송금';
+            const today = new Date().toISOString().split('T')[0];
+            
+            const dateInput = prompt(`${typeText} 날짜를 입력하세요 (YYYY-MM-DD):`, today);
+            
+            if (!dateInput) return;
+            
+            let exchangeRate = null;
+            if (type === 'sent') {
+                const rateInput = prompt('송금 시 적용된 환율을 입력하세요 (예: 1330):', '1330');
+                if (!rateInput) return;
+                exchangeRate = parseFloat(rateInput);
+                if (isNaN(exchangeRate) || exchangeRate <= 0) {
+                    alert('올바른 환율을 입력해주세요.');
+                    return;
+                }
+            }
+            
+            if (!confirm(`선택한 ${selectedSettlements.size}개 항목을 ${typeText} 처리하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                console.log(`💰 일괄 ${typeText} 처리:`, Array.from(selectedSettlements), dateInput, exchangeRate);
+                
+                const response = await fetch('/api/settlements/bulk-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        settlement_ids: Array.from(selectedSettlements),
+                        type: type,
+                        date: dateInput,
+                        exchange_rate: exchangeRate
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ ${selectedSettlements.size}개 항목의 ${typeText} 처리가 완료되었습니다.`);
+                    clearAllSelections();
+                    loadSettlementsByStatus(currentSettlementStatus);
+                } else {
+                    alert(`❌ ${typeText} 처리 실패: ` + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error(`❌ 일괄 ${typeText} 처리 오류:`, error);
+                alert(`일괄 ${typeText} 처리 중 오류가 발생했습니다.`);
+            }
+        }
+        
+        // 입금/송금 처리 (단일)
         async function processPayment(settlementId, type) {
             const typeText = type === 'received' ? '입금' : '송금';
             const today = new Date().toISOString().split('T')[0];
@@ -851,15 +984,27 @@
             
             if (!dateInput) return;
             
+            let exchangeRate = null;
+            if (type === 'sent') {
+                const rateInput = prompt('송금 시 적용된 환율을 입력하세요 (예: 1330):', '1330');
+                if (!rateInput) return;
+                exchangeRate = parseFloat(rateInput);
+                if (isNaN(exchangeRate) || exchangeRate <= 0) {
+                    alert('올바른 환율을 입력해주세요.');
+                    return;
+                }
+            }
+            
             try {
-                console.log(`💰 ${typeText} 처리:`, settlementId, dateInput);
+                console.log(`💰 ${typeText} 처리:`, settlementId, dateInput, exchangeRate);
                 
                 const response = await fetch(`/api/settlements/${settlementId}/payment`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         type: type,
-                        date: dateInput
+                        date: dateInput,
+                        exchange_rate: exchangeRate
                     })
                 });
                 
@@ -867,15 +1012,7 @@
                 
                 if (result.success) {
                     alert(`✅ ${typeText} 처리가 완료되었습니다.`);
-                    
-                    // 둘 다 완료되면 전체완료 탭으로 이동
-                    if (result.all_completed) {
-                        alert('✅ 입금과 송금이 모두 완료되어 전체완료 탭으로 이동합니다.');
-                        document.getElementById('completed-tab').click();
-                    } else {
-                        // 현재 탭 새로고침
-                        loadSettlementsByStatus(currentSettlementStatus);
-                    }
+                    loadSettlementsByStatus(currentSettlementStatus);
                 } else {
                     alert(`❌ ${typeText} 처리 실패: ` + (result.message || '알 수 없는 오류'));
                 }
