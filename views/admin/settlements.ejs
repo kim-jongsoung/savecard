@@ -72,7 +72,7 @@
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="rag-tab" data-bs-toggle="tab" data-bs-target="#ragPane" type="button" role="tab">
-                            <i class="fas fa-book me-1"></i>RAG 문서 관리
+                            <i class="fas fa-dollar-sign me-1"></i>요금 RAG 문서
                         </button>
                     </li>
                 </ul>
@@ -181,43 +181,98 @@
                     </div>
                     <!-- 정산 목록 탭 끝 -->
 
-                    <!-- RAG 문서 관리 탭 -->
+                    <!-- 요금 RAG 문서 관리 탭 -->
                     <div class="tab-pane fade" id="ragPane" role="tabpanel">
                         <div class="row">
                             <div class="col-12">
-                                <!-- RAG 문서 업로드 -->
+                                <!-- 요금 정보 등록 -->
                                 <div class="card mb-4">
                                     <div class="card-header bg-primary text-white">
-                                        <h5 class="mb-0"><i class="fas fa-upload me-2"></i>RAG 문서 업로드</h5>
+                                        <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>요금 정보 등록</h5>
                                     </div>
                                     <div class="card-body">
                                         <div class="alert alert-info">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            <strong>RAG 문서란?</strong> 플랫폼별 수수료 정책, 공급사별 가격 정보 등 정산 계산에 필요한 참고 문서입니다.
+                                            <strong>요금 RAG 문서란?</strong> 상품별/패키지별 판매가, 원가, 수수료율을 등록하여 정산이관 시 AI가 자동으로 금액을 파싱합니다.
                                         </div>
-                                        <form id="ragUploadForm" class="row g-3">
-                                            <div class="col-md-3">
-                                                <label class="form-label">문서 유형</label>
-                                                <select class="form-select" id="ragDocType" required>
-                                                    <option value="">선택하세요</option>
-                                                    <option value="platform_policy">플랫폼 정책</option>
-                                                    <option value="supplier_policy">공급사 정책</option>
-                                                    <option value="settlement_guide">정산 가이드</option>
-                                                    <option value="exchange_rate_policy">환율 정책</option>
-                                                    <option value="other">기타</option>
-                                                </select>
+                                        <form id="priceRagForm">
+                                            <!-- 기본 정보 -->
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>상품명</strong> <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control" id="productName" placeholder="예: 돌핀투어" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>패키지명</strong></label>
+                                                    <input type="text" class="form-control" id="packageName" placeholder="예: 기본투어, 프리미엄투어">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label"><strong>수배업체명</strong></label>
+                                                    <input type="text" class="form-control" id="supplierName" placeholder="예: ABC Tours">
+                                                </div>
                                             </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">문서명</label>
-                                                <input type="text" class="form-control" id="ragDocName" placeholder="예: NOL 수수료 정책" required>
+
+                                            <hr>
+
+                                            <!-- 판매가 (매출) -->
+                                            <h6 class="text-primary"><i class="fas fa-arrow-down me-1"></i>판매가 (받을 돈)</h6>
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-md-2">
+                                                    <label class="form-label">화폐</label>
+                                                    <select class="form-select" id="saleCurrency">
+                                                        <option value="KRW">원화(₩)</option>
+                                                        <option value="USD">달러($)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">성인 판매가</label>
+                                                    <input type="number" class="form-control" id="saleAdultPrice" step="0.01" placeholder="0">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">소아 판매가</label>
+                                                    <input type="number" class="form-control" id="saleChildPrice" step="0.01" placeholder="0">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">유아 판매가</label>
+                                                    <input type="number" class="form-control" id="saleInfantPrice" step="0.01" placeholder="0">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">수수료율 (%)</label>
+                                                    <input type="number" class="form-control" id="commissionRate" step="0.01" placeholder="10">
+                                                </div>
                                             </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label">문서 내용</label>
-                                                <textarea class="form-control" id="ragDocContent" rows="1" placeholder="문서 내용을 입력하세요..." required></textarea>
+
+                                            <hr>
+
+                                            <!-- 원가 (매입) -->
+                                            <h6 class="text-danger"><i class="fas fa-arrow-up me-1"></i>원가 (줄 돈)</h6>
+                                            <div class="row g-3 mb-3">
+                                                <div class="col-md-2">
+                                                    <label class="form-label">화폐</label>
+                                                    <select class="form-select" id="costCurrency">
+                                                        <option value="USD">달러($)</option>
+                                                        <option value="KRW">원화(₩)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">성인 원가</label>
+                                                    <input type="number" class="form-control" id="costAdultPrice" step="0.01" placeholder="0">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">소아 원가</label>
+                                                    <input type="number" class="form-control" id="costChildPrice" step="0.01" placeholder="0">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">유아 원가</label>
+                                                    <input type="number" class="form-control" id="costInfantPrice" step="0.01" placeholder="0">
+                                                </div>
                                             </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label">&nbsp;</label>
-                                                <button type="submit" class="btn btn-primary w-100">
+
+                                            <div class="text-end">
+                                                <button type="button" class="btn btn-outline-secondary me-2" onclick="resetPriceForm()">
+                                                    <i class="fas fa-redo me-1"></i>초기화
+                                                </button>
+                                                <button type="submit" class="btn btn-primary">
                                                     <i class="fas fa-save me-1"></i>등록
                                                 </button>
                                             </div>
@@ -225,30 +280,35 @@
                                     </div>
                                 </div>
 
-                                <!-- RAG 문서 목록 -->
+                                <!-- 등록된 요금 정보 목록 -->
                                 <div class="card">
                                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>등록된 RAG 문서</h5>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="loadRagDocuments()">
-                                            <i class="fas fa-sync me-1"></i>새로고침
-                                        </button>
+                                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>등록된 요금 정보</h5>
+                                        <div>
+                                            <input type="text" class="form-control form-control-sm d-inline-block me-2" style="width: 200px;" id="priceSearchInput" placeholder="상품명 검색...">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="loadPriceRagDocuments()">
+                                                <i class="fas fa-sync me-1"></i>새로고침
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="card-body">
                                         <div class="table-responsive">
-                                            <table class="table table-hover">
+                                            <table class="table table-hover table-sm">
                                                 <thead>
                                                     <tr>
-                                                        <th>문서 유형</th>
-                                                        <th>문서명</th>
-                                                        <th>플랫폼/공급사</th>
-                                                        <th>내용 미리보기</th>
-                                                        <th>등록일시</th>
+                                                        <th>상품명</th>
+                                                        <th>패키지</th>
+                                                        <th>수배업체</th>
+                                                        <th>판매가</th>
+                                                        <th>원가</th>
+                                                        <th>수수료율</th>
+                                                        <th>등록일</th>
                                                         <th>작업</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody id="ragDocumentList">
+                                                <tbody id="priceRagDocumentList">
                                                     <tr>
-                                                        <td colspan="6" class="text-center text-muted">
+                                                        <td colspan="8" class="text-center text-muted">
                                                             <i class="fas fa-spinner fa-spin me-1"></i>로딩 중...
                                                         </td>
                                                     </tr>
@@ -1125,43 +1185,146 @@
             }
         }
 
-        // ==================== RAG 문서 관리 기능 ====================
+        // ==================== 요금 RAG 문서 관리 기능 ====================
 
-        // RAG 문서 목록 로드
-        async function loadRagDocuments() {
+        // 요금 RAG 문서 목록 로드
+        async function loadPriceRagDocuments() {
             try {
-                // 서버에 RAG 문서 목록 API가 있다면 사용, 없으면 임시 데이터
-                const tbody = document.getElementById('ragDocumentList');
+                console.log('💰 요금 RAG 문서 목록 로드 시작');
+                const tbody = document.getElementById('priceRagDocumentList');
+                const searchTerm = document.getElementById('priceSearchInput').value;
                 
-                // 임시: 서버 API 호출 (실제로는 /api/rag/documents 같은 엔드포인트 필요)
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">
-                            <i class="fas fa-inbox me-1"></i>등록된 RAG 문서가 없습니다.
-                        </td>
-                    </tr>
-                `;
-                
-                // 실제 구현 예시 (주석 처리):
-                /*
-                const response = await fetch('/api/rag-documents');
+                const response = await fetch(`/api/price-rag/documents?search=${encodeURIComponent(searchTerm)}`);
                 const data = await response.json();
                 
-                if (data.success && data.data.length > 0) {
-                    renderRagDocuments(data.data);
+                if (data.success && data.data && data.data.length > 0) {
+                    renderPriceRagDocuments(data.data);
                 } else {
                     tbody.innerHTML = `
                         <tr>
-                            <td colspan="6" class="text-center text-muted">
-                                <i class="fas fa-inbox me-1"></i>등록된 RAG 문서가 없습니다.
+                            <td colspan="8" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                등록된 요금 정보가 없습니다.
                             </td>
                         </tr>
                     `;
                 }
-                */
             } catch (error) {
-                console.error('RAG 문서 목록 로드 실패:', error);
-                showAlert('RAG 문서 목록을 불러오는데 실패했습니다.', 'danger');
+                console.error('❌ 요금 RAG 문서 목록 로드 실패:', error);
+                const tbody = document.getElementById('priceRagDocumentList');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-danger py-3">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            데이터를 불러오는데 실패했습니다.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // 요금 RAG 문서 렌더링
+        function renderPriceRagDocuments(documents) {
+            const tbody = document.getElementById('priceRagDocumentList');
+            
+            tbody.innerHTML = documents.map(doc => {
+                const salePrice = `${doc.sale_adult_price || 0}/${doc.sale_child_price || 0}/${doc.sale_infant_price || 0} ${doc.sale_currency}`;
+                const costPrice = `${doc.cost_adult_price || 0}/${doc.cost_child_price || 0}/${doc.cost_infant_price || 0} ${doc.cost_currency}`;
+                
+                return `
+                    <tr>
+                        <td><strong>${doc.product_name}</strong></td>
+                        <td>${doc.package_name || '-'}</td>
+                        <td>${doc.supplier_name || '-'}</td>
+                        <td>
+                            <small class="text-success">${salePrice}</small>
+                        </td>
+                        <td>
+                            <small class="text-danger">${costPrice}</small>
+                        </td>
+                        <td>${doc.commission_rate || 0}%</td>
+                        <td><small class="text-muted">${formatDate(doc.created_at)}</small></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editPriceRag(${doc.id})" title="수정">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deletePriceRag(${doc.id})" title="삭제">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 요금 RAG 폼 초기화
+        function resetPriceForm() {
+            document.getElementById('priceRagForm').reset();
+        }
+        
+        // 요금 RAG 수정
+        async function editPriceRag(id) {
+            try {
+                const response = await fetch(`/api/price-rag/documents/${id}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const doc = data.data;
+                    
+                    document.getElementById('productName').value = doc.product_name || '';
+                    document.getElementById('packageName').value = doc.package_name || '';
+                    document.getElementById('supplierName').value = doc.supplier_name || '';
+                    
+                    document.getElementById('saleCurrency').value = doc.sale_currency || 'KRW';
+                    document.getElementById('saleAdultPrice').value = doc.sale_adult_price || 0;
+                    document.getElementById('saleChildPrice').value = doc.sale_child_price || 0;
+                    document.getElementById('saleInfantPrice').value = doc.sale_infant_price || 0;
+                    document.getElementById('commissionRate').value = doc.commission_rate || 0;
+                    
+                    document.getElementById('costCurrency').value = doc.cost_currency || 'USD';
+                    document.getElementById('costAdultPrice').value = doc.cost_adult_price || 0;
+                    document.getElementById('costChildPrice').value = doc.cost_child_price || 0;
+                    document.getElementById('costInfantPrice').value = doc.cost_infant_price || 0;
+                    
+                    // 폼에 수정 ID 저장
+                    document.getElementById('priceRagForm').dataset.editId = id;
+                    
+                    // 스크롤 이동
+                    document.querySelector('#priceRagForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    showAlert('수정하려는 데이터를 불러왔습니다.', 'info');
+                } else {
+                    showAlert('데이터를 불러오는데 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('❌ 요금 RAG 조회 실패:', error);
+                showAlert('데이터를 불러오는데 실패했습니다.', 'danger');
+            }
+        }
+        
+        // 요금 RAG 삭제
+        async function deletePriceRag(id) {
+            if (!confirm('이 요금 정보를 삭제하시겠습니까?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/price-rag/documents/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('✅ 요금 정보가 삭제되었습니다.', 'success');
+                    loadPriceRagDocuments();
+                } else {
+                    showAlert(result.message || '삭제에 실패했습니다.', 'danger');
+                }
+            } catch (error) {
+                console.error('❌ 요금 RAG 삭제 실패:', error);
+                showAlert('삭제 중 오류가 발생했습니다.', 'danger');
             }
         }
 
@@ -1200,30 +1363,39 @@
             }).join('');
         }
 
-        // RAG 문서 업로드 폼 제출
+        // 요금 RAG 폼 제출 이벤트
         document.addEventListener('DOMContentLoaded', function() {
-            const ragForm = document.getElementById('ragUploadForm');
-            if (ragForm) {
-                ragForm.addEventListener('submit', async function(e) {
+            const priceRagForm = document.getElementById('priceRagForm');
+            if (priceRagForm) {
+                priceRagForm.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     
+                    const editId = priceRagForm.dataset.editId;
                     const formData = {
-                        document_type: document.getElementById('ragDocType').value,
-                        document_name: document.getElementById('ragDocName').value,
-                        content: document.getElementById('ragDocContent').value,
-                        platform_id: null, // 필요시 추가
-                        supplier_id: null  // 필요시 추가
+                        product_name: document.getElementById('productName').value,
+                        package_name: document.getElementById('packageName').value || null,
+                        supplier_name: document.getElementById('supplierName').value || null,
+                        
+                        sale_currency: document.getElementById('saleCurrency').value,
+                        sale_adult_price: parseFloat(document.getElementById('saleAdultPrice').value) || 0,
+                        sale_child_price: parseFloat(document.getElementById('saleChildPrice').value) || 0,
+                        sale_infant_price: parseFloat(document.getElementById('saleInfantPrice').value) || 0,
+                        commission_rate: parseFloat(document.getElementById('commissionRate').value) || 0,
+                        
+                        cost_currency: document.getElementById('costCurrency').value,
+                        cost_adult_price: parseFloat(document.getElementById('costAdultPrice').value) || 0,
+                        cost_child_price: parseFloat(document.getElementById('costChildPrice').value) || 0,
+                        cost_infant_price: parseFloat(document.getElementById('costInfantPrice').value) || 0
                     };
                     
                     try {
-                        // 임시: 성공 메시지만 표시
-                        showAlert('RAG 문서가 등록되었습니다. (서버 API 연동 필요)', 'success');
-                        ragForm.reset();
+                        const url = editId 
+                            ? `/api/price-rag/documents/${editId}` 
+                            : '/api/price-rag/documents';
+                        const method = editId ? 'PUT' : 'POST';
                         
-                        // 실제 구현 예시 (주석 처리):
-                        /*
-                        const response = await fetch('/api/rag-documents', {
-                            method: 'POST',
+                        const response = await fetch(url, {
+                            method: method,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(formData)
                         });
@@ -1231,63 +1403,40 @@
                         const result = await response.json();
                         
                         if (result.success) {
-                            showAlert('RAG 문서가 등록되었습니다.', 'success');
-                            ragForm.reset();
-                            loadRagDocuments();
+                            showAlert(`✅ 요금 정보가 ${editId ? '수정' : '등록'}되었습니다.`, 'success');
+                            priceRagForm.reset();
+                            delete priceRagForm.dataset.editId;
+                            loadPriceRagDocuments();
                         } else {
-                            showAlert(result.message || 'RAG 문서 등록에 실패했습니다.', 'danger');
+                            showAlert(result.message || `요금 정보 ${editId ? '수정' : '등록'}에 실패했습니다.`, 'danger');
                         }
-                        */
                     } catch (error) {
-                        console.error('RAG 문서 등록 실패:', error);
-                        showAlert('RAG 문서 등록 중 오류가 발생했습니다.', 'danger');
+                        console.error('❌ 요금 RAG 등록/수정 실패:', error);
+                        showAlert('요금 정보 저장 중 오류가 발생했습니다.', 'danger');
                     }
                 });
             }
             
-            // RAG 탭 클릭 시 문서 로드
+            // 요금 RAG 탭 클릭 시 문서 로드
             const ragTab = document.getElementById('rag-tab');
             if (ragTab) {
                 ragTab.addEventListener('shown.bs.tab', function() {
-                    loadRagDocuments();
+                    loadPriceRagDocuments();
+                });
+            }
+            
+            // 검색 입력 시 실시간 검색
+            const searchInput = document.getElementById('priceSearchInput');
+            if (searchInput) {
+                let searchTimeout;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        loadPriceRagDocuments();
+                    }, 500);
                 });
             }
         });
-
-        // RAG 문서 상세 보기
-        function viewRagDocument(id) {
-            showAlert('RAG 문서 상세 보기 기능은 곧 추가됩니다.', 'info');
-        }
-
-        // RAG 문서 삭제
-        async function deleteRagDocument(id) {
-            if (!confirm('이 RAG 문서를 삭제하시겠습니까?')) {
-                return;
-            }
-            
-            try {
-                showAlert('RAG 문서 삭제 기능은 곧 추가됩니다.', 'info');
-                
-                // 실제 구현 예시 (주석 처리):
-                /*
-                const response = await fetch(`/api/rag-documents/${id}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert('RAG 문서가 삭제되었습니다.', 'success');
-                    loadRagDocuments();
-                } else {
-                    showAlert(result.message || 'RAG 문서 삭제에 실패했습니다.', 'danger');
-                }
-                */
-            } catch (error) {
-                console.error('RAG 문서 삭제 실패:', error);
-                showAlert('RAG 문서 삭제 중 오류가 발생했습니다.', 'danger');
-            }
-        }
     </script>
 </body>
 </html>

@@ -15832,6 +15832,247 @@ async function startServer() {
                 client.release();
             }
         });
+
+        // ==================== 요금 RAG 문서 관리 API ====================
+        
+        // 요금 RAG 문서 목록 조회
+        app.get('/api/price-rag/documents', requireAuth, async (req, res) => {
+            try {
+                const { search = '' } = req.query;
+                console.log('💰 요금 RAG 문서 조회:', { search });
+                
+                let query = 'SELECT * FROM price_rag_documents WHERE 1=1';
+                const params = [];
+                
+                if (search) {
+                    params.push(`%${search}%`);
+                    query += ` AND (product_name ILIKE $${params.length} OR package_name ILIKE $${params.length} OR supplier_name ILIKE $${params.length})`;
+                }
+                
+                query += ' ORDER BY created_at DESC';
+                
+                const result = await pool.query(query, params);
+                
+                res.json({
+                    success: true,
+                    data: result.rows
+                });
+            } catch (error) {
+                console.error('❌ 요금 RAG 문서 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '요금 문서 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 요금 RAG 문서 단건 조회
+        app.get('/api/price-rag/documents/:id', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                console.log('🔍 요금 RAG 문서 상세 조회:', id);
+                
+                const result = await pool.query(
+                    'SELECT * FROM price_rag_documents WHERE id = $1',
+                    [id]
+                );
+                
+                if (result.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '요금 문서를 찾을 수 없습니다.'
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    data: result.rows[0]
+                });
+            } catch (error) {
+                console.error('❌ 요금 RAG 문서 상세 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '요금 문서 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 요금 RAG 문서 등록
+        app.post('/api/price-rag/documents', requireAuth, async (req, res) => {
+            try {
+                const {
+                    product_name,
+                    package_name,
+                    supplier_name,
+                    sale_currency,
+                    sale_adult_price,
+                    sale_child_price,
+                    sale_infant_price,
+                    commission_rate,
+                    cost_currency,
+                    cost_adult_price,
+                    cost_child_price,
+                    cost_infant_price
+                } = req.body;
+                
+                console.log('💾 요금 RAG 문서 등록:', { product_name, package_name });
+                
+                if (!product_name) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '상품명은 필수입니다.'
+                    });
+                }
+                
+                const result = await pool.query(`
+                    INSERT INTO price_rag_documents (
+                        product_name, package_name, supplier_name,
+                        sale_currency, sale_adult_price, sale_child_price, sale_infant_price, commission_rate,
+                        cost_currency, cost_adult_price, cost_child_price, cost_infant_price,
+                        created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    RETURNING *
+                `, [
+                    product_name,
+                    package_name || null,
+                    supplier_name || null,
+                    sale_currency || 'KRW',
+                    sale_adult_price || 0,
+                    sale_child_price || 0,
+                    sale_infant_price || 0,
+                    commission_rate || 0,
+                    cost_currency || 'USD',
+                    cost_adult_price || 0,
+                    cost_child_price || 0,
+                    cost_infant_price || 0,
+                    req.session.user?.username || 'admin'
+                ]);
+                
+                console.log('✅ 요금 RAG 문서 등록 완료:', result.rows[0].id);
+                
+                res.json({
+                    success: true,
+                    message: '요금 정보가 등록되었습니다.',
+                    data: result.rows[0]
+                });
+            } catch (error) {
+                console.error('❌ 요금 RAG 문서 등록 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '요금 정보 등록 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 요금 RAG 문서 수정
+        app.put('/api/price-rag/documents/:id', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                const {
+                    product_name,
+                    package_name,
+                    supplier_name,
+                    sale_currency,
+                    sale_adult_price,
+                    sale_child_price,
+                    sale_infant_price,
+                    commission_rate,
+                    cost_currency,
+                    cost_adult_price,
+                    cost_child_price,
+                    cost_infant_price
+                } = req.body;
+                
+                console.log('✏️ 요금 RAG 문서 수정:', id);
+                
+                const result = await pool.query(`
+                    UPDATE price_rag_documents SET
+                        product_name = $1,
+                        package_name = $2,
+                        supplier_name = $3,
+                        sale_currency = $4,
+                        sale_adult_price = $5,
+                        sale_child_price = $6,
+                        sale_infant_price = $7,
+                        commission_rate = $8,
+                        cost_currency = $9,
+                        cost_adult_price = $10,
+                        cost_child_price = $11,
+                        cost_infant_price = $12,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $13
+                    RETURNING *
+                `, [
+                    product_name,
+                    package_name || null,
+                    supplier_name || null,
+                    sale_currency || 'KRW',
+                    sale_adult_price || 0,
+                    sale_child_price || 0,
+                    sale_infant_price || 0,
+                    commission_rate || 0,
+                    cost_currency || 'USD',
+                    cost_adult_price || 0,
+                    cost_child_price || 0,
+                    cost_infant_price || 0,
+                    id
+                ]);
+                
+                if (result.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '요금 문서를 찾을 수 없습니다.'
+                    });
+                }
+                
+                console.log('✅ 요금 RAG 문서 수정 완료:', id);
+                
+                res.json({
+                    success: true,
+                    message: '요금 정보가 수정되었습니다.',
+                    data: result.rows[0]
+                });
+            } catch (error) {
+                console.error('❌ 요금 RAG 문서 수정 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '요금 정보 수정 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 요금 RAG 문서 삭제
+        app.delete('/api/price-rag/documents/:id', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                console.log('🗑️ 요금 RAG 문서 삭제:', id);
+                
+                const result = await pool.query(
+                    'DELETE FROM price_rag_documents WHERE id = $1 RETURNING id',
+                    [id]
+                );
+                
+                if (result.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '요금 문서를 찾을 수 없습니다.'
+                    });
+                }
+                
+                console.log('✅ 요금 RAG 문서 삭제 완료:', id);
+                
+                res.json({
+                    success: true,
+                    message: '요금 정보가 삭제되었습니다.'
+                });
+            } catch (error) {
+                console.error('❌ 요금 RAG 문서 삭제 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '요금 정보 삭제 중 오류가 발생했습니다.'
+                });
+            }
+        });
         
         // ERP 확장 마이그레이션 함수
         async function runERPMigration() {
