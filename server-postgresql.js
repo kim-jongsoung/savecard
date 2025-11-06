@@ -10,6 +10,7 @@ const cors = require('cors');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const cron = require('node-cron');
+const axios = require('axios');
 
 // 비즈온 서비스 조건부 로드 (SDK가 있을 때만)
 let bizonService = null;
