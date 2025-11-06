@@ -15267,19 +15267,31 @@ async function startServer() {
             try {
                 console.log('🔍 정산 통계 API 호출 시작');
                 
-                // 1. 미입금 거래액 (payment_received_date가 NULL인 항목)
+                // 1. 미입금 거래액 (payment_received_date가 NULL인 항목) - 원화 환산
                 const unpaidRevenueQuery = await pool.query(`
                     SELECT 
-                        COALESCE(SUM(s.net_revenue), 0) as total_unpaid_revenue
+                        COALESCE(SUM(
+                            CASE 
+                                WHEN s.sale_currency = 'KRW' THEN s.total_sale
+                                WHEN s.sale_currency = 'USD' THEN s.total_sale * s.exchange_rate
+                                ELSE s.total_sale * s.exchange_rate
+                            END
+                        ), 0) as total_unpaid_revenue
                     FROM settlements s
                     WHERE s.payment_received_date IS NULL
                 `);
                 
-                // 1-1. 예약업체별 미입금 거래액
+                // 1-1. 예약업체별 미입금 거래액 - 원화 환산
                 const unpaidByPlatformQuery = await pool.query(`
                     SELECT 
                         r.platform_name,
-                        COALESCE(SUM(s.net_revenue), 0) as unpaid_amount
+                        COALESCE(SUM(
+                            CASE 
+                                WHEN s.sale_currency = 'KRW' THEN s.total_sale
+                                WHEN s.sale_currency = 'USD' THEN s.total_sale * s.exchange_rate
+                                ELSE s.total_sale * s.exchange_rate
+                            END
+                        ), 0) as unpaid_amount
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
                     WHERE s.payment_received_date IS NULL
