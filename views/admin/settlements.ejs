@@ -645,24 +645,62 @@
                     <input type="hidden" id="edit-settlement-id">
                     <input type="hidden" id="edit-reservation-id">
                     
-                    <!-- 예약 정보 요약 -->
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>예약 정보</h6>
+                    <!-- 예약 정보 상세 -->
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>예약 상세 정보</h6>
                         </div>
                         <div class="card-body">
-                            <div class="row g-2">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="small text-muted mb-1">예약번호</label>
+                                    <div class="fw-bold" id="edit-reservation-number">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="small text-muted mb-1">손님명</label>
+                                    <div class="fw-bold" id="edit-korean-name">-</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="small text-muted mb-1">이용일</label>
+                                    <div class="fw-bold text-primary" id="edit-usage-date">-</div>
+                                </div>
+                            </div>
+                            <hr class="my-3">
+                            <div class="row g-3">
                                 <div class="col-md-3">
-                                    <strong>예약번호:</strong> <span id="edit-reservation-number">-</span>
+                                    <label class="small text-muted mb-1">예약업체</label>
+                                    <div class="fw-bold text-success" id="edit-platform-name">-</div>
                                 </div>
                                 <div class="col-md-3">
-                                    <strong>손님명:</strong> <span id="edit-korean-name">-</span>
+                                    <label class="small text-muted mb-1">수배업체</label>
+                                    <div class="fw-bold text-danger" id="edit-vendor-name">-</div>
                                 </div>
-                                <div class="col-md-3">
-                                    <strong>상품명:</strong> <span id="edit-product-name">-</span>
+                                <div class="col-md-4">
+                                    <label class="small text-muted mb-1">상품명</label>
+                                    <div class="fw-bold" id="edit-product-name">-</div>
                                 </div>
-                                <div class="col-md-3">
-                                    <strong>이용일:</strong> <span id="edit-usage-date">-</span>
+                                <div class="col-md-2">
+                                    <label class="small text-muted mb-1">패키지명</label>
+                                    <div id="edit-package-type">-</div>
+                                </div>
+                            </div>
+                            <hr class="my-3">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="small text-muted mb-1">성인</label>
+                                    <div class="badge bg-primary fs-6" id="edit-people-adult">0</div>명
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="small text-muted mb-1">소아</label>
+                                    <div class="badge bg-info fs-6" id="edit-people-child">0</div>명
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="small text-muted mb-1">유아</label>
+                                    <div class="badge bg-secondary fs-6" id="edit-people-infant">0</div>명
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="small text-muted mb-1">총 인원</label>
+                                    <div class="fw-bold fs-5" id="edit-total-people">0명</div>
                                 </div>
                             </div>
                         </div>
@@ -1297,6 +1335,20 @@
                 document.getElementById('edit-korean-name').textContent = settlement.korean_name || '-';
                 document.getElementById('edit-product-name').textContent = settlement.product_name || '-';
                 document.getElementById('edit-usage-date').textContent = formatDate(settlement.usage_date);
+                document.getElementById('edit-platform-name').textContent = settlement.platform_name || '-';
+                document.getElementById('edit-vendor-name').textContent = settlement.vendor_name || '-';
+                document.getElementById('edit-package-type').textContent = settlement.package_type || '-';
+                
+                // 인원 정보 표시
+                const peopleAdult = settlement.people_adult || 0;
+                const peopleChild = settlement.people_child || 0;
+                const peopleInfant = settlement.people_infant || 0;
+                const totalPeople = peopleAdult + peopleChild + peopleInfant;
+                
+                document.getElementById('edit-people-adult').textContent = peopleAdult;
+                document.getElementById('edit-people-child').textContent = peopleChild;
+                document.getElementById('edit-people-infant').textContent = peopleInfant;
+                document.getElementById('edit-total-people').textContent = totalPeople + '명';
                 
                 // 거래액 정보
                 document.getElementById('edit-sale-currency').value = settlement.sale_currency || 'KRW';

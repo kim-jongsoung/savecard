@@ -16473,8 +16473,12 @@ async function startServer() {
                         r.reservation_number,
                         r.korean_name,
                         r.product_name,
+                        r.package_type,
                         r.usage_date,
                         r.platform_name,
+                        r.people_adult,
+                        r.people_child,
+                        r.people_infant,
                         v.vendor_name
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
