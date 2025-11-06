@@ -917,6 +917,8 @@
             let totalRevenue = 0;
             let totalCost = 0;
             let totalMargin = 0;
+            let totalMarginTax = 0;
+            let totalCommissionTax = 0;
             let totalTax = 0;
             
             const rows = settlements.map(s => {
@@ -930,13 +932,15 @@
                 // 마진
                 const marginKRW = s.margin_krw || 0;
                 // 부가세 = 마진*10% - 예약업체수수료*10%
-                const saleTax = marginKRW * 0.1;
-                const commissionTax = (s.commission_amount || 0) * 0.1;
-                const tax = saleTax - commissionTax;
+                const marginTax = Math.round(marginKRW * 0.1);  // 마진부가세
+                const commissionTax = Math.round((s.commission_amount || 0) * 0.1);  // 수수료부가세
+                const tax = marginTax - commissionTax;  // 실제부가세
                 
                 totalRevenue += revenueKRW;
                 totalCost += costKRW;
                 totalMargin += marginKRW;
+                totalMarginTax += marginTax;
+                totalCommissionTax += commissionTax;
                 totalTax += tax;
                 
                 // 거래액 표시 (원화만 입력되면 달러는 0)
@@ -966,7 +970,9 @@
                         <td class="text-end"><strong>${revenueDisplay}</strong></td>
                         <td class="text-end text-danger"><strong>${costDisplay}</strong></td>
                         <td class="text-end text-primary"><strong>${Math.round(marginKRW).toLocaleString()}원</strong></td>
-                        <td class="text-end text-info"><small>${Math.round(tax).toLocaleString()}원</small></td>
+                        <td class="text-end" style="background-color: #e0f7ff;"><small>${marginTax.toLocaleString()}원</small></td>
+                        <td class="text-end" style="background-color: #e0ffe0;"><small>${commissionTax.toLocaleString()}원</small></td>
+                        <td class="text-end" style="background-color: #ffe0cc;"><small>${tax.toLocaleString()}원</small></td>
                         <td class="text-center">
                             ${isPaymentReceived ? `<small class="text-success">${formatDate(s.payment_received_date)}</small>` : `<small class="text-muted">-</small>`}
                         </td>
@@ -994,7 +1000,7 @@
             const html = `
                 ${bulkActionButtons}
                 <div class="table-responsive">
-                    <table class="table table-hover table-sm">
+                    <table class="table table-hover table-sm" style="font-size: 0.65rem;">
                         <thead class="table-light">
                             <tr>
                                 <th class="text-center">
@@ -1009,7 +1015,9 @@
                                 <th class="text-end">거래액 (KRW)</th>
                                 <th class="text-end">매입액 (KRW)</th>
                                 <th class="text-end">마진</th>
-                                <th class="text-end">부가세</th>
+                                <th class="text-end" style="background-color: #e0f7ff;">마진부가세</th>
+                                <th class="text-end" style="background-color: #e0ffe0;">수수료부가세</th>
+                                <th class="text-end" style="background-color: #ffe0cc;">실제부가세</th>
                                 <th class="text-center">입금일</th>
                                 <th class="text-center">송금일</th>
                             </tr>
@@ -1023,7 +1031,9 @@
                                 <th class="text-end">${formatCurrency(totalRevenue, 'KRW')}</th>
                                 <th class="text-end text-danger">${formatCurrency(totalCost, 'KRW')}</th>
                                 <th class="text-end text-primary">${formatCurrency(totalMargin, 'KRW')}</th>
-                                <th class="text-end text-info">${formatCurrency(totalTax, 'KRW')}</th>
+                                <th class="text-end" style="background-color: #e0f7ff;">${formatCurrency(totalMarginTax, 'KRW')}</th>
+                                <th class="text-end" style="background-color: #e0ffe0;">${formatCurrency(totalCommissionTax, 'KRW')}</th>
+                                <th class="text-end" style="background-color: #ffe0cc;">${formatCurrency(totalTax, 'KRW')}</th>
                                 <th colspan="2"></th>
                             </tr>
                         </tfoot>
@@ -1559,12 +1569,6 @@
 
         function printSettlement(id) {
             showAlert('정산서 출력 기능은 곧 추가됩니다.', 'info');
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
         }
 
         function renderPagination(pagination) {
