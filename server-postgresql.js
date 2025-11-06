@@ -11,6 +11,7 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const cron = require('node-cron');
 const axios = require('axios');
+const XLSX = require('xlsx');
 
 // 비즈온 서비스 조건부 로드 (SDK가 있을 때만)
 let bizonService = null;
@@ -16353,10 +16354,10 @@ async function startServer() {
         // 정산 목록 조회 (상태별)
         app.get('/api/settlements/list', requireAuth, async (req, res) => {
             try {
-                const { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent } = req.query;
-                console.log('💰 정산 목록 조회:', { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent });
+                const { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent, assigned_to } = req.query;
+                console.log('💰 정산 목록 조회:', { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent, assigned_to });
                 
-                // settlements 테이블과 reservations, assignments, vendors 테이블 조인
+                // settlements 테이블과 reservations, assignments, vendors, admin_users 테이블 조인
                 let query = `
                     SELECT 
                         s.*,
@@ -16365,11 +16366,14 @@ async function startServer() {
                         r.product_name,
                         r.platform_name,
                         r.usage_date,
-                        v.vendor_name
+                        r.assigned_to,
+                        v.vendor_name,
+                        u.full_name as staff_name
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
                     LEFT JOIN assignments a ON a.reservation_id = r.id
                     LEFT JOIN vendors v ON a.vendor_id = v.id
+                    LEFT JOIN admin_users u ON r.assigned_to = u.username
                     WHERE 1=1
                 `;
                 
@@ -16418,6 +16422,12 @@ async function startServer() {
                     query += ' AND s.payment_sent_date IS NULL';
                 }
                 
+                // 담당직원 필터
+                if (assigned_to) {
+                    params.push(assigned_to);
+                    query += ` AND r.assigned_to = $${params.length}`;
+                }
+                
                 // 검색 필터 (손님이름 또는 상품명)
                 if (search) {
                     params.push(`%${search}%`);
@@ -16455,6 +16465,78 @@ async function startServer() {
             }
         });
         
+        // 직원 목록 조회 API
+        app.get('/api/admin/users', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT username, full_name, email, role, is_active
+                    FROM admin_users
+                    WHERE is_active = true
+                    ORDER BY full_name
+                `);
+                
+                res.json({
+                    success: true,
+                    users: result.rows
+                });
+            } catch (error) {
+                console.error('❌ 직원 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '직원 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
+        // 예약업체 목록 조회 API
+        app.get('/api/settlements/platforms', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT r.platform_name
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    WHERE r.platform_name IS NOT NULL
+                    ORDER BY r.platform_name
+                `);
+                
+                res.json({
+                    success: true,
+                    platforms: result.rows.map(row => row.platform_name)
+                });
+            } catch (error) {
+                console.error('❌ 예약업체 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '예약업체 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
+        // 수배업체 목록 조회 API
+        app.get('/api/settlements/vendors', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT v.vendor_name
+                    FROM settlements s
+                    INNER JOIN assignments a ON a.reservation_id = s.reservation_id
+                    INNER JOIN vendors v ON a.vendor_id = v.id
+                    WHERE v.vendor_name IS NOT NULL
+                    ORDER BY v.vendor_name
+                `);
+                
+                res.json({
+                    success: true,
+                    vendors: result.rows.map(row => row.vendor_name)
+                });
+            } catch (error) {
+                console.error('❌ 수배업체 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '수배업체 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
         // 입금/송금 처리 API
         app.post('/api/settlements/:id/payment', requireAuth, async (req, res) => {
             try {
@@ -16536,6 +16618,158 @@ async function startServer() {
             }
         });
         
+        // 정산 내보내기 API (엑셀)
+        app.get('/api/settlements/export', requireAuth, async (req, res) => {
+            try {
+                const { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent, assigned_to } = req.query;
+                console.log('📊 정산 엑셀 내보내기:', { status, start_date, end_date, search, platform, vendor, payment_received, payment_sent, assigned_to });
+                
+                // 정산 목록 조회 (필터 적용)
+                let query = `
+                    SELECT 
+                        s.*,
+                        r.reservation_number,
+                        r.korean_name,
+                        r.product_name,
+                        r.platform_name,
+                        r.usage_date,
+                        r.assigned_to,
+                        v.vendor_name,
+                        u.full_name as staff_name
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    LEFT JOIN assignments a ON a.reservation_id = r.id
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
+                    LEFT JOIN admin_users u ON r.assigned_to = u.username
+                    WHERE 1=1
+                `;
+                
+                const params = [];
+                
+                // 필터 적용 (정산 목록 조회와 동일한 로직)
+                if (status === 'incomplete') {
+                    query += ' AND (s.payment_received_date IS NULL OR s.payment_sent_date IS NULL)';
+                } else if (status === 'completed') {
+                    query += ' AND s.payment_received_date IS NOT NULL AND s.payment_sent_date IS NOT NULL';
+                }
+                
+                if (start_date) {
+                    params.push(start_date);
+                    query += ` AND r.usage_date >= $${params.length}`;
+                }
+                if (end_date) {
+                    params.push(end_date);
+                    query += ` AND r.usage_date <= $${params.length}`;
+                }
+                if (platform) {
+                    params.push(platform);
+                    query += ` AND r.platform_name = $${params.length}`;
+                }
+                if (vendor) {
+                    params.push(vendor);
+                    query += ` AND v.vendor_name = $${params.length}`;
+                }
+                if (payment_received === 'completed') {
+                    query += ' AND s.payment_received_date IS NOT NULL';
+                } else if (payment_received === 'pending') {
+                    query += ' AND s.payment_received_date IS NULL';
+                }
+                if (payment_sent === 'completed') {
+                    query += ' AND s.payment_sent_date IS NOT NULL';
+                } else if (payment_sent === 'pending') {
+                    query += ' AND s.payment_sent_date IS NULL';
+                }
+                if (assigned_to) {
+                    params.push(assigned_to);
+                    query += ` AND r.assigned_to = $${params.length}`;
+                }
+                if (search) {
+                    params.push(`%${search}%`);
+                    const searchIdx = params.length;
+                    query += ` AND (r.korean_name ILIKE $${searchIdx} OR r.product_name ILIKE $${searchIdx})`;
+                }
+                
+                query += ' ORDER BY r.usage_date DESC, s.created_at DESC';
+                
+                const result = await pool.query(query, params);
+                
+                // 엑셀 데이터 생성
+                const excelData = result.rows.map(s => {
+                    const revenueKRW = s.sale_currency === 'KRW' ? (s.net_revenue || 0) : (s.net_revenue || 0) * (s.exchange_rate || 1330);
+                    const costKRW = s.cost_krw || 0;
+                    const marginKRW = s.margin_krw || 0;
+                    const marginTax = Math.round(marginKRW * 0.1);
+                    const commissionTax = Math.round((s.commission_amount || 0) * 0.1);
+                    const tax = marginTax - commissionTax;
+                    
+                    return {
+                        '이용일': s.usage_date ? new Date(s.usage_date).toISOString().split('T')[0] : '-',
+                        '손님이름': s.korean_name || '-',
+                        '상품명': s.product_name || '-',
+                        '예약업체': s.platform_name || '-',
+                        '수배업체': s.vendor_name || '-',
+                        '담당직원': s.staff_name || s.assigned_to || '-',
+                        '거래액(KRW)': Math.round(revenueKRW),
+                        '매입액(KRW)': Math.round(costKRW),
+                        '마진(KRW)': Math.round(marginKRW),
+                        '마진부가세': marginTax,
+                        '수수료부가세': commissionTax,
+                        '실제부가세': tax,
+                        '입금일': s.payment_received_date ? new Date(s.payment_received_date).toISOString().split('T')[0] : '-',
+                        '송금일': s.payment_sent_date ? new Date(s.payment_sent_date).toISOString().split('T')[0] : '-',
+                        '예약번호': s.reservation_number || '-',
+                        '환율': s.exchange_rate || '-'
+                    };
+                });
+                
+                // 엑셀 워크북 생성
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(excelData);
+                
+                // 컬럼 너비 설정
+                ws['!cols'] = [
+                    { wch: 12 }, // 이용일
+                    { wch: 10 }, // 손님이름
+                    { wch: 25 }, // 상품명
+                    { wch: 12 }, // 예약업체
+                    { wch: 12 }, // 수배업체
+                    { wch: 10 }, // 담당직원
+                    { wch: 15 }, // 거래액
+                    { wch: 15 }, // 매입액
+                    { wch: 15 }, // 마진
+                    { wch: 12 }, // 마진부가세
+                    { wch: 12 }, // 수수료부가세
+                    { wch: 12 }, // 실제부가세
+                    { wch: 12 }, // 입금일
+                    { wch: 12 }, // 송금일
+                    { wch: 20 }, // 예약번호
+                    { wch: 10 }  // 환율
+                ];
+                
+                XLSX.utils.book_append_sheet(wb, ws, '정산내역');
+                
+                // 파일명 생성 (날짜 포함)
+                const today = new Date().toISOString().split('T')[0];
+                const filename = `정산내역_${today}.xlsx`;
+                
+                // 엑셀 파일 생성 및 전송
+                const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+                
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+                res.send(excelBuffer);
+                
+                console.log(`✅ 엑셀 내보내기 완료: ${result.rows.length}개 항목`);
+                
+            } catch (error) {
+                console.error('❌ 엑셀 내보내기 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '엑셀 내보내기 중 오류가 발생했습니다.'
+                });
+            }
+        });
+
         // 일괄 입금/송금 처리 API
         app.post('/api/settlements/bulk-payment', requireAuth, async (req, res) => {
             try {

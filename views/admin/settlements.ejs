@@ -175,20 +175,26 @@
                                     <option value="">전체</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">입금상태</label>
+                            <div class="col-md-1">
+                                <label class="form-label small">입금</label>
                                 <select class="form-select form-select-sm" id="paymentReceivedFilter">
                                     <option value="">전체</option>
                                     <option value="completed">완료</option>
                                     <option value="pending">미완료</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">송금상태</label>
+                            <div class="col-md-1">
+                                <label class="form-label small">송금</label>
                                 <select class="form-select form-select-sm" id="paymentSentFilter">
                                     <option value="">전체</option>
                                     <option value="completed">완료</option>
                                     <option value="pending">미완료</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">담당직원</label>
+                                <select class="form-select form-select-sm" id="staffFilter">
+                                    <option value="">전체</option>
                                 </select>
                             </div>
                             <div class="col-md-1">
@@ -870,6 +876,9 @@
             console.log('정산관리 페이지 로드 시작');
             loadSettlementsByStatus('incomplete');
             loadStats();
+            loadStaffList();
+            loadPlatformList();
+            loadVendorList();
             
             // 금액 입력 시 자동 계산 (요소가 존재할 때만)
             const saleAmountEl = document.getElementById('saleAmount');
@@ -880,6 +889,72 @@
                 costAmountEl.addEventListener('input', calculateProfit);
             }
         });
+
+        // 직원 목록 로드
+        async function loadStaffList() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const staffFilter = document.getElementById('staffFilter');
+                    staffFilter.innerHTML = '<option value="">전체</option>';
+                    
+                    data.users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.username;
+                        option.textContent = `${user.full_name} (${user.username})`;
+                        staffFilter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('직원 목록 로드 실패:', error);
+            }
+        }
+
+        // 예약업체 목록 로드
+        async function loadPlatformList() {
+            try {
+                const response = await fetch('/api/settlements/platforms');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const platformFilter = document.getElementById('platformFilter');
+                    platformFilter.innerHTML = '<option value="">전체</option>';
+                    
+                    data.platforms.forEach(platform => {
+                        const option = document.createElement('option');
+                        option.value = platform;
+                        option.textContent = platform;
+                        platformFilter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('예약업체 목록 로드 실패:', error);
+            }
+        }
+
+        // 수배업체 목록 로드
+        async function loadVendorList() {
+            try {
+                const response = await fetch('/api/settlements/vendors');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const vendorFilter = document.getElementById('vendorFilter');
+                    vendorFilter.innerHTML = '<option value="">전체</option>';
+                    
+                    data.vendors.forEach(vendor => {
+                        const option = document.createElement('option');
+                        option.value = vendor;
+                        option.textContent = vendor;
+                        vendorFilter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('수배업체 목록 로드 실패:', error);
+            }
+        }
 
         // 정산 통계 로드
         async function loadStats() {
@@ -961,6 +1036,7 @@
                 const vendorFilter = document.getElementById('vendorFilter').value;
                 const paymentReceivedFilter = document.getElementById('paymentReceivedFilter').value;
                 const paymentSentFilter = document.getElementById('paymentSentFilter').value;
+                const staffFilter = document.getElementById('staffFilter').value;
                 
                 const params = new URLSearchParams({
                     status: status,
@@ -970,7 +1046,8 @@
                     platform: platformFilter || '',
                     vendor: vendorFilter || '',
                     payment_received: paymentReceivedFilter || '',
-                    payment_sent: paymentSentFilter || ''
+                    payment_sent: paymentSentFilter || '',
+                    assigned_to: staffFilter || ''
                 });
                 
                 const response = await fetch(`/api/settlements/list?${params}`);
@@ -1057,6 +1134,7 @@
                         <td><small>${s.product_name || '-'}</small></td>
                         <td><small>${s.platform_name || '-'}</small></td>
                         <td><small>${s.vendor_name || '-'}</small></td>
+                        <td><small class="text-primary">${s.staff_name || s.assigned_to || '-'}</small></td>
                         <td class="text-end"><strong>${revenueDisplay}</strong></td>
                         <td class="text-end text-danger"><strong>${costDisplay}</strong></td>
                         <td class="text-end text-primary"><strong>${Math.round(marginKRW).toLocaleString()}원</strong></td>
@@ -1102,6 +1180,7 @@
                                 <th>상품명</th>
                                 <th>예약업체</th>
                                 <th>수배업체</th>
+                                <th>담당직원</th>
                                 <th class="text-end">거래액 (KRW)</th>
                                 <th class="text-end">매입액 (KRW)</th>
                                 <th class="text-end">마진</th>
@@ -1117,7 +1196,7 @@
                         </tbody>
                         <tfoot class="table-secondary">
                             <tr>
-                                <th colspan="6" class="text-end">총액</th>
+                                <th colspan="7" class="text-end">총액</th>
                                 <th class="text-end">${formatCurrency(totalRevenue, 'KRW')}</th>
                                 <th class="text-end text-danger">${formatCurrency(totalCost, 'KRW')}</th>
                                 <th class="text-end text-primary">${formatCurrency(totalMargin, 'KRW')}</th>
@@ -1654,16 +1733,40 @@
             loadSettlements(1);
         }
 
-        // 정산 내보내기
+        // 정산 내보내기 (엑셀)
         function exportSettlements() {
-            const params = new URLSearchParams({
-                status: currentStatus,
-                month: currentMonth,
-                search: currentSearch,
-                export: 'csv'
-            });
-            
-            window.open(`/api/settlements/export?${params}`, '_blank');
+            try {
+                // 현재 필터 조건 가져오기
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const searchText = document.getElementById('searchInput').value;
+                const platformFilter = document.getElementById('platformFilter').value;
+                const vendorFilter = document.getElementById('vendorFilter').value;
+                const paymentReceivedFilter = document.getElementById('paymentReceivedFilter').value;
+                const paymentSentFilter = document.getElementById('paymentSentFilter').value;
+                const staffFilter = document.getElementById('staffFilter').value;
+                
+                const params = new URLSearchParams({
+                    status: currentSettlementStatus,
+                    start_date: startDate || '',
+                    end_date: endDate || '',
+                    search: searchText || '',
+                    platform: platformFilter || '',
+                    vendor: vendorFilter || '',
+                    payment_received: paymentReceivedFilter || '',
+                    payment_sent: paymentSentFilter || '',
+                    assigned_to: staffFilter || ''
+                });
+                
+                // 엑셀 다운로드
+                window.location.href = `/api/settlements/export?${params}`;
+                
+                showAlert('엑셀 파일을 다운로드합니다.', 'success');
+                
+            } catch (error) {
+                console.error('엑셀 내보내기 오류:', error);
+                showAlert('엑셀 내보내기 중 오류가 발생했습니다.', 'danger');
+            }
         }
 
         // 기타 함수들
