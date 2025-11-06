@@ -1717,20 +1717,23 @@
 
         // 검색 및 필터링
         function searchSettlements() {
-            currentStatus = document.getElementById('statusFilter').value;
-            currentMonth = document.getElementById('monthFilter').value;
-            currentSearch = document.getElementById('searchInput').value;
-            loadSettlements(1);
+            // 현재 선택된 탭(미완료/완료)의 정산 목록을 다시 로드
+            loadSettlementsByStatus(currentSettlementStatus);
         }
 
         function resetFilters() {
-            document.getElementById('statusFilter').value = '';
-            document.getElementById('monthFilter').value = '';
+            // 모든 필터 초기화
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
             document.getElementById('searchInput').value = '';
-            currentStatus = '';
-            currentMonth = '';
-            currentSearch = '';
-            loadSettlements(1);
+            document.getElementById('platformFilter').value = '';
+            document.getElementById('vendorFilter').value = '';
+            document.getElementById('paymentReceivedFilter').value = '';
+            document.getElementById('paymentSentFilter').value = '';
+            document.getElementById('staffFilter').value = '';
+            
+            // 현재 탭의 정산 목록 다시 로드
+            loadSettlementsByStatus(currentSettlementStatus);
         }
 
         // 정산 내보내기 (엑셀)
