@@ -136,40 +136,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- 두번째 행: 월간 통계 -->
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="card stats-card">
-                            <div class="card-body text-center">
-                                <i class="fas fa-calendar-check fa-2x mb-2 text-primary"></i>
-                                <h5 class="mb-1">총 마진</h5>
-                                <h3 id="monthlyProfit" class="text-primary">₩0</h3>
-                                <small id="currentMonth" class="text-muted">이번 달</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card stats-card">
-                            <div class="card-body text-center">
-                                <i class="fas fa-dollar-sign fa-2x mb-2 text-success"></i>
-                                <h5 class="mb-1">거래액 총액</h5>
-                                <h3 id="monthlyRevenue" class="text-success">₩0</h3>
-                                <small class="text-muted">현재까지</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card stats-card">
-                            <div class="card-body text-center">
-                                <i class="fas fa-shopping-cart fa-2x mb-2 text-danger"></i>
-                                <h5 class="mb-1">매입액 총액</h5>
-                                <h3 id="monthlyCost" class="text-danger">₩0</h3>
-                                <small class="text-muted">현재까지</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- 정산 상태 탭 -->
                 <ul class="nav nav-pills mb-3" id="settlementStatusTabs" role="tablist">
@@ -919,23 +885,6 @@
                             </div>`)
                             .join('');
                         unpaidByVendorEl.innerHTML = vendorHtml || '<div class="text-center text-success">✓ 미송금 없음</div>';
-                    }
-                    
-                    // 3. 월간 통계
-                    const monthlyProfitEl = document.getElementById('monthlyProfit');
-                    const monthlyRevenueEl = document.getElementById('monthlyRevenue');
-                    const monthlyCostEl = document.getElementById('monthlyCost');
-                    const currentMonthEl = document.getElementById('currentMonth');
-                    
-                    if (monthlyProfitEl) monthlyProfitEl.textContent = `₩${Math.round(stats.monthlyProfit).toLocaleString()}`;
-                    if (monthlyRevenueEl) monthlyRevenueEl.textContent = `₩${Math.round(stats.monthlyRevenue).toLocaleString()}`;
-                    if (monthlyCostEl) monthlyCostEl.textContent = `₩${Math.round(stats.monthlyCost).toLocaleString()}`;
-                    
-                    // 현재 월 표시
-                    if (currentMonthEl) {
-                        const now = new Date();
-                        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-                        currentMonthEl.textContent = `${now.getFullYear()}년 ${monthNames[now.getMonth()]}`;
                     }
                     
                 } else {
