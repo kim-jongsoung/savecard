@@ -15267,58 +15267,82 @@ async function startServer() {
             try {
                 console.log('🔍 정산 통계 API 호출 시작');
                 
-                // settlement_status 컬럼 존재 여부 확인
-                const columnCheck = await pool.query(`
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name = 'reservations' AND column_name = 'settlement_status'
+                // 1. 미입금 거래액 (payment_received_date가 NULL인 항목)
+                const unpaidRevenueQuery = await pool.query(`
+                    SELECT 
+                        COALESCE(SUM(s.net_revenue), 0) as total_unpaid_revenue
+                    FROM settlements s
+                    WHERE s.payment_received_date IS NULL
                 `);
                 
-                const hasSettlementStatus = columnCheck.rows.length > 0;
-                console.log('📋 settlement_status 컬럼 존재:', hasSettlementStatus);
+                // 1-1. 예약업체별 미입금 거래액
+                const unpaidByPlatformQuery = await pool.query(`
+                    SELECT 
+                        r.platform_name,
+                        COALESCE(SUM(s.net_revenue), 0) as unpaid_amount
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    WHERE s.payment_received_date IS NULL
+                    GROUP BY r.platform_name
+                    ORDER BY unpaid_amount DESC
+                `);
                 
-                let statsQuery;
-                if (hasSettlementStatus) {
-                    statsQuery = `
-                        SELECT 
-                            COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN sale_amount ELSE 0 END), 0) as total_revenue,
-                            COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN cost_amount ELSE 0 END), 0) as total_cost,
-                            COALESCE(SUM(CASE WHEN settlement_status = 'settled' THEN profit_amount ELSE 0 END), 0) as total_profit,
-                            COUNT(*) as total_count,
-                            COUNT(CASE WHEN settlement_status = 'settled' THEN 1 END) as settled_count
-                        FROM reservations 
-                        WHERE payment_status = 'voucher_sent' 
-                        AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
-                    `;
-                } else {
-                    // settlement_status 컬럼이 없을 때 기본 통계
-                    statsQuery = `
-                        SELECT 
-                            COALESCE(SUM(total_amount), 0) as total_revenue,
-                            0 as total_cost,
-                            COALESCE(SUM(total_amount), 0) as total_profit,
-                            COUNT(*) as total_count,
-                            0 as settled_count
-                        FROM reservations 
-                        WHERE payment_status = 'voucher_sent' 
-                        AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', CURRENT_DATE)
-                    `;
-                }
+                // 2. 미송금 매입액 (payment_sent_date가 NULL인 항목)
+                const unpaidCostQuery = await pool.query(`
+                    SELECT 
+                        COALESCE(SUM(s.cost_krw), 0) as total_unpaid_cost
+                    FROM settlements s
+                    WHERE s.payment_sent_date IS NULL
+                `);
                 
-                const result = await pool.query(statsQuery);
-                const stats = result.rows[0];
+                // 2-1. 수배업체별 미송금 매입액
+                const unpaidByVendorQuery = await pool.query(`
+                    SELECT 
+                        v.vendor_name,
+                        COALESCE(SUM(s.cost_krw), 0) as unpaid_amount
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    LEFT JOIN assignments a ON r.id = a.reservation_id
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
+                    WHERE s.payment_sent_date IS NULL
+                    GROUP BY v.vendor_name
+                    ORDER BY unpaid_amount DESC
+                `);
                 
-                const profitRate = stats.total_revenue > 0 ? (stats.total_profit / stats.total_revenue * 100) : 0;
+                // 3. 이번 달 월간 통계 (usage_date 기준)
+                const monthlyStatsQuery = await pool.query(`
+                    SELECT 
+                        COALESCE(SUM(s.net_revenue), 0) as monthly_revenue,
+                        COALESCE(SUM(s.cost_krw), 0) as monthly_cost,
+                        COALESCE(SUM(s.margin_krw), 0) as monthly_profit
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    WHERE DATE_TRUNC('month', r.usage_date) = DATE_TRUNC('month', CURRENT_DATE)
+                `);
+                
+                const unpaidRevenue = parseFloat(unpaidRevenueQuery.rows[0].total_unpaid_revenue) || 0;
+                const unpaidCost = parseFloat(unpaidCostQuery.rows[0].total_unpaid_cost) || 0;
+                const monthlyStats = monthlyStatsQuery.rows[0];
                 
                 res.json({
                     success: true,
                     data: {
-                        totalRevenue: parseFloat(stats.total_revenue) || 0,
-                        totalCost: parseFloat(stats.total_cost) || 0,
-                        totalProfit: parseFloat(stats.total_profit) || 0,
-                        profitRate: profitRate,
-                        totalCount: parseInt(stats.total_count) || 0,
-                        settledCount: parseInt(stats.settled_count) || 0
+                        // 미입금/미송금
+                        unpaidRevenue: unpaidRevenue,
+                        unpaidByPlatform: unpaidByPlatformQuery.rows.map(row => ({
+                            name: row.platform_name || '미지정',
+                            amount: parseFloat(row.unpaid_amount) || 0
+                        })),
+                        unpaidCost: unpaidCost,
+                        unpaidByVendor: unpaidByVendorQuery.rows.map(row => ({
+                            name: row.vendor_name || '미지정',
+                            amount: parseFloat(row.unpaid_amount) || 0
+                        })),
+                        
+                        // 월간 통계
+                        monthlyRevenue: parseFloat(monthlyStats.monthly_revenue) || 0,
+                        monthlyCost: parseFloat(monthlyStats.monthly_cost) || 0,
+                        monthlyProfit: parseFloat(monthlyStats.monthly_profit) || 0
                     }
                 });
                 

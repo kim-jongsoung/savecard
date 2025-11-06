@@ -82,44 +82,67 @@
                     <!-- 정산 목록 탭 -->
                     <div class="tab-pane fade show active" id="listPane" role="tabpanel">
                         <!-- 정산 통계 -->
+                <!-- 첫번째 행: 미입금/미송금 -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card stats-card border-warning">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="mb-0"><i class="fas fa-arrow-down text-warning me-2"></i>미입금 거래액</h5>
+                                    <small class="text-muted">현재 시점</small>
+                                </div>
+                                <h3 class="text-warning mb-2" id="unpaidRevenue">₩0</h3>
+                                <div id="unpaidByPlatform" class="small text-muted">
+                                    <!-- 업체별 미입금액 표시 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card stats-card border-danger">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="mb-0"><i class="fas fa-arrow-up text-danger me-2"></i>미송금 매입액</h5>
+                                    <small class="text-muted">현재 시점</small>
+                                </div>
+                                <h3 class="text-danger mb-2" id="unpaidCost">₩0</h3>
+                                <div id="unpaidByVendor" class="small text-muted">
+                                    <!-- 업체별 미송금액 표시 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 두번째 행: 월간 통계 -->
                 <div class="row mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card stats-card">
                             <div class="card-body text-center">
-                                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
-                                <h5 class="mb-1">총 거래액</h5>
-                                <h3 id="totalRevenue">$0</h3>
-                                <small>이번 달</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="card-body text-center">
-                                <i class="fas fa-shopping-cart fa-2x mb-2"></i>
-                                <h5 class="mb-1">총 매입</h5>
-                                <h3 id="totalCost">$0</h3>
-                                <small>이번 달</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card stats-card">
-                            <div class="card-body text-center">
-                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <i class="fas fa-calendar-check fa-2x mb-2 text-primary"></i>
                                 <h5 class="mb-1">총 마진</h5>
-                                <h3 id="totalProfit">$0</h3>
-                                <small>이번 달</small>
+                                <h3 id="monthlyProfit" class="text-primary">₩0</h3>
+                                <small id="currentMonth" class="text-muted">이번 달</small>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card stats-card">
                             <div class="card-body text-center">
-                                <i class="fas fa-percentage fa-2x mb-2"></i>
-                                <h5 class="mb-1">마진율</h5>
-                                <h3 id="profitRate">0%</h3>
-                                <small>이번 달</small>
+                                <i class="fas fa-dollar-sign fa-2x mb-2 text-success"></i>
+                                <h5 class="mb-1">거래액 총액</h5>
+                                <h3 id="monthlyRevenue" class="text-success">₩0</h3>
+                                <small class="text-muted">현재까지</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-shopping-cart fa-2x mb-2 text-danger"></i>
+                                <h5 class="mb-1">매입액 총액</h5>
+                                <h3 id="monthlyCost" class="text-danger">₩0</h3>
+                                <small class="text-muted">현재까지</small>
                             </div>
                         </div>
                     </div>
@@ -836,15 +859,62 @@
                 
                 if (data.success) {
                     const stats = data.data;
-                    const totalRevenueEl = document.getElementById('totalRevenue');
-                    const totalCostEl = document.getElementById('totalCost');
-                    const totalProfitEl = document.getElementById('totalProfit');
-                    const profitRateEl = document.getElementById('profitRate');
                     
-                    if (totalRevenueEl) totalRevenueEl.textContent = `$${stats.totalRevenue.toLocaleString()}`;
-                    if (totalCostEl) totalCostEl.textContent = `$${stats.totalCost.toLocaleString()}`;
-                    if (totalProfitEl) totalProfitEl.textContent = `$${stats.totalProfit.toLocaleString()}`;
-                    if (profitRateEl) profitRateEl.textContent = `${stats.profitRate.toFixed(1)}%`;
+                    // 1. 미입금 거래액
+                    const unpaidRevenueEl = document.getElementById('unpaidRevenue');
+                    if (unpaidRevenueEl) {
+                        unpaidRevenueEl.textContent = `₩${Math.round(stats.unpaidRevenue).toLocaleString()}`;
+                    }
+                    
+                    // 1-1. 예약업체별 미입금 분류
+                    const unpaidByPlatformEl = document.getElementById('unpaidByPlatform');
+                    if (unpaidByPlatformEl && stats.unpaidByPlatform) {
+                        const platformHtml = stats.unpaidByPlatform
+                            .filter(p => p.amount > 0)
+                            .map(p => `<div class="d-flex justify-content-between mb-1">
+                                <span>${p.name}:</span>
+                                <strong>₩${Math.round(p.amount).toLocaleString()}</strong>
+                            </div>`)
+                            .join('');
+                        unpaidByPlatformEl.innerHTML = platformHtml || '<div class="text-center text-success">✓ 미입금 없음</div>';
+                    }
+                    
+                    // 2. 미송금 매입액
+                    const unpaidCostEl = document.getElementById('unpaidCost');
+                    if (unpaidCostEl) {
+                        unpaidCostEl.textContent = `₩${Math.round(stats.unpaidCost).toLocaleString()}`;
+                    }
+                    
+                    // 2-1. 수배업체별 미송금 분류
+                    const unpaidByVendorEl = document.getElementById('unpaidByVendor');
+                    if (unpaidByVendorEl && stats.unpaidByVendor) {
+                        const vendorHtml = stats.unpaidByVendor
+                            .filter(v => v.amount > 0)
+                            .map(v => `<div class="d-flex justify-content-between mb-1">
+                                <span>${v.name}:</span>
+                                <strong>₩${Math.round(v.amount).toLocaleString()}</strong>
+                            </div>`)
+                            .join('');
+                        unpaidByVendorEl.innerHTML = vendorHtml || '<div class="text-center text-success">✓ 미송금 없음</div>';
+                    }
+                    
+                    // 3. 월간 통계
+                    const monthlyProfitEl = document.getElementById('monthlyProfit');
+                    const monthlyRevenueEl = document.getElementById('monthlyRevenue');
+                    const monthlyCostEl = document.getElementById('monthlyCost');
+                    const currentMonthEl = document.getElementById('currentMonth');
+                    
+                    if (monthlyProfitEl) monthlyProfitEl.textContent = `₩${Math.round(stats.monthlyProfit).toLocaleString()}`;
+                    if (monthlyRevenueEl) monthlyRevenueEl.textContent = `₩${Math.round(stats.monthlyRevenue).toLocaleString()}`;
+                    if (monthlyCostEl) monthlyCostEl.textContent = `₩${Math.round(stats.monthlyCost).toLocaleString()}`;
+                    
+                    // 현재 월 표시
+                    if (currentMonthEl) {
+                        const now = new Date();
+                        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+                        currentMonthEl.textContent = `${now.getFullYear()}년 ${monthNames[now.getMonth()]}`;
+                    }
+                    
                 } else {
                     console.error('통계 API 오류:', data.message);
                     showAlert('통계를 불러오는데 실패했습니다: ' + data.message, 'danger');
