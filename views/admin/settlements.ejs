@@ -620,6 +620,173 @@
         </div>
     </div>
 
+    <!-- 정산 상세/수정 모달 -->
+    <div class="modal fade" id="settlementDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>정산 상세/수정</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 숨겨진 ID 필드 -->
+                    <input type="hidden" id="edit-settlement-id">
+                    <input type="hidden" id="edit-reservation-id">
+                    
+                    <!-- 예약 정보 요약 -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>예약 정보</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <strong>예약번호:</strong> <span id="edit-reservation-number">-</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>손님명:</strong> <span id="edit-korean-name">-</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>상품명:</strong> <span id="edit-product-name">-</span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>이용일:</strong> <span id="edit-usage-date">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 거래액 (받을 돈) -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-arrow-down me-2"></i>거래액 (받을 돈)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label">화폐</label>
+                                    <select class="form-select" id="edit-sale-currency" onchange="calculateEditSettlement()">
+                                        <option value="KRW">원화(₩)</option>
+                                        <option value="USD">달러($)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">성인 판매가</label>
+                                    <input type="number" class="form-control" id="edit-sale-adult" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">소아 판매가</label>
+                                    <input type="number" class="form-control" id="edit-sale-child" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">유아 판매가</label>
+                                    <input type="number" class="form-control" id="edit-sale-infant" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">총 판매가</label>
+                                    <input type="number" class="form-control bg-light" id="edit-total-sale" readonly>
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-3">
+                                    <label class="form-label">수수료율 (%)</label>
+                                    <input type="number" class="form-control" id="edit-commission-rate" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">수수료금액</label>
+                                    <input type="number" class="form-control bg-light" id="edit-commission-amount" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label"><strong>입금받을금액</strong></label>
+                                    <input type="number" class="form-control bg-warning fw-bold" id="edit-net-revenue" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 매입 (줄 돈) -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="fas fa-arrow-up me-2"></i>매입 (줄 돈)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-2">
+                                    <label class="form-label">화폐</label>
+                                    <select class="form-select" id="edit-cost-currency" onchange="calculateEditSettlement()">
+                                        <option value="USD">달러($)</option>
+                                        <option value="KRW">원화(₩)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">성인 원가</label>
+                                    <input type="number" class="form-control" id="edit-cost-adult" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">소아 원가</label>
+                                    <input type="number" class="form-control" id="edit-cost-child" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">유아 원가</label>
+                                    <input type="number" class="form-control" id="edit-cost-infant" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label"><strong>총 원가</strong></label>
+                                    <input type="number" class="form-control bg-light fw-bold" id="edit-total-cost" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 환율 및 마진 정보 -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-graph-up me-2"></i>환율 및 마진</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">환율 (1 USD = ? KRW)</label>
+                                    <input type="number" class="form-control" id="edit-exchange-rate" step="0.01" onchange="calculateEditSettlement()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">매입 원화환산</label>
+                                    <input type="number" class="form-control bg-light" id="edit-cost-krw" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label"><strong>예상 마진</strong></label>
+                                    <input type="number" class="form-control bg-primary text-white fw-bold" id="edit-margin-krw" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label"><strong>마진율 (%)</strong></label>
+                                    <input type="number" class="form-control bg-primary text-white fw-bold" id="edit-margin-rate" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 메모 -->
+                    <div class="card">
+                        <div class="card-body">
+                            <label class="form-label">정산 메모</label>
+                            <textarea class="form-control" id="edit-memo" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-danger" onclick="deleteSettlement()">
+                        <i class="fas fa-trash me-1"></i>정산 삭제
+                    </button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button class="btn btn-primary" onclick="updateSettlement()">
+                        <i class="fas fa-save me-1"></i>수정 저장
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentPage = 1;
@@ -783,8 +950,9 @@
                     : `${formatCurrency(costKRW, 'KRW')}<br><small class="text-muted">(${formatCurrency(s.total_cost || 0, 'USD')} × ${s.exchange_rate || 1330})</small>`;
                 
                 return `
-                    <tr>
-                        <td class="text-center">
+                    <tr style="cursor: pointer;" 
+                        onclick="openSettlementDetail(${s.id}, event, '${status}')">
+                        <td class="text-center" onclick="event.stopPropagation()">
                             <input type="checkbox" class="form-check-input settlement-checkbox" 
                                    value="${s.id}" 
                                    onchange="toggleSettlementSelection(${s.id})" 
@@ -797,8 +965,8 @@
                         <td><small>${s.vendor_name || '-'}</small></td>
                         <td class="text-end"><strong>${revenueDisplay}</strong></td>
                         <td class="text-end text-danger"><strong>${costDisplay}</strong></td>
-                        <td class="text-end text-primary"><strong>${formatCurrency(marginKRW, 'KRW')}</strong></td>
-                        <td class="text-end text-info"><small>${formatCurrency(tax, 'KRW')}</small></td>
+                        <td class="text-end text-primary"><strong>${Math.round(marginKRW).toLocaleString()}원</strong></td>
+                        <td class="text-end text-info"><small>${Math.round(tax).toLocaleString()}원</small></td>
                         <td class="text-center">
                             ${isPaymentReceived ? `<small class="text-success">${formatDate(s.payment_received_date)}</small>` : `<small class="text-muted">-</small>`}
                         </td>
@@ -872,11 +1040,12 @@
             document.getElementById('completedCount').textContent = counts.completed || 0;
         }
         
-        // 화폐 포맷
+        // 화폐 포맷 (소수점 반올림)
         function formatCurrency(amount, currency) {
             if (!amount) return '0';
+            const roundedAmount = Math.round(parseFloat(amount));
             const symbol = currency === 'KRW' ? '₩' : '$';
-            return `${symbol}${parseFloat(amount).toLocaleString()}`;
+            return `${symbol}${roundedAmount.toLocaleString()}`;
         }
         
         // 체크박스 선택/해제
@@ -1049,6 +1218,249 @@
             return 'profit-neutral';
         }
 
+        // 정산 상세 모달 열기
+        async function openSettlementDetail(settlementId, event, status = 'incomplete') {
+            if (event) event.stopPropagation();
+            
+            try {
+                console.log('💰 정산 상세 조회:', settlementId);
+                
+                const response = await fetch(`/api/settlements/${settlementId}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    alert('정산 정보를 불러오는데 실패했습니다.');
+                    return;
+                }
+                
+                const settlement = data.data;
+                const isCompleted = status === 'completed';
+                
+                // 숨겨진 필드 설정
+                document.getElementById('edit-settlement-id').value = settlement.id;
+                document.getElementById('edit-reservation-id').value = settlement.reservation_id;
+                
+                // 예약 정보 표시
+                document.getElementById('edit-reservation-number').textContent = settlement.reservation_number || '-';
+                document.getElementById('edit-korean-name').textContent = settlement.korean_name || '-';
+                document.getElementById('edit-product-name').textContent = settlement.product_name || '-';
+                document.getElementById('edit-usage-date').textContent = formatDate(settlement.usage_date);
+                
+                // 거래액 정보
+                document.getElementById('edit-sale-currency').value = settlement.sale_currency || 'KRW';
+                document.getElementById('edit-sale-adult').value = settlement.sale_adult_price || 0;
+                document.getElementById('edit-sale-child').value = settlement.sale_child_price || 0;
+                document.getElementById('edit-sale-infant').value = settlement.sale_infant_price || 0;
+                document.getElementById('edit-commission-rate').value = settlement.commission_rate || 0;
+                
+                // 매입 정보
+                document.getElementById('edit-cost-currency').value = settlement.cost_currency || 'USD';
+                document.getElementById('edit-cost-adult').value = settlement.cost_adult_price || 0;
+                document.getElementById('edit-cost-child').value = settlement.cost_child_price || 0;
+                document.getElementById('edit-cost-infant').value = settlement.cost_infant_price || 0;
+                
+                // 환율
+                document.getElementById('edit-exchange-rate').value = settlement.exchange_rate || 1330;
+                
+                // 메모
+                document.getElementById('edit-memo').value = settlement.memo || '';
+                
+                // 계산 실행
+                calculateEditSettlement();
+                
+                // 완료된 항목은 읽기 전용으로 설정
+                const formElements = document.querySelectorAll('#settlementDetailModal input, #settlementDetailModal select, #settlementDetailModal textarea');
+                formElements.forEach(el => {
+                    if (isCompleted) {
+                        el.setAttribute('readonly', true);
+                        el.setAttribute('disabled', true);
+                    } else {
+                        el.removeAttribute('readonly');
+                        el.removeAttribute('disabled');
+                    }
+                });
+                
+                // 모달 제목 변경
+                const modalTitle = document.querySelector('#settlementDetailModal .modal-title');
+                modalTitle.innerHTML = isCompleted 
+                    ? '<i class="fas fa-file-invoice me-2"></i>정산서 상세' 
+                    : '<i class="fas fa-edit me-2"></i>정산 상세/수정';
+                
+                // 버튼 표시/숨김
+                const deleteBtn = document.querySelector('#settlementDetailModal .btn-danger');
+                const saveBtn = document.querySelector('#settlementDetailModal .btn-primary');
+                
+                if (isCompleted) {
+                    deleteBtn.style.display = 'none';
+                    saveBtn.style.display = 'none';
+                    
+                    // 입출금 날짜 정보 추가
+                    if (settlement.payment_received_date || settlement.payment_sent_date) {
+                        const paymentInfo = document.createElement('div');
+                        paymentInfo.className = 'alert alert-info mt-3';
+                        paymentInfo.innerHTML = `
+                            <strong><i class="fas fa-check-circle me-2"></i>입출금 완료 정보</strong><br>
+                            ${settlement.payment_received_date ? `<span class="me-3">입금일: <strong>${formatDate(settlement.payment_received_date)}</strong></span>` : ''}
+                            ${settlement.payment_sent_date ? `<span>송금일: <strong>${formatDate(settlement.payment_sent_date)}</strong></span>` : ''}
+                        `;
+                        
+                        const modalBody = document.querySelector('#settlementDetailModal .modal-body');
+                        const existingInfo = modalBody.querySelector('.alert-info');
+                        if (existingInfo) existingInfo.remove();
+                        modalBody.insertBefore(paymentInfo, modalBody.firstChild);
+                    }
+                } else {
+                    deleteBtn.style.display = 'inline-block';
+                    saveBtn.style.display = 'inline-block';
+                    
+                    // 입출금 정보 제거
+                    const modalBody = document.querySelector('#settlementDetailModal .modal-body');
+                    const existingInfo = modalBody.querySelector('.alert-info');
+                    if (existingInfo) existingInfo.remove();
+                }
+                
+                // 모달 열기
+                const modal = new bootstrap.Modal(document.getElementById('settlementDetailModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('❌ 정산 상세 조회 실패:', error);
+                alert('정산 정보를 불러오는데 실패했습니다.');
+            }
+        }
+        
+        // 정산 수정 모달 계산 함수
+        function calculateEditSettlement() {
+            // 인원수 가져오기 (숨겨진 필드나 예약 정보에서 가져와야 함)
+            // 여기서는 간단히 1로 설정 (실제로는 예약 정보에서 가져와야 함)
+            const adultCount = 1;
+            const childCount = 0;
+            const infantCount = 0;
+            
+            // 거래액 계산
+            const saleCurrency = document.getElementById('edit-sale-currency').value;
+            const saleAdult = parseFloat(document.getElementById('edit-sale-adult').value) || 0;
+            const saleChild = parseFloat(document.getElementById('edit-sale-child').value) || 0;
+            const saleInfant = parseFloat(document.getElementById('edit-sale-infant').value) || 0;
+            const totalSale = Math.round((saleAdult * adultCount) + (saleChild * childCount) + (saleInfant * infantCount));
+            
+            const commissionRate = parseFloat(document.getElementById('edit-commission-rate').value) || 0;
+            const commissionAmount = Math.round(totalSale * (commissionRate / 100));
+            const netRevenue = Math.round(totalSale - commissionAmount);
+            
+            document.getElementById('edit-total-sale').value = totalSale;
+            document.getElementById('edit-commission-amount').value = commissionAmount;
+            document.getElementById('edit-net-revenue').value = netRevenue;
+            
+            // 매입액 계산
+            const costCurrency = document.getElementById('edit-cost-currency').value;
+            const costAdult = parseFloat(document.getElementById('edit-cost-adult').value) || 0;
+            const costChild = parseFloat(document.getElementById('edit-cost-child').value) || 0;
+            const costInfant = parseFloat(document.getElementById('edit-cost-infant').value) || 0;
+            const totalCost = Math.round((costAdult * adultCount) + (costChild * childCount) + (costInfant * infantCount));
+            
+            document.getElementById('edit-total-cost').value = totalCost;
+            
+            // 환율 및 마진 계산
+            const exchangeRate = parseFloat(document.getElementById('edit-exchange-rate').value) || 1330;
+            
+            // 원화 환산
+            const revenueKRW = saleCurrency === 'KRW' ? netRevenue : Math.round(netRevenue * exchangeRate);
+            const costKRW = costCurrency === 'KRW' ? totalCost : Math.round(totalCost * exchangeRate);
+            
+            const marginKRW = Math.round(revenueKRW - costKRW);
+            const marginRate = revenueKRW > 0 ? ((marginKRW / revenueKRW) * 100).toFixed(2) : 0;
+            
+            document.getElementById('edit-cost-krw').value = costKRW;
+            document.getElementById('edit-margin-krw').value = marginKRW;
+            document.getElementById('edit-margin-rate').value = marginRate;
+        }
+        
+        // 정산 수정 저장
+        async function updateSettlement() {
+            const settlementId = document.getElementById('edit-settlement-id').value;
+            
+            if (!confirm('정산 정보를 수정하시겠습니까?')) {
+                return;
+            }
+            
+            try {
+                const updateData = {
+                    sale_currency: document.getElementById('edit-sale-currency').value,
+                    sale_adult_price: parseFloat(document.getElementById('edit-sale-adult').value) || 0,
+                    sale_child_price: parseFloat(document.getElementById('edit-sale-child').value) || 0,
+                    sale_infant_price: parseFloat(document.getElementById('edit-sale-infant').value) || 0,
+                    total_sale: parseFloat(document.getElementById('edit-total-sale').value) || 0,
+                    commission_rate: parseFloat(document.getElementById('edit-commission-rate').value) || 0,
+                    commission_amount: parseFloat(document.getElementById('edit-commission-amount').value) || 0,
+                    net_revenue: parseFloat(document.getElementById('edit-net-revenue').value) || 0,
+                    
+                    cost_currency: document.getElementById('edit-cost-currency').value,
+                    cost_adult_price: parseFloat(document.getElementById('edit-cost-adult').value) || 0,
+                    cost_child_price: parseFloat(document.getElementById('edit-cost-child').value) || 0,
+                    cost_infant_price: parseFloat(document.getElementById('edit-cost-infant').value) || 0,
+                    total_cost: parseFloat(document.getElementById('edit-total-cost').value) || 0,
+                    
+                    exchange_rate: parseFloat(document.getElementById('edit-exchange-rate').value) || 1330,
+                    cost_krw: parseFloat(document.getElementById('edit-cost-krw').value) || 0,
+                    margin_krw: parseFloat(document.getElementById('edit-margin-krw').value) || 0,
+                    
+                    memo: document.getElementById('edit-memo').value
+                };
+                
+                console.log('💾 정산 수정:', settlementId, updateData);
+                
+                const response = await fetch(`/api/settlements/${settlementId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ 정산 정보가 수정되었습니다.');
+                    bootstrap.Modal.getInstance(document.getElementById('settlementDetailModal')).hide();
+                    loadSettlementsByStatus(currentSettlementStatus);
+                } else {
+                    alert('❌ 정산 수정 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('❌ 정산 수정 오류:', error);
+                alert('정산 수정 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 정산 삭제
+        async function deleteSettlement() {
+            const settlementId = document.getElementById('edit-settlement-id').value;
+            
+            if (!confirm('정산을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.')) {
+                return;
+            }
+            
+            try {
+                console.log('🗑️ 정산 삭제:', settlementId);
+                
+                const response = await fetch(`/api/settlements/${settlementId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ 정산이 삭제되었습니다.');
+                    bootstrap.Modal.getInstance(document.getElementById('settlementDetailModal')).hide();
+                    loadSettlementsByStatus(currentSettlementStatus);
+                } else {
+                    alert('❌ 정산 삭제 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('❌ 정산 삭제 오류:', error);
+                alert('정산 삭제 중 오류가 발생했습니다.');
+            }
+        }
+        
         // 마진 자동 계산
         function calculateProfit() {
             const saleAmount = parseFloat(document.getElementById('saleAmount').value) || 0;

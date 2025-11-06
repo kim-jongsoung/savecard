@@ -16436,6 +16436,138 @@ async function startServer() {
             }
         });
         
+        // 정산 상세 조회 API
+        app.get('/api/settlements/:id', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                
+                console.log('💰 정산 상세 조회:', id);
+                
+                const result = await pool.query(`
+                    SELECT 
+                        s.*,
+                        r.reservation_number,
+                        r.korean_name,
+                        r.product_name,
+                        r.usage_date,
+                        r.platform_name,
+                        v.vendor_name
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    LEFT JOIN assignments a ON r.id = a.reservation_id
+                    LEFT JOIN vendors v ON a.vendor_id = v.id
+                    WHERE s.id = $1
+                `, [id]);
+                
+                if (result.rows.length === 0) {
+                    return res.status(404).json({
+                        success: false,
+                        message: '정산 정보를 찾을 수 없습니다.'
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    data: result.rows[0]
+                });
+            } catch (error) {
+                console.error('❌ 정산 상세 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 상세 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 정산 수정 API
+        app.put('/api/settlements/:id', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                const updateData = req.body;
+                
+                console.log('💾 정산 수정:', id, updateData);
+                
+                await pool.query(`
+                    UPDATE settlements SET
+                        sale_currency = $1,
+                        sale_adult_price = $2,
+                        sale_child_price = $3,
+                        sale_infant_price = $4,
+                        total_sale = $5,
+                        commission_rate = $6,
+                        commission_amount = $7,
+                        net_revenue = $8,
+                        cost_currency = $9,
+                        cost_adult_price = $10,
+                        cost_child_price = $11,
+                        cost_infant_price = $12,
+                        total_cost = $13,
+                        exchange_rate = $14,
+                        cost_krw = $15,
+                        margin_krw = $16,
+                        memo = $17,
+                        updated_at = NOW()
+                    WHERE id = $18
+                `, [
+                    updateData.sale_currency,
+                    updateData.sale_adult_price,
+                    updateData.sale_child_price,
+                    updateData.sale_infant_price,
+                    updateData.total_sale,
+                    updateData.commission_rate,
+                    updateData.commission_amount,
+                    updateData.net_revenue,
+                    updateData.cost_currency,
+                    updateData.cost_adult_price,
+                    updateData.cost_child_price,
+                    updateData.cost_infant_price,
+                    updateData.total_cost,
+                    updateData.exchange_rate,
+                    updateData.cost_krw,
+                    updateData.margin_krw,
+                    updateData.memo,
+                    id
+                ]);
+                
+                console.log('✅ 정산 수정 완료:', id);
+                
+                res.json({
+                    success: true,
+                    message: '정산 정보가 수정되었습니다.'
+                });
+            } catch (error) {
+                console.error('❌ 정산 수정 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 수정 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 정산 삭제 API
+        app.delete('/api/settlements/:id', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                
+                console.log('🗑️ 정산 삭제:', id);
+                
+                await pool.query('DELETE FROM settlements WHERE id = $1', [id]);
+                
+                console.log('✅ 정산 삭제 완료:', id);
+                
+                res.json({
+                    success: true,
+                    message: '정산이 삭제되었습니다.'
+                });
+            } catch (error) {
+                console.error('❌ 정산 삭제 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '정산 삭제 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // 예약업체 목록 조회
         app.get('/api/settlements/platforms', requireAuth, async (req, res) => {
             try {
