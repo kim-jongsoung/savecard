@@ -15755,6 +15755,165 @@ async function startServer() {
             }
         });
 
+        // ==================== 환율 자동 등록 기능 ====================
+        
+        // 환율 자동 가져오기 함수
+        async function fetchAndSaveExchangeRate() {
+            try {
+                console.log('💱 환율 자동 가져오기 시작...');
+                
+                // ExchangeRate-API 사용 (무료, API 키 불필요)
+                // 또는 한국수출입은행 API 사용 가능
+                const response = await axios.get('https://open.er-api.com/v6/latest/USD');
+                
+                if (response.data && response.data.rates && response.data.rates.KRW) {
+                    const usdToKrw = response.data.rates.KRW;
+                    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                    const currentTime = new Date().toTimeString().split(' ')[0]; // HH:MM:SS
+                    
+                    // DB에 저장 (UPSERT)
+                    await pool.query(`
+                        INSERT INTO exchange_rates (currency_code, rate_date, rate_time, rate, source)
+                        VALUES ($1, $2, $3, $4, $5)
+                        ON CONFLICT (currency_code, rate_date, rate_time)
+                        DO UPDATE SET rate = $4, source = $5, created_at = NOW()
+                        RETURNING *
+                    `, ['USD', today, currentTime, usdToKrw, 'auto_api']);
+                    
+                    console.log(`✅ 환율 자동 등록 완료: 1 USD = ${usdToKrw.toFixed(2)} KRW (${today} ${currentTime})`);
+                    
+                    return {
+                        success: true,
+                        rate: usdToKrw,
+                        date: today,
+                        time: currentTime
+                    };
+                } else {
+                    console.error('❌ 환율 API 응답 형식 오류');
+                    return { success: false, message: 'API 응답 형식 오류' };
+                }
+                
+            } catch (error) {
+                console.error('❌ 환율 자동 가져오기 실패:', error.message);
+                
+                // 실패 시 대체 API 시도 (한국수출입은행)
+                try {
+                    console.log('💱 대체 API로 재시도 중...');
+                    
+                    // 한국수출입은행 API (API 키 필요 - 환경변수에서 가져오기)
+                    const koreaEximbankApiKey = process.env.KOREA_EXIMBANK_API_KEY;
+                    
+                    if (koreaEximbankApiKey) {
+                        const today = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+                        const url = `https://www.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey=${koreaEximbankApiKey}&searchdate=${today}&data=AP01`;
+                        
+                        const response = await axios.get(url);
+                        
+                        if (response.data && Array.isArray(response.data)) {
+                            const usdData = response.data.find(item => item.cur_unit === 'USD');
+                            
+                            if (usdData) {
+                                const usdToKrw = parseFloat(usdData.deal_bas_r.replace(/,/g, ''));
+                                const dateStr = new Date().toISOString().split('T')[0];
+                                const timeStr = new Date().toTimeString().split(' ')[0];
+                                
+                                await pool.query(`
+                                    INSERT INTO exchange_rates (currency_code, rate_date, rate_time, rate, source)
+                                    VALUES ($1, $2, $3, $4, $5)
+                                    ON CONFLICT (currency_code, rate_date, rate_time)
+                                    DO UPDATE SET rate = $4, source = $5, created_at = NOW()
+                                    RETURNING *
+                                `, ['USD', dateStr, timeStr, usdToKrw, 'korea_eximbank_api']);
+                                
+                                console.log(`✅ 대체 API로 환율 등록 완료: 1 USD = ${usdToKrw.toFixed(2)} KRW`);
+                                
+                                return {
+                                    success: true,
+                                    rate: usdToKrw,
+                                    date: dateStr,
+                                    time: timeStr
+                                };
+                            }
+                        }
+                    }
+                    
+                    console.error('❌ 대체 API도 실패');
+                    return { success: false, message: '모든 환율 API 실패' };
+                    
+                } catch (fallbackError) {
+                    console.error('❌ 대체 API 오류:', fallbackError.message);
+                    return { success: false, message: '환율 가져오기 실패' };
+                }
+            }
+        }
+        
+        // 환율 자동 가져오기 수동 실행 API
+        app.post('/api/exchange-rates/fetch', requireAuth, async (req, res) => {
+            try {
+                const result = await fetchAndSaveExchangeRate();
+                
+                if (result.success) {
+                    res.json({
+                        success: true,
+                        message: '환율이 자동으로 등록되었습니다.',
+                        data: result
+                    });
+                } else {
+                    res.status(500).json({
+                        success: false,
+                        message: result.message || '환율 가져오기 실패'
+                    });
+                }
+                
+            } catch (error) {
+                console.error('환율 자동 가져오기 API 오류:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '환율 자동 가져오기 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
+        // 매일 아침 9시에 자동 실행 (한국 시간 기준)
+        cron.schedule('0 9 * * *', async () => {
+            console.log('🕐 스케줄 실행: 매일 아침 9시 환율 자동 업데이트');
+            await fetchAndSaveExchangeRate();
+        }, {
+            timezone: "Asia/Seoul"
+        });
+        
+        console.log('📅 환율 자동 업데이트 스케줄러 시작됨 (매일 09:00 KST)');
+        
+        // 서버 시작 시 오늘 환율 확인 및 자동 등록
+        async function checkAndFetchTodayRate() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                // 오늘 USD 환율이 이미 등록되어 있는지 확인
+                const existingRate = await pool.query(`
+                    SELECT * FROM exchange_rates 
+                    WHERE currency_code = 'USD' 
+                    AND rate_date = $1
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                `, [today]);
+                
+                if (existingRate.rows.length === 0) {
+                    console.log('💱 오늘 환율이 없습니다. 자동으로 가져옵니다...');
+                    await fetchAndSaveExchangeRate();
+                } else {
+                    console.log(`✅ 오늘 환율이 이미 등록되어 있습니다: 1 USD = ₩${parseFloat(existingRate.rows[0].rate).toFixed(2)} (${existingRate.rows[0].rate_time})`);
+                }
+            } catch (error) {
+                console.error('❌ 환율 확인 중 오류:', error.message);
+            }
+        }
+        
+        // 서버 시작 시 환율 체크 (5초 후 - DB 연결 안정화 대기)
+        setTimeout(async () => {
+            await checkAndFetchTodayRate();
+        }, 5000);
+
         // ==================== 대량 정산 계산 API ====================
         
         // 대량 정산 계산 API (AI 기반 자동 계산)

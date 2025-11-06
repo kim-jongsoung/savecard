@@ -495,11 +495,21 @@
                                     </button>
                                 </div>
                             </form>
-                            <div class="mt-2">
+                            <div class="mt-3 d-flex justify-content-between align-items-center">
                                 <small class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i>
                                     환율은 KRW 기준입니다. 예: USD 1 = 1330.50 KRW
                                 </small>
+                                <button type="button" class="btn btn-success btn-sm" onclick="fetchExchangeRateAuto()">
+                                    <i class="fas fa-download me-1"></i>USD 환율 자동으로 가져오기
+                                </button>
+                            </div>
+                            <div class="mt-2">
+                                <div class="alert alert-info alert-dismissible fade show mb-0" role="alert">
+                                    <i class="fas fa-robot me-1"></i>
+                                    <strong>자동 업데이트:</strong> 매일 아침 9시에 자동으로 USD 환율이 등록됩니다.
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1759,15 +1769,55 @@
                 return;
             }
 
-            tbody.innerHTML = rates.map(rate => `
-                <tr>
-                    <td><strong>${rate.currency_code}</strong></td>
-                    <td>${rate.rate_date} ${rate.rate_time || '16:00'}</td>
-                    <td><strong class="text-primary">₩${parseFloat(rate.rate).toLocaleString('ko-KR', {minimumFractionDigits: 2})}</strong></td>
-                    <td><span class="badge bg-secondary">${rate.source || '수동'}</span></td>
-                    <td><small class="text-muted">${formatDate(rate.created_at)}</small></td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = rates.map(rate => {
+                // source 표시 개선
+                let sourceLabel = '수동';
+                let sourceBadge = 'secondary';
+                if (rate.source === 'auto_api') {
+                    sourceLabel = '자동 (API)';
+                    sourceBadge = 'success';
+                } else if (rate.source === 'korea_eximbank_api') {
+                    sourceLabel = '한국수출입은행';
+                    sourceBadge = 'primary';
+                }
+                
+                return `
+                    <tr>
+                        <td><strong>${rate.currency_code}</strong></td>
+                        <td>${rate.rate_date} ${rate.rate_time || '16:00'}</td>
+                        <td><strong class="text-primary">₩${parseFloat(rate.rate).toLocaleString('ko-KR', {minimumFractionDigits: 2})}</strong></td>
+                        <td><span class="badge bg-${sourceBadge}">${sourceLabel}</span></td>
+                        <td><small class="text-muted">${formatDate(rate.created_at)}</small></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 환율 자동으로 가져오기 (수동 실행)
+        async function fetchExchangeRateAuto() {
+            try {
+                showAlert('환율을 가져오는 중입니다...', 'info');
+                
+                const response = await fetch('/api/exchange-rates/fetch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(
+                        `✅ USD 환율이 자동으로 등록되었습니다: 1 USD = ₩${result.data.rate.toFixed(2)} KRW`, 
+                        'success'
+                    );
+                    loadExchangeRates(); // 목록 새로고침
+                } else {
+                    showAlert('❌ ' + (result.message || '환율 가져오기 실패'), 'danger');
+                }
+            } catch (error) {
+                console.error('환율 자동 가져오기 실패:', error);
+                showAlert('환율 가져오기 중 오류가 발생했습니다.', 'danger');
+            }
         }
 
         // 환율 폼 제출 이벤트
