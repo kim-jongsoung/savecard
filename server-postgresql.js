@@ -16383,6 +16383,34 @@ async function startServer() {
             }
         });
         
+        // [디버깅] 정산 데이터의 실제 assigned_to 값 확인
+        app.get('/api/settlements/debug/assigned-to', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT 
+                        r.assigned_to,
+                        u.username,
+                        u.full_name,
+                        COUNT(*) as count
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    LEFT JOIN admin_users u ON r.assigned_to = u.username
+                    WHERE s.payment_received_date IS NOT NULL 
+                      AND s.payment_sent_date IS NOT NULL
+                    GROUP BY r.assigned_to, u.username, u.full_name
+                    ORDER BY count DESC
+                `);
+                
+                res.json({
+                    success: true,
+                    data: result.rows
+                });
+            } catch (error) {
+                console.error('❌ 디버깅 조회 실패:', error);
+                res.status(500).json({ success: false, message: error.message });
+            }
+        });
+
         // 직원 목록 조회 API
         app.get('/api/admin/users', requireAuth, async (req, res) => {
             try {
