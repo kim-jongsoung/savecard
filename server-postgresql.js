@@ -16350,7 +16350,12 @@ async function startServer() {
                 
                 query += ' ORDER BY r.usage_date DESC, s.created_at DESC';
                 
+                console.log('🔍 실행 쿼리:', query);
+                console.log('🔍 쿼리 파라미터:', params);
+                
                 const result = await pool.query(query, params);
+                
+                console.log(`✅ 조회 결과: ${result.rows.length}개`);
                 
                 // 카운트 계산
                 const countQuery = `
