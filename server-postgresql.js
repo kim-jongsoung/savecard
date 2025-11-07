@@ -978,6 +978,105 @@ try {
         if (typeof ensureAllColumns === 'function') {
             await ensureAllColumns();
         }
+        
+        // 요금 RAG 매칭을 위한 컬럼 추가 마이그레이션
+        console.log('🔧 요금 RAG 컬럼 마이그레이션 시작...');
+        await pool.query(`
+            DO $$ 
+            BEGIN
+                -- infant_unit_price 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'infant_unit_price'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN infant_unit_price DECIMAL(10,2);
+                    RAISE NOTICE 'infant_unit_price 컬럼 추가 완료';
+                END IF;
+                
+                -- adult_cost 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'adult_cost'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN adult_cost DECIMAL(10,2);
+                    RAISE NOTICE 'adult_cost 컬럼 추가 완료';
+                END IF;
+                
+                -- child_cost 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'child_cost'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN child_cost DECIMAL(10,2);
+                    RAISE NOTICE 'child_cost 컬럼 추가 완료';
+                END IF;
+                
+                -- infant_cost 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'infant_cost'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN infant_cost DECIMAL(10,2);
+                    RAISE NOTICE 'infant_cost 컬럼 추가 완료';
+                END IF;
+                
+                -- adult_currency 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'adult_currency'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN adult_currency VARCHAR(10) DEFAULT 'USD';
+                    RAISE NOTICE 'adult_currency 컬럼 추가 완료';
+                END IF;
+                
+                -- child_currency 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'child_currency'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN child_currency VARCHAR(10) DEFAULT 'USD';
+                    RAISE NOTICE 'child_currency 컬럼 추가 완료';
+                END IF;
+                
+                -- infant_currency 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'infant_currency'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN infant_currency VARCHAR(10) DEFAULT 'USD';
+                    RAISE NOTICE 'infant_currency 컬럼 추가 완료';
+                END IF;
+                
+                -- adult_cost_currency 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'adult_cost_currency'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN adult_cost_currency VARCHAR(10) DEFAULT 'USD';
+                    RAISE NOTICE 'adult_cost_currency 컬럼 추가 완료';
+                END IF;
+                
+                -- child_cost_currency 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'child_cost_currency'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN child_cost_currency VARCHAR(10) DEFAULT 'USD';
+                    RAISE NOTICE 'child_cost_currency 컬럼 추가 완료';
+                END IF;
+                
+                -- infant_cost_currency 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'infant_cost_currency'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN infant_cost_currency VARCHAR(10) DEFAULT 'USD';
+                    RAISE NOTICE 'infant_cost_currency 컬럼 추가 완료';
+                END IF;
+            END $$;
+        `);
+        console.log('✅ 요금 RAG 컬럼 마이그레이션 완료');
+        
         console.log('🗄️ DB 초기화/보정 완료');
     } catch (e) {
         console.warn('DB 초기화/보정 중 경고:', e.message);
