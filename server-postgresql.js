@@ -10843,6 +10843,31 @@ app.get('/api/vendors', requireAuth, async (req, res) => {
     }
 });
 
+// 플랫폼 목록 조회 API
+app.get('/api/platforms', requireAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT id, platform_name, platform_code, commission_rate, is_active
+            FROM platforms
+            WHERE is_active = true
+            ORDER BY platform_name ASC
+        `;
+        
+        const result = await pool.query(query);
+        
+        res.json({
+            success: true,
+            platforms: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 플랫폼 목록 조회 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '플랫폼 목록 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 상품명으로 수배업체 자동 매칭 API (인박스용)
 app.post('/api/vendors/match', requireAuth, async (req, res) => {
     try {

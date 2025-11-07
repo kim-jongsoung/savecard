@@ -54,15 +54,10 @@
                             <div class="row g-3 mb-4">
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">업체명 (플랫폼) <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="platformName" list="platformList" placeholder="예: NOL, KLOOK" required>
-                                    <datalist id="platformList">
-                                        <option value="NOL">
-                                        <option value="KLOOK">
-                                        <option value="VIATOR">
-                                        <option value="투어비스">
-                                        <option value="GETYOURGUIDE">
-                                    </datalist>
-                                    <small class="text-muted">예약 플랫폼 이름</small>
+                                    <select class="form-select" id="platformName" required>
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                    <small class="text-muted">예약 플랫폼 선택</small>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">상품명 <span class="text-danger">*</span></label>
@@ -101,26 +96,46 @@
                                             </button>
                                         </div>
                                         <div class="row g-3">
-                                            <div class="col-md-3">
+                                            <div class="col-md-2">
                                                 <label class="form-label">옵션명 <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" name="option_name_0" placeholder="예: 성인, 아동" required>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">판매가 ($) <span class="text-danger">*</span></label>
-                                                <input type="number" class="form-control" name="selling_price_0" step="0.01" placeholder="120.00" required onchange="calculateMargin(0)">
+                                                <label class="form-label">판매가 <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control" name="selling_price_0" step="0.01" placeholder="120" required onchange="calculateMargin(0)">
+                                                    <select class="form-select" name="selling_currency_0" style="max-width: 80px;" onchange="calculateMargin(0)">
+                                                        <option value="KRW">₩</option>
+                                                        <option value="USD" selected>$</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">수수료율 (%) <span class="text-danger">*</span></label>
-                                                <input type="number" class="form-control" name="commission_rate_0" step="0.01" placeholder="15.00" required onchange="calculateMargin(0)">
+                                                <label class="form-label">수수료율 <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control" name="commission_rate_0" step="0.01" placeholder="15" required onchange="calculateMargin(0)">
+                                                    <span class="input-group-text">%</span>
+                                                </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">원가 ($) <span class="text-danger">*</span></label>
-                                                <input type="number" class="form-control" name="cost_price_0" step="0.01" placeholder="85.00" required onchange="calculateMargin(0)">
+                                                <label class="form-label">원가 <span class="text-danger">*</span></label>
+                                                <div class="input-group">
+                                                    <input type="number" class="form-control" name="cost_price_0" step="0.01" placeholder="85" required onchange="calculateMargin(0)">
+                                                    <select class="form-select" name="cost_currency_0" style="max-width: 80px;" onchange="calculateMargin(0)">
+                                                        <option value="KRW">₩</option>
+                                                        <option value="USD" selected>$</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">예상 마진 ($)</label>
+                                            <div class="col-md-2">
+                                                <label class="form-label">마진 ($)</label>
                                                 <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_0" readonly>
-                                                <small class="text-muted">판매가 - 수수료 - 원가</small>
+                                                <small class="text-muted">자동계산</small>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">마진율</label>
+                                                <input type="text" class="form-control" name="margin_rate_0" readonly>
+                                                <small class="text-muted">%</small>
                                             </div>
                                         </div>
                                     </div>
@@ -206,12 +221,32 @@
     <script>
         let packageOptionIndex = 1;
         let currentPage = 1;
+        const USD_TO_KRW = 1330; // 환율 (설정에서 가져와야 함)
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
+            loadPlatforms();
             loadVendors();
             loadPricingList();
         });
+
+        // 플랫폼 목록 로드
+        async function loadPlatforms() {
+            try {
+                const response = await fetch('/api/platforms');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('platformName');
+                    select.innerHTML = '<option value="">선택하세요</option>';
+                    data.platforms.forEach(platform => {
+                        select.innerHTML += `<option value="${platform.platform_name}">${platform.platform_name}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('플랫폼 로드 오류:', error);
+            }
+        }
 
         // 수배업체 목록 로드
         async function loadVendors() {
@@ -244,26 +279,46 @@
                             </button>
                         </div>
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">옵션명 <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="option_name_${packageOptionIndex}" placeholder="예: 성인, 아동" required>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">판매가 ($) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="selling_price_${packageOptionIndex}" step="0.01" placeholder="120.00" required onchange="calculateMargin(${packageOptionIndex})">
+                                <label class="form-label">판매가 <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="selling_price_${packageOptionIndex}" step="0.01" placeholder="120" required onchange="calculateMargin(${packageOptionIndex})">
+                                    <select class="form-select" name="selling_currency_${packageOptionIndex}" style="max-width: 80px;" onchange="calculateMargin(${packageOptionIndex})">
+                                        <option value="KRW">₩</option>
+                                        <option value="USD" selected>$</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">수수료율 (%) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="commission_rate_${packageOptionIndex}" step="0.01" placeholder="15.00" required onchange="calculateMargin(${packageOptionIndex})">
+                                <label class="form-label">수수료율 <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="commission_rate_${packageOptionIndex}" step="0.01" placeholder="15" required onchange="calculateMargin(${packageOptionIndex})">
+                                    <span class="input-group-text">%</span>
+                                </div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">원가 ($) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" name="cost_price_${packageOptionIndex}" step="0.01" placeholder="85.00" required onchange="calculateMargin(${packageOptionIndex})">
+                                <label class="form-label">원가 <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="cost_price_${packageOptionIndex}" step="0.01" placeholder="85" required onchange="calculateMargin(${packageOptionIndex})">
+                                    <select class="form-select" name="cost_currency_${packageOptionIndex}" style="max-width: 80px;" onchange="calculateMargin(${packageOptionIndex})">
+                                        <option value="KRW">₩</option>
+                                        <option value="USD" selected>$</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">예상 마진 ($)</label>
+                            <div class="col-md-2">
+                                <label class="form-label">마진 ($)</label>
                                 <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_${packageOptionIndex}" readonly>
-                                <small class="text-muted">판매가 - 수수료 - 원가</small>
+                                <small class="text-muted">자동계산</small>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">마진율</label>
+                                <input type="text" class="form-control" name="margin_rate_${packageOptionIndex}" readonly>
+                                <small class="text-muted">%</small>
                             </div>
                         </div>
                     </div>
@@ -281,24 +336,37 @@
             }
         }
 
-        // 마진 자동 계산
+        // 마진 자동 계산 (통화 고려)
         function calculateMargin(index) {
             const sellingPrice = parseFloat(document.querySelector(`[name="selling_price_${index}"]`).value) || 0;
+            const sellingCurrency = document.querySelector(`[name="selling_currency_${index}"]`).value;
             const commissionRate = parseFloat(document.querySelector(`[name="commission_rate_${index}"]`).value) || 0;
             const costPrice = parseFloat(document.querySelector(`[name="cost_price_${index}"]`).value) || 0;
+            const costCurrency = document.querySelector(`[name="cost_currency_${index}"]`).value;
 
-            const commission = sellingPrice * (commissionRate / 100);
-            const margin = sellingPrice - commission - costPrice;
+            // 모두 달러로 통일
+            let sellingPriceUSD = sellingCurrency === 'KRW' ? sellingPrice / USD_TO_KRW : sellingPrice;
+            let costPriceUSD = costCurrency === 'KRW' ? costPrice / USD_TO_KRW : costPrice;
+
+            const commission = sellingPriceUSD * (commissionRate / 100);
+            const margin = sellingPriceUSD - commission - costPriceUSD;
+            const marginRate = sellingPriceUSD > 0 ? (margin / sellingPriceUSD) * 100 : 0;
 
             const marginInput = document.querySelector(`[name="margin_preview_${index}"]`);
-            marginInput.value = `$${margin.toFixed(2)} (${((margin/sellingPrice)*100).toFixed(1)}%)`;
+            const marginRateInput = document.querySelector(`[name="margin_rate_${index}"]`);
+            
+            marginInput.value = `$${margin.toFixed(2)}`;
+            marginRateInput.value = `${marginRate.toFixed(1)}%`;
             
             if (margin > 0) {
                 marginInput.style.color = '#28a745';
+                marginRateInput.style.color = '#28a745';
             } else if (margin < 0) {
                 marginInput.style.color = '#dc3545';
+                marginRateInput.style.color = '#dc3545';
             } else {
                 marginInput.style.color = '#6c757d';
+                marginRateInput.style.color = '#6c757d';
             }
         }
 
@@ -335,14 +403,18 @@
                 const index = option.getAttribute('data-index');
                 const optionName = document.querySelector(`[name="option_name_${index}"]`).value;
                 const sellingPrice = parseFloat(document.querySelector(`[name="selling_price_${index}"]`).value);
+                const sellingCurrency = document.querySelector(`[name="selling_currency_${index}"]`).value;
                 const commissionRate = parseFloat(document.querySelector(`[name="commission_rate_${index}"]`).value);
                 const costPrice = parseFloat(document.querySelector(`[name="cost_price_${index}"]`).value);
+                const costCurrency = document.querySelector(`[name="cost_currency_${index}"]`).value;
 
                 packageOptions.push({
                     option_name: optionName,
                     selling_price: sellingPrice,
+                    selling_currency: sellingCurrency,
                     commission_rate: commissionRate,
-                    cost_price: costPrice
+                    cost_price: costPrice,
+                    cost_currency: costCurrency
                 });
             });
 
@@ -491,6 +563,8 @@
                     packageOptionIndex = 0;
 
                     options.forEach((opt, idx) => {
+                        const sellingCurrency = opt.selling_currency || 'USD';
+                        const costCurrency = opt.cost_currency || 'USD';
                         const optionHTML = `
                             <div class="package-option card mb-3" data-index="${idx}">
                                 <div class="card-body">
@@ -501,25 +575,44 @@
                                         </button>
                                     </div>
                                     <div class="row g-3">
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <label class="form-label">옵션명</label>
                                             <input type="text" class="form-control" name="option_name_${idx}" value="${opt.option_name}" required>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">판매가 ($)</label>
-                                            <input type="number" class="form-control" name="selling_price_${idx}" value="${opt.selling_price}" step="0.01" required onchange="calculateMargin(${idx})">
+                                            <label class="form-label">판매가</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" name="selling_price_${idx}" value="${opt.selling_price}" step="0.01" required onchange="calculateMargin(${idx})">
+                                                <select class="form-select" name="selling_currency_${idx}" style="max-width: 80px;" onchange="calculateMargin(${idx})">
+                                                    <option value="KRW" ${sellingCurrency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${sellingCurrency === 'USD' ? 'selected' : ''}>$</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">수수료율 (%)</label>
-                                            <input type="number" class="form-control" name="commission_rate_${idx}" value="${opt.commission_rate}" step="0.01" required onchange="calculateMargin(${idx})">
+                                            <label class="form-label">수수료율</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" name="commission_rate_${idx}" value="${opt.commission_rate}" step="0.01" required onchange="calculateMargin(${idx})">
+                                                <span class="input-group-text">%</span>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">원가 ($)</label>
-                                            <input type="number" class="form-control" name="cost_price_${idx}" value="${opt.cost_price}" step="0.01" required onchange="calculateMargin(${idx})">
+                                            <label class="form-label">원가</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" name="cost_price_${idx}" value="${opt.cost_price}" step="0.01" required onchange="calculateMargin(${idx})">
+                                                <select class="form-select" name="cost_currency_${idx}" style="max-width: 80px;" onchange="calculateMargin(${idx})">
+                                                    <option value="KRW" ${costCurrency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${costCurrency === 'USD' ? 'selected' : ''}>$</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">예상 마진 ($)</label>
+                                        <div class="col-md-2">
+                                            <label class="form-label">마진 ($)</label>
                                             <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_${idx}" readonly>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">마진율</label>
+                                            <input type="text" class="form-control" name="margin_rate_${idx}" readonly>
                                         </div>
                                     </div>
                                 </div>
