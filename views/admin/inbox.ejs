@@ -1250,44 +1250,84 @@
             // 수수료율 가져오기 (RAG에서 설정된 값)
             const commissionRate = window.ragCommissionRate || 0;
             
-            // 마진 계산 (판매가 - 원가 - 수수료)
-            const adultCommission = adultPrice * (commissionRate / 100);
-            const childCommission = childPrice * (commissionRate / 100);
-            const infantCommission = infantPrice * (commissionRate / 100);
+            // 환율 (환율관리에서 가져온 최신 환율)
+            const exchangeRate = window.latestExchangeRate || 1300;
             
-            const adultMargin = adultPrice - adultCost - adultCommission;
-            const childMargin = childPrice - childCost - childCommission;
-            const infantMargin = infantPrice - infantCost - infantCommission;
+            // 통화 변환 함수 (모든 금액을 원화로 통일)
+            function convertToKRW(amount, currency) {
+                if (currency === 'USD') {
+                    return amount * exchangeRate;
+                }
+                return amount; // 이미 KRW
+            }
             
-            console.log('💰 마진 계산:', {
+            // 판매가를 원화로 변환
+            const adultPriceKRW = convertToKRW(adultPrice, adultCurrency);
+            const childPriceKRW = convertToKRW(childPrice, childCurrency);
+            const infantPriceKRW = convertToKRW(infantPrice, infantCurrency);
+            
+            // 원가를 원화로 변환
+            const adultCostKRW = convertToKRW(adultCost, adultCostCurrency);
+            const childCostKRW = convertToKRW(childCost, childCostCurrency);
+            const infantCostKRW = convertToKRW(infantCost, infantCostCurrency);
+            
+            // 마진 계산 (원화 기준: 판매가 - 원가 - 수수료)
+            const adultCommissionKRW = adultPriceKRW * (commissionRate / 100);
+            const childCommissionKRW = childPriceKRW * (commissionRate / 100);
+            const infantCommissionKRW = infantPriceKRW * (commissionRate / 100);
+            
+            const adultMarginKRW = adultPriceKRW - adultCostKRW - adultCommissionKRW;
+            const childMarginKRW = childPriceKRW - childCostKRW - childCommissionKRW;
+            const infantMarginKRW = infantPriceKRW - infantCostKRW - infantCommissionKRW;
+            
+            console.log('💰 마진 계산 (환율 적용):', {
+                exchangeRate: exchangeRate,
                 commissionRate: commissionRate + '%',
-                adult: { price: adultPrice, cost: adultCost, commission: adultCommission, margin: adultMargin },
-                child: { price: childPrice, cost: childCost, commission: childCommission, margin: childMargin },
-                infant: { price: infantPrice, cost: infantCost, commission: infantCommission, margin: infantMargin }
+                adult: { 
+                    priceOriginal: `${adultPrice} ${adultCurrency}`,
+                    priceKRW: adultPriceKRW, 
+                    costOriginal: `${adultCost} ${adultCostCurrency}`,
+                    costKRW: adultCostKRW, 
+                    commission: adultCommissionKRW, 
+                    margin: adultMarginKRW 
+                },
+                child: { 
+                    priceOriginal: `${childPrice} ${childCurrency}`,
+                    priceKRW: childPriceKRW, 
+                    costOriginal: `${childCost} ${childCostCurrency}`,
+                    costKRW: childCostKRW, 
+                    commission: childCommissionKRW, 
+                    margin: childMarginKRW 
+                },
+                infant: { 
+                    priceOriginal: `${infantPrice} ${infantCurrency}`,
+                    priceKRW: infantPriceKRW, 
+                    costOriginal: `${infantCost} ${infantCostCurrency}`,
+                    costKRW: infantCostKRW, 
+                    commission: infantCommissionKRW, 
+                    margin: infantMarginKRW 
+                }
             });
             
-            // 성인 마진 표시
+            // 성인 마진 표시 (원화 기준)
             if (adultPrice > 0 || adultCost > 0) {
-                const display = adultCurrency === 'USD' ? 
-                    `$${adultMargin.toFixed(2)}` : `₩${Math.round(adultMargin).toLocaleString('ko-KR')}`;
+                const display = `₩${Math.round(adultMarginKRW).toLocaleString('ko-KR')}`;
                 document.getElementById('adult_margin').value = display;
             } else {
                 document.getElementById('adult_margin').value = '';
             }
             
-            // 소아 마진 표시
+            // 소아 마진 표시 (원화 기준)
             if (childPrice > 0 || childCost > 0) {
-                const display = childCurrency === 'USD' ? 
-                    `$${childMargin.toFixed(2)}` : `₩${Math.round(childMargin).toLocaleString('ko-KR')}`;
+                const display = `₩${Math.round(childMarginKRW).toLocaleString('ko-KR')}`;
                 document.getElementById('child_margin').value = display;
             } else {
                 document.getElementById('child_margin').value = '';
             }
             
-            // 유아 마진 표시
+            // 유아 마진 표시 (원화 기준)
             if (infantPrice > 0 || infantCost > 0) {
-                const display = infantCurrency === 'USD' ? 
-                    `$${infantMargin.toFixed(2)}` : `₩${Math.round(infantMargin).toLocaleString('ko-KR')}`;
+                const display = `₩${Math.round(infantMarginKRW).toLocaleString('ko-KR')}`;
                 document.getElementById('infant_margin').value = display;
             } else {
                 document.getElementById('infant_margin').value = '';
@@ -1367,8 +1407,30 @@
             }
         }
 
+        // 최신 USD 환율 가져오기
+        async function fetchLatestExchangeRate() {
+            try {
+                const response = await fetch('/api/exchange-rates?currency=USD');
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    window.latestExchangeRate = result.data[0].rate;
+                    console.log('💱 최신 USD 환율:', window.latestExchangeRate);
+                } else {
+                    window.latestExchangeRate = 1300; // 기본값
+                    console.warn('⚠️ 환율 조회 실패, 기본값 사용:', window.latestExchangeRate);
+                }
+            } catch (error) {
+                console.error('환율 조회 오류:', error);
+                window.latestExchangeRate = 1300; // 기본값
+            }
+        }
+
         // 인원 수 및 가격 변경 시 재계산 - 페이지 로드 후 이벤트 리스너 추가
         document.addEventListener('DOMContentLoaded', function() {
+            // 최신 환율 가져오기
+            fetchLatestExchangeRate();
+            
             // 수배업체 목록 로드
             loadVendors();
             
