@@ -2454,7 +2454,6 @@
             document.getElementById('edit-reservation-number').value = reservation.reservation_number || '';
             document.getElementById('edit-platform-name').value = reservation.platform_name || '';
             document.getElementById('edit-payment-status').value = reservation.payment_status || 'pending';
-            document.getElementById('edit-created-at').value = reservation.created_at ? new Date(reservation.created_at).toLocaleString('ko-KR') : '';
             
             // 상품 정보
             document.getElementById('edit-product-name').value = reservation.product_name || '';
@@ -2478,8 +2477,6 @@
             }
             
             document.getElementById('edit-phone').value = reservation.phone || '';
-            document.getElementById('edit-email').value = reservation.email || '';
-            document.getElementById('edit-kakao-id').value = reservation.kakao_id || '';
             
             // 인원 및 금액 정보
             document.getElementById('edit-people-adult').value = reservation.people_adult || 0;
