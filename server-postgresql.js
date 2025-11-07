@@ -17718,6 +17718,7 @@ async function startServer() {
                         platform_name VARCHAR(100) NOT NULL,
                         vendor_id INTEGER REFERENCES vendors(id),
                         product_name VARCHAR(255) NOT NULL,
+                        commission_rate DECIMAL(5,2) DEFAULT 15.00,
                         package_options JSONB NOT NULL DEFAULT '[]',
                         notes TEXT,
                         is_active BOOLEAN DEFAULT true,
@@ -17728,6 +17729,20 @@ async function startServer() {
                     )
                 `);
                 console.log('   ✅ product_pricing 테이블 생성 완료');
+                
+                // 1-1. commission_rate 컬럼이 없으면 추가 (기존 테이블 대응)
+                await pool.query(`
+                    DO $$ 
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE table_name='product_pricing' AND column_name='commission_rate'
+                        ) THEN
+                            ALTER TABLE product_pricing ADD COLUMN commission_rate DECIMAL(5,2) DEFAULT 15.00;
+                        END IF;
+                    END $$;
+                `);
+                console.log('   ✅ commission_rate 컬럼 확인/추가 완료');
                 
                 // 2. 인덱스 생성
                 await pool.query(`

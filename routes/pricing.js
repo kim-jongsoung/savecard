@@ -186,7 +186,8 @@ module.exports = (pool) => {
                 platform_name,
                 vendor_id,
                 product_name,
-                package_options, // [{ option_name, selling_price, commission_rate, cost_price }]
+                commission_rate, // 상품 전체 공통 수수료율
+                package_options, // [{ option_name, adult_price, adult_currency, ... }]
                 notes
             } = req.body;
             
@@ -223,13 +224,14 @@ module.exports = (pool) => {
             // 요금 등록
             const result = await pool.query(`
                 INSERT INTO product_pricing 
-                (platform_name, vendor_id, product_name, package_options, notes)
-                VALUES ($1, $2, $3, $4, $5)
+                (platform_name, vendor_id, product_name, commission_rate, package_options, notes)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING *
             `, [
                 platform_name,
                 vendor_id || null,
                 product_name,
+                commission_rate || 15,
                 JSON.stringify(package_options),
                 notes || null
             ]);
@@ -261,6 +263,7 @@ module.exports = (pool) => {
                 platform_name,
                 vendor_id,
                 product_name,
+                commission_rate,
                 package_options,
                 notes,
                 change_reason
@@ -307,16 +310,18 @@ module.exports = (pool) => {
                     platform_name = $1,
                     vendor_id = $2,
                     product_name = $3,
-                    package_options = $4,
-                    notes = $5,
+                    commission_rate = $4,
+                    package_options = $5,
+                    notes = $6,
                     version = version + 1,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = $6
+                WHERE id = $7
                 RETURNING *
             `, [
                 platform_name,
                 vendor_id || null,
                 product_name,
+                commission_rate || 15,
                 JSON.stringify(package_options),
                 notes || null,
                 id

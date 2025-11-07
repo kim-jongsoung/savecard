@@ -52,19 +52,27 @@
                             
                             <!-- 1단계: 기본 정보 -->
                             <div class="row g-3 mb-4">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold">업체명 (플랫폼) <span class="text-danger">*</span></label>
                                     <select class="form-select" id="platformName" required>
                                         <option value="">선택하세요</option>
                                     </select>
                                     <small class="text-muted">예약 플랫폼 선택</small>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold">상품명 <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="productName" placeholder="예: 괌 돌핀크루즈 투어" required>
                                     <small class="text-muted">실제 상품 이름</small>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">수수료율 (전체 공통) <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="commissionRate" step="0.01" placeholder="15" required onchange="recalculateAllMargins()">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    <small class="text-muted">모든 옵션에 동일 적용</small>
+                                </div>
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold">수배업체</label>
                                     <select class="form-select" id="vendorId">
                                         <option value="">선택하세요</option>
@@ -90,52 +98,109 @@
                                 <div class="package-option card mb-3" data-index="0">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>옵션 #1</h6>
+                                            <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>패키지 옵션 #1</h6>
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackageOption(0)" disabled>
                                                 <i class="fas fa-trash"></i> 삭제
                                             </button>
                                         </div>
-                                        <div class="row g-3">
-                                            <div class="col-md-2">
-                                                <label class="form-label">옵션명 <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" name="option_name_0" placeholder="예: 성인, 아동" required>
+                                        
+                                        <!-- 옵션명 -->
+                                        <div class="row g-3 mb-3">
+                                            <div class="col-md-12">
+                                                <label class="form-label fw-bold">옵션명 <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="option_name_0" placeholder="예: 픽업 포함 + 오전, 픽업 미포함 + 오후" required>
+                                                <small class="text-muted">픽업 포함 여부, 이용 시간대 등을 명시</small>
+                                            </div>
+                                        </div>
+
+                                        <hr class="my-3">
+
+                                        <!-- 성인/소아/유아 요금 -->
+                                        <h6 class="text-secondary mb-3"><i class="fas fa-users me-1"></i>인원별 요금</h6>
+                                        
+                                        <!-- 성인 -->
+                                        <div class="row g-2 mb-2 align-items-end">
+                                            <div class="col-md-1">
+                                                <span class="badge bg-primary">성인</span>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">판매가 <span class="text-danger">*</span></label>
-                                                <div class="input-group">
-                                                    <input type="number" class="form-control" name="selling_price_0" step="0.01" placeholder="120" required onchange="calculateMargin(0)">
-                                                    <select class="form-select" name="selling_currency_0" style="max-width: 80px;" onchange="calculateMargin(0)">
+                                                <label class="form-label small">판매가</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" name="adult_price_0" step="0.01" placeholder="120" onchange="calculateAllMargins(0)">
+                                                    <select class="form-select" name="adult_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
                                                         <option value="KRW">₩</option>
                                                         <option value="USD" selected>$</option>
                                                     </select>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">수수료율 <span class="text-danger">*</span></label>
-                                                <div class="input-group">
-                                                    <input type="number" class="form-control" name="commission_rate_0" step="0.01" placeholder="15" required onchange="calculateMargin(0)">
-                                                    <span class="input-group-text">%</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label">원가 <span class="text-danger">*</span></label>
-                                                <div class="input-group">
-                                                    <input type="number" class="form-control" name="cost_price_0" step="0.01" placeholder="85" required onchange="calculateMargin(0)">
-                                                    <select class="form-select" name="cost_currency_0" style="max-width: 80px;" onchange="calculateMargin(0)">
+                                                <label class="form-label small">원가</label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" name="adult_cost_0" step="0.01" placeholder="85" onchange="calculateAllMargins(0)">
+                                                    <select class="form-select" name="adult_cost_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
                                                         <option value="KRW">₩</option>
                                                         <option value="USD" selected>$</option>
                                                     </select>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">마진 ($)</label>
-                                                <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_0" readonly>
-                                                <small class="text-muted">자동계산</small>
+                                                <label class="form-label small">마진</label>
+                                                <input type="text" class="form-control form-control-sm fw-bold" name="adult_margin_0" readonly>
+                                            </div>
+
+                                            <!-- 소아 -->
+                                            <div class="col-md-1">
+                                                <span class="badge bg-info">소아</span>
                                             </div>
                                             <div class="col-md-2">
-                                                <label class="form-label">마진율</label>
-                                                <input type="text" class="form-control" name="margin_rate_0" readonly>
-                                                <small class="text-muted">%</small>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" name="child_price_0" step="0.01" placeholder="80" onchange="calculateAllMargins(0)">
+                                                    <select class="form-select" name="child_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
+                                                        <option value="KRW">₩</option>
+                                                        <option value="USD" selected>$</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" name="child_cost_0" step="0.01" placeholder="50" onchange="calculateAllMargins(0)">
+                                                    <select class="form-select" name="child_cost_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
+                                                        <option value="KRW">₩</option>
+                                                        <option value="USD" selected>$</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- 유아 -->
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-1">
+                                                <span class="badge bg-warning text-dark">유아</span>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" name="infant_price_0" step="0.01" placeholder="40" onchange="calculateAllMargins(0)">
+                                                    <select class="form-select" name="infant_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
+                                                        <option value="KRW">₩</option>
+                                                        <option value="USD" selected>$</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" class="form-control" name="infant_cost_0" step="0.01" placeholder="20" onchange="calculateAllMargins(0)">
+                                                    <select class="form-select" name="infant_cost_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
+                                                        <option value="KRW">₩</option>
+                                                        <option value="USD" selected>$</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_0" readonly>
+                                            </div>
+                                            <div class="col-md-1"></div>
+                                            <div class="col-md-4">
+                                                <input type="text" class="form-control form-control-sm fw-bold" name="infant_margin_0" readonly>
                                             </div>
                                         </div>
                                     </div>
@@ -273,52 +338,109 @@
                 <div class="package-option card mb-3" data-index="${packageOptionIndex}">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>옵션 #${packageOptionIndex + 1}</h6>
+                            <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>패키지 옵션 #${packageOptionIndex + 1}</h6>
                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackageOption(${packageOptionIndex})">
                                 <i class="fas fa-trash"></i> 삭제
                             </button>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-2">
-                                <label class="form-label">옵션명 <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="option_name_${packageOptionIndex}" placeholder="예: 성인, 아동" required>
+                        
+                        <!-- 옵션명 -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">옵션명 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="option_name_${packageOptionIndex}" placeholder="예: 픽업 포함 + 오전, 픽업 미포함 + 오후" required>
+                                <small class="text-muted">픽업 포함 여부, 이용 시간대 등을 명시</small>
+                            </div>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <!-- 성인/소아/유아 요금 -->
+                        <h6 class="text-secondary mb-3"><i class="fas fa-users me-1"></i>인원별 요금</h6>
+                        
+                        <!-- 성인 -->
+                        <div class="row g-2 mb-2 align-items-end">
+                            <div class="col-md-1">
+                                <span class="badge bg-primary">성인</span>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">판매가 <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" name="selling_price_${packageOptionIndex}" step="0.01" placeholder="120" required onchange="calculateMargin(${packageOptionIndex})">
-                                    <select class="form-select" name="selling_currency_${packageOptionIndex}" style="max-width: 80px;" onchange="calculateMargin(${packageOptionIndex})">
+                                <label class="form-label small">판매가</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" name="adult_price_${packageOptionIndex}" step="0.01" placeholder="120" onchange="calculateAllMargins(${packageOptionIndex})">
+                                    <select class="form-select" name="adult_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
                                         <option value="KRW">₩</option>
                                         <option value="USD" selected>$</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">수수료율 <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" name="commission_rate_${packageOptionIndex}" step="0.01" placeholder="15" required onchange="calculateMargin(${packageOptionIndex})">
-                                    <span class="input-group-text">%</span>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">원가 <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" name="cost_price_${packageOptionIndex}" step="0.01" placeholder="85" required onchange="calculateMargin(${packageOptionIndex})">
-                                    <select class="form-select" name="cost_currency_${packageOptionIndex}" style="max-width: 80px;" onchange="calculateMargin(${packageOptionIndex})">
+                                <label class="form-label small">원가</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" name="adult_cost_${packageOptionIndex}" step="0.01" placeholder="85" onchange="calculateAllMargins(${packageOptionIndex})">
+                                    <select class="form-select" name="adult_cost_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
                                         <option value="KRW">₩</option>
                                         <option value="USD" selected>$</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">마진 ($)</label>
-                                <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_${packageOptionIndex}" readonly>
-                                <small class="text-muted">자동계산</small>
+                                <label class="form-label small">마진</label>
+                                <input type="text" class="form-control form-control-sm fw-bold" name="adult_margin_${packageOptionIndex}" readonly>
+                            </div>
+
+                            <!-- 소아 -->
+                            <div class="col-md-1">
+                                <span class="badge bg-info">소아</span>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">마진율</label>
-                                <input type="text" class="form-control" name="margin_rate_${packageOptionIndex}" readonly>
-                                <small class="text-muted">%</small>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" name="child_price_${packageOptionIndex}" step="0.01" placeholder="80" onchange="calculateAllMargins(${packageOptionIndex})">
+                                    <select class="form-select" name="child_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
+                                        <option value="KRW">₩</option>
+                                        <option value="USD" selected>$</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" name="child_cost_${packageOptionIndex}" step="0.01" placeholder="50" onchange="calculateAllMargins(${packageOptionIndex})">
+                                    <select class="form-select" name="child_cost_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
+                                        <option value="KRW">₩</option>
+                                        <option value="USD" selected>$</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 유아 -->
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-1">
+                                <span class="badge bg-warning text-dark">유아</span>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" name="infant_price_${packageOptionIndex}" step="0.01" placeholder="40" onchange="calculateAllMargins(${packageOptionIndex})">
+                                    <select class="form-select" name="infant_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
+                                        <option value="KRW">₩</option>
+                                        <option value="USD" selected>$</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" name="infant_cost_${packageOptionIndex}" step="0.01" placeholder="20" onchange="calculateAllMargins(${packageOptionIndex})">
+                                    <select class="form-select" name="infant_cost_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
+                                        <option value="KRW">₩</option>
+                                        <option value="USD" selected>$</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_${packageOptionIndex}" readonly>
+                            </div>
+                            <div class="col-md-1"></div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm fw-bold" name="infant_margin_${packageOptionIndex}" readonly>
                             </div>
                         </div>
                     </div>
@@ -336,37 +458,77 @@
             }
         }
 
-        // 마진 자동 계산 (통화 고려)
-        function calculateMargin(index) {
-            const sellingPrice = parseFloat(document.querySelector(`[name="selling_price_${index}"]`).value) || 0;
-            const sellingCurrency = document.querySelector(`[name="selling_currency_${index}"]`).value;
-            const commissionRate = parseFloat(document.querySelector(`[name="commission_rate_${index}"]`).value) || 0;
-            const costPrice = parseFloat(document.querySelector(`[name="cost_price_${index}"]`).value) || 0;
-            const costCurrency = document.querySelector(`[name="cost_currency_${index}"]`).value;
+        // 모든 옵션의 마진 재계산 (수수료율 변경 시)
+        function recalculateAllMargins() {
+            const options = document.querySelectorAll('.package-option');
+            options.forEach(option => {
+                const index = option.getAttribute('data-index');
+                calculateAllMargins(index);
+            });
+        }
 
-            // 모두 달러로 통일
-            let sellingPriceUSD = sellingCurrency === 'KRW' ? sellingPrice / USD_TO_KRW : sellingPrice;
-            let costPriceUSD = costCurrency === 'KRW' ? costPrice / USD_TO_KRW : costPrice;
-
-            const commission = sellingPriceUSD * (commissionRate / 100);
-            const margin = sellingPriceUSD - commission - costPriceUSD;
-            const marginRate = sellingPriceUSD > 0 ? (margin / sellingPriceUSD) * 100 : 0;
-
-            const marginInput = document.querySelector(`[name="margin_preview_${index}"]`);
-            const marginRateInput = document.querySelector(`[name="margin_rate_${index}"]`);
+        // 특정 옵션의 모든 인원별 마진 계산
+        function calculateAllMargins(index) {
+            const commissionRate = parseFloat(document.getElementById('commissionRate')?.value) || 0;
             
-            marginInput.value = `$${margin.toFixed(2)}`;
-            marginRateInput.value = `${marginRate.toFixed(1)}%`;
+            // 성인 마진 계산
+            const adultPrice = parseFloat(document.querySelector(`[name="adult_price_${index}"]`)?.value) || 0;
+            const adultCurrency = document.querySelector(`[name="adult_currency_${index}"]`)?.value || 'USD';
+            const adultCost = parseFloat(document.querySelector(`[name="adult_cost_${index}"]`)?.value) || 0;
+            const adultCostCurrency = document.querySelector(`[name="adult_cost_currency_${index}"]`)?.value || 'USD';
             
-            if (margin > 0) {
-                marginInput.style.color = '#28a745';
-                marginRateInput.style.color = '#28a745';
-            } else if (margin < 0) {
-                marginInput.style.color = '#dc3545';
-                marginRateInput.style.color = '#dc3545';
-            } else {
-                marginInput.style.color = '#6c757d';
-                marginRateInput.style.color = '#6c757d';
+            if (adultPrice > 0) {
+                const adultPriceUSD = adultCurrency === 'KRW' ? adultPrice / USD_TO_KRW : adultPrice;
+                const adultCostUSD = adultCostCurrency === 'KRW' ? adultCost / USD_TO_KRW : adultCost;
+                const adultCommission = adultPriceUSD * (commissionRate / 100);
+                const adultMargin = adultPriceUSD - adultCommission - adultCostUSD;
+                const adultMarginRate = (adultMargin / adultPriceUSD) * 100;
+                
+                const adultMarginInput = document.querySelector(`[name="adult_margin_${index}"]`);
+                if (adultMarginInput) {
+                    adultMarginInput.value = `$${adultMargin.toFixed(2)} (${adultMarginRate.toFixed(1)}%)`;
+                    adultMarginInput.style.color = adultMargin > 0 ? '#28a745' : (adultMargin < 0 ? '#dc3545' : '#6c757d');
+                }
+            }
+            
+            // 소아 마진 계산
+            const childPrice = parseFloat(document.querySelector(`[name="child_price_${index}"]`)?.value) || 0;
+            const childCurrency = document.querySelector(`[name="child_currency_${index}"]`)?.value || 'USD';
+            const childCost = parseFloat(document.querySelector(`[name="child_cost_${index}"]`)?.value) || 0;
+            const childCostCurrency = document.querySelector(`[name="child_cost_currency_${index}"]`)?.value || 'USD';
+            
+            if (childPrice > 0) {
+                const childPriceUSD = childCurrency === 'KRW' ? childPrice / USD_TO_KRW : childPrice;
+                const childCostUSD = childCostCurrency === 'KRW' ? childCost / USD_TO_KRW : childCost;
+                const childCommission = childPriceUSD * (commissionRate / 100);
+                const childMargin = childPriceUSD - childCommission - childCostUSD;
+                const childMarginRate = (childMargin / childPriceUSD) * 100;
+                
+                const childMarginInput = document.querySelector(`[name="child_margin_${index}"]`);
+                if (childMarginInput) {
+                    childMarginInput.value = `$${childMargin.toFixed(2)} (${childMarginRate.toFixed(1)}%)`;
+                    childMarginInput.style.color = childMargin > 0 ? '#28a745' : (childMargin < 0 ? '#dc3545' : '#6c757d');
+                }
+            }
+            
+            // 유아 마진 계산
+            const infantPrice = parseFloat(document.querySelector(`[name="infant_price_${index}"]`)?.value) || 0;
+            const infantCurrency = document.querySelector(`[name="infant_currency_${index}"]`)?.value || 'USD';
+            const infantCost = parseFloat(document.querySelector(`[name="infant_cost_${index}"]`)?.value) || 0;
+            const infantCostCurrency = document.querySelector(`[name="infant_cost_currency_${index}"]`)?.value || 'USD';
+            
+            if (infantPrice > 0) {
+                const infantPriceUSD = infantCurrency === 'KRW' ? infantPrice / USD_TO_KRW : infantPrice;
+                const infantCostUSD = infantCostCurrency === 'KRW' ? infantCost / USD_TO_KRW : infantCost;
+                const infantCommission = infantPriceUSD * (commissionRate / 100);
+                const infantMargin = infantPriceUSD - infantCommission - infantCostUSD;
+                const infantMarginRate = (infantMargin / infantPriceUSD) * 100;
+                
+                const infantMarginInput = document.querySelector(`[name="infant_margin_${index}"]`);
+                if (infantMarginInput) {
+                    infantMarginInput.value = `$${infantMargin.toFixed(2)} (${infantMarginRate.toFixed(1)}%)`;
+                    infantMarginInput.style.color = infantMargin > 0 ? '#28a745' : (infantMargin < 0 ? '#dc3545' : '#6c757d');
+                }
             }
         }
 
@@ -392,29 +554,50 @@
             const pricingId = document.getElementById('pricingId').value;
             const platformName = document.getElementById('platformName').value;
             const productName = document.getElementById('productName').value;
+            const commissionRate = parseFloat(document.getElementById('commissionRate').value);
             const vendorId = document.getElementById('vendorId').value || null;
             const notes = document.getElementById('pricingNotes').value;
 
-            // 패키지 옵션 수집
+            // 패키지 옵션 수집 (새로운 구조: 옵션명 + 성인/소아/유아 가격)
             const packageOptions = [];
             const options = document.querySelectorAll('.package-option');
             
             options.forEach(option => {
                 const index = option.getAttribute('data-index');
                 const optionName = document.querySelector(`[name="option_name_${index}"]`).value;
-                const sellingPrice = parseFloat(document.querySelector(`[name="selling_price_${index}"]`).value);
-                const sellingCurrency = document.querySelector(`[name="selling_currency_${index}"]`).value;
-                const commissionRate = parseFloat(document.querySelector(`[name="commission_rate_${index}"]`).value);
-                const costPrice = parseFloat(document.querySelector(`[name="cost_price_${index}"]`).value);
-                const costCurrency = document.querySelector(`[name="cost_currency_${index}"]`).value;
+                
+                // 성인 가격
+                const adultPrice = parseFloat(document.querySelector(`[name="adult_price_${index}"]`)?.value) || null;
+                const adultCurrency = document.querySelector(`[name="adult_currency_${index}"]`)?.value || 'USD';
+                const adultCost = parseFloat(document.querySelector(`[name="adult_cost_${index}"]`)?.value) || null;
+                const adultCostCurrency = document.querySelector(`[name="adult_cost_currency_${index}"]`)?.value || 'USD';
+                
+                // 소아 가격
+                const childPrice = parseFloat(document.querySelector(`[name="child_price_${index}"]`)?.value) || null;
+                const childCurrency = document.querySelector(`[name="child_currency_${index}"]`)?.value || 'USD';
+                const childCost = parseFloat(document.querySelector(`[name="child_cost_${index}"]`)?.value) || null;
+                const childCostCurrency = document.querySelector(`[name="child_cost_currency_${index}"]`)?.value || 'USD';
+                
+                // 유아 가격
+                const infantPrice = parseFloat(document.querySelector(`[name="infant_price_${index}"]`)?.value) || null;
+                const infantCurrency = document.querySelector(`[name="infant_currency_${index}"]`)?.value || 'USD';
+                const infantCost = parseFloat(document.querySelector(`[name="infant_cost_${index}"]`)?.value) || null;
+                const infantCostCurrency = document.querySelector(`[name="infant_cost_currency_${index}"]`)?.value || 'USD';
 
                 packageOptions.push({
                     option_name: optionName,
-                    selling_price: sellingPrice,
-                    selling_currency: sellingCurrency,
-                    commission_rate: commissionRate,
-                    cost_price: costPrice,
-                    cost_currency: costCurrency
+                    adult_price: adultPrice,
+                    adult_currency: adultCurrency,
+                    adult_cost: adultCost,
+                    adult_cost_currency: adultCostCurrency,
+                    child_price: childPrice,
+                    child_currency: childCurrency,
+                    child_cost: childCost,
+                    child_cost_currency: childCostCurrency,
+                    infant_price: infantPrice,
+                    infant_currency: infantCurrency,
+                    infant_cost: infantCost,
+                    infant_cost_currency: infantCostCurrency
                 });
             });
 
@@ -429,6 +612,7 @@
                         platform_name: platformName,
                         vendor_id: vendorId,
                         product_name: productName,
+                        commission_rate: commissionRate,
                         package_options: packageOptions,
                         notes: notes,
                         change_reason: pricingId ? '요금 수정' : '신규 등록'
@@ -552,74 +736,123 @@
                     document.getElementById('pricingId').value = pricing.id;
                     document.getElementById('platformName').value = pricing.platform_name;
                     document.getElementById('productName').value = pricing.product_name;
+                    document.getElementById('commissionRate').value = pricing.commission_rate || 15;
                     document.getElementById('vendorId').value = pricing.vendor_id || '';
                     document.getElementById('pricingNotes').value = pricing.notes || '';
                     document.getElementById('saveBtnText').textContent = '수정';
 
-                    // 패키지 옵션 로드
+                    // 패키지 옵션 로드 (새로운 구조)
                     const options = JSON.parse(pricing.package_options);
                     const container = document.getElementById('packageOptionsContainer');
                     container.innerHTML = '';
                     packageOptionIndex = 0;
 
                     options.forEach((opt, idx) => {
-                        const sellingCurrency = opt.selling_currency || 'USD';
-                        const costCurrency = opt.cost_currency || 'USD';
                         const optionHTML = `
                             <div class="package-option card mb-3" data-index="${idx}">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>옵션 #${idx + 1}</h6>
+                                        <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>패키지 옵션 #${idx + 1}</h6>
                                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackageOption(${idx})" ${idx === 0 ? 'disabled' : ''}>
                                             <i class="fas fa-trash"></i> 삭제
                                         </button>
                                     </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-2">
-                                            <label class="form-label">옵션명</label>
+                                    
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label fw-bold">옵션명</label>
                                             <input type="text" class="form-control" name="option_name_${idx}" value="${opt.option_name}" required>
                                         </div>
+                                    </div>
+
+                                    <hr class="my-3">
+
+                                    <h6 class="text-secondary mb-3"><i class="fas fa-users me-1"></i>인원별 요금</h6>
+                                    
+                                    <!-- 성인 -->
+                                    <div class="row g-2 mb-2 align-items-end">
+                                        <div class="col-md-1"><span class="badge bg-primary">성인</span></div>
                                         <div class="col-md-2">
-                                            <label class="form-label">판매가</label>
-                                            <div class="input-group">
-                                                <input type="number" class="form-control" name="selling_price_${idx}" value="${opt.selling_price}" step="0.01" required onchange="calculateMargin(${idx})">
-                                                <select class="form-select" name="selling_currency_${idx}" style="max-width: 80px;" onchange="calculateMargin(${idx})">
-                                                    <option value="KRW" ${sellingCurrency === 'KRW' ? 'selected' : ''}>₩</option>
-                                                    <option value="USD" ${sellingCurrency === 'USD' ? 'selected' : ''}>$</option>
+                                            <label class="form-label small">판매가</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="adult_price_${idx}" value="${opt.adult_price || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
+                                                <select class="form-select" name="adult_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
+                                                    <option value="KRW" ${opt.adult_currency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${opt.adult_currency !== 'KRW' ? 'selected' : ''}>$</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">수수료율</label>
-                                            <div class="input-group">
-                                                <input type="number" class="form-control" name="commission_rate_${idx}" value="${opt.commission_rate}" step="0.01" required onchange="calculateMargin(${idx})">
-                                                <span class="input-group-text">%</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label class="form-label">원가</label>
-                                            <div class="input-group">
-                                                <input type="number" class="form-control" name="cost_price_${idx}" value="${opt.cost_price}" step="0.01" required onchange="calculateMargin(${idx})">
-                                                <select class="form-select" name="cost_currency_${idx}" style="max-width: 80px;" onchange="calculateMargin(${idx})">
-                                                    <option value="KRW" ${costCurrency === 'KRW' ? 'selected' : ''}>₩</option>
-                                                    <option value="USD" ${costCurrency === 'USD' ? 'selected' : ''}>$</option>
+                                            <label class="form-label small">원가</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="adult_cost_${idx}" value="${opt.adult_cost || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
+                                                <select class="form-select" name="adult_cost_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
+                                                    <option value="KRW" ${opt.adult_cost_currency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${opt.adult_cost_currency !== 'KRW' ? 'selected' : ''}>$</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">마진 ($)</label>
-                                            <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_${idx}" readonly>
+                                            <label class="form-label small">마진</label>
+                                            <input type="text" class="form-control form-control-sm fw-bold" name="adult_margin_${idx}" readonly>
+                                        </div>
+
+                                        <!-- 소아 -->
+                                        <div class="col-md-1"><span class="badge bg-info">소아</span></div>
+                                        <div class="col-md-2">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="child_price_${idx}" value="${opt.child_price || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
+                                                <select class="form-select" name="child_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
+                                                    <option value="KRW" ${opt.child_currency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${opt.child_currency !== 'KRW' ? 'selected' : ''}>$</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <label class="form-label">마진율</label>
-                                            <input type="text" class="form-control" name="margin_rate_${idx}" readonly>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="child_cost_${idx}" value="${opt.child_cost || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
+                                                <select class="form-select" name="child_cost_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
+                                                    <option value="KRW" ${opt.child_cost_currency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${opt.child_cost_currency !== 'KRW' ? 'selected' : ''}>$</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 유아 -->
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-1"><span class="badge bg-warning text-dark">유아</span></div>
+                                        <div class="col-md-2">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="infant_price_${idx}" value="${opt.infant_price || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
+                                                <select class="form-select" name="infant_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
+                                                    <option value="KRW" ${opt.infant_currency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${opt.infant_currency !== 'KRW' ? 'selected' : ''}>$</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control" name="infant_cost_${idx}" value="${opt.infant_cost || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
+                                                <select class="form-select" name="infant_cost_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
+                                                    <option value="KRW" ${opt.infant_cost_currency === 'KRW' ? 'selected' : ''}>₩</option>
+                                                    <option value="USD" ${opt.infant_cost_currency !== 'KRW' ? 'selected' : ''}>$</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_${idx}" readonly>
+                                        </div>
+                                        <div class="col-md-1"></div>
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control form-control-sm fw-bold" name="infant_margin_${idx}" readonly>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         `;
                         container.insertAdjacentHTML('beforeend', optionHTML);
-                        calculateMargin(idx);
+                        calculateAllMargins(idx);
                         packageOptionIndex++;
                     });
 
