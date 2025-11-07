@@ -615,6 +615,11 @@
 
         // ==================== 데이터 전처리 ====================
         
+        // 정규식 특수문자 이스케이프 처리
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        
         // 데이터 전처리 실행
         function preprocessData(text) {
             let processedText = text;
@@ -629,7 +634,9 @@
                 if (!rule.pattern) return;
                 
                 try {
-                    const regex = new RegExp(rule.pattern, 'gi');
+                    // 특수문자를 안전하게 이스케이프 처리
+                    const escapedPattern = escapeRegex(rule.pattern);
+                    const regex = new RegExp(escapedPattern, 'gi');
                     const beforeLength = processedText.length;
                     processedText = processedText.replace(regex, rule.replacement);
                     const afterLength = processedText.length;
