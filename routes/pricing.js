@@ -252,18 +252,23 @@ module.exports = (pool) => {
             console.log('📦 변환 후 타입:', typeof packageOptionsObj);
             console.log('📦 변환 후 Array.isArray:', Array.isArray(packageOptionsObj));
             
-            // 요금 등록 - JSONB 컬럼에 객체 전달
+            // JSONB 파라미터를 명시적으로 stringify
+            const packageOptionsJsonStr = JSON.stringify(packageOptionsObj);
+            console.log('📝 최종 JSON 문자열 길이:', packageOptionsJsonStr.length);
+            console.log('📝 최종 JSON 문자열 미리보기:', packageOptionsJsonStr.substring(0, 200));
+            
+            // 요금 등록 - JSONB 컬럼에 JSON 문자열 전달
             const result = await pool.query(`
                 INSERT INTO product_pricing 
                 (platform_name, vendor_id, product_name, commission_rate, package_options, notes)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6)
                 RETURNING *
             `, [
                 platform_name,
                 vendor_id || null,
                 product_name,
                 commission_rate || 15,
-                packageOptionsObj, // 객체 전달
+                packageOptionsJsonStr, // JSON 문자열로 전달, ::jsonb로 명시적 캐스팅
                 notes || null
             ]);
             
@@ -355,20 +360,24 @@ module.exports = (pool) => {
                 oldPackageOptionsObj = [];
             }
             
-            console.log('📦 old 변환 후:', JSON.stringify(oldPackageOptionsObj).substring(0, 100));
-            console.log('📦 new 변환 후:', JSON.stringify(packageOptionsObj).substring(0, 100));
+            // JSON 문자열로 변환
+            const oldPackageOptionsJsonStr = JSON.stringify(oldPackageOptionsObj);
+            const packageOptionsJsonStr = JSON.stringify(packageOptionsObj);
             
-            // 요금 변경 이력 저장 (JSONB 컬럼에 객체 전달)
+            console.log('📦 old JSON 길이:', oldPackageOptionsJsonStr.length);
+            console.log('📦 new JSON 길이:', packageOptionsJsonStr.length);
+            
+            // 요금 변경 이력 저장 (JSONB 컬럼에 JSON 문자열 전달)
             // 실패해도 업데이트는 계속 진행
             try {
                 await client.query(`
                     INSERT INTO pricing_history 
                     (pricing_id, old_package_options, new_package_options, changed_by, change_reason, version)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    VALUES ($1, $2::jsonb, $3::jsonb, $4, $5, $6)
                 `, [
                     id,
-                    oldPackageOptionsObj,
-                    packageOptionsObj,
+                    oldPackageOptionsJsonStr,
+                    packageOptionsJsonStr,
                     req.session?.adminUsername || 'admin',
                     change_reason || '요금 수정',
                     oldData.version
@@ -379,7 +388,7 @@ module.exports = (pool) => {
                 // 이력 저장 실패해도 업데이트는 계속 진행
             }
             
-            // 요금 업데이트 (버전 증가) - JSONB 컬럼에 객체 전달
+            // 요금 업데이트 (버전 증가) - JSONB 컬럼에 JSON 문자열 전달
             const updateResult = await client.query(`
                 UPDATE product_pricing
                 SET 
@@ -387,7 +396,7 @@ module.exports = (pool) => {
                     vendor_id = $2,
                     product_name = $3,
                     commission_rate = $4,
-                    package_options = $5,
+                    package_options = $5::jsonb,
                     notes = $6,
                     version = version + 1,
                     updated_at = CURRENT_TIMESTAMP
@@ -398,7 +407,7 @@ module.exports = (pool) => {
                 vendor_id || null,
                 product_name,
                 commission_rate || 15,
-                packageOptionsObj, // 객체 전달
+                packageOptionsJsonStr, // JSON 문자열로 전달
                 notes || null,
                 id
             ]);
