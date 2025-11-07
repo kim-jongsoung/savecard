@@ -11,12 +11,15 @@
 const express = require('express');
 const router = express.Router();
 
-// 인증 미들웨어 (실제로는 requireAuth 사용)
+// 인증 미들웨어
 const requireAuth = (req, res, next) => {
-    if (req.session && req.session.isAuthenticated) {
+    if (req.session && req.session.adminId) {
         next();
     } else {
-        res.status(401).json({ success: false, message: '인증이 필요합니다' });
+        res.status(401).json({ 
+            success: false, 
+            message: '인증이 필요합니다. 관리자 로그인을 해주세요.' 
+        });
     }
 };
 
@@ -298,7 +301,7 @@ module.exports = (pool) => {
                 id,
                 oldData.package_options,
                 JSON.stringify(package_options),
-                req.session?.username || 'admin',
+                req.session?.adminUsername || 'admin',
                 change_reason || '요금 수정',
                 oldData.version
             ]);
