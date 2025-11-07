@@ -6131,6 +6131,86 @@ async function resolvePlatformAlias(alias) {
     }
 }
 
+// 요금 RAG에서 가격 정보 조회 및 자동 계산
+async function matchPricingFromRAG(platform_name, product_name, package_type) {
+    try {
+        console.log('💰 요금 RAG 매칭 시작:', { platform_name, product_name, package_type });
+        
+        if (!platform_name || !product_name) {
+            console.log('⚠️ 업체명 또는 상품명 누락 - 요금 매칭 건너뜀');
+            return null;
+        }
+        
+        // 요금 RAG에서 조회
+        const pricingResult = await pool.query(`
+            SELECT id, platform_name, product_name, commission_rate, package_options
+            FROM product_pricing
+            WHERE platform_name = $1 
+            AND product_name = $2 
+            AND is_active = true
+            LIMIT 1
+        `, [platform_name, product_name]);
+        
+        if (pricingResult.rows.length === 0) {
+            console.log('⚠️ 요금 RAG에 매칭되는 상품 없음');
+            return null;
+        }
+        
+        const pricing = pricingResult.rows[0];
+        const options = pricing.package_options || [];
+        
+        console.log('✅ 요금 RAG 매칭 성공:', pricing.id);
+        console.log('📦 옵션 개수:', options.length);
+        
+        // package_type과 매칭되는 옵션 찾기
+        let matchedOption = null;
+        
+        if (package_type) {
+            // 정확히 일치하는 옵션 찾기
+            matchedOption = options.find(opt => 
+                opt.option_name && opt.option_name.trim() === package_type.trim()
+            );
+            
+            // 부분 일치 시도
+            if (!matchedOption) {
+                matchedOption = options.find(opt => 
+                    opt.option_name && 
+                    (opt.option_name.includes(package_type) || package_type.includes(opt.option_name))
+                );
+            }
+        }
+        
+        // 매칭된 옵션이 없으면 첫 번째 옵션 사용
+        if (!matchedOption && options.length > 0) {
+            matchedOption = options[0];
+            console.log('ℹ️ 첫 번째 옵션 자동 선택');
+        }
+        
+        if (!matchedOption) {
+            console.log('⚠️ 사용 가능한 옵션 없음');
+            return null;
+        }
+        
+        console.log('✅ 옵션 매칭:', matchedOption.option_name);
+        
+        return {
+            pricing_id: pricing.id,
+            commission_rate: pricing.commission_rate,
+            matched_option: matchedOption,
+            adult_price: matchedOption.adult_price || null,
+            adult_currency: matchedOption.adult_currency || 'USD',
+            child_price: matchedOption.child_price || null,
+            child_currency: matchedOption.child_currency || 'USD',
+            infant_price: matchedOption.infant_price || null,
+            infant_currency: matchedOption.infant_currency || 'USD'
+        };
+        
+    } catch (error) {
+        console.error('❌ 요금 RAG 매칭 오류:', error);
+        return null;
+    }
+}
+
 // ==================== API 라우트 ====================
 
 // 예약 등록 (텍스트 파싱) - 관리자용
@@ -6172,14 +6252,61 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         
         console.log('✅ 파싱 완료 (여행사 정보는 파싱 결과에서 추출)');
         
+        // 요금 RAG 매칭 시도
+        let pricingMatched = false;
+        let pricingInfo = null;
+        
+        try {
+            pricingInfo = await matchPricingFromRAG(
+                normalizedData.platform_name,
+                normalizedData.product_name,
+                normalizedData.package_type
+            );
+            
+            if (pricingInfo) {
+                console.log('💰 요금 자동 설정 완료');
+                
+                // 단가 정보 자동 설정
+                normalizedData.adult_unit_price = pricingInfo.adult_price;
+                normalizedData.adult_currency = pricingInfo.adult_currency;
+                normalizedData.child_unit_price = pricingInfo.child_price;
+                normalizedData.child_currency = pricingInfo.child_currency;
+                normalizedData.infant_unit_price = pricingInfo.infant_price;
+                normalizedData.infant_currency = pricingInfo.infant_currency;
+                normalizedData.pricing_id = pricingInfo.pricing_id;
+                normalizedData.commission_rate = pricingInfo.commission_rate;
+                
+                // 총 금액 자동 계산 (인원 정보가 있는 경우)
+                if (normalizedData.people_adult || normalizedData.people_child || normalizedData.people_infant) {
+                    const adultCount = normalizedData.people_adult || 0;
+                    const childCount = normalizedData.people_child || 0;
+                    const infantCount = normalizedData.people_infant || 0;
+                    
+                    const adultTotal = (pricingInfo.adult_price || 0) * adultCount;
+                    const childTotal = (pricingInfo.child_price || 0) * childCount;
+                    const infantTotal = (pricingInfo.infant_price || 0) * infantCount;
+                    
+                    normalizedData.total_amount = adultTotal + childTotal + infantTotal;
+                    
+                    console.log(`💵 총 금액 계산: 성인${adultCount}×${pricingInfo.adult_price} + 소아${childCount}×${pricingInfo.child_price} + 유아${infantCount}×${pricingInfo.infant_price} = ${normalizedData.total_amount}`);
+                }
+                
+                pricingMatched = true;
+            }
+        } catch (pricingError) {
+            console.error('⚠️ 요금 매칭 중 오류 (계속 진행):', pricingError.message);
+        }
+        
         // 파싱 결과만 반환 (저장은 별도 단계)
         res.json({
             success: true,
-            message: '파싱이 완료되었습니다.',
+            message: pricingMatched ? '파싱 및 요금 매칭이 완료되었습니다.' : '파싱이 완료되었습니다.',
             parsed_data: normalizedData,
             parsing_method: parsingMethod,
             confidence: confidence,
             extracted_notes: extractedNotes,
+            pricing_matched: pricingMatched,
+            pricing_info: pricingInfo,
             workflow: 'parsing_only'
         });
         
