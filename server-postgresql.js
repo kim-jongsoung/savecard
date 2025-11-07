@@ -1073,6 +1073,15 @@ try {
                     ALTER TABLE reservations ADD COLUMN infant_cost_currency VARCHAR(10) DEFAULT 'USD';
                     RAISE NOTICE 'infant_cost_currency 컬럼 추가 완료';
                 END IF;
+                
+                -- commission_rate 추가
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'reservations' AND column_name = 'commission_rate'
+                ) THEN
+                    ALTER TABLE reservations ADD COLUMN commission_rate DECIMAL(5,2) DEFAULT 10;
+                    RAISE NOTICE 'commission_rate 컬럼 추가 완료';
+                END IF;
             END $$;
         `);
         console.log('✅ 요금 RAG 컬럼 마이그레이션 완료');
@@ -6844,12 +6853,13 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                     adult_cost, child_cost, infant_cost,
                     adult_currency, child_currency, infant_currency,
                     adult_cost_currency, child_cost_currency, infant_cost_currency,
+                    commission_rate,
                     usage_date, usage_time, reservation_datetime, payment_status,
                     memo, assigned_to, created_by, created_by_email, created_at, updated_at
                 ) VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
                     $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, 
-                    $30, $31, $32, $33, $34, $35, $36, $37, $38, NOW(), NOW()
+                    $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, NOW(), NOW()
                 ) RETURNING id, reservation_number
             `;
             
@@ -6884,6 +6894,7 @@ app.post('/api/reservations', requireAuth, async (req, res) => {
                 reservationData.adult_cost_currency || reservationData.adult_currency || 'USD',
                 reservationData.child_cost_currency || reservationData.child_currency || 'USD',
                 reservationData.infant_cost_currency || reservationData.infant_currency || 'USD',
+                reservationData.commission_rate || 10,
                 reservationData.usage_date || null,
                 reservationData.usage_time || null,
                 reservationData.reservation_datetime || null,
@@ -11602,6 +11613,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                     r.adult_cost_currency,
                     r.child_cost_currency,
                     r.infant_cost_currency,
+                    r.commission_rate,
                     a.id as assignment_id,
                     a.vendor_id,
                     a.vendor_name,

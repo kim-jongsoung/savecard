@@ -2510,6 +2510,10 @@
             document.getElementById('edit-child-cost-currency').value = reservation.child_cost_currency || reservation.child_currency || 'USD';
             document.getElementById('edit-infant-cost-currency').value = reservation.infant_cost_currency || reservation.infant_currency || 'USD';
             
+            // 수수료율 설정 (RAG에서 가져온 값 또는 기본값 10%)
+            window.ragCommissionRate = reservation.commission_rate || 10;
+            console.log('💰 수수료율 설정:', window.ragCommissionRate + '%');
+            
             // 마진 계산
             calculateEditTotal();
             

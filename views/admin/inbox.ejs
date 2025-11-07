@@ -1492,6 +1492,8 @@
                 adult_cost_currency: formData.adult_cost_currency || formData.adult_currency || 'USD',
                 child_cost_currency: formData.child_cost_currency || formData.child_currency || 'USD',
                 infant_cost_currency: formData.infant_cost_currency || formData.infant_currency || 'USD',
+                // 수수료율 (RAG에서 가져온 값)
+                commission_rate: window.ragCommissionRate || 10,
                 memo: formData.special_requests,
                 guest_count: (parseInt(formData.adult_count) || 1) + (parseInt(formData.child_count) || 0) + (parseInt(formData.infant_count) || 0),
                 vendor_id: formData.vendor_id || null // 수배업체 ID 추가
