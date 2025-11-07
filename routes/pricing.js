@@ -349,18 +349,25 @@ module.exports = (pool) => {
             console.log('📦 new 변환 후:', JSON.stringify(packageOptionsObj).substring(0, 100));
             
             // 요금 변경 이력 저장 (JSONB 컬럼에 객체 전달)
-            await client.query(`
-                INSERT INTO pricing_history 
-                (pricing_id, old_package_options, new_package_options, changed_by, change_reason, version)
-                VALUES ($1, $2, $3, $4, $5, $6)
-            `, [
-                id,
-                oldPackageOptionsObj,
-                packageOptionsObj,
-                req.session?.adminUsername || 'admin',
-                change_reason || '요금 수정',
-                oldData.version
-            ]);
+            // 실패해도 업데이트는 계속 진행
+            try {
+                await client.query(`
+                    INSERT INTO pricing_history 
+                    (pricing_id, old_package_options, new_package_options, changed_by, change_reason, version)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                `, [
+                    id,
+                    oldPackageOptionsObj,
+                    packageOptionsObj,
+                    req.session?.adminUsername || 'admin',
+                    change_reason || '요금 수정',
+                    oldData.version
+                ]);
+                console.log('✅ 이력 저장 완료');
+            } catch (historyError) {
+                console.error('⚠️ 이력 저장 실패 (계속 진행):', historyError.message);
+                // 이력 저장 실패해도 업데이트는 계속 진행
+            }
             
             // 요금 업데이트 (버전 증가) - JSONB 컬럼에 객체 전달
             const updateResult = await client.query(`
