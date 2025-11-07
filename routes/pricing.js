@@ -312,6 +312,11 @@ module.exports = (pool) => {
             
             const oldData = oldDataResult.rows[0];
             
+            console.log('🔍 oldData.package_options RAW:', oldData.package_options);
+            console.log('🔍 oldData.package_options 타입:', typeof oldData.package_options);
+            console.log('🔍 package_options RAW:', package_options);
+            console.log('🔍 package_options 타입:', typeof package_options);
+            
             // JSONB 컬럼에는 객체를 직접 전달 (pg 라이브러리가 자동 변환)
             // 문자열이면 파싱, 객체면 그대로 사용
             let packageOptionsObj = package_options;
@@ -319,17 +324,29 @@ module.exports = (pool) => {
                 try {
                     packageOptionsObj = JSON.parse(package_options);
                 } catch (e) {
+                    console.error('❌ package_options 파싱 실패:', e);
                     packageOptionsObj = [];
                 }
             } else if (!package_options) {
                 packageOptionsObj = [];
             }
             
-            let oldPackageOptionsObj = oldData.package_options || [];
+            // oldData는 JSONB에서 읽은 것이므로 이미 객체여야 함
+            let oldPackageOptionsObj = oldData.package_options;
+            if (typeof oldData.package_options === 'string') {
+                console.warn('⚠️ oldData.package_options가 문자열입니다! 파싱 시도...');
+                try {
+                    oldPackageOptionsObj = JSON.parse(oldData.package_options);
+                } catch (e) {
+                    console.error('❌ oldData.package_options 파싱 실패:', e);
+                    oldPackageOptionsObj = [];
+                }
+            } else if (!oldData.package_options) {
+                oldPackageOptionsObj = [];
+            }
             
-            console.log('📦 old 타입:', typeof oldData.package_options);
-            console.log('📦 new 타입:', typeof package_options);
-            console.log('📦 new 변환 후 타입:', typeof packageOptionsObj);
+            console.log('📦 old 변환 후:', JSON.stringify(oldPackageOptionsObj).substring(0, 100));
+            console.log('📦 new 변환 후:', JSON.stringify(packageOptionsObj).substring(0, 100));
             
             // 요금 변경 이력 저장 (JSONB 컬럼에 객체 전달)
             await client.query(`
