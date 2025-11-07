@@ -120,88 +120,41 @@
                                         
                                         <!-- 성인 -->
                                         <div class="row g-2 mb-2 align-items-end">
-                                            <div class="col-md-1">
-                                                <span class="badge bg-primary">성인</span>
-                                            </div>
                                             <div class="col-md-2">
-                                                <label class="form-label small">판매가</label>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control" name="adult_price_0" step="0.01" placeholder="120" onchange="calculateAllMargins(0)">
-                                                    <select class="form-select" name="adult_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
-                                                        <option value="KRW">₩</option>
-                                                        <option value="USD" selected>$</option>
-                                                    </select>
-                                                </div>
+                                                <label class="form-label small"><span class="badge bg-primary me-1">성인</span> 판매가</label>
+                                                <input type="number" class="form-control form-control-sm" name="adult_price_0" step="0.01" placeholder="19900 (₩) or 120 ($)" oninput="autoSetCurrency(this, 'adult_currency_0')">
+                                                <input type="hidden" name="adult_currency_0" value="USD">
                                             </div>
                                             <div class="col-md-2">
                                                 <label class="form-label small">원가</label>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control" name="adult_cost_0" step="0.01" placeholder="85" onchange="calculateAllMargins(0)">
-                                                    <select class="form-select" name="adult_cost_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
-                                                        <option value="KRW">₩</option>
-                                                        <option value="USD" selected>$</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label small">마진</label>
-                                                <input type="text" class="form-control form-control-sm fw-bold" name="adult_margin_0" readonly>
+                                                <input type="number" class="form-control form-control-sm" name="adult_cost_0" step="0.01" placeholder="10000 (₩) or 85 ($)" oninput="autoSetCurrency(this, 'adult_cost_currency_0')">
+                                                <input type="hidden" name="adult_cost_currency_0" value="USD">
                                             </div>
 
                                             <!-- 소아 -->
-                                            <div class="col-md-1">
-                                                <span class="badge bg-info">소아</span>
+                                            <div class="col-md-2">
+                                                <label class="form-label small"><span class="badge bg-info me-1">소아</span> 판매가</label>
+                                                <input type="number" class="form-control form-control-sm" name="child_price_0" step="0.01" placeholder="15000 (₩) or 80 ($)" oninput="autoSetCurrency(this, 'child_currency_0')">
+                                                <input type="hidden" name="child_currency_0" value="USD">
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control" name="child_price_0" step="0.01" placeholder="80" onchange="calculateAllMargins(0)">
-                                                    <select class="form-select" name="child_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
-                                                        <option value="KRW">₩</option>
-                                                        <option value="USD" selected>$</option>
-                                                    </select>
-                                                </div>
+                                                <label class="form-label small">원가</label>
+                                                <input type="number" class="form-control form-control-sm" name="child_cost_0" step="0.01" placeholder="8000 (₩) or 50 ($)" oninput="autoSetCurrency(this, 'child_cost_currency_0')">
+                                                <input type="hidden" name="child_cost_currency_0" value="USD">
+                                            </div>
+
+                                            <!-- 유아 -->
+                                            <div class="col-md-2">
+                                                <label class="form-label small"><span class="badge bg-warning text-dark me-1">유아</span> 판매가</label>
+                                                <input type="number" class="form-control form-control-sm" name="infant_price_0" step="0.01" placeholder="5000 (₩) or 40 ($)" oninput="autoSetCurrency(this, 'infant_currency_0')">
+                                                <input type="hidden" name="infant_currency_0" value="USD">
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control" name="child_cost_0" step="0.01" placeholder="50" onchange="calculateAllMargins(0)">
-                                                    <select class="form-select" name="child_cost_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
-                                                        <option value="KRW">₩</option>
-                                                        <option value="USD" selected>$</option>
-                                                    </select>
-                                                </div>
+                                                <label class="form-label small">원가</label>
+                                                <input type="number" class="form-control form-control-sm" name="infant_cost_0" step="0.01" placeholder="3000 (₩) or 20 ($)" oninput="autoSetCurrency(this, 'infant_cost_currency_0')">
+                                                <input type="hidden" name="infant_cost_currency_0" value="USD">
                                             </div>
                                         </div>
-
-                                        <!-- 유아 -->
-                                        <div class="row g-2 align-items-center">
-                                            <div class="col-md-1">
-                                                <span class="badge bg-warning text-dark">유아</span>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control" name="infant_price_0" step="0.01" placeholder="40" onchange="calculateAllMargins(0)">
-                                                    <select class="form-select" name="infant_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
-                                                        <option value="KRW">₩</option>
-                                                        <option value="USD" selected>$</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" class="form-control" name="infant_cost_0" step="0.01" placeholder="20" onchange="calculateAllMargins(0)">
-                                                    <select class="form-select" name="infant_cost_currency_0" style="max-width: 70px;" onchange="calculateAllMargins(0)">
-                                                        <option value="KRW">₩</option>
-                                                        <option value="USD" selected>$</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_0" readonly>
-                                            </div>
-                                            <div class="col-md-1"></div>
-                                            <div class="col-md-4">
-                                                <input type="text" class="form-control form-control-sm fw-bold" name="infant_margin_0" readonly>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -295,6 +248,24 @@
             loadPricingList();
         });
 
+        // 금액 입력 시 자동으로 통화 설정 (999 이상: 원화, 이하: 달러)
+        function autoSetCurrency(input, hiddenFieldName) {
+            const value = parseFloat(input.value);
+            const hiddenField = document.getElementsByName(hiddenFieldName)[0];
+            
+            if (!isNaN(value) && value > 0) {
+                if (value > 999) {
+                    hiddenField.value = 'KRW';
+                    input.style.borderLeft = '4px solid #4CAF50'; // 초록색 (원화)
+                } else {
+                    hiddenField.value = 'USD';
+                    input.style.borderLeft = '4px solid #2196F3'; // 파란색 (달러)
+                }
+            } else {
+                input.style.borderLeft = '';
+            }
+        }
+
         // 플랫폼 목록 로드
         async function loadPlatforms() {
             try {
@@ -358,89 +329,40 @@
                         <!-- 성인/소아/유아 요금 -->
                         <h6 class="text-secondary mb-3"><i class="fas fa-users me-1"></i>인원별 요금</h6>
                         
-                        <!-- 성인 -->
                         <div class="row g-2 mb-2 align-items-end">
-                            <div class="col-md-1">
-                                <span class="badge bg-primary">성인</span>
-                            </div>
                             <div class="col-md-2">
-                                <label class="form-label small">판매가</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" name="adult_price_${packageOptionIndex}" step="0.01" placeholder="120" onchange="calculateAllMargins(${packageOptionIndex})">
-                                    <select class="form-select" name="adult_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
-                                        <option value="KRW">₩</option>
-                                        <option value="USD" selected>$</option>
-                                    </select>
-                                </div>
+                                <label class="form-label small"><span class="badge bg-primary me-1">성인</span> 판매가</label>
+                                <input type="number" class="form-control form-control-sm" name="adult_price_${packageOptionIndex}" step="0.01" placeholder="19900 (₩) or 120 ($)" oninput="autoSetCurrency(this, 'adult_currency_${packageOptionIndex}')">
+                                <input type="hidden" name="adult_currency_${packageOptionIndex}" value="USD">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label small">원가</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" name="adult_cost_${packageOptionIndex}" step="0.01" placeholder="85" onchange="calculateAllMargins(${packageOptionIndex})">
-                                    <select class="form-select" name="adult_cost_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
-                                        <option value="KRW">₩</option>
-                                        <option value="USD" selected>$</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">마진</label>
-                                <input type="text" class="form-control form-control-sm fw-bold" name="adult_margin_${packageOptionIndex}" readonly>
+                                <input type="number" class="form-control form-control-sm" name="adult_cost_${packageOptionIndex}" step="0.01" placeholder="10000 (₩) or 85 ($)" oninput="autoSetCurrency(this, 'adult_cost_currency_${packageOptionIndex}')">
+                                <input type="hidden" name="adult_cost_currency_${packageOptionIndex}" value="USD">
                             </div>
 
                             <!-- 소아 -->
-                            <div class="col-md-1">
-                                <span class="badge bg-info">소아</span>
+                            <div class="col-md-2">
+                                <label class="form-label small"><span class="badge bg-info me-1">소아</span> 판매가</label>
+                                <input type="number" class="form-control form-control-sm" name="child_price_${packageOptionIndex}" step="0.01" placeholder="15000 (₩) or 80 ($)" oninput="autoSetCurrency(this, 'child_currency_${packageOptionIndex}')">
+                                <input type="hidden" name="child_currency_${packageOptionIndex}" value="USD">
                             </div>
                             <div class="col-md-2">
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" name="child_price_${packageOptionIndex}" step="0.01" placeholder="80" onchange="calculateAllMargins(${packageOptionIndex})">
-                                    <select class="form-select" name="child_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
-                                        <option value="KRW">₩</option>
-                                        <option value="USD" selected>$</option>
-                                    </select>
-                                </div>
+                                <label class="form-label small">원가</label>
+                                <input type="number" class="form-control form-control-sm" name="child_cost_${packageOptionIndex}" step="0.01" placeholder="8000 (₩) or 50 ($)" oninput="autoSetCurrency(this, 'child_cost_currency_${packageOptionIndex}')">
+                                <input type="hidden" name="child_cost_currency_${packageOptionIndex}" value="USD">
                             </div>
-                            <div class="col-md-2">
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" name="child_cost_${packageOptionIndex}" step="0.01" placeholder="50" onchange="calculateAllMargins(${packageOptionIndex})">
-                                    <select class="form-select" name="child_cost_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
-                                        <option value="KRW">₩</option>
-                                        <option value="USD" selected>$</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- 유아 -->
-                        <div class="row g-2 align-items-center">
-                            <div class="col-md-1">
-                                <span class="badge bg-warning text-dark">유아</span>
+                            <!-- 유아 -->
+                            <div class="col-md-2">
+                                <label class="form-label small"><span class="badge bg-warning text-dark me-1">유아</span> 판매가</label>
+                                <input type="number" class="form-control form-control-sm" name="infant_price_${packageOptionIndex}" step="0.01" placeholder="5000 (₩) or 40 ($)" oninput="autoSetCurrency(this, 'infant_currency_${packageOptionIndex}')">
+                                <input type="hidden" name="infant_currency_${packageOptionIndex}" value="USD">
                             </div>
                             <div class="col-md-2">
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" name="infant_price_${packageOptionIndex}" step="0.01" placeholder="40" onchange="calculateAllMargins(${packageOptionIndex})">
-                                    <select class="form-select" name="infant_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
-                                        <option value="KRW">₩</option>
-                                        <option value="USD" selected>$</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" name="infant_cost_${packageOptionIndex}" step="0.01" placeholder="20" onchange="calculateAllMargins(${packageOptionIndex})">
-                                    <select class="form-select" name="infant_cost_currency_${packageOptionIndex}" style="max-width: 70px;" onchange="calculateAllMargins(${packageOptionIndex})">
-                                        <option value="KRW">₩</option>
-                                        <option value="USD" selected>$</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_${packageOptionIndex}" readonly>
-                            </div>
-                            <div class="col-md-1"></div>
-                            <div class="col-md-4">
-                                <input type="text" class="form-control form-control-sm fw-bold" name="infant_margin_${packageOptionIndex}" readonly>
+                                <label class="form-label small">원가</label>
+                                <input type="number" class="form-control form-control-sm" name="infant_cost_${packageOptionIndex}" step="0.01" placeholder="3000 (₩) or 20 ($)" oninput="autoSetCurrency(this, 'infant_cost_currency_${packageOptionIndex}')">
+                                <input type="hidden" name="infant_cost_currency_${packageOptionIndex}" value="USD">
                             </div>
                         </div>
                     </div>
