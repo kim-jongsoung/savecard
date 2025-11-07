@@ -519,12 +519,14 @@
             localStorage.setItem('preprocessingRules', JSON.stringify(preprocessingRules));
             localStorage.setItem('customPrompt', customPrompt);
             
-            console.log('💾 파싱 설정 저장:', {
-                전처리규칙: preprocessingRules.length + '개',
-                활성화된규칙: preprocessingRules.filter(r => r.enabled).length + '개',
-                커스텀프롬프트: customPrompt ? `있음 (${customPrompt.length}자)` : '없음',
-                커스텀프롬프트내용: customPrompt ? customPrompt.substring(0, 50) + '...' : 'N/A'
-            });
+            console.log('💾 파싱 설정 저장:');
+            console.log('  - 전처리규칙:', preprocessingRules.length + '개');
+            console.log('  - 활성화된규칙:', preprocessingRules.filter(r => r.enabled).length + '개');
+            console.log('  - 커스텀프롬프트:', customPrompt ? `있음 (${customPrompt.length}자)` : '없음');
+            if (customPrompt) {
+                console.log('  - 저장할 프롬프트 전체 내용:');
+                console.log(customPrompt);
+            }
             
             showNotification('파싱 설정이 저장되었습니다.', 'success');
             bootstrap.Modal.getInstance(document.getElementById('parsingSettingsModal')).hide();
@@ -680,9 +682,11 @@
                 const latestPrompt = localStorage.getItem('customPrompt') || '';
                 customPrompt = latestPrompt;
                 
-                console.log('🔄 최신 설정 로드:', {
-                    커스텀프롬프트: customPrompt ? `있음 (${customPrompt.length}자)` : '없음'
-                });
+                console.log('🔄 최신 설정 로드:');
+                console.log('  - 커스텀프롬프트:', customPrompt ? `있음 (${customPrompt.length}자)` : '없음');
+                if (customPrompt) {
+                    console.log('  - 프롬프트 내용:', customPrompt);
+                }
                 
                 // 1단계: 데이터 전처리
                 const preprocessedText = preprocessData(text);
@@ -693,11 +697,12 @@
                     차이: text.length - preprocessedText.length
                 });
 
-                console.log('🤖 AI 파싱 요청:', {
-                    전처리된텍스트길이: preprocessedText.length,
-                    커스텀프롬프트: customPrompt ? `있음 (${customPrompt.length}자)` : '없음',
-                    커스텀프롬프트내용: customPrompt ? customPrompt.substring(0, 100) + '...' : 'N/A'
-                });
+                console.log('🤖 AI 파싱 요청:');
+                console.log('  - 전처리된텍스트길이:', preprocessedText.length);
+                console.log('  - 커스텀프롬프트:', customPrompt ? `있음 (${customPrompt.length}자)` : '없음');
+                if (customPrompt) {
+                    console.log('  - 전송할 프롬프트:', customPrompt);
+                }
 
                 // 2단계: AI 파싱 (전처리된 데이터 + 커스텀 프롬프트)
                 const response = await fetch('/admin/reservations/parse', {
