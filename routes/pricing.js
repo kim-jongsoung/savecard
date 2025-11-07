@@ -130,9 +130,15 @@ module.exports = (pool) => {
             
         } catch (error) {
             console.error('❌ 요금 목록 조회 오류:', error);
+            console.error('❌ 오류 상세:', {
+                message: error.message,
+                code: error.code,
+                detail: error.detail
+            });
             res.status(500).json({
                 success: false,
-                message: '요금 목록 조회 중 오류가 발생했습니다: ' + error.message
+                message: '요금 목록 조회 중 오류가 발생했습니다: ' + error.message,
+                error: error.code
             });
         }
     });
