@@ -18,9 +18,10 @@ try {
 /**
  * OpenAI API를 사용하여 예약 텍스트를 JSON으로 파싱
  * @param {string} rawText - 파싱할 원본 예약 텍스트
+ * @param {string} customPrompt - 사용자 정의 추가 프롬프트 (선택사항)
  * @returns {Promise<Object>} - 파싱된 예약 데이터 JSON (confidence, extracted_notes 포함)
  */
-async function parseBooking(rawText) {
+async function parseBooking(rawText, customPrompt = '') {
     // OpenAI API 키가 없으면 에러 발생
     if (!openai) {
         throw new Error('OpenAI API 키가 설정되지 않았습니다. OPENAI_API_KEY 환경변수를 확인하세요.');
@@ -181,6 +182,10 @@ adult_unit_price, child_unit_price, payment_status
 - 0.7~0.8: 대부분 정보 확실, 일부 확인 필요
 - 0.5~0.6: 기본 정보만 확실, 많은 부분 검수 필요
 - 0.0~0.4: 정보 부족하거나 애매함, 전면 검수 필요
+
+${customPrompt ? `🔧 추가 지침:
+${customPrompt}
+` : ''}
 `;
 
         const userPrompt = `

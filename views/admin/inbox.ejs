@@ -46,12 +46,17 @@
                                 <textarea class="form-control" id="reservationText" rows="8" 
                                         placeholder="예약 확인서 내용을 붙여넣으세요..."></textarea>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-primary" onclick="parseReservation()">
-                                    <i class="fas fa-robot me-1"></i>AI 파싱
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
-                                    <i class="fas fa-eraser me-1"></i>초기화
+                            <div class="d-flex gap-2 justify-content-between">
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-primary" onclick="parseReservation()">
+                                        <i class="fas fa-robot me-1"></i>AI 파싱
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                                        <i class="fas fa-eraser me-1"></i>초기화
+                                    </button>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary" onclick="openParsingSettings()">
+                                    <i class="fas fa-cog me-1"></i>파싱 설정
                                 </button>
                             </div>
                         </form>
@@ -456,8 +461,187 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let parsedData = null;
+        let preprocessingRules = [];
+        let customPrompt = '';
 
-        // 예약 파싱 (여행사 선택 제거)
+        // 페이지 로드 시 설정 불러오기
+        document.addEventListener('DOMContentLoaded', function() {
+            loadParsingSettings();
+        });
+
+        // ==================== 설정 관리 ====================
+        
+        // 파싱 설정 모달 열기
+        function openParsingSettings() {
+            loadParsingSettings();
+            renderPreprocessingRules();
+            const modal = new bootstrap.Modal(document.getElementById('parsingSettingsModal'));
+            modal.show();
+        }
+
+        // 설정 불러오기
+        function loadParsingSettings() {
+            const savedRules = localStorage.getItem('preprocessingRules');
+            const savedPrompt = localStorage.getItem('customPrompt');
+            
+            if (savedRules) {
+                preprocessingRules = JSON.parse(savedRules);
+            } else {
+                // 기본 전처리 규칙
+                preprocessingRules = [
+                    { pattern: 'logo_', replacement: '', type: 'remove', enabled: true },
+                    { pattern: 'image_', replacement: '', type: 'remove', enabled: true },
+                    { pattern: 'icon_', replacement: '', type: 'remove', enabled: true },
+                    { pattern: 'img_', replacement: '', type: 'remove', enabled: true },
+                    { pattern: 'photo_', replacement: '', type: 'remove', enabled: true }
+                ];
+            }
+            
+            customPrompt = savedPrompt || '';
+            document.getElementById('customPromptText').value = customPrompt;
+        }
+
+        // 설정 저장
+        function saveParsingSettings() {
+            customPrompt = document.getElementById('customPromptText').value;
+            
+            localStorage.setItem('preprocessingRules', JSON.stringify(preprocessingRules));
+            localStorage.setItem('customPrompt', customPrompt);
+            
+            showNotification('파싱 설정이 저장되었습니다.', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('parsingSettingsModal')).hide();
+        }
+
+        // ==================== 전처리 규칙 관리 ====================
+        
+        // 전처리 규칙 렌더링
+        function renderPreprocessingRules() {
+            const container = document.getElementById('preprocessingRulesList');
+            
+            if (preprocessingRules.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-3">등록된 규칙이 없습니다.</div>';
+                return;
+            }
+            
+            container.innerHTML = preprocessingRules.map((rule, index) => `
+                <div class="card mb-2">
+                    <div class="card-body p-3">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" ${rule.enabled ? 'checked' : ''} 
+                                           onchange="toggleRule(${index})">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" 
+                                       value="${rule.pattern}" 
+                                       onchange="updateRulePattern(${index}, this.value)"
+                                       placeholder="찾을 문자열">
+                            </div>
+                            <div class="col-md-1 text-center">
+                                <i class="fas fa-arrow-right text-muted"></i>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" 
+                                       value="${rule.replacement}" 
+                                       onchange="updateRuleReplacement(${index}, this.value)"
+                                       placeholder="바꿀 문자열 (비우면 삭제)">
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm" onchange="updateRuleType(${index}, this.value)">
+                                    <option value="remove" ${rule.type === 'remove' ? 'selected' : ''}>삭제</option>
+                                    <option value="replace" ${rule.type === 'replace' ? 'selected' : ''}>변경</option>
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteRule(${index})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 규칙 추가
+        function addPreprocessingRule() {
+            preprocessingRules.push({
+                pattern: '',
+                replacement: '',
+                type: 'remove',
+                enabled: true
+            });
+            renderPreprocessingRules();
+        }
+
+        // 규칙 토글
+        function toggleRule(index) {
+            preprocessingRules[index].enabled = !preprocessingRules[index].enabled;
+        }
+
+        // 규칙 패턴 업데이트
+        function updateRulePattern(index, value) {
+            preprocessingRules[index].pattern = value;
+        }
+
+        // 규칙 변경값 업데이트
+        function updateRuleReplacement(index, value) {
+            preprocessingRules[index].replacement = value;
+        }
+
+        // 규칙 타입 업데이트
+        function updateRuleType(index, value) {
+            preprocessingRules[index].type = value;
+        }
+
+        // 규칙 삭제
+        function deleteRule(index) {
+            preprocessingRules.splice(index, 1);
+            renderPreprocessingRules();
+        }
+
+        // ==================== 데이터 전처리 ====================
+        
+        // 데이터 전처리 실행
+        function preprocessData(text) {
+            let processedText = text;
+            
+            console.log('🔧 전처리 시작:', {
+                originalLength: text.length,
+                rulesCount: preprocessingRules.filter(r => r.enabled).length
+            });
+            
+            // 활성화된 규칙만 적용
+            preprocessingRules.filter(r => r.enabled).forEach(rule => {
+                if (!rule.pattern) return;
+                
+                try {
+                    const regex = new RegExp(rule.pattern, 'gi');
+                    const beforeLength = processedText.length;
+                    processedText = processedText.replace(regex, rule.replacement);
+                    const afterLength = processedText.length;
+                    
+                    if (beforeLength !== afterLength) {
+                        console.log(`✅ 규칙 적용: "${rule.pattern}" → "${rule.replacement}" (${beforeLength - afterLength}자 변경)`);
+                    }
+                } catch (error) {
+                    console.error(`❌ 규칙 적용 실패: "${rule.pattern}"`, error);
+                }
+            });
+            
+            console.log('🔧 전처리 완료:', {
+                processedLength: processedText.length,
+                difference: text.length - processedText.length
+            });
+            
+            return processedText;
+        }
+
+        // ==================== AI 파싱 ====================
+        
+        // 예약 파싱 (전처리 + 프롬프트 추가)
         async function parseReservation() {
             const text = document.getElementById('reservationText').value.trim();
             
@@ -467,11 +651,22 @@
             }
 
             try {
+                // 1단계: 데이터 전처리
+                const preprocessedText = preprocessData(text);
+                
+                console.log('📊 전처리 결과:', {
+                    원본길이: text.length,
+                    전처리후길이: preprocessedText.length,
+                    차이: text.length - preprocessedText.length
+                });
+
+                // 2단계: AI 파싱 (전처리된 데이터 + 커스텀 프롬프트)
                 const response = await fetch('/admin/reservations/parse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        reservationText: text
+                        reservationText: preprocessedText,
+                        customPrompt: customPrompt  // 커스텀 프롬프트 추가
                     })
                 });
 
@@ -1900,6 +2095,78 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
                     <button type="button" class="btn btn-primary" onclick="copyBookmarkletCode()">
                         <i class="fas fa-copy me-1"></i>코드 복사
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 파싱 설정 모달 -->
+    <div class="modal fade" id="parsingSettingsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-cog me-2"></i>AI 파싱 설정</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#preprocessingTab">
+                                <i class="fas fa-filter me-1"></i>전처리 규칙
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#promptTab">
+                                <i class="fas fa-comment-dots me-1"></i>프롬프트 템플릿
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3">
+                        <!-- 전처리 규칙 탭 -->
+                        <div class="tab-pane fade show active" id="preprocessingTab">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">데이터 전처리 규칙</h6>
+                                    <small class="text-muted">AI 파싱 전에 불필요한 텍스트를 자동으로 제거하거나 변경합니다</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <button class="btn btn-sm btn-primary" onclick="addPreprocessingRule()">
+                                            <i class="fas fa-plus me-1"></i>규칙 추가
+                                        </button>
+                                    </div>
+                                    <div id="preprocessingRulesList"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 프롬프트 템플릿 탭 -->
+                        <div class="tab-pane fade" id="promptTab">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">AI 프롬프트 추가 지침</h6>
+                                    <small class="text-muted">AI에게 전달할 추가 지침을 설정합니다</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">프롬프트 추가 문구</label>
+                                        <textarea class="form-control" id="customPromptText" rows="6" 
+                                                placeholder="예: 상품명에서 날짜와 시간 정보를 제거하세요.&#10;예: 가격은 항상 숫자만 추출하세요.&#10;예: 통화는 USD 또는 KRW만 인식하세요."></textarea>
+                                        <small class="text-muted mt-2 d-block">
+                                            이 문구가 AI 프롬프트에 추가되어 더 정확한 파싱이 가능합니다.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" onclick="saveParsingSettings()">
+                        <i class="fas fa-save me-1"></i>저장
                     </button>
                 </div>
             </div>

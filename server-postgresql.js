@@ -6339,13 +6339,16 @@ async function matchPricingFromRAG(platform_name, product_name, package_type) {
 // 예약 등록 (텍스트 파싱) - 관리자용
 app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     try {
-        const { reservationText } = req.body;
+        const { reservationText, customPrompt } = req.body;
         
         if (!reservationText || !reservationText.trim()) {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
         }
         
         console.log('📝 파싱 요청 받음 (여행사 선택 없음)');
+        if (customPrompt) {
+            console.log('🔧 커스텀 프롬프트 적용:', customPrompt.substring(0, 100) + '...');
+        }
         
         // OpenAI 지능형 텍스트 파싱 (검수형 워크플로우)
         console.log('🤖 OpenAI 파싱 시작...');
@@ -6355,7 +6358,7 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         let extractedNotes = '';
         
         try {
-            const aiResult = await parseBooking(reservationText);
+            const aiResult = await parseBooking(reservationText, customPrompt);
             parsedData = aiResult;
             confidence = aiResult.confidence || 0.8;
             extractedNotes = aiResult.extracted_notes || '';
