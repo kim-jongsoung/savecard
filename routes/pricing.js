@@ -230,17 +230,19 @@ module.exports = (pool) => {
                 });
             }
             
-            // package_options를 안전하게 처리
-            let packageOptionsStr;
+            // JSONB 컬럼에 객체 전달 (문자열이면 파싱)
+            let packageOptionsObj = package_options;
             if (typeof package_options === 'string') {
-                packageOptionsStr = package_options;
-            } else if (package_options && typeof package_options === 'object') {
-                packageOptionsStr = JSON.stringify(package_options);
-            } else {
-                packageOptionsStr = '[]';
+                try {
+                    packageOptionsObj = JSON.parse(package_options);
+                } catch (e) {
+                    packageOptionsObj = [];
+                }
+            } else if (!package_options) {
+                packageOptionsObj = [];
             }
             
-            // 요금 등록
+            // 요금 등록 - JSONB 컬럼에 객체 전달
             const result = await pool.query(`
                 INSERT INTO product_pricing 
                 (platform_name, vendor_id, product_name, commission_rate, package_options, notes)
@@ -251,7 +253,7 @@ module.exports = (pool) => {
                 vendor_id || null,
                 product_name,
                 commission_rate || 15,
-                packageOptionsStr,
+                packageOptionsObj, // 객체 전달
                 notes || null
             ]);
             
@@ -310,31 +312,40 @@ module.exports = (pool) => {
             
             const oldData = oldDataResult.rows[0];
             
-            // package_options를 안전하게 처리
-            let packageOptionsJson;
+            // JSONB 컬럼에는 객체를 직접 전달 (pg 라이브러리가 자동 변환)
+            // 문자열이면 파싱, 객체면 그대로 사용
+            let packageOptionsObj = package_options;
             if (typeof package_options === 'string') {
-                packageOptionsJson = package_options; // 이미 문자열
-            } else if (package_options && typeof package_options === 'object') {
-                packageOptionsJson = JSON.stringify(package_options); // 객체면 stringify
-            } else {
-                packageOptionsJson = '[]'; // null이나 undefined면 빈 배열
+                try {
+                    packageOptionsObj = JSON.parse(package_options);
+                } catch (e) {
+                    packageOptionsObj = [];
+                }
+            } else if (!package_options) {
+                packageOptionsObj = [];
             }
             
-            // 요금 변경 이력 저장
+            let oldPackageOptionsObj = oldData.package_options || [];
+            
+            console.log('📦 old 타입:', typeof oldData.package_options);
+            console.log('📦 new 타입:', typeof package_options);
+            console.log('📦 new 변환 후 타입:', typeof packageOptionsObj);
+            
+            // 요금 변경 이력 저장 (JSONB 컬럼에 객체 전달)
             await client.query(`
                 INSERT INTO pricing_history 
                 (pricing_id, old_package_options, new_package_options, changed_by, change_reason, version)
                 VALUES ($1, $2, $3, $4, $5, $6)
             `, [
                 id,
-                oldData.package_options,
-                packageOptionsJson,
+                oldPackageOptionsObj,
+                packageOptionsObj,
                 req.session?.adminUsername || 'admin',
                 change_reason || '요금 수정',
                 oldData.version
             ]);
             
-            // 요금 업데이트 (버전 증가)
+            // 요금 업데이트 (버전 증가) - JSONB 컬럼에 객체 전달
             const updateResult = await client.query(`
                 UPDATE product_pricing
                 SET 
@@ -353,7 +364,7 @@ module.exports = (pool) => {
                 vendor_id || null,
                 product_name,
                 commission_rate || 15,
-                packageOptionsJson,
+                packageOptionsObj, // 객체 전달
                 notes || null,
                 id
             ]);
