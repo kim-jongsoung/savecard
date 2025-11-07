@@ -16281,12 +16281,11 @@ async function startServer() {
                         r.usage_date,
                         r.assigned_to,
                         v.vendor_name,
-                        u.full_name as staff_name
+                        r.assigned_to as staff_name
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
                     LEFT JOIN assignments a ON a.reservation_id = r.id
                     LEFT JOIN vendors v ON a.vendor_id = v.id
-                    LEFT JOIN admin_users u ON r.assigned_to = u.username
                     WHERE 1=1
                 `;
                 
@@ -16389,15 +16388,14 @@ async function startServer() {
                 const result = await pool.query(`
                     SELECT DISTINCT 
                         r.assigned_to,
-                        u.username,
-                        u.full_name,
                         COUNT(*) as count
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
-                    LEFT JOIN admin_users u ON r.assigned_to = u.username
                     WHERE s.payment_received_date IS NOT NULL 
                       AND s.payment_sent_date IS NOT NULL
-                    GROUP BY r.assigned_to, u.username, u.full_name
+                      AND r.assigned_to IS NOT NULL
+                      AND r.assigned_to != ''
+                    GROUP BY r.assigned_to
                     ORDER BY count DESC
                 `);
                 
@@ -16411,19 +16409,23 @@ async function startServer() {
             }
         });
 
-        // 직원 목록 조회 API
+        // 직원 목록 조회 API (정산 데이터의 실제 담당직원 목록)
         app.get('/api/admin/users', requireAuth, async (req, res) => {
             try {
                 const result = await pool.query(`
-                    SELECT username, full_name, email, role, is_active
-                    FROM admin_users
-                    WHERE is_active = true
-                    ORDER BY full_name
+                    SELECT DISTINCT r.assigned_to as full_name
+                    FROM settlements s
+                    INNER JOIN reservations r ON s.reservation_id = r.id
+                    WHERE r.assigned_to IS NOT NULL AND r.assigned_to != ''
+                    ORDER BY r.assigned_to
                 `);
                 
                 res.json({
                     success: true,
-                    users: result.rows
+                    users: result.rows.map(row => ({
+                        username: row.full_name,  // 한글 이름을 username으로 사용
+                        full_name: row.full_name
+                    }))
                 });
             } catch (error) {
                 console.error('❌ 직원 목록 조회 실패:', error);
@@ -16581,12 +16583,11 @@ async function startServer() {
                         r.usage_date,
                         r.assigned_to,
                         v.vendor_name,
-                        u.full_name as staff_name
+                        r.assigned_to as staff_name
                     FROM settlements s
                     INNER JOIN reservations r ON s.reservation_id = r.id
                     LEFT JOIN assignments a ON a.reservation_id = r.id
                     LEFT JOIN vendors v ON a.vendor_id = v.id
-                    LEFT JOIN admin_users u ON r.assigned_to = u.username
                     WHERE 1=1
                 `;
                 
