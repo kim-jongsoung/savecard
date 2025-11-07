@@ -354,6 +354,17 @@
                             <input type="text" class="form-control form-control-sm" id="edit-phone">
                         </div>
                     </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1">이메일</label>
+                            <input type="email" class="form-control form-control-sm" id="edit-email" placeholder="이메일">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1">카카오ID</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-kakao-id" placeholder="카카오ID">
+                        </div>
+                    </div>
 
                     <div class="row g-3">
 
@@ -1565,11 +1576,6 @@
             }
         });
 
-        // 예약 변경사항 저장
-        function saveReservationChanges() {
-            showAlert('예약 변경사항이 저장되었습니다.', 'success');
-        }
-
 
         // 수배서 수정
         function editAssignment() {
@@ -2477,6 +2483,8 @@
             }
             
             document.getElementById('edit-phone').value = reservation.phone || '';
+            document.getElementById('edit-email').value = reservation.email || '';
+            document.getElementById('edit-kakao-id').value = reservation.kakao_id || '';
             
             // 인원 및 금액 정보
             document.getElementById('edit-people-adult').value = reservation.people_adult || 0;
@@ -4877,9 +4885,26 @@
                 people_adult: parseInt(document.getElementById('edit-people-adult').value) || 0,
                 people_child: parseInt(document.getElementById('edit-people-child').value) || 0,
                 people_infant: parseInt(document.getElementById('edit-people-infant').value) || 0,
+                
+                // 판매가
                 adult_price: parseFloat(document.getElementById('edit-adult-price').value) || 0,
                 child_price: parseFloat(document.getElementById('edit-child-price').value) || 0,
                 infant_price: parseFloat(document.getElementById('edit-infant-price').value) || 0,
+                
+                // 원가
+                adult_cost: parseFloat(document.getElementById('edit-adult-cost').value) || 0,
+                child_cost: parseFloat(document.getElementById('edit-child-cost').value) || 0,
+                infant_cost: parseFloat(document.getElementById('edit-infant-cost').value) || 0,
+                
+                // 판매가 통화
+                adult_currency: document.getElementById('edit-adult-currency').value || 'USD',
+                child_currency: document.getElementById('edit-child-currency').value || 'USD',
+                infant_currency: document.getElementById('edit-infant-currency').value || 'USD',
+                
+                // 원가 통화
+                adult_cost_currency: document.getElementById('edit-adult-cost-currency').value || 'USD',
+                child_cost_currency: document.getElementById('edit-child-cost-currency').value || 'USD',
+                infant_cost_currency: document.getElementById('edit-infant-cost-currency').value || 'USD',
                 
                 // 특별 요청사항
                 memo: document.getElementById('edit-memo').value
