@@ -6380,11 +6380,11 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
                 normalizedData.infant_currency = pricingInfo.infant_currency;
                 
                 // 원가 정보 자동 설정
-                normalizedData.adult_unit_cost = pricingInfo.adult_cost;
+                normalizedData.adult_cost = pricingInfo.adult_cost;
                 normalizedData.adult_cost_currency = pricingInfo.adult_cost_currency;
-                normalizedData.child_unit_cost = pricingInfo.child_cost;
+                normalizedData.child_cost = pricingInfo.child_cost;
                 normalizedData.child_cost_currency = pricingInfo.child_cost_currency;
-                normalizedData.infant_unit_cost = pricingInfo.infant_cost;
+                normalizedData.infant_cost = pricingInfo.infant_cost;
                 normalizedData.infant_cost_currency = pricingInfo.infant_cost_currency;
                 
                 normalizedData.pricing_id = pricingInfo.pricing_id;
