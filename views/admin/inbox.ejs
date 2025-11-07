@@ -175,23 +175,33 @@
                                     <div class="col-md-1">
                                         <span class="badge bg-primary">성인</span>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-md-1">
                                         <label class="form-label small">인원</label>
                                         <input type="number" class="form-control form-control-sm" id="adult_count" name="adult_count" min="0" placeholder="2" onchange="calculateTotal()">
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">단가</label>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">판매가</label>
                                         <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" id="adult_price" name="adult_price" min="0" step="0.01" placeholder="19900 or 120" onchange="calculateTotal()">
+                                            <input type="number" class="form-control" id="adult_price" name="adult_price" min="0" step="0.01" placeholder="19900" onchange="calculateTotal()">
                                             <select class="form-select" id="adult_currency" name="adult_currency" style="max-width: 70px;" onchange="calculateTotal()">
                                                 <option value="KRW">₩</option>
                                                 <option value="USD">$</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">소계</label>
-                                        <input type="text" class="form-control form-control-sm fw-bold" id="adult_subtotal" readonly style="background-color: #e7f3ff;">
+                                    <div class="col-md-2">
+                                        <label class="form-label small">원가</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control" id="adult_cost" name="adult_cost" min="0" step="0.01" placeholder="10000" onchange="calculateTotal()">
+                                            <select class="form-select" id="adult_cost_currency" name="adult_cost_currency" style="max-width: 70px;" onchange="calculateTotal()">
+                                                <option value="KRW">₩</option>
+                                                <option value="USD">$</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">마진</label>
+                                        <input type="text" class="form-control form-control-sm fw-bold" id="adult_margin" readonly style="background-color: #e7f3ff;">
                                     </div>
                                 </div>
                             </div>
@@ -202,23 +212,33 @@
                                     <div class="col-md-1">
                                         <span class="badge bg-info">소아</span>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-md-1">
                                         <label class="form-label small">인원</label>
                                         <input type="number" class="form-control form-control-sm" id="child_count" name="child_count" min="0" placeholder="1" onchange="calculateTotal()">
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">단가</label>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">판매가</label>
                                         <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" id="child_price" name="child_price" min="0" step="0.01" placeholder="15000 or 80" onchange="calculateTotal()">
+                                            <input type="number" class="form-control" id="child_price" name="child_price" min="0" step="0.01" placeholder="15000" onchange="calculateTotal()">
                                             <select class="form-select" id="child_currency" name="child_currency" style="max-width: 70px;" onchange="calculateTotal()">
                                                 <option value="KRW">₩</option>
                                                 <option value="USD">$</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">소계</label>
-                                        <input type="text" class="form-control form-control-sm fw-bold" id="child_subtotal" readonly style="background-color: #d1ecf1;">
+                                    <div class="col-md-2">
+                                        <label class="form-label small">원가</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control" id="child_cost" name="child_cost" min="0" step="0.01" placeholder="8000" onchange="calculateTotal()">
+                                            <select class="form-select" id="child_cost_currency" name="child_cost_currency" style="max-width: 70px;" onchange="calculateTotal()">
+                                                <option value="KRW">₩</option>
+                                                <option value="USD">$</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">마진</label>
+                                        <input type="text" class="form-control form-control-sm fw-bold" id="child_margin" readonly style="background-color: #d1ecf1;">
                                     </div>
                                 </div>
                             </div>
@@ -229,23 +249,33 @@
                                     <div class="col-md-1">
                                         <span class="badge bg-warning text-dark">유아</span>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col-md-1">
                                         <label class="form-label small">인원</label>
                                         <input type="number" class="form-control form-control-sm" id="infant_count" name="infant_count" min="0" placeholder="0" onchange="calculateTotal()">
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">단가</label>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">판매가</label>
                                         <div class="input-group input-group-sm">
-                                            <input type="number" class="form-control" id="infant_price" name="infant_price" min="0" step="0.01" placeholder="5000 or 40" onchange="calculateTotal()">
+                                            <input type="number" class="form-control" id="infant_price" name="infant_price" min="0" step="0.01" placeholder="5000" onchange="calculateTotal()">
                                             <select class="form-select" id="infant_currency" name="infant_currency" style="max-width: 70px;" onchange="calculateTotal()">
                                                 <option value="KRW">₩</option>
                                                 <option value="USD">$</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small">소계</label>
-                                        <input type="text" class="form-control form-control-sm fw-bold" id="infant_subtotal" readonly style="background-color: #fff3cd;">
+                                    <div class="col-md-2">
+                                        <label class="form-label small">원가</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" class="form-control" id="infant_cost" name="infant_cost" min="0" step="0.01" placeholder="3000" onchange="calculateTotal()">
+                                            <select class="form-select" id="infant_cost_currency" name="infant_cost_currency" style="max-width: 70px;" onchange="calculateTotal()">
+                                                <option value="KRW">₩</option>
+                                                <option value="USD">$</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">마진</label>
+                                        <input type="text" class="form-control form-control-sm fw-bold" id="infant_margin" readonly style="background-color: #fff3cd;">
                                     </div>
                                 </div>
                             </div>
@@ -620,9 +650,15 @@
                 'adult_price': parseFloat(data.adult_unit_price || data.adult_price || data.adult_amount || 0),
                 'child_price': parseFloat(data.child_unit_price || data.child_price || data.child_amount || 0),
                 'infant_price': parseFloat(data.infant_unit_price || data.infant_price || data.infant_amount || 0),
+                'adult_cost': parseFloat(data.adult_cost || data.adult_unit_cost || 0),
+                'child_cost': parseFloat(data.child_cost || data.child_unit_cost || 0),
+                'infant_cost': parseFloat(data.infant_cost || data.infant_unit_cost || 0),
                 'adult_currency': data.adult_currency || 'USD',
                 'child_currency': data.child_currency || 'USD',
                 'infant_currency': data.infant_currency || 'USD',
+                'adult_cost_currency': data.adult_cost_currency || data.adult_currency || 'USD',
+                'child_cost_currency': data.child_cost_currency || data.child_currency || 'USD',
+                'infant_cost_currency': data.infant_cost_currency || data.infant_currency || 'USD',
                 'special_requests': data.memo || data.special_requests || data.notes || data.remarks || ''
             };
 
@@ -1172,56 +1208,68 @@
             const childCount = parseInt(document.getElementById('child_count').value) || 0;
             const infantCount = parseInt(document.getElementById('infant_count').value) || 0;
             
+            // 판매가
             const adultPrice = parseFloat(document.getElementById('adult_price').value) || 0;
             const childPrice = parseFloat(document.getElementById('child_price').value) || 0;
             const infantPrice = parseFloat(document.getElementById('infant_price').value) || 0;
             
-            // 통화 가져오기
+            // 원가
+            const adultCost = parseFloat(document.getElementById('adult_cost').value) || 0;
+            const childCost = parseFloat(document.getElementById('child_cost').value) || 0;
+            const infantCost = parseFloat(document.getElementById('infant_cost').value) || 0;
+            
+            // 통화
             const adultCurrency = document.getElementById('adult_currency').value || 'USD';
             const childCurrency = document.getElementById('child_currency').value || 'USD';
             const infantCurrency = document.getElementById('infant_currency').value || 'USD';
             
-            // 소계 계산 및 표시
-            const adultTotal = adultCount * adultPrice;
-            const childTotal = childCount * childPrice;
-            const infantTotal = infantCount * infantPrice;
+            const adultCostCurrency = document.getElementById('adult_cost_currency').value || 'USD';
+            const childCostCurrency = document.getElementById('child_cost_currency').value || 'USD';
+            const infantCostCurrency = document.getElementById('infant_cost_currency').value || 'USD';
             
-            // 성인 소계
-            if (adultCount > 0 && adultPrice > 0) {
+            // 마진 계산 (판매가 - 원가)
+            const adultMargin = adultPrice - adultCost;
+            const childMargin = childPrice - childCost;
+            const infantMargin = infantPrice - infantCost;
+            
+            // 성인 마진 표시
+            if (adultPrice > 0 || adultCost > 0) {
                 const display = adultCurrency === 'USD' ? 
-                    `$${adultTotal.toFixed(2)}` : `₩${Math.round(adultTotal).toLocaleString('ko-KR')}`;
-                document.getElementById('adult_subtotal').value = `${adultCount}명 × ${adultCurrency === 'USD' ? '$' : '₩'}${adultCurrency === 'USD' ? adultPrice.toFixed(2) : Math.round(adultPrice).toLocaleString('ko-KR')} = ${display}`;
+                    `$${adultMargin.toFixed(2)}` : `₩${Math.round(adultMargin).toLocaleString('ko-KR')}`;
+                document.getElementById('adult_margin').value = display;
             } else {
-                document.getElementById('adult_subtotal').value = '';
+                document.getElementById('adult_margin').value = '';
             }
             
-            // 소아 소계
-            if (childCount > 0 && childPrice > 0) {
+            // 소아 마진 표시
+            if (childPrice > 0 || childCost > 0) {
                 const display = childCurrency === 'USD' ? 
-                    `$${childTotal.toFixed(2)}` : `₩${Math.round(childTotal).toLocaleString('ko-KR')}`;
-                document.getElementById('child_subtotal').value = `${childCount}명 × ${childCurrency === 'USD' ? '$' : '₩'}${childCurrency === 'USD' ? childPrice.toFixed(2) : Math.round(childPrice).toLocaleString('ko-KR')} = ${display}`;
+                    `$${childMargin.toFixed(2)}` : `₩${Math.round(childMargin).toLocaleString('ko-KR')}`;
+                document.getElementById('child_margin').value = display;
             } else {
-                document.getElementById('child_subtotal').value = '';
+                document.getElementById('child_margin').value = '';
             }
             
-            // 유아 소계
-            if (infantCount > 0 && infantPrice > 0) {
+            // 유아 마진 표시
+            if (infantPrice > 0 || infantCost > 0) {
                 const display = infantCurrency === 'USD' ? 
-                    `$${infantTotal.toFixed(2)}` : `₩${Math.round(infantTotal).toLocaleString('ko-KR')}`;
-                document.getElementById('infant_subtotal').value = `${infantCount}명 × ${infantCurrency === 'USD' ? '$' : '₩'}${infantCurrency === 'USD' ? infantPrice.toFixed(2) : Math.round(infantPrice).toLocaleString('ko-KR')} = ${display}`;
+                    `$${infantMargin.toFixed(2)}` : `₩${Math.round(infantMargin).toLocaleString('ko-KR')}`;
+                document.getElementById('infant_margin').value = display;
             } else {
-                document.getElementById('infant_subtotal').value = '';
+                document.getElementById('infant_margin').value = '';
             }
             
             // 총 인원 계산
             const totalGuests = adultCount + childCount + infantCount;
             document.getElementById('total_guests').value = totalGuests;
             
-            // 총 금액 계산 (모두 같은 통화로 가정)
+            // 총 금액 계산 (판매가 기준)
+            const adultTotal = adultCount * adultPrice;
+            const childTotal = childCount * childPrice;
+            const infantTotal = infantCount * infantPrice;
             const totalAmount = adultTotal + childTotal + infantTotal;
-            const mainCurrency = adultCurrency || childCurrency || infantCurrency || 'USD';
             
-            // 총 금액 표시
+            const mainCurrency = adultCurrency || childCurrency || infantCurrency || 'USD';
             const totalDisplay = mainCurrency === 'USD' ? 
                 `$${totalAmount.toFixed(2)}` : `₩${Math.round(totalAmount).toLocaleString('ko-KR')}`;
             document.getElementById('total_amount').value = totalDisplay;

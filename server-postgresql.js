@@ -6199,10 +6199,16 @@ async function matchPricingFromRAG(platform_name, product_name, package_type) {
             matched_option: matchedOption,
             adult_price: matchedOption.adult_price || null,
             adult_currency: matchedOption.adult_currency || 'USD',
+            adult_cost: matchedOption.adult_cost || null,
+            adult_cost_currency: matchedOption.adult_cost_currency || matchedOption.adult_currency || 'USD',
             child_price: matchedOption.child_price || null,
             child_currency: matchedOption.child_currency || 'USD',
+            child_cost: matchedOption.child_cost || null,
+            child_cost_currency: matchedOption.child_cost_currency || matchedOption.child_currency || 'USD',
             infant_price: matchedOption.infant_price || null,
-            infant_currency: matchedOption.infant_currency || 'USD'
+            infant_currency: matchedOption.infant_currency || 'USD',
+            infant_cost: matchedOption.infant_cost || null,
+            infant_cost_currency: matchedOption.infant_cost_currency || matchedOption.infant_currency || 'USD'
         };
         
     } catch (error) {
@@ -6266,13 +6272,22 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
             if (pricingInfo) {
                 console.log('💰 요금 자동 설정 완료');
                 
-                // 단가 정보 자동 설정
+                // 판매가 정보 자동 설정
                 normalizedData.adult_unit_price = pricingInfo.adult_price;
                 normalizedData.adult_currency = pricingInfo.adult_currency;
                 normalizedData.child_unit_price = pricingInfo.child_price;
                 normalizedData.child_currency = pricingInfo.child_currency;
                 normalizedData.infant_unit_price = pricingInfo.infant_price;
                 normalizedData.infant_currency = pricingInfo.infant_currency;
+                
+                // 원가 정보 자동 설정
+                normalizedData.adult_unit_cost = pricingInfo.adult_cost;
+                normalizedData.adult_cost_currency = pricingInfo.adult_cost_currency;
+                normalizedData.child_unit_cost = pricingInfo.child_cost;
+                normalizedData.child_cost_currency = pricingInfo.child_cost_currency;
+                normalizedData.infant_unit_cost = pricingInfo.infant_cost;
+                normalizedData.infant_cost_currency = pricingInfo.infant_cost_currency;
+                
                 normalizedData.pricing_id = pricingInfo.pricing_id;
                 normalizedData.commission_rate = pricingInfo.commission_rate;
                 
