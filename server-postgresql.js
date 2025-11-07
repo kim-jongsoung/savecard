@@ -17718,7 +17718,6 @@ async function startServer() {
                         platform_name VARCHAR(100) NOT NULL,
                         vendor_id INTEGER REFERENCES vendors(id),
                         product_name VARCHAR(255) NOT NULL,
-                        commission_rate DECIMAL(5,2) DEFAULT 15.00,
                         package_options JSONB NOT NULL DEFAULT '[]',
                         notes TEXT,
                         is_active BOOLEAN DEFAULT true,
@@ -17729,20 +17728,6 @@ async function startServer() {
                     )
                 `);
                 console.log('   ✅ product_pricing 테이블 생성 완료');
-                
-                // 1-1. commission_rate 컬럼이 없으면 추가 (기존 테이블 대응)
-                await pool.query(`
-                    DO $$ 
-                    BEGIN
-                        IF NOT EXISTS (
-                            SELECT 1 FROM information_schema.columns 
-                            WHERE table_name='product_pricing' AND column_name='commission_rate'
-                        ) THEN
-                            ALTER TABLE product_pricing ADD COLUMN commission_rate DECIMAL(5,2) DEFAULT 15.00;
-                        END IF;
-                    END $$;
-                `);
-                console.log('   ✅ commission_rate 컬럼 확인/추가 완료');
                 
                 // 2. 인덱스 생성
                 await pool.query(`
@@ -17803,6 +17788,49 @@ async function startServer() {
             } catch (error) {
                 await pool.query('ROLLBACK');
                 console.error('❌ 마이그레이션 007 실패:', error);
+                throw error;
+            }
+        }
+
+        // ==================== 마이그레이션 008: commission_rate 컬럼 추가 ====================
+        async function runMigration008() {
+            console.log('🔄 마이그레이션 008 실행 확인 중...');
+            
+            // 이미 실행되었는지 확인
+            const checkResult = await pool.query(
+                "SELECT * FROM migration_log WHERE version = '008'"
+            );
+            
+            if (checkResult.rows.length > 0) {
+                console.log('✅ 마이그레이션 008은 이미 실행되었습니다.');
+                return;
+            }
+            
+            console.log('🔄 마이그레이션 008 실행 중...');
+            
+            try {
+                await pool.query('BEGIN');
+                
+                // commission_rate 컬럼 추가
+                await pool.query(`
+                    ALTER TABLE product_pricing 
+                    ADD COLUMN IF NOT EXISTS commission_rate DECIMAL(5,2) DEFAULT 15.00;
+                `);
+                console.log('   ✅ commission_rate 컬럼 추가 완료');
+                
+                // 마이그레이션 로그 기록
+                await pool.query(
+                    'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
+                    ['008', 'product_pricing 테이블에 commission_rate 컬럼 추가']
+                );
+                
+                await pool.query('COMMIT');
+                
+                console.log('✅ 마이그레이션 008 완료!');
+                
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                console.error('❌ 마이그레이션 008 실패:', error);
                 throw error;
             }
         }
@@ -18090,6 +18118,10 @@ async function startServer() {
                 // 마이그레이션 007 실행 (요금 RAG 테이블 생성)
                 await runMigration007();
                 console.log('✅ 요금 RAG 마이그레이션 완료');
+                
+                // 마이그레이션 008 실행 (commission_rate 컬럼 추가)
+                await runMigration008();
+                console.log('✅ commission_rate 컬럼 추가 완료');
             } catch (error) {
                 console.error('⚠️ 마이그레이션 실패 (서버는 계속 실행):', error.message);
             }
