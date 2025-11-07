@@ -2514,6 +2514,10 @@
             window.ragCommissionRate = reservation.commission_rate || 10;
             console.log('💰 수수료율 설정:', window.ragCommissionRate + '%');
             
+            // 환율 설정 (인박스에서 저장한 환율)
+            window.latestExchangeRate = reservation.exchange_rate || 1300;
+            console.log('💱 환율 설정:', window.latestExchangeRate + '원');
+            
             // 마진 계산
             calculateEditTotal();
             
@@ -2581,6 +2585,45 @@
             const adultMarginKRW = adultPriceKRW - adultCostKRW - adultCommissionKRW;
             const childMarginKRW = childPriceKRW - childCostKRW - childCommissionKRW;
             const infantMarginKRW = infantPriceKRW - infantCostKRW - infantCommissionKRW;
+            
+            // 상세 계산 과정 로그
+            console.log('💱 환율 정보:', {
+                환율: exchangeRate + '원',
+                수수료율: commissionRate + '%'
+            });
+            
+            if (adultPrice > 0 || adultCost > 0) {
+                console.log('👨 성인 계산:', {
+                    판매가원본: `${adultPrice} ${adultCurrency}`,
+                    판매가원화: `₩${Math.round(adultPriceKRW).toLocaleString('ko-KR')}`,
+                    원가원본: `${adultCost} ${adultCostCurrency}`,
+                    원가원화: `₩${Math.round(adultCostKRW).toLocaleString('ko-KR')}`,
+                    수수료: `₩${Math.round(adultCommissionKRW).toLocaleString('ko-KR')}`,
+                    마진: `₩${Math.round(adultMarginKRW).toLocaleString('ko-KR')} (판매가 - 원가 - 수수료)`
+                });
+            }
+            
+            if (childPrice > 0 || childCost > 0) {
+                console.log('👶 소아 계산:', {
+                    판매가원본: `${childPrice} ${childCurrency}`,
+                    판매가원화: `₩${Math.round(childPriceKRW).toLocaleString('ko-KR')}`,
+                    원가원본: `${childCost} ${childCostCurrency}`,
+                    원가원화: `₩${Math.round(childCostKRW).toLocaleString('ko-KR')}`,
+                    수수료: `₩${Math.round(childCommissionKRW).toLocaleString('ko-KR')}`,
+                    마진: `₩${Math.round(childMarginKRW).toLocaleString('ko-KR')} (판매가 - 원가 - 수수료)`
+                });
+            }
+            
+            if (infantPrice > 0 || infantCost > 0) {
+                console.log('👼 유아 계산:', {
+                    판매가원본: `${infantPrice} ${infantCurrency}`,
+                    판매가원화: `₩${Math.round(infantPriceKRW).toLocaleString('ko-KR')}`,
+                    원가원본: `${infantCost} ${infantCostCurrency}`,
+                    원가원화: `₩${Math.round(infantCostKRW).toLocaleString('ko-KR')}`,
+                    수수료: `₩${Math.round(infantCommissionKRW).toLocaleString('ko-KR')}`,
+                    마진: `₩${Math.round(infantMarginKRW).toLocaleString('ko-KR')} (판매가 - 원가 - 수수료)`
+                });
+            }
             
             // 성인 마진 표시 (원화 기준)
             if (adultPrice > 0 || adultCost > 0) {
