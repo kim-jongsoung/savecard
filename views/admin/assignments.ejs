@@ -1385,6 +1385,7 @@
                             <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge" style="font-size: 0.85rem; padding: 6px 12px;">${statusText}</span>
                             ${statusBadges}
                             ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.8rem; padding: 5px 10px;">📋 정산대기</span>' : ''}
+                            ${reservation.payment_status === 'settlement_completed' ? '<span class="badge bg-dark ms-2" style="font-size: 0.8rem; padding: 5px 10px;">💰 정산이관완료</span>' : ''}
                         </div>
                         <div class="row-main" style="flex-direction: column; gap: 10px;">
                             <!-- 윗줄: 시스템번호(업체번호) / 예약일 / 출발일 / 고객명(담당자) -->
@@ -1444,12 +1445,14 @@
                                     title="바우처관리">
                                 <i class="bi bi-ticket-perforated"></i>
                             </button>
+                            ${reservation.payment_status !== 'settlement_completed' ? `
                             <button class="btn btn-outline-warning btn-sm" 
                                     onclick="openSettlementModal(${reservation.id})" 
                                     data-reservation-id="${reservation.id}"
                                     title="정산이관">
                                 <i class="bi bi-calculator"></i>
                             </button>
+                            ` : ''}
                             <button class="btn btn-outline-dark btn-sm" 
                                     onclick="openHistoryModal(${reservation.id})" 
                                     data-reservation-id="${reservation.id}"
@@ -1476,7 +1479,8 @@
                 pending: 0,
                 in_progress: 0,
                 confirmed: 0,
-                voucher_sent: 0
+                voucher_sent: 0,
+                settlement_completed: 0
             };
             
             assignments.forEach(r => {
@@ -2064,6 +2068,7 @@
                 'in_progress': '수배중', 
                 'confirmed': '확정',
                 'voucher_sent': '바우처전송완료',
+                'settlement_completed': '정산이관완료',
                 'cancelled': '취소',
                 'refunded': '환불'
             };
@@ -2077,6 +2082,7 @@
                 'in_progress': 'info',
                 'confirmed': 'success', 
                 'voucher_sent': 'primary',
+                'settlement_completed': 'dark',
                 'cancelled': 'danger',
                 'refunded': 'secondary'
             };

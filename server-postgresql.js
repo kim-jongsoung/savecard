@@ -11571,9 +11571,16 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             whereClause += ` AND r.payment_status = $${paramIndex}`;
             queryParams.push(status);
         } else {
-            // 상태 필터가 없으면 예약취소는 기본적으로 제외
-            whereClause += ` AND r.payment_status != 'cancelled'`;
-            console.log('✅ 예약취소 건 제외');
+            // 상태 필터가 없으면 예약취소와 정산이관완료는 기본적으로 제외
+            if (search) {
+                // 검색 시에는 정산이관완료 포함 (예약취소만 제외)
+                whereClause += ` AND r.payment_status != 'cancelled'`;
+                console.log('✅ 검색 모드: 예약취소만 제외, 정산이관완료 포함');
+            } else {
+                // 일반 목록에서는 정산이관완료와 예약취소 모두 제외
+                whereClause += ` AND r.payment_status NOT IN ('cancelled', 'settlement_completed')`;
+                console.log('✅ 일반 목록: 예약취소 및 정산이관완료 제외');
+            }
         }
         
         // 검색 필터 (예약번호, 상품명, 고객명)
