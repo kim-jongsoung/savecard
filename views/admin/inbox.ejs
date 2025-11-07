@@ -1380,8 +1380,22 @@
                 people_adult: parseInt(formData.adult_count) || 1,
                 people_child: parseInt(formData.child_count) || 0,
                 people_infant: parseInt(formData.infant_count) || 0,
-                adult_unit_price: parseFloat(formData.adult_price) || null,
-                child_unit_price: parseFloat(formData.child_price) || null,
+                // 판매가
+                adult_price: parseFloat(formData.adult_price) || null,
+                child_price: parseFloat(formData.child_price) || null,
+                infant_price: parseFloat(formData.infant_price) || null,
+                // 원가
+                adult_cost: parseFloat(formData.adult_cost) || null,
+                child_cost: parseFloat(formData.child_cost) || null,
+                infant_cost: parseFloat(formData.infant_cost) || null,
+                // 판매가 통화
+                adult_currency: formData.adult_currency || 'USD',
+                child_currency: formData.child_currency || 'USD',
+                infant_currency: formData.infant_currency || 'USD',
+                // 원가 통화
+                adult_cost_currency: formData.adult_cost_currency || formData.adult_currency || 'USD',
+                child_cost_currency: formData.child_cost_currency || formData.child_currency || 'USD',
+                infant_cost_currency: formData.infant_cost_currency || formData.infant_currency || 'USD',
                 memo: formData.special_requests,
                 guest_count: (parseInt(formData.adult_count) || 1) + (parseInt(formData.child_count) || 0) + (parseInt(formData.infant_count) || 0),
                 vendor_id: formData.vendor_id || null // 수배업체 ID 추가
