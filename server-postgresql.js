@@ -17636,6 +17636,107 @@ async function startServer() {
             }
         }
 
+        // ==================== 마이그레이션 007: 요금 RAG 테이블 생성 ====================
+        async function runMigration007() {
+            try {
+                console.log('🔍 마이그레이션 007 확인 중...');
+                
+                // 마이그레이션 007 실행 여부 확인
+                const migration007Check = await pool.query(
+                    'SELECT * FROM migration_log WHERE version = $1',
+                    ['007']
+                ).catch(() => ({ rows: [] }));
+                
+                if (migration007Check.rows.length > 0) {
+                    console.log('✅ 마이그레이션 007 이미 실행됨 - 건너뜀');
+                    return;
+                }
+                
+                console.log('🚀 마이그레이션 007 실행 중: 요금 RAG 테이블 생성...');
+                
+                await pool.query('BEGIN');
+                
+                // 1. product_pricing 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS product_pricing (
+                        id SERIAL PRIMARY KEY,
+                        platform_name VARCHAR(100) NOT NULL,
+                        vendor_id INTEGER REFERENCES vendors(id),
+                        product_name VARCHAR(255) NOT NULL,
+                        package_options JSONB NOT NULL DEFAULT '[]',
+                        notes TEXT,
+                        is_active BOOLEAN DEFAULT true,
+                        version INTEGER DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unique_platform_product UNIQUE(platform_name, product_name)
+                    )
+                `);
+                console.log('   ✅ product_pricing 테이블 생성 완료');
+                
+                // 2. 인덱스 생성
+                await pool.query(`
+                    CREATE INDEX IF NOT EXISTS idx_pricing_platform ON product_pricing(platform_name);
+                    CREATE INDEX IF NOT EXISTS idx_pricing_product ON product_pricing(product_name);
+                    CREATE INDEX IF NOT EXISTS idx_pricing_vendor ON product_pricing(vendor_id);
+                    CREATE INDEX IF NOT EXISTS idx_pricing_active ON product_pricing(is_active);
+                    CREATE INDEX IF NOT EXISTS idx_pricing_options ON product_pricing USING GIN (package_options);
+                `);
+                console.log('   ✅ 인덱스 생성 완료');
+                
+                // 3. pricing_history 테이블 생성
+                await pool.query(`
+                    CREATE TABLE IF NOT EXISTS pricing_history (
+                        id SERIAL PRIMARY KEY,
+                        pricing_id INTEGER REFERENCES product_pricing(id) ON DELETE CASCADE,
+                        old_package_options JSONB,
+                        new_package_options JSONB,
+                        changed_by VARCHAR(100),
+                        change_reason TEXT,
+                        version INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
+                console.log('   ✅ pricing_history 테이블 생성 완료');
+                
+                // 4. 샘플 데이터 삽입
+                await pool.query(`
+                    INSERT INTO product_pricing (platform_name, product_name, package_options, notes)
+                    VALUES 
+                        ('NOL', '괌 돌핀크루즈 투어', 
+                         '[
+                           {"option_name": "성인", "selling_price": 120, "commission_rate": 15, "cost_price": 85},
+                           {"option_name": "아동", "selling_price": 80, "commission_rate": 15, "cost_price": 60},
+                           {"option_name": "유아", "selling_price": 0, "commission_rate": 0, "cost_price": 0}
+                         ]'::jsonb,
+                         '인기 투어 상품'),
+                        ('KLOOK', '괌 정글리버크루즈', 
+                         '[
+                           {"option_name": "성인", "selling_price": 95, "commission_rate": 12, "cost_price": 70},
+                           {"option_name": "아동", "selling_price": 65, "commission_rate": 12, "cost_price": 50}
+                         ]'::jsonb,
+                         '강 투어 상품')
+                    ON CONFLICT (platform_name, product_name) DO NOTHING
+                `);
+                console.log('   ✅ 샘플 데이터 삽입 완료');
+                
+                // 마이그레이션 로그 기록
+                await pool.query(
+                    'INSERT INTO migration_log (version, description) VALUES ($1, $2)',
+                    ['007', '요금 RAG 시스템: product_pricing, pricing_history 테이블 생성']
+                );
+                
+                await pool.query('COMMIT');
+                
+                console.log('✅ 마이그레이션 007 완료!');
+                
+            } catch (error) {
+                await pool.query('ROLLBACK');
+                console.error('❌ 마이그레이션 007 실패:', error);
+                throw error;
+            }
+        }
+
         // ❌ 중복 API - 7901번 라인에 정의됨
         // app.get('/api/assignments/by-reservation/:reservationId', requireAuth, async (req, res) => {
         //     try {
@@ -17915,6 +18016,10 @@ async function startServer() {
                 // 마이그레이션 006 실행 (송금 시 환율 저장 컬럼 추가)
                 await runMigration006();
                 console.log('✅ 송금 환율 마이그레이션 완료');
+                
+                // 마이그레이션 007 실행 (요금 RAG 테이블 생성)
+                await runMigration007();
+                console.log('✅ 요금 RAG 마이그레이션 완료');
             } catch (error) {
                 console.error('⚠️ 마이그레이션 실패 (서버는 계속 실행):', error.message);
             }
