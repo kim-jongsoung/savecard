@@ -685,7 +685,8 @@
             }
 
             tbody.innerHTML = pricings.map(pricing => {
-                const options = JSON.parse(pricing.package_options || '[]');
+                // PostgreSQL JSONB는 이미 객체로 변환됨
+                const options = pricing.package_options || [];
                 
                 // 옵션 정보 표시 (새로운 구조)
                 const optionsText = options.map(opt => {
@@ -774,7 +775,8 @@
                     document.getElementById('saveBtnText').textContent = '수정';
 
                     // 패키지 옵션 로드 (새로운 구조)
-                    const options = JSON.parse(pricing.package_options);
+                    // PostgreSQL JSONB는 이미 객체로 변환됨
+                    const options = pricing.package_options || [];
                     const container = document.getElementById('packageOptionsContainer');
                     container.innerHTML = '';
                     packageOptionIndex = 0;
