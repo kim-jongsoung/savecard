@@ -521,6 +521,14 @@
         // 미리보기 폼에 데이터 채우기
         async function fillPreviewForm(data) {
             console.log('📋 파싱된 데이터:', data);
+            console.log('💰 원가 데이터 확인:', {
+                adult_cost: data.adult_cost,
+                child_cost: data.child_cost,
+                infant_cost: data.infant_cost,
+                adult_cost_currency: data.adult_cost_currency,
+                child_cost_currency: data.child_cost_currency,
+                infant_cost_currency: data.infant_cost_currency
+            });
             
             // 업체명 추출 함수 (판매채널/업체명/플랫폼 중 우선순위)
             function extractCompanyName(data) {
@@ -661,6 +669,13 @@
                 'infant_cost_currency': data.infant_cost_currency || data.infant_currency || 'USD',
                 'special_requests': data.memo || data.special_requests || data.notes || data.remarks || ''
             };
+            
+            console.log('🔍 fieldMappings 원가 확인:', {
+                adult_cost: fieldMappings.adult_cost,
+                child_cost: fieldMappings.child_cost,
+                infant_cost: fieldMappings.infant_cost,
+                adult_cost_currency: fieldMappings.adult_cost_currency
+            });
 
             // 1단계: 폼 필드에 기본값 설정
             Object.entries(fieldMappings).forEach(([fieldId, value]) => {
