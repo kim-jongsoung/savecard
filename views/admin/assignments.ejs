@@ -296,122 +296,66 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- 기본 정보 (가로형 레이아웃) -->
+                    <div class="row mb-2">
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">예약번호</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-reservation-number" readonly>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">업체명</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-platform-name">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">예약 상태</label>
+                            <select class="form-select form-select-sm" id="edit-payment-status">
+                                <option value="in_revision">수정중</option>
+                                <option value="pending">대기중</option>
+                                <option value="in_progress">수배중</option>
+                                <option value="confirmed">확정</option>
+                                <option value="voucher_sent">바우처전송완료</option>
+                                <option value="cancelled">예약취소</option>
+                                <option value="refunded">환불완료</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-1">상품명</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-product-name">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-1">패키지 타입</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-package-type">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">이용일</label>
+                            <input type="date" class="form-control form-control-sm" id="edit-usage-date">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">이용시간</label>
+                            <input type="time" class="form-control form-control-sm" id="edit-usage-time">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">한글명</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-korean-name">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">영문 성</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-english-lastname">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">영문 이름</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-english-firstname">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">전화번호</label>
+                            <input type="text" class="form-control form-control-sm" id="edit-phone">
+                        </div>
+                    </div>
+
                     <div class="row g-3">
-                        <!-- 예약 정보 -->
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>예약 정보</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-2">
-                                        <div class="col-12">
-                                            <label class="form-label">예약번호</label>
-                                            <input type="text" class="form-control" id="edit-reservation-number" readonly>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">업체명</label>
-                                            <input type="text" class="form-control" id="edit-platform-name" placeholder="업체명">
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">예약 상태</label>
-                                            <select class="form-select" id="edit-payment-status">
-                                                <option value="in_revision">수정중 (예약변경)</option>
-                                                <option value="pending">대기중 (신규예약)</option>
-                                                <option value="in_progress">수배중 (현지수배)</option>
-                                                <option value="confirmed">확정 (수배완료)</option>
-                                                <option value="voucher_sent">바우처전송완료</option>
-                                                <option value="cancelled">예약취소</option>
-                                                <option value="refunded">환불완료</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">예약일시</label>
-                                            <input type="text" class="form-control" id="edit-created-at" readonly>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 상품 정보 -->
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-box me-2"></i>상품 정보</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-2">
-                                        <div class="col-12">
-                                            <label class="form-label">상품명</label>
-                                            <input type="text" class="form-control" id="edit-product-name" placeholder="상품명">
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">패키지 타입 (상품 옵션)</label>
-                                            <input type="text" class="form-control" id="edit-package-type" placeholder="패키지 타입">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 일정 정보 -->
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-calendar me-2"></i>일정 정보</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <label class="form-label">이용일</label>
-                                            <input type="date" class="form-control" id="edit-usage-date">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">이용시간</label>
-                                            <input type="time" class="form-control" id="edit-usage-time">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 예약자 정보 -->
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h6 class="mb-0"><i class="bi bi-person me-2"></i>예약자 정보</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-2">
-                                        <div class="col-12">
-                                            <label class="form-label">한글명</label>
-                                            <input type="text" class="form-control" id="edit-korean-name" placeholder="한글명">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">영문 성</label>
-                                            <input type="text" class="form-control" id="edit-english-lastname" placeholder="Last Name">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label">영문 이름</label>
-                                            <input type="text" class="form-control" id="edit-english-firstname" placeholder="First Name">
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">전화번호</label>
-                                            <input type="text" class="form-control" id="edit-phone" placeholder="전화번호">
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">이메일</label>
-                                            <input type="email" class="form-control" id="edit-email" placeholder="이메일">
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">카카오ID</label>
-                                            <input type="text" class="form-control" id="edit-kakao-id" placeholder="카카오ID">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- 인원 및 금액 정보 -->
                         <div class="col-md-12">
@@ -1224,8 +1168,30 @@
         let currentStatus = '';
         let currentSearch = '';
 
+        // 최신 USD 환율 가져오기 (인박스와 동일)
+        async function fetchLatestExchangeRate() {
+            try {
+                const response = await fetch('/api/exchange-rates?currency=USD');
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    window.latestExchangeRate = result.data[0].rate;
+                    console.log('💱 최신 USD 환율:', window.latestExchangeRate);
+                } else {
+                    window.latestExchangeRate = 1300; // 기본값
+                    console.warn('⚠️ 환율 조회 실패, 기본값 사용:', window.latestExchangeRate);
+                }
+            } catch (error) {
+                console.error('환율 조회 오류:', error);
+                window.latestExchangeRate = 1300; // 기본값
+            }
+        }
+
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
+            // 최신 환율 가져오기
+            fetchLatestExchangeRate();
+            
             loadAssignments();
             
             // ✅ 모든 모달에 닫힘 이벤트 리스너 추가 (자동 새로고침)
@@ -2549,7 +2515,7 @@
             modal.show();
         }
         
-        // 예약 변경 모달의 마진 계산
+        // 예약 변경 모달의 마진 계산 (인박스와 동일한 로직)
         function calculateEditTotal() {
             const adultCount = parseInt(document.getElementById('edit-people-adult').value) || 0;
             const childCount = parseInt(document.getElementById('edit-people-child').value) || 0;
@@ -2574,33 +2540,58 @@
             const childCostCurrency = document.getElementById('edit-child-cost-currency').value || 'USD';
             const infantCostCurrency = document.getElementById('edit-infant-cost-currency').value || 'USD';
             
-            // 마진 계산 (판매가 - 원가)
-            const adultMargin = adultPrice - adultCost;
-            const childMargin = childPrice - childCost;
-            const infantMargin = infantPrice - infantCost;
+            // 수수료율 가져오기 (RAG에서 설정된 값)
+            const commissionRate = window.ragCommissionRate || 0;
             
-            // 성인 마진 표시
+            // 환율 (환율관리에서 가져온 최신 환율)
+            const exchangeRate = window.latestExchangeRate || 1300;
+            
+            // 통화 변환 함수 (모든 금액을 원화로 통일)
+            function convertToKRW(amount, currency) {
+                if (currency === 'USD') {
+                    return amount * exchangeRate;
+                }
+                return amount; // 이미 KRW
+            }
+            
+            // 판매가를 원화로 변환
+            const adultPriceKRW = convertToKRW(adultPrice, adultCurrency);
+            const childPriceKRW = convertToKRW(childPrice, childCurrency);
+            const infantPriceKRW = convertToKRW(infantPrice, infantCurrency);
+            
+            // 원가를 원화로 변환
+            const adultCostKRW = convertToKRW(adultCost, adultCostCurrency);
+            const childCostKRW = convertToKRW(childCost, childCostCurrency);
+            const infantCostKRW = convertToKRW(infantCost, infantCostCurrency);
+            
+            // 마진 계산 (원화 기준: 판매가 - 원가 - 수수료)
+            const adultCommissionKRW = adultPriceKRW * (commissionRate / 100);
+            const childCommissionKRW = childPriceKRW * (commissionRate / 100);
+            const infantCommissionKRW = infantPriceKRW * (commissionRate / 100);
+            
+            const adultMarginKRW = adultPriceKRW - adultCostKRW - adultCommissionKRW;
+            const childMarginKRW = childPriceKRW - childCostKRW - childCommissionKRW;
+            const infantMarginKRW = infantPriceKRW - infantCostKRW - infantCommissionKRW;
+            
+            // 성인 마진 표시 (원화 기준)
             if (adultPrice > 0 || adultCost > 0) {
-                const display = adultCurrency === 'USD' ? 
-                    `$${adultMargin.toFixed(2)}` : `₩${Math.round(adultMargin).toLocaleString('ko-KR')}`;
+                const display = `₩${Math.round(adultMarginKRW).toLocaleString('ko-KR')}`;
                 document.getElementById('edit-adult-margin').value = display;
             } else {
                 document.getElementById('edit-adult-margin').value = '';
             }
             
-            // 소아 마진 표시
+            // 소아 마진 표시 (원화 기준)
             if (childPrice > 0 || childCost > 0) {
-                const display = childCurrency === 'USD' ? 
-                    `$${childMargin.toFixed(2)}` : `₩${Math.round(childMargin).toLocaleString('ko-KR')}`;
+                const display = `₩${Math.round(childMarginKRW).toLocaleString('ko-KR')}`;
                 document.getElementById('edit-child-margin').value = display;
             } else {
                 document.getElementById('edit-child-margin').value = '';
             }
             
-            // 유아 마진 표시
+            // 유아 마진 표시 (원화 기준)
             if (infantPrice > 0 || infantCost > 0) {
-                const display = infantCurrency === 'USD' ? 
-                    `$${infantMargin.toFixed(2)}` : `₩${Math.round(infantMargin).toLocaleString('ko-KR')}`;
+                const display = `₩${Math.round(infantMarginKRW).toLocaleString('ko-KR')}`;
                 document.getElementById('edit-infant-margin').value = display;
             } else {
                 document.getElementById('edit-infant-margin').value = '';
