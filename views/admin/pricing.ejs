@@ -673,16 +673,35 @@
 
             tbody.innerHTML = pricings.map(pricing => {
                 const options = JSON.parse(pricing.package_options || '[]');
-                const optionsText = options.map(opt => 
-                    `${opt.option_name}: $${opt.selling_price}`
-                ).join(', ');
+                
+                // 옵션 정보 표시 (새로운 구조)
+                const optionsText = options.map(opt => {
+                    const prices = [];
+                    if (opt.adult_price) {
+                        const currency = opt.adult_currency === 'KRW' ? '₩' : '$';
+                        prices.push(`성인: ${currency}${opt.adult_price}`);
+                    }
+                    if (opt.child_price) {
+                        const currency = opt.child_currency === 'KRW' ? '₩' : '$';
+                        prices.push(`소아: ${currency}${opt.child_price}`);
+                    }
+                    if (opt.infant_price) {
+                        const currency = opt.infant_currency === 'KRW' ? '₩' : '$';
+                        prices.push(`유아: ${currency}${opt.infant_price}`);
+                    }
+                    return `<div class="mb-1"><strong>${opt.option_name}</strong><br>${prices.join(', ')}</div>`;
+                }).join('');
 
                 const date = new Date(pricing.created_at).toLocaleDateString('ko-KR');
+                const commissionRate = pricing.commission_rate || 15;
 
                 return `
                     <tr>
                         <td><span class="badge bg-primary">${pricing.platform_name}</span></td>
-                        <td><strong>${pricing.product_name}</strong></td>
+                        <td>
+                            <strong>${pricing.product_name}</strong><br>
+                            <small class="text-muted">수수료: ${commissionRate}%</small>
+                        </td>
                         <td>${pricing.vendor_name || '<span class="text-muted">-</span>'}</td>
                         <td><small>${optionsText}</small></td>
                         <td><span class="badge bg-info">v${pricing.version}</span></td>
