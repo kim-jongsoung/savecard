@@ -752,10 +752,13 @@
                                             <label class="form-label small">마진</label>
                                             <input type="text" class="form-control form-control-sm fw-bold" name="adult_margin_${idx}" readonly>
                                         </div>
+                                    </div>
 
-                                        <!-- 소아 -->
+                                    <!-- 소아 -->
+                                    <div class="row g-2 mb-2 align-items-end">
                                         <div class="col-md-1"><span class="badge bg-info">소아</span></div>
                                         <div class="col-md-2">
+                                            <label class="form-label small">판매가</label>
                                             <div class="input-group input-group-sm">
                                                 <input type="number" class="form-control" name="child_price_${idx}" value="${opt.child_price || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
                                                 <select class="form-select" name="child_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
@@ -765,6 +768,7 @@
                                             </div>
                                         </div>
                                         <div class="col-md-2">
+                                            <label class="form-label small">원가</label>
                                             <div class="input-group input-group-sm">
                                                 <input type="number" class="form-control" name="child_cost_${idx}" value="${opt.child_cost || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
                                                 <select class="form-select" name="child_cost_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
@@ -773,12 +777,17 @@
                                                 </select>
                                             </div>
                                         </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label small">마진</label>
+                                            <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_${idx}" readonly>
+                                        </div>
                                     </div>
 
                                     <!-- 유아 -->
-                                    <div class="row g-2 align-items-center">
+                                    <div class="row g-2 align-items-end">
                                         <div class="col-md-1"><span class="badge bg-warning text-dark">유아</span></div>
                                         <div class="col-md-2">
+                                            <label class="form-label small">판매가</label>
                                             <div class="input-group input-group-sm">
                                                 <input type="number" class="form-control" name="infant_price_${idx}" value="${opt.infant_price || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
                                                 <select class="form-select" name="infant_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
@@ -788,6 +797,7 @@
                                             </div>
                                         </div>
                                         <div class="col-md-2">
+                                            <label class="form-label small">원가</label>
                                             <div class="input-group input-group-sm">
                                                 <input type="number" class="form-control" name="infant_cost_${idx}" value="${opt.infant_cost || ''}" step="0.01" onchange="calculateAllMargins(${idx})">
                                                 <select class="form-select" name="infant_cost_currency_${idx}" style="max-width: 70px;" onchange="calculateAllMargins(${idx})">
@@ -797,10 +807,7 @@
                                             </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="text" class="form-control form-control-sm fw-bold" name="child_margin_${idx}" readonly>
-                                        </div>
-                                        <div class="col-md-1"></div>
-                                        <div class="col-md-4">
+                                            <label class="form-label small">마진</label>
                                             <input type="text" class="form-control form-control-sm fw-bold" name="infant_margin_${idx}" readonly>
                                         </div>
                                     </div>
