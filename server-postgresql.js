@@ -816,6 +816,15 @@ try {
     console.error('⚠️ 수배업체 라우트 연결 실패:', error.message);
 }
 
+// 요금 RAG API 라우트 연결
+try {
+    const pricingRouter = require('./routes/pricing')(pool);
+    app.use('/api/pricing', pricingRouter);
+    console.log('✅ 요금 RAG API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 요금 RAG 라우트 연결 실패:', error.message);
+}
+
 // 공항 픽업 라우트 연결 ⭐
 try {
     const pickupRouter = require('./routes/pickup');
@@ -15257,6 +15266,27 @@ async function startServer() {
                 console.error('정산관리 페이지 렌더링 오류:', error);
                 res.status(500).send(`
                     <h1>정산관리 페이지 오류</h1>
+                    <p>페이지를 불러오는 중 오류가 발생했습니다.</p>
+                    <p>오류: ${error.message}</p>
+                    <a href="/admin">관리자 대시보드로 돌아가기</a>
+                `);
+            }
+        });
+
+        // 요금 RAG 관리 페이지 라우트
+        app.get('/admin/pricing', requireAuth, (req, res) => {
+            try {
+                console.log('요금 RAG 관리 페이지 렌더링 시작');
+                res.render('admin/pricing', { 
+                    title: '요금 RAG 관리',
+                    currentPage: 'pricing',
+                    adminUsername: req.session.adminUsername || 'Admin'
+                });
+                console.log('요금 RAG 관리 페이지 렌더링 완료');
+            } catch (error) {
+                console.error('요금 RAG 관리 페이지 렌더링 오류:', error);
+                res.status(500).send(`
+                    <h1>요금 RAG 관리 페이지 오류</h1>
                     <p>페이지를 불러오는 중 오류가 발생했습니다.</p>
                     <p>오류: ${error.message}</p>
                     <a href="/admin">관리자 대시보드로 돌아가기</a>

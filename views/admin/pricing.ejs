@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>요금 RAG 관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .package-option {
+            border-left: 4px solid #0d6efd;
+        }
+        .package-option:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .margin-preview {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'pricing' }) %>
+    
+    <div class="container-fluid mt-4" style="max-width: 1400px;">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-dollar-sign me-2 text-primary"></i>요금 RAG 관리</h2>
+                    <div>
+                        <span class="badge bg-info me-2">버전 관리</span>
+                        <span class="badge bg-success">변경 이력 자동 저장</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>요금 RAG란?</strong> 업체별/상품별 판매가, 수수료율, 원가를 등록하면 <strong>인박스에서 예약 저장 시 자동으로 금액이 매칭</strong>됩니다. 
+                    패키지 옵션별로 상세 요금 관리가 가능합니다.
+                </div>
+
+                <!-- 요금 등록/수정 폼 -->
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>요금 정보 등록</h5>
+                        <button type="button" class="btn btn-sm btn-light" onclick="resetPricingForm()">
+                            <i class="fas fa-redo me-1"></i>초기화
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <form id="pricingForm">
+                            <input type="hidden" id="pricingId">
+                            
+                            <!-- 1단계: 기본 정보 -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">업체명 (플랫폼) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="platformName" list="platformList" placeholder="예: NOL, KLOOK" required>
+                                    <datalist id="platformList">
+                                        <option value="NOL">
+                                        <option value="KLOOK">
+                                        <option value="VIATOR">
+                                        <option value="투어비스">
+                                        <option value="GETYOURGUIDE">
+                                    </datalist>
+                                    <small class="text-muted">예약 플랫폼 이름</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">상품명 <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="productName" placeholder="예: 괌 돌핀크루즈 투어" required>
+                                    <small class="text-muted">실제 상품 이름</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">수배업체</label>
+                                    <select class="form-select" id="vendorId">
+                                        <option value="">선택하세요</option>
+                                    </select>
+                                    <small class="text-muted">공급사 선택 (선택사항)</small>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- 2단계: 패키지 옵션 관리 -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-boxes me-2 text-primary"></i>패키지 옵션별 요금
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-success" onclick="addPackageOption()">
+                                    <i class="fas fa-plus me-1"></i>옵션 추가
+                                </button>
+                            </div>
+
+                            <div id="packageOptionsContainer">
+                                <!-- 기본 옵션 1개 -->
+                                <div class="package-option card mb-3" data-index="0">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>옵션 #1</h6>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackageOption(0)" disabled>
+                                                <i class="fas fa-trash"></i> 삭제
+                                            </button>
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <label class="form-label">옵션명 <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" name="option_name_0" placeholder="예: 성인, 아동" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">판매가 ($) <span class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" name="selling_price_0" step="0.01" placeholder="120.00" required onchange="calculateMargin(0)">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">수수료율 (%) <span class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" name="commission_rate_0" step="0.01" placeholder="15.00" required onchange="calculateMargin(0)">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">원가 ($) <span class="text-danger">*</span></label>
+                                                <input type="number" class="form-control" name="cost_price_0" step="0.01" placeholder="85.00" required onchange="calculateMargin(0)">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label">예상 마진 ($)</label>
+                                                <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_0" readonly>
+                                                <small class="text-muted">판매가 - 수수료 - 원가</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mt-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">비고</label>
+                                    <textarea class="form-control" id="pricingNotes" rows="2" placeholder="특이사항, 시즌별 가격 등..."></textarea>
+                                </div>
+                            </div>
+
+                            <div class="text-end mt-3">
+                                <button type="button" class="btn btn-outline-secondary me-2" onclick="resetPricingForm()">
+                                    <i class="fas fa-undo me-1"></i>취소
+                                </button>
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-save me-1"></i><span id="saveBtnText">등록</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 등록된 요금 목록 -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h5 class="mb-0"><i class="fas fa-list me-2"></i>등록된 요금 정보</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="pricingSearchInput" placeholder="업체명 또는 상품명 검색..." onkeypress="if(event.keyCode==13) searchPricing()">
+                                    <button class="btn btn-outline-primary" onclick="searchPricing()">
+                                        <i class="fas fa-search"></i> 검색
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="loadPricingList()">
+                                        <i class="fas fa-sync"></i> 새로고침
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 12%;">업체명</th>
+                                        <th style="width: 20%;">상품명</th>
+                                        <th style="width: 12%;">수배업체</th>
+                                        <th style="width: 25%;">패키지 옵션</th>
+                                        <th style="width: 8%;">버전</th>
+                                        <th style="width: 10%;">등록일</th>
+                                        <th style="width: 13%;">작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pricingList">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>로딩 중...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 페이징 -->
+                        <nav aria-label="요금 목록 페이징">
+                            <ul class="pagination justify-content-center mb-0" id="pagination">
+                                <!-- 동적 로드 -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let packageOptionIndex = 1;
+        let currentPage = 1;
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVendors();
+            loadPricingList();
+        });
+
+        // 수배업체 목록 로드
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/vendors');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('vendorId');
+                    select.innerHTML = '<option value="">선택하세요</option>';
+                    data.vendors.forEach(vendor => {
+                        select.innerHTML += `<option value="${vendor.id}">${vendor.vendor_name}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('수배업체 로드 오류:', error);
+            }
+        }
+
+        // 패키지 옵션 추가
+        function addPackageOption() {
+            const container = document.getElementById('packageOptionsContainer');
+            const newOption = `
+                <div class="package-option card mb-3" data-index="${packageOptionIndex}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>옵션 #${packageOptionIndex + 1}</h6>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackageOption(${packageOptionIndex})">
+                                <i class="fas fa-trash"></i> 삭제
+                            </button>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">옵션명 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="option_name_${packageOptionIndex}" placeholder="예: 성인, 아동" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">판매가 ($) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="selling_price_${packageOptionIndex}" step="0.01" placeholder="120.00" required onchange="calculateMargin(${packageOptionIndex})">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">수수료율 (%) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="commission_rate_${packageOptionIndex}" step="0.01" placeholder="15.00" required onchange="calculateMargin(${packageOptionIndex})">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">원가 ($) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="cost_price_${packageOptionIndex}" step="0.01" placeholder="85.00" required onchange="calculateMargin(${packageOptionIndex})">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">예상 마진 ($)</label>
+                                <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_${packageOptionIndex}" readonly>
+                                <small class="text-muted">판매가 - 수수료 - 원가</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', newOption);
+            packageOptionIndex++;
+        }
+
+        // 패키지 옵션 삭제
+        function removePackageOption(index) {
+            const option = document.querySelector(`[data-index="${index}"]`);
+            if (option) {
+                option.remove();
+            }
+        }
+
+        // 마진 자동 계산
+        function calculateMargin(index) {
+            const sellingPrice = parseFloat(document.querySelector(`[name="selling_price_${index}"]`).value) || 0;
+            const commissionRate = parseFloat(document.querySelector(`[name="commission_rate_${index}"]`).value) || 0;
+            const costPrice = parseFloat(document.querySelector(`[name="cost_price_${index}"]`).value) || 0;
+
+            const commission = sellingPrice * (commissionRate / 100);
+            const margin = sellingPrice - commission - costPrice;
+
+            const marginInput = document.querySelector(`[name="margin_preview_${index}"]`);
+            marginInput.value = `$${margin.toFixed(2)} (${((margin/sellingPrice)*100).toFixed(1)}%)`;
+            
+            if (margin > 0) {
+                marginInput.style.color = '#28a745';
+            } else if (margin < 0) {
+                marginInput.style.color = '#dc3545';
+            } else {
+                marginInput.style.color = '#6c757d';
+            }
+        }
+
+        // 폼 초기화
+        function resetPricingForm() {
+            document.getElementById('pricingForm').reset();
+            document.getElementById('pricingId').value = '';
+            document.getElementById('saveBtnText').textContent = '등록';
+            
+            // 패키지 옵션 초기화 (첫 번째만 남기고 삭제)
+            const container = document.getElementById('packageOptionsContainer');
+            const options = container.querySelectorAll('.package-option');
+            options.forEach((option, idx) => {
+                if (idx > 0) option.remove();
+            });
+            packageOptionIndex = 1;
+        }
+
+        // 요금 등록/수정
+        document.getElementById('pricingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const pricingId = document.getElementById('pricingId').value;
+            const platformName = document.getElementById('platformName').value;
+            const productName = document.getElementById('productName').value;
+            const vendorId = document.getElementById('vendorId').value || null;
+            const notes = document.getElementById('pricingNotes').value;
+
+            // 패키지 옵션 수집
+            const packageOptions = [];
+            const options = document.querySelectorAll('.package-option');
+            
+            options.forEach(option => {
+                const index = option.getAttribute('data-index');
+                const optionName = document.querySelector(`[name="option_name_${index}"]`).value;
+                const sellingPrice = parseFloat(document.querySelector(`[name="selling_price_${index}"]`).value);
+                const commissionRate = parseFloat(document.querySelector(`[name="commission_rate_${index}"]`).value);
+                const costPrice = parseFloat(document.querySelector(`[name="cost_price_${index}"]`).value);
+
+                packageOptions.push({
+                    option_name: optionName,
+                    selling_price: sellingPrice,
+                    commission_rate: commissionRate,
+                    cost_price: costPrice
+                });
+            });
+
+            try {
+                const url = pricingId ? `/api/pricing/${pricingId}` : '/api/pricing';
+                const method = pricingId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        platform_name: platformName,
+                        vendor_id: vendorId,
+                        product_name: productName,
+                        package_options: packageOptions,
+                        notes: notes,
+                        change_reason: pricingId ? '요금 수정' : '신규 등록'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    resetPricingForm();
+                    loadPricingList();
+                } else {
+                    alert('오류: ' + data.message);
+                }
+            } catch (error) {
+                console.error('요금 저장 오류:', error);
+                alert('요금 저장 중 오류가 발생했습니다.');
+            }
+        });
+
+        // 요금 목록 로드
+        async function loadPricingList(page = 1) {
+            try {
+                currentPage = page;
+                const searchQuery = document.getElementById('pricingSearchInput').value;
+                
+                let url = `/api/pricing?page=${page}&limit=20`;
+                if (searchQuery) {
+                    url += `&product=${encodeURIComponent(searchQuery)}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    renderPricingList(data.data);
+                    renderPagination(data.pagination);
+                }
+            } catch (error) {
+                console.error('요금 목록 로드 오류:', error);
+                document.getElementById('pricingList').innerHTML = `
+                    <tr><td colspan="7" class="text-center text-danger">로드 실패</td></tr>
+                `;
+            }
+        }
+
+        // 요금 목록 렌더링
+        function renderPricingList(pricings) {
+            const tbody = document.getElementById('pricingList');
+            
+            if (pricings.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="7" class="text-center text-muted">등록된 요금이 없습니다</td></tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = pricings.map(pricing => {
+                const options = JSON.parse(pricing.package_options || '[]');
+                const optionsText = options.map(opt => 
+                    `${opt.option_name}: $${opt.selling_price}`
+                ).join(', ');
+
+                const date = new Date(pricing.created_at).toLocaleDateString('ko-KR');
+
+                return `
+                    <tr>
+                        <td><span class="badge bg-primary">${pricing.platform_name}</span></td>
+                        <td><strong>${pricing.product_name}</strong></td>
+                        <td>${pricing.vendor_name || '<span class="text-muted">-</span>'}</td>
+                        <td><small>${optionsText}</small></td>
+                        <td><span class="badge bg-info">v${pricing.version}</span></td>
+                        <td><small>${date}</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="editPricing(${pricing.id})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deletePricing(${pricing.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 페이징 렌더링
+        function renderPagination(pagination) {
+            const paginationEl = document.getElementById('pagination');
+            if (!pagination || pagination.totalPages <= 1) {
+                paginationEl.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            for (let i = 1; i <= pagination.totalPages; i++) {
+                html += `
+                    <li class="page-item ${i === pagination.page ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="loadPricingList(${i}); return false;">${i}</a>
+                    </li>
+                `;
+            }
+            paginationEl.innerHTML = html;
+        }
+
+        // 검색
+        function searchPricing() {
+            loadPricingList(1);
+        }
+
+        // 요금 수정
+        async function editPricing(id) {
+            try {
+                const response = await fetch(`/api/pricing/${id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const pricing = result.data;
+                    
+                    document.getElementById('pricingId').value = pricing.id;
+                    document.getElementById('platformName').value = pricing.platform_name;
+                    document.getElementById('productName').value = pricing.product_name;
+                    document.getElementById('vendorId').value = pricing.vendor_id || '';
+                    document.getElementById('pricingNotes').value = pricing.notes || '';
+                    document.getElementById('saveBtnText').textContent = '수정';
+
+                    // 패키지 옵션 로드
+                    const options = JSON.parse(pricing.package_options);
+                    const container = document.getElementById('packageOptionsContainer');
+                    container.innerHTML = '';
+                    packageOptionIndex = 0;
+
+                    options.forEach((opt, idx) => {
+                        const optionHTML = `
+                            <div class="package-option card mb-3" data-index="${idx}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0 text-primary"><i class="fas fa-box me-1"></i>옵션 #${idx + 1}</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePackageOption(${idx})" ${idx === 0 ? 'disabled' : ''}>
+                                            <i class="fas fa-trash"></i> 삭제
+                                        </button>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label">옵션명</label>
+                                            <input type="text" class="form-control" name="option_name_${idx}" value="${opt.option_name}" required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">판매가 ($)</label>
+                                            <input type="number" class="form-control" name="selling_price_${idx}" value="${opt.selling_price}" step="0.01" required onchange="calculateMargin(${idx})">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">수수료율 (%)</label>
+                                            <input type="number" class="form-control" name="commission_rate_${idx}" value="${opt.commission_rate}" step="0.01" required onchange="calculateMargin(${idx})">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">원가 ($)</label>
+                                            <input type="number" class="form-control" name="cost_price_${idx}" value="${opt.cost_price}" step="0.01" required onchange="calculateMargin(${idx})">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">예상 마진 ($)</label>
+                                            <input type="text" class="form-control margin-preview fw-bold" name="margin_preview_${idx}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.insertAdjacentHTML('beforeend', optionHTML);
+                        calculateMargin(idx);
+                        packageOptionIndex++;
+                    });
+
+                    // 폼으로 스크롤
+                    document.getElementById('pricingForm').scrollIntoView({ behavior: 'smooth' });
+                }
+            } catch (error) {
+                console.error('요금 로드 오류:', error);
+                alert('요금 정보를 불러오는데 실패했습니다.');
+            }
+        }
+
+        // 요금 삭제
+        async function deletePricing(id) {
+            if (!confirm('정말 이 요금 정보를 삭제하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/api/pricing/${id}`, { method: 'DELETE' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('요금 정보가 삭제되었습니다.');
+                    loadPricingList(currentPage);
+                } else {
+                    alert('삭제 실패: ' + data.message);
+                }
+            } catch (error) {
+                console.error('요금 삭제 오류:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>
