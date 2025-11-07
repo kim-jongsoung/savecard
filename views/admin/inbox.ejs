@@ -486,6 +486,7 @@
             
             if (savedRules) {
                 preprocessingRules = JSON.parse(savedRules);
+                console.log('✅ 저장된 전처리 규칙 로드:', preprocessingRules.length + '개');
             } else {
                 // 기본 전처리 규칙
                 preprocessingRules = [
@@ -495,10 +496,20 @@
                     { pattern: 'img_', replacement: '', type: 'remove', enabled: true },
                     { pattern: 'photo_', replacement: '', type: 'remove', enabled: true }
                 ];
+                console.log('✅ 기본 전처리 규칙 로드:', preprocessingRules.length + '개');
             }
             
             customPrompt = savedPrompt || '';
-            document.getElementById('customPromptText').value = customPrompt;
+            const promptTextarea = document.getElementById('customPromptText');
+            if (promptTextarea) {
+                promptTextarea.value = customPrompt;
+            }
+            
+            console.log('✅ 파싱 설정 로드 완료:', {
+                전처리규칙: preprocessingRules.length + '개',
+                활성화된규칙: preprocessingRules.filter(r => r.enabled).length + '개',
+                커스텀프롬프트: customPrompt ? '있음' : '없음'
+            });
         }
 
         // 설정 저장
