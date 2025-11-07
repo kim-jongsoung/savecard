@@ -11900,12 +11900,63 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         //     updateFields.push(`infant_unit_price = $${paramIndex++}`);
         //     values.push(formData.infant_price);
         // }
-        
+
+        // 원가 정보 추가
+        if (formData.adult_cost !== undefined) {
+            updateFields.push(`adult_cost = $${paramIndex++}`);
+            values.push(formData.adult_cost);
+        }
+        if (formData.child_cost !== undefined) {
+            updateFields.push(`child_cost = $${paramIndex++}`);
+            values.push(formData.child_cost);
+        }
+        if (formData.infant_cost !== undefined) {
+            updateFields.push(`infant_cost = $${paramIndex++}`);
+            values.push(formData.infant_cost);
+        }
+
+        // 통화 정보 추가
+        if (formData.adult_currency !== undefined) {
+            updateFields.push(`adult_currency = $${paramIndex++}`);
+            values.push(formData.adult_currency);
+        }
+        if (formData.child_currency !== undefined) {
+            updateFields.push(`child_currency = $${paramIndex++}`);
+            values.push(formData.child_currency);
+        }
+        if (formData.infant_currency !== undefined) {
+            updateFields.push(`infant_currency = $${paramIndex++}`);
+            values.push(formData.infant_currency);
+        }
+        if (formData.adult_cost_currency !== undefined) {
+            updateFields.push(`adult_cost_currency = $${paramIndex++}`);
+            values.push(formData.adult_cost_currency);
+        }
+        if (formData.child_cost_currency !== undefined) {
+            updateFields.push(`child_cost_currency = $${paramIndex++}`);
+            values.push(formData.child_cost_currency);
+        }
+        if (formData.infant_cost_currency !== undefined) {
+            updateFields.push(`infant_cost_currency = $${paramIndex++}`);
+            values.push(formData.infant_cost_currency);
+        }
+
+        // 수수료율과 환율 추가
+        if (formData.commission_rate !== undefined) {
+            updateFields.push(`commission_rate = $${paramIndex++}`);
+            values.push(formData.commission_rate);
+        }
+        if (formData.exchange_rate !== undefined) {
+            updateFields.push(`exchange_rate = $${paramIndex++}`);
+            values.push(formData.exchange_rate);
+        }
+
         // 특별 요청사항
         if (formData.memo !== undefined) {
             updateFields.push(`memo = $${paramIndex++}`);
             values.push(formData.memo || null);
         }
+
         
         if (updateFields.length === 0) {
             return res.status(400).json({
@@ -12063,6 +12114,137 @@ app.put('/api/reservations/:id', requireAuth, async (req, res) => {
         } catch (logError) {
             console.error('⚠️ 변경 이력 저장 실패:', logError);
             // 이력 저장 실패해도 예약 수정은 성공으로 처리
+        }
+        
+        // ✅ settlements 테이블 자동 UPSERT (정산이관 데이터 동기화)
+        try {
+            const updatedReservation = result.rows[0];
+            
+            // 판매가 계산
+            const adultCount = updatedReservation.people_adult || 0;
+            const childCount = updatedReservation.people_child || 0;
+            const infantCount = updatedReservation.people_infant || 0;
+            
+            const adultPrice = updatedReservation.adult_unit_price || 0;
+            const childPrice = updatedReservation.child_unit_price || 0;
+            const infantPrice = updatedReservation.infant_unit_price || 0;
+            
+            const adultCost = updatedReservation.adult_cost || 0;
+            const childCost = updatedReservation.child_cost || 0;
+            const infantCost = updatedReservation.infant_cost || 0;
+            
+            const adultCurrency = updatedReservation.adult_currency || 'USD';
+            const childCurrency = updatedReservation.child_currency || 'USD';
+            const infantCurrency = updatedReservation.infant_currency || 'USD';
+            
+            const adultCostCurrency = updatedReservation.adult_cost_currency || 'USD';
+            const childCostCurrency = updatedReservation.child_cost_currency || 'USD';
+            const infantCostCurrency = updatedReservation.infant_cost_currency || 'USD';
+            
+            const commissionRate = updatedReservation.commission_rate || 10;
+            const exchangeRate = updatedReservation.exchange_rate || 1300;
+            
+            // 총 판매가 (원화 기준)
+            const convertToKRW = (amount, currency) => {
+                if (currency === 'USD') return amount * exchangeRate;
+                return amount;
+            };
+            
+            const adultTotalKRW = adultCount * convertToKRW(adultPrice, adultCurrency);
+            const childTotalKRW = childCount * convertToKRW(childPrice, childCurrency);
+            const infantTotalKRW = infantCount * convertToKRW(infantPrice, infantCurrency);
+            const totalSaleKRW = adultTotalKRW + childTotalKRW + infantTotalKRW;
+            
+            // 수수료 계산
+            const commissionAmount = totalSaleKRW * (commissionRate / 100);
+            const netRevenue = totalSaleKRW - commissionAmount;
+            
+            // 총 원가 (원화 기준)
+            const adultCostKRW = adultCount * convertToKRW(adultCost, adultCostCurrency);
+            const childCostKRW = childCount * convertToKRW(childCost, childCostCurrency);
+            const infantCostKRW = infantCount * convertToKRW(infantCost, infantCostCurrency);
+            const totalCostKRW = adultCostKRW + childCostKRW + infantCostKRW;
+            
+            // 마진 계산
+            const marginKRW = totalSaleKRW - totalCostKRW - commissionAmount;
+            
+            console.log('💰 정산 데이터 계산:', {
+                totalSaleKRW,
+                commissionRate: commissionRate + '%',
+                commissionAmount,
+                netRevenue,
+                totalCostKRW,
+                marginKRW,
+                exchangeRate
+            });
+            
+            // settlements UPSERT
+            await pool.query(`
+                INSERT INTO settlements (
+                    reservation_id,
+                    sale_currency,
+                    sale_adult_price,
+                    sale_child_price,
+                    sale_infant_price,
+                    total_sale,
+                    commission_rate,
+                    commission_amount,
+                    net_revenue,
+                    cost_currency,
+                    cost_adult_price,
+                    cost_child_price,
+                    cost_infant_price,
+                    total_cost,
+                    exchange_rate,
+                    cost_krw,
+                    margin_krw,
+                    settlement_status,
+                    created_at,
+                    updated_at
+                ) VALUES (
+                    $1, 'KRW', $2, $3, $4, $5, $6, $7, $8,
+                    'KRW', $9, $10, $11, $12, $13, $14, $15,
+                    'pending', NOW(), NOW()
+                )
+                ON CONFLICT (reservation_id) 
+                DO UPDATE SET
+                    sale_adult_price = EXCLUDED.sale_adult_price,
+                    sale_child_price = EXCLUDED.sale_child_price,
+                    sale_infant_price = EXCLUDED.sale_infant_price,
+                    total_sale = EXCLUDED.total_sale,
+                    commission_rate = EXCLUDED.commission_rate,
+                    commission_amount = EXCLUDED.commission_amount,
+                    net_revenue = EXCLUDED.net_revenue,
+                    cost_adult_price = EXCLUDED.cost_adult_price,
+                    cost_child_price = EXCLUDED.cost_child_price,
+                    cost_infant_price = EXCLUDED.cost_infant_price,
+                    total_cost = EXCLUDED.total_cost,
+                    exchange_rate = EXCLUDED.exchange_rate,
+                    cost_krw = EXCLUDED.cost_krw,
+                    margin_krw = EXCLUDED.margin_krw,
+                    updated_at = NOW()
+            `, [
+                reservationId,
+                Math.round(adultTotalKRW),
+                Math.round(childTotalKRW),
+                Math.round(infantTotalKRW),
+                Math.round(totalSaleKRW),
+                commissionRate,
+                Math.round(commissionAmount),
+                Math.round(netRevenue),
+                Math.round(adultCostKRW),
+                Math.round(childCostKRW),
+                Math.round(infantCostKRW),
+                Math.round(totalCostKRW),
+                exchangeRate,
+                Math.round(totalCostKRW),
+                Math.round(marginKRW)
+            ]);
+            
+            console.log('✅ settlements 테이블 동기화 완료 (reservation_id:', reservationId, ')');
+        } catch (settlementError) {
+            console.error('⚠️ settlements 동기화 실패:', settlementError);
+            // settlements 동기화 실패해도 예약 수정은 성공으로 처리
         }
         
         res.json({

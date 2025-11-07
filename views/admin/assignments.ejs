@@ -4961,6 +4961,10 @@
                 child_cost_currency: document.getElementById('edit-child-cost-currency').value || 'USD',
                 infant_cost_currency: document.getElementById('edit-infant-cost-currency').value || 'USD',
                 
+                // 수수료율과 환율 (인박스에서 저장된 값)
+                commission_rate: window.ragCommissionRate || 10,
+                exchange_rate: window.latestExchangeRate || 1300,
+                
                 // 특별 요청사항
                 memo: document.getElementById('edit-memo').value
             };
