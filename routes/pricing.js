@@ -217,9 +217,9 @@ module.exports = (pool) => {
                 });
             }
             
-            // 중복 체크
+            // 중복 체크 (활성화된 데이터만)
             const duplicateCheck = await pool.query(
-                'SELECT id FROM product_pricing WHERE platform_name = $1 AND product_name = $2',
+                'SELECT id FROM product_pricing WHERE platform_name = $1 AND product_name = $2 AND is_active = true',
                 [platform_name, product_name]
             );
             
