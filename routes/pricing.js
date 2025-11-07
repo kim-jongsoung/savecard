@@ -201,6 +201,9 @@ module.exports = (pool) => {
             } = req.body;
             
             console.log('➕ 요금 등록 요청:', { platform_name, product_name, options: package_options?.length });
+            console.log('🔍 package_options RAW:', package_options);
+            console.log('🔍 package_options 타입:', typeof package_options);
+            console.log('🔍 package_options[0]:', package_options?.[0]);
             
             // 필수 필드 검증
             if (!platform_name || !product_name) {
@@ -233,14 +236,21 @@ module.exports = (pool) => {
             // JSONB 컬럼에 객체 전달 (문자열이면 파싱)
             let packageOptionsObj = package_options;
             if (typeof package_options === 'string') {
+                console.log('⚠️ package_options가 문자열입니다. 파싱 시도...');
                 try {
                     packageOptionsObj = JSON.parse(package_options);
+                    console.log('✅ 파싱 성공:', packageOptionsObj);
                 } catch (e) {
+                    console.error('❌ 파싱 실패:', e.message);
                     packageOptionsObj = [];
                 }
             } else if (!package_options) {
                 packageOptionsObj = [];
             }
+            
+            console.log('📦 변환 후 packageOptionsObj:', packageOptionsObj);
+            console.log('📦 변환 후 타입:', typeof packageOptionsObj);
+            console.log('📦 변환 후 Array.isArray:', Array.isArray(packageOptionsObj));
             
             // 요금 등록 - JSONB 컬럼에 객체 전달
             const result = await pool.query(`
