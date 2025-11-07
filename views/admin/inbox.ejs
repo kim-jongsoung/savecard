@@ -519,6 +519,13 @@
             localStorage.setItem('preprocessingRules', JSON.stringify(preprocessingRules));
             localStorage.setItem('customPrompt', customPrompt);
             
+            console.log('💾 파싱 설정 저장:', {
+                전처리규칙: preprocessingRules.length + '개',
+                활성화된규칙: preprocessingRules.filter(r => r.enabled).length + '개',
+                커스텀프롬프트: customPrompt ? `있음 (${customPrompt.length}자)` : '없음',
+                커스텀프롬프트내용: customPrompt ? customPrompt.substring(0, 50) + '...' : 'N/A'
+            });
+            
             showNotification('파싱 설정이 저장되었습니다.', 'success');
             bootstrap.Modal.getInstance(document.getElementById('parsingSettingsModal')).hide();
         }
@@ -669,6 +676,14 @@
             }
 
             try {
+                // 0단계: 최신 설정 불러오기 (localStorage에서)
+                const latestPrompt = localStorage.getItem('customPrompt') || '';
+                customPrompt = latestPrompt;
+                
+                console.log('🔄 최신 설정 로드:', {
+                    커스텀프롬프트: customPrompt ? `있음 (${customPrompt.length}자)` : '없음'
+                });
+                
                 // 1단계: 데이터 전처리
                 const preprocessedText = preprocessData(text);
                 
@@ -676,6 +691,12 @@
                     원본길이: text.length,
                     전처리후길이: preprocessedText.length,
                     차이: text.length - preprocessedText.length
+                });
+
+                console.log('🤖 AI 파싱 요청:', {
+                    전처리된텍스트길이: preprocessedText.length,
+                    커스텀프롬프트: customPrompt ? `있음 (${customPrompt.length}자)` : '없음',
+                    커스텀프롬프트내용: customPrompt ? customPrompt.substring(0, 100) + '...' : 'N/A'
                 });
 
                 // 2단계: AI 파싱 (전처리된 데이터 + 커스텀 프롬프트)
