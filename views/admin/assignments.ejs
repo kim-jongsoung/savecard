@@ -3683,20 +3683,57 @@
             document.getElementById('settlement-child-count').textContent = reservation.people_child || 0;
             document.getElementById('settlement-infant-count').textContent = reservation.people_infant || 0;
             
-            // 입력값 초기화
-            document.getElementById('settlement-sale-currency').value = 'KRW';
-            document.getElementById('settlement-sale-adult').value = '';
-            document.getElementById('settlement-sale-child').value = '';
-            document.getElementById('settlement-sale-infant').value = '';
-            document.getElementById('settlement-commission-rate').value = '10';
+            // 예약 데이터 값 자동 매칭 (원본 통화 그대로)
             
-            document.getElementById('settlement-cost-currency').value = 'USD';
-            document.getElementById('settlement-cost-adult').value = '';
-            document.getElementById('settlement-cost-child').value = '';
-            document.getElementById('settlement-cost-infant').value = '';
+            // 판매가 (원본 값 그대로)
+            const adultPrice = reservation.adult_unit_price || 0;
+            const childPrice = reservation.child_unit_price || 0;
+            const infantPrice = reservation.infant_unit_price || 0;
             
-            document.getElementById('settlement-exchange-rate').value = '1330';
+            const adultCurrency = reservation.adult_currency || 'USD';
+            const childCurrency = reservation.child_currency || 'USD';
+            const infantCurrency = reservation.infant_currency || 'USD';
+            
+            // 주 통화 (성인 기준)
+            const mainSaleCurrency = adultCurrency;
+            
+            // 원가 (원본 값 그대로)
+            const adultCost = reservation.adult_cost || 0;
+            const childCost = reservation.child_cost || 0;
+            const infantCost = reservation.infant_cost || 0;
+            
+            const adultCostCurrency = reservation.adult_cost_currency || 'USD';
+            const childCostCurrency = reservation.child_cost_currency || 'USD';
+            const infantCostCurrency = reservation.infant_cost_currency || 'USD';
+            
+            // 주 통화 (원가도 성인 기준)
+            const mainCostCurrency = adultCostCurrency;
+            
+            // 환율과 수수료율
+            const exchangeRate = reservation.exchange_rate || 1300;
+            const commissionRate = reservation.commission_rate || 10;
+            
+            // 정산이관 모달 필드에 값 채우기 (원본 통화 그대로)
+            document.getElementById('settlement-sale-currency').value = mainSaleCurrency;
+            document.getElementById('settlement-sale-adult').value = adultPrice;
+            document.getElementById('settlement-sale-child').value = childPrice;
+            document.getElementById('settlement-sale-infant').value = infantPrice;
+            document.getElementById('settlement-commission-rate').value = commissionRate;
+            
+            document.getElementById('settlement-cost-currency').value = mainCostCurrency;
+            document.getElementById('settlement-cost-adult').value = adultCost;
+            document.getElementById('settlement-cost-child').value = childCost;
+            document.getElementById('settlement-cost-infant').value = infantCost;
+            
+            document.getElementById('settlement-exchange-rate').value = exchangeRate;
             document.getElementById('settlement-memo').value = '';
+            
+            console.log('✅ 정산이관 데이터 자동 매칭:', {
+                판매가: { 성인: `${adultPrice} ${adultCurrency}`, 소아: `${childPrice} ${childCurrency}`, 유아: `${infantPrice} ${infantCurrency}` },
+                원가: { 성인: `${adultCost} ${adultCostCurrency}`, 소아: `${childCost} ${childCostCurrency}`, 유아: `${infantCost} ${infantCostCurrency}` },
+                환율: exchangeRate,
+                수수료율: commissionRate + '%'
+            });
             
             // 환율 자동 로드 (이용일 기준)
             if (reservation.usage_date) {
