@@ -230,6 +230,16 @@ module.exports = (pool) => {
                 });
             }
             
+            // package_options를 안전하게 처리
+            let packageOptionsStr;
+            if (typeof package_options === 'string') {
+                packageOptionsStr = package_options;
+            } else if (package_options && typeof package_options === 'object') {
+                packageOptionsStr = JSON.stringify(package_options);
+            } else {
+                packageOptionsStr = '[]';
+            }
+            
             // 요금 등록
             const result = await pool.query(`
                 INSERT INTO product_pricing 
@@ -241,7 +251,7 @@ module.exports = (pool) => {
                 vendor_id || null,
                 product_name,
                 commission_rate || 15,
-                JSON.stringify(package_options),
+                packageOptionsStr,
                 notes || null
             ]);
             
@@ -279,6 +289,8 @@ module.exports = (pool) => {
             } = req.body;
             
             console.log('✏️  요금 수정 요청:', id);
+            console.log('📦 package_options 타입:', typeof package_options);
+            console.log('📦 package_options 값:', package_options);
             
             await client.query('BEGIN');
             
@@ -298,6 +310,16 @@ module.exports = (pool) => {
             
             const oldData = oldDataResult.rows[0];
             
+            // package_options를 안전하게 처리
+            let packageOptionsJson;
+            if (typeof package_options === 'string') {
+                packageOptionsJson = package_options; // 이미 문자열
+            } else if (package_options && typeof package_options === 'object') {
+                packageOptionsJson = JSON.stringify(package_options); // 객체면 stringify
+            } else {
+                packageOptionsJson = '[]'; // null이나 undefined면 빈 배열
+            }
+            
             // 요금 변경 이력 저장
             await client.query(`
                 INSERT INTO pricing_history 
@@ -306,7 +328,7 @@ module.exports = (pool) => {
             `, [
                 id,
                 oldData.package_options,
-                JSON.stringify(package_options),
+                packageOptionsJson,
                 req.session?.adminUsername || 'admin',
                 change_reason || '요금 수정',
                 oldData.version
@@ -331,7 +353,7 @@ module.exports = (pool) => {
                 vendor_id || null,
                 product_name,
                 commission_rate || 15,
-                JSON.stringify(package_options),
+                packageOptionsJson,
                 notes || null,
                 id
             ]);
