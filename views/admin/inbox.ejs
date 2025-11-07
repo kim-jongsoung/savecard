@@ -667,14 +667,19 @@
                 'adult_cost_currency': data.adult_cost_currency || data.adult_currency || 'USD',
                 'child_cost_currency': data.child_cost_currency || data.child_currency || 'USD',
                 'infant_cost_currency': data.infant_cost_currency || data.infant_currency || 'USD',
+                'commission_rate': parseFloat(data.commission_rate || 0),
                 'special_requests': data.memo || data.special_requests || data.notes || data.remarks || ''
             };
             
-            console.log('🔍 fieldMappings 원가 확인:', {
+            // RAG 수수료율 저장 (전역 변수)
+            window.ragCommissionRate = fieldMappings.commission_rate;
+            
+            console.log('🔍 fieldMappings 원가 및 수수료율 확인:', {
                 adult_cost: fieldMappings.adult_cost,
                 child_cost: fieldMappings.child_cost,
                 infant_cost: fieldMappings.infant_cost,
-                adult_cost_currency: fieldMappings.adult_cost_currency
+                adult_cost_currency: fieldMappings.adult_cost_currency,
+                commission_rate: fieldMappings.commission_rate
             });
 
             // 1단계: 폼 필드에 기본값 설정
@@ -1242,10 +1247,24 @@
             const childCostCurrency = document.getElementById('child_cost_currency').value || 'USD';
             const infantCostCurrency = document.getElementById('infant_cost_currency').value || 'USD';
             
-            // 마진 계산 (판매가 - 원가)
-            const adultMargin = adultPrice - adultCost;
-            const childMargin = childPrice - childCost;
-            const infantMargin = infantPrice - infantCost;
+            // 수수료율 가져오기 (RAG에서 설정된 값)
+            const commissionRate = window.ragCommissionRate || 0;
+            
+            // 마진 계산 (판매가 - 원가 - 수수료)
+            const adultCommission = adultPrice * (commissionRate / 100);
+            const childCommission = childPrice * (commissionRate / 100);
+            const infantCommission = infantPrice * (commissionRate / 100);
+            
+            const adultMargin = adultPrice - adultCost - adultCommission;
+            const childMargin = childPrice - childCost - childCommission;
+            const infantMargin = infantPrice - infantCost - infantCommission;
+            
+            console.log('💰 마진 계산:', {
+                commissionRate: commissionRate + '%',
+                adult: { price: adultPrice, cost: adultCost, commission: adultCommission, margin: adultMargin },
+                child: { price: childPrice, cost: childCost, commission: childCommission, margin: childMargin },
+                infant: { price: infantPrice, cost: infantCost, commission: infantCommission, margin: infantMargin }
+            });
             
             // 성인 마진 표시
             if (adultPrice > 0 || adultCost > 0) {
