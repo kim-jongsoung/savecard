@@ -1,219 +1,136 @@
-<!-- 네비게이션 - 두 줄 구조 -->
-<nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-        <!-- 첫 번째 줄: 로고 | 주메뉴 | 로그인메뉴 -->
-        <div class="row w-100 align-items-center">
-            <!-- 로고 영역 -->
-            <div class="col-3">
-                <a class="navbar-brand" href="/admin">
-                    <i class="fas fa-shield-alt me-2"></i>괌세이브카드 관리자
-                </a>
-            </div>
+<!-- 네비게이션 - 깔끔한 사무용 스타일 -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container-fluid px-4">
+        <!-- 로고 -->
+        <a class="navbar-brand fw-bold" href="/admin">Save ERP</a>
+        
+        <!-- 메인 메뉴 -->
+        <div class="navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <!-- SaveCard 메뉴 -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        SaveCard
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin">대시보드</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자 관리</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사 관리</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'stores' ? 'active' : '' %>" href="/admin/stores">제휴업체 관리</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'usages' ? 'active' : '' %>" href="/admin/usages">사용 내역</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'issue-codes' ? 'active' : '' %>" href="/admin/issue-codes">발급 코드</a></li>
+                    </ul>
+                </li>
+                
+                <!-- ERP 메뉴 -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        ERP
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'assignments' ? 'active' : '' %>" href="/admin/assignments">수배관리</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'settlements' ? 'active' : '' %>" href="/admin/settlements">정산관리</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item <%= currentPage === 'pricing' ? 'active' : '' %>" href="/admin/pricing">요금 RAG</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'rag-manager' ? 'active' : '' %>" href="/admin/rag-manager">RAG 관리</a></li>
+                        <li><a class="dropdown-item <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">설정</a></li>
+                    </ul>
+                </li>
+                
+                <!-- 공항픽업 별도 버튼 -->
+                <li class="nav-item">
+                    <a class="nav-link <%= currentPage === 'pickup' ? 'active' : '' %>" href="/pickup">공항픽업</a>
+                </li>
+            </ul>
             
-            <!-- 주메뉴 영역 -->
-            <div class="col-6">
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <!-- 괌세이브카드 메뉴 -->
-                    <div class="nav-row justify-content-center mb-2">
-                        <span class="nav-section-title">
-                            <i class="fas fa-credit-card me-1"></i>괌세이브카드
-                        </span>
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin">대시보드</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자 관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사 관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'stores' ? 'active' : '' %>" href="/admin/stores">제휴업체 관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'usages' ? 'active' : '' %>" href="/admin/usages">사용 내역</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'issue-codes' ? 'active' : '' %>" href="/admin/issue-codes">발급 코드</a>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <!-- 예약관리 ERP 메뉴 -->
-                    <div class="nav-row justify-content-center">
-                        <span class="nav-section-title">
-                            <i class="fas fa-calendar-alt me-1"></i>예약관리 ERP
-                        </span>
-                        <ul class="navbar-nav">
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'assignments' ? 'active' : '' %>" href="/admin/assignments">수배관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'settlements' ? 'active' : '' %>" href="/admin/settlements">정산관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'pricing' ? 'active' : '' %>" href="/admin/pricing">💰 요금 RAG</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'pickup' ? 'active' : '' %>" href="/pickup">🚗 공항픽업</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'rag-manager' ? 'active' : '' %>" href="/admin/rag-manager">RAG 관리</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">설정</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 로그인/로그아웃 영역 -->
-            <div class="col-3 text-end">
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-nav d-inline-flex">
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i><%= adminUsername %>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+            <!-- 사용자 메뉴 -->
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <%= adminUsername %>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
+                    </ul>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>
 
 <style>
+/* 네비게이션 - 심플하고 깔끔한 사무용 스타일 */
 .navbar {
-    background: linear-gradient(45deg, #667eea, #764ba2) !important;
-    padding: 15px 0 10px 0;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    min-height: auto;
+    padding: 0.5rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .navbar-brand {
-    font-weight: bold;
-    font-size: 1.3rem;
-    color: white !important;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2c3e50 !important;
+    letter-spacing: -0.5px;
 }
 
-/* 네비게이션 행 스타일 */
-.nav-row {
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.nav-section-title {
-    color: rgba(255,255,255,0.8);
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-right: 15px;
-    margin-bottom: 0;
-    padding: 4px 12px;
-    border-radius: 4px;
-    background: rgba(255,255,255,0.15);
-    white-space: nowrap;
-}
-
-.nav-row .navbar-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    margin-bottom: 0;
-}
-
+/* 메뉴 링크 */
 .navbar-nav .nav-link {
-    color: rgba(255,255,255,0.9) !important;
-    margin: 2px 5px;
-    padding: 5px 12px !important;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    font-size: 0.85rem;
-    white-space: nowrap;
+    color: #495057 !important;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+    transition: color 0.2s;
 }
 
-.navbar-nav .nav-link:hover, 
+.navbar-nav .nav-link:hover {
+    color: #007bff !important;
+}
+
 .navbar-nav .nav-link.active {
-    background: rgba(255,255,255,0.2);
-    color: white !important;
-    transform: translateY(-1px);
+    color: #007bff !important;
+    font-weight: 600;
 }
 
-/* 사용자 드롭다운 */
+/* 드롭다운 메뉴 */
 .dropdown-menu {
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    border-radius: 12px;
-    padding: 10px 0;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    padding: 0.5rem 0;
+    margin-top: 0.25rem;
     min-width: 180px;
 }
 
 .dropdown-item {
-    padding: 10px 20px;
-    border-radius: 8px;
-    margin: 2px 10px;
-    transition: all 0.3s ease;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+    color: #495057;
+    transition: background-color 0.15s;
 }
 
 .dropdown-item:hover {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    transform: translateX(5px);
+    background-color: #f8f9fa;
+    color: #007bff;
 }
 
 .dropdown-item.active {
-    background: linear-gradient(45deg, #667eea, #764ba2);
+    background-color: #007bff;
     color: white;
 }
 
-/* 반응형 디자인 */
-@media (max-width: 991.98px) {
-    .nav-row {
-        flex-direction: column;
-        align-items: flex-start;
-        margin-bottom: 20px;
-    }
-    
-    .nav-section-title {
-        margin-right: 0;
-        margin-bottom: 10px;
-    }
-    
-    .nav-row .navbar-nav {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .navbar-nav .nav-link {
-        margin: 2px 0;
-        padding: 8px 15px !important;
-    }
+.dropdown-divider {
+    margin: 0.5rem 0;
+    border-top-color: #e9ecef;
 }
 
-@media (max-width: 767.98px) {
-    .navbar {
-        padding: 10px 0;
-    }
-    
-    .navbar-brand {
-        font-size: 1.1rem;
-    }
-    
-    .nav-section-title {
-        font-size: 0.8rem;
-    }
+/* 공항픽업 버튼 강조 */
+.navbar-nav .nav-item:has(a[href="/pickup"]) .nav-link {
+    color: #28a745 !important;
+    font-weight: 600;
+}
+
+.navbar-nav .nav-item:has(a[href="/pickup"]) .nav-link:hover {
+    color: #218838 !important;
 }
 </style>
