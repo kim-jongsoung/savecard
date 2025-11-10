@@ -152,17 +152,25 @@ class BizonService {
             // 바우처 URL
             const voucherUrl = `https://www.guamsavecard.com/voucher/${voucherToken}`;
 
-            // 메시지 내용 구성 (템플릿과 동일하게)
-            const messageText = `[${productName} 바우처]
+            // 메시지 내용 구성 (승인받은 템플릿 형식 사용)
+            const messageText = `[#{PRODUCT_NAME} 바우처]
 
-안녕하세요, ${name}님
+안녕하세요, #{NAME}님
 
-${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.
+#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.
 
-▶ 상품명: ${productName}
-▶ 이용일: ${usageDate}
+▶ 상품명: #{PRODUCT_NAME}
+▶ 이용일: #{USAGE_DATE}
 
 아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`;
+            
+            // 템플릿 변수 매핑
+            const templateParams = {
+                '#{NAME}': name,
+                '#{PLATFORM_NAME}': platformName,
+                '#{PRODUCT_NAME}': productName,
+                '#{USAGE_DATE}': usageDate
+            };
 
             // 알림톡 요청 구성
             const req = {
@@ -173,6 +181,7 @@ ${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.
                     senderKey: this.senderKey,
                     templateCode: 'VOUCHER_001',  // 바우처 전송 템플릿
                     text: messageText,
+                    templateParameter: templateParams,  // 템플릿 변수
                     buttons: [
                         {
                             type: "WL",
