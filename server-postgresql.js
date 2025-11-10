@@ -3197,54 +3197,64 @@ app.post('/card/use', async (req, res) => {
     }
 });
 
-// 관리자 대시보드 (ERP 중심)
+// 관리자 대시보드 (ERP 중심 - 개인화)
 app.get('/admin/dashboard', requireAuth, async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
         const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
         const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
         
-        // Phase 1 데이터 조회
+        // 현재 로그인한 사용자
+        const currentUser = req.session.adminName || req.session.adminUsername || 'admin';
+        console.log('👤 대시보드 접근:', currentUser);
+        
+        // Phase 1 데이터 조회 (내 담당만)
         // 1. 오늘 해야 할 일 (긴급 액션)
         const urgentTodayDeparture = await pool.query(`
             SELECT COUNT(*) as count FROM reservations 
-            WHERE usage_date = $1 AND (
+            WHERE assigned_to = $1
+            AND usage_date = $2 AND (
                 payment_status = 'in_progress' OR 
                 payment_status = 'pending'
             )
-        `, [today]);
+        `, [currentUser, today]);
         
         const pendingOver24h = await pool.query(`
             SELECT COUNT(*) as count FROM reservations 
-            WHERE payment_status = 'pending' 
+            WHERE assigned_to = $1
+            AND payment_status = 'pending' 
             AND created_at < NOW() - INTERVAL '24 hours'
-        `);
+        `, [currentUser]);
         
         const tomorrowDepartures = await pool.query(`
             SELECT COUNT(*) as count FROM reservations 
-            WHERE usage_date = $1 AND payment_status != 'cancelled'
-        `, [tomorrow]);
+            WHERE assigned_to = $1
+            AND usage_date = $2 AND payment_status != 'cancelled'
+        `, [currentUser, tomorrow]);
         
-        // 2. 워크플로우 현황
+        // 2. 워크플로우 현황 (내 담당만)
         const workflowStats = await pool.query(`
             SELECT 
                 payment_status,
                 COUNT(*) as count
             FROM reservations
-            WHERE payment_status != 'cancelled'
+            WHERE assigned_to = $1
+            AND payment_status != 'cancelled'
             GROUP BY payment_status
-        `);
+        `, [currentUser]);
         
-        // 3. 오늘의 숫자
+        // 3. 오늘의 숫자 (내 담당만)
         const todayNew = await pool.query(`
             SELECT COUNT(*) as count FROM reservations 
-            WHERE DATE(created_at) = $1
-        `, [today]);
+            WHERE assigned_to = $1
+            AND DATE(created_at) = $2
+        `, [currentUser, today]);
         
         const todayCompleted = await pool.query(`
             SELECT COUNT(*) as count FROM reservations 
-            WHERE DATE(updated_at) = $1 AND payment_status = 'confirmed'
-        `, [today]);
+            WHERE assigned_to = $1
+            AND DATE(updated_at) = $2 AND payment_status = 'confirmed'
+        `, [currentUser, today]);
         
         const todayRevenue = await pool.query(`
             SELECT SUM(
@@ -3253,10 +3263,11 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
                 (COALESCE(infant_price, 0) * COALESCE(people_infant, 0))
             ) as total
             FROM reservations 
-            WHERE DATE(created_at) = $1
-        `, [today]);
+            WHERE assigned_to = $1
+            AND DATE(created_at) = $2
+        `, [currentUser, today]);
         
-        // Phase 2 데이터 조회
+        // Phase 2 데이터 조회 (내 담당만)
         // 4. 알림 센터 (데이터 검증 이슈)
         const dataIssues = await pool.query(`
             SELECT 
@@ -3269,7 +3280,8 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
                     WHEN english_last_name IS NULL OR english_first_name IS NULL THEN '영문명 누락'
                 END as issue_type
             FROM reservations
-            WHERE payment_status != 'cancelled'
+            WHERE assigned_to = $1
+            AND payment_status != 'cancelled'
             AND (
                 email IS NULL OR email = '' OR
                 kakao_id IS NULL OR kakao_id = '' OR
@@ -3277,22 +3289,23 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
             )
             ORDER BY created_at DESC
             LIMIT 10
-        `);
+        `, [currentUser]);
         
-        // 5. 캘린더 뷰 (이번주 날짜별 예약 수)
+        // 5. 캘린더 뷰 (이번주 날짜별 예약 수, 내 담당만)
         const weeklyCalendar = await pool.query(`
             SELECT 
                 usage_date,
                 COUNT(*) as count
             FROM reservations
-            WHERE usage_date >= $1 
-            AND usage_date <= $1 + INTERVAL '6 days'
+            WHERE assigned_to = $1
+            AND usage_date >= $2 
+            AND usage_date <= $2 + INTERVAL '6 days'
             AND payment_status != 'cancelled'
             GROUP BY usage_date
             ORDER BY usage_date
-        `, [today]);
+        `, [currentUser, today]);
         
-        // 6. 정산 요약
+        // 6. 정산 요약 (내 담당만)
         const unpaidSettlements = await pool.query(`
             SELECT 
                 COUNT(*) as count,
@@ -3302,8 +3315,9 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
                     (COALESCE(infant_price, 0) * COALESCE(people_infant, 0))
                 ) as total_amount
             FROM reservations
-            WHERE payment_status = 'confirmed'
-        `);
+            WHERE assigned_to = $1
+            AND payment_status = 'confirmed'
+        `, [currentUser]);
         
         const workflow = {};
         workflowStats.rows.forEach(row => {
