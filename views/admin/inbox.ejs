@@ -48,8 +48,10 @@
                             </div>
                             <div class="d-flex gap-2 justify-content-between">
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary" onclick="parseReservation()">
-                                        <i class="fas fa-robot me-1"></i>AI 파싱
+                                    <button type="button" class="btn btn-primary" id="parseBtn" onclick="parseReservation()">
+                                        <i class="fas fa-robot me-1"></i>
+                                        <span id="parseBtnText">AI 파싱</span>
+                                        <span id="parseBtnSpinner" class="spinner-border spinner-border-sm ms-1" style="display: none;" role="status" aria-hidden="true"></span>
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
                                         <i class="fas fa-eraser me-1"></i>초기화
@@ -313,8 +315,10 @@
 
                         <!-- 액션 버튼 -->
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-success" onclick="saveReservation()">
-                                <i class="fas fa-save me-1"></i>예약 저장
+                            <button type="button" class="btn btn-success" id="saveBtn" onclick="saveReservation()">
+                                <i class="fas fa-save me-1"></i>
+                                <span id="saveBtnText">예약 저장</span>
+                                <span id="saveBtnSpinner" class="spinner-border spinner-border-sm ms-1" style="display: none;" role="status" aria-hidden="true"></span>
                             </button>
                             <button type="button" class="btn btn-outline-secondary" onclick="editRawData()">
                                 <i class="fas fa-edit me-1"></i>다시 수정
@@ -711,6 +715,22 @@
                 return;
             }
 
+            // 로딩 UI 표시
+            const parseBtn = document.getElementById('parseBtn');
+            const parseBtnText = document.getElementById('parseBtnText');
+            const parseBtnSpinner = document.getElementById('parseBtnSpinner');
+            const reservationTextarea = document.getElementById('reservationText');
+            const allButtons = document.querySelectorAll('#parseForm button');
+            
+            parseBtn.disabled = true;
+            parseBtnText.textContent = '파싱 중';
+            parseBtnSpinner.style.display = 'inline-block';
+            reservationTextarea.disabled = true;
+            parseBtn.style.cursor = 'wait';
+            
+            // 다른 모든 버튼도 비활성화
+            allButtons.forEach(btn => btn.disabled = true);
+
             try {
                 // 0단계: 이미 DB에서 로드된 설정 사용 (customPrompt, preprocessingRules)
                 console.log('🔄 현재 설정 상태:');
@@ -758,6 +778,19 @@
             } catch (error) {
                 console.error('파싱 오류:', error);
                 alert('파싱 중 오류가 발생했습니다.');
+            } finally {
+                // 로딩 UI 복구
+                parseBtn.disabled = false;
+                parseBtnText.textContent = 'AI 파싱';
+                parseBtnSpinner.style.display = 'none';
+                reservationTextarea.disabled = false;
+                parseBtn.style.cursor = 'pointer';
+                
+                // 다른 모든 버튼도 활성화
+                allButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.cursor = 'pointer';
+                });
             }
         }
 
@@ -1742,6 +1775,20 @@
 
         // 예약 저장
         async function saveReservation() {
+            // 로딩 UI 표시
+            const saveBtn = document.getElementById('saveBtn');
+            const saveBtnText = document.getElementById('saveBtnText');
+            const saveBtnSpinner = document.getElementById('saveBtnSpinner');
+            const actionButtons = document.querySelectorAll('#previewArea .d-flex.gap-2 button');
+            
+            saveBtn.disabled = true;
+            saveBtnText.textContent = '저장 중';
+            saveBtnSpinner.style.display = 'inline-block';
+            saveBtn.style.cursor = 'wait';
+            
+            // 다른 액션 버튼들도 비활성화
+            actionButtons.forEach(btn => btn.disabled = true);
+            
             const formData = {};
             
             // 폼 데이터 수집
@@ -1841,6 +1888,18 @@
             } catch (error) {
                 console.error('저장 오류:', error);
                 alert('저장 중 오류가 발생했습니다.');
+            } finally {
+                // 로딩 UI 복구
+                saveBtn.disabled = false;
+                saveBtnText.textContent = '예약 저장';
+                saveBtnSpinner.style.display = 'none';
+                saveBtn.style.cursor = 'pointer';
+                
+                // 다른 액션 버튼들도 활성화
+                actionButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.cursor = 'pointer';
+                });
             }
         }
 
