@@ -127,14 +127,10 @@ class BizonService {
                             button: [
                                 {
                                     type: 'WL',
-                                    name: '바우처 보기',
+                                    name: '바우처보기',  // 템플릿과 정확히 일치 (띄어쓰기 없음)
                                     // 템플릿 변수 사용
                                     urlMobile: 'https://www.guamsavecard.com/voucher/#{TOKEN}',
                                     urlPc: 'https://www.guamsavecard.com/voucher/#{TOKEN}'
-                                },
-                                {
-                                    type: 'MD',
-                                    name: '문의하기'
                                 }
                             ]
                         }
