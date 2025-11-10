@@ -3,210 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - 괌세이브카드</title>
+    <title><%= title %></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         body {
             background: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* PC 화면에서 가로폭 1200px 고정 */
-        @media (min-width: 1200px) {
-            .container-fluid {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
-        .navbar {
-            background: linear-gradient(45deg, #667eea, #764ba2) !important;
-        }
-        
-        .stat-card {
+        /* 카드 기본 스타일 */
+        .dashboard-card {
             background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e9ecef;
         }
         
-        .stat-card:hover {
-            transform: translateY(-5px);
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2c3e50;
         }
         
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
+        /* 긴급 액션 */
+        .urgent-item {
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
         }
         
-        .stat-number {
+        .urgent-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .urgent-item.danger {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+        
+        .urgent-item.warning {
+            border-left: 4px solid #ffc107;
+            background: #fffbf0;
+        }
+        
+        .urgent-item.info {
+            border-left: 4px solid #17a2b8;
+            background: #f0f9ff;
+        }
+        
+        /* 워크플로우 */
+        .workflow-item {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+        
+        .workflow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 1.5rem;
+        }
+        
+        /* 오늘의 숫자 */
+        .today-stat {
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 6px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .stat-value {
             font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 5px;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
         
-        .recent-activity {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
         }
         
-        .activity-item {
-            padding: 15px 0;
+        /* 알림 아이템 */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
             border-bottom: 1px solid #e9ecef;
         }
         
-        .activity-item:last-child {
+        .alert-item:last-child {
             border-bottom: none;
         }
         
-        .btn-admin {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            display: inline-block;
-            margin: 5px;
+        .alert-item:hover {
+            background: #f8f9fa;
+            cursor: pointer;
         }
         
-        .btn-admin:hover {
-            color: white;
-            text-decoration: none;
-            transform: translateY(-2px);
+        /* 캘린더 */
+        .calendar-day {
+            text-align: center;
+            padding: 0.75rem;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .calendar-day:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+        }
+        
+        .calendar-day.today {
+            background: #e7f3ff;
+            border-color: #007bff;
+            font-weight: 600;
+        }
+        
+        .day-name {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+        
+        .day-count {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        /* 정산 요약 */
+        .settlement-box {
+            padding: 1rem;
+            border-radius: 6px;
+            border: 2px solid #e9ecef;
+            text-align: center;
+        }
+        
+        .settlement-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #dc3545;
         }
     </style>
 </head>
 <body>
     <%- include('../partials/navbar', { currentPage: 'dashboard', adminUsername: adminUsername }) %>
 
-    <div class="container mt-4">
-        <h2><i class="fas fa-chart-bar me-2"></i><%= title %></h2>
-        <p class="text-muted">괌세이브카드 시스템 현황을 확인하세요</p>
+    <div class="container mt-4 mb-5">
+        <h2><i class="fas fa-tachometer-alt me-2"></i><%= title %></h2>
+        <p class="text-muted">환영합니다, <%= adminUsername %>님</p>
 
-        <!-- 통계 카드 -->
+        <!-- Phase 1: 오늘 해야 할 일 -->
+        <div class="dashboard-card">
+            <h5 class="card-title">⚠️ 오늘 해야 할 일</h5>
+            
+            <% if (urgentActions.todayDeparture > 0) { %>
+            <div class="urgent-item danger" onclick="location.href='/admin/reservations'">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>🔴 긴급 처리 필요</strong>
+                        <p class="mb-0 small">오늘 출발하는데 수배 미완료 예약</p>
+                    </div>
+                    <h3 class="mb-0"><%= urgentActions.todayDeparture %>건</h3>
+                </div>
+            </div>
+            <% } %>
+            
+            <% if (urgentActions.pendingOver24h > 0) { %>
+            <div class="urgent-item warning" onclick="location.href='/admin/reservations?status=pending'">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>🟡 오늘 처리 권장</strong>
+                        <p class="mb-0 small">대기중 24시간 경과</p>
+                    </div>
+                    <h3 class="mb-0"><%= urgentActions.pendingOver24h %>건</h3>
+                </div>
+            </div>
+            <% } %>
+            
+            <% if (urgentActions.tomorrowDepartures > 0) { %>
+            <div class="urgent-item info" onclick="location.href='/admin/reservations'">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>🔵 예정된 작업</strong>
+                        <p class="mb-0 small">내일 출발 예약 확인 필요</p>
+                    </div>
+                    <h3 class="mb-0"><%= urgentActions.tomorrowDepartures %>건</h3>
+                </div>
+            </div>
+            <% } %>
+            
+            <% if (urgentActions.todayDeparture === 0 && urgentActions.pendingOver24h === 0) { %>
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745;"></i>
+                <p>모든 긴급 작업이 완료되었습니다! 👍</p>
+            </div>
+            <% } %>
+        </div>
+        
+        <!-- Phase 1: 워크플로우 현황 & 오늘의 숫자 -->
         <div class="row">
-            <div class="col-md-3 col-sm-6">
-                <div class="stat-card text-center">
-                    <div class="stat-icon text-primary">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <div class="stat-number text-primary"><%= stats.total_agencies %></div>
-                    <div class="text-muted">등록된 여행사</div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stat-card text-center">
-                    <div class="stat-icon text-success">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-number text-success"><%= stats.total_users %></div>
-                    <div class="text-muted">발급된 카드</div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stat-card text-center">
-                    <div class="stat-icon text-warning">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <div class="stat-number text-warning"><%= stats.total_usages %></div>
-                    <div class="text-muted">총 사용 횟수</div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stat-card text-center">
-                    <div class="stat-icon text-info">
-                        <i class="fas fa-store"></i>
-                    </div>
-                    <div class="stat-number text-info"><%= stats.total_stores %></div>
-                    <div class="text-muted">제휴업체</div>
-                </div>
-            </div>
-            
-            <div class="col-md-3 col-sm-6">
-                <div class="stat-card text-center">
-                    <div class="stat-icon text-danger">
-                        <i class="fas fa-ad"></i>
-                    </div>
-                    <div class="stat-number text-danger"><%= stats.active_banners %></div>
-                    <div class="text-muted">활성 광고</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 빠른 액션 -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="recent-activity">
-                    <h5><i class="fas fa-bolt me-2"></i>빠른 액션</h5>
-                    <div class="mt-3">
-                        <a href="/admin/agencies" class="btn-admin">
-                            <i class="fas fa-building me-1"></i>여행사 관리
-                        </a>
-                        <a href="/admin/stores" class="btn-admin">
-                            <i class="fas fa-store me-1"></i>제휴업체 관리
-                        </a>
-                        <a href="/admin/partner-applications" class="btn-admin">
-                            <i class="fas fa-handshake me-1"></i>제휴 신청
-                        </a>
-                        <a href="/admin/banners" class="btn-admin">
-                            <i class="fas fa-image me-1"></i>광고 관리
-                        </a>
-                        <a href="/admin/usages" class="btn-admin">
-                            <i class="fas fa-chart-line me-1"></i>사용 통계
-                        </a>
-                        <a href="/admin/issue-codes" class="btn-admin">
-                            <i class="fas fa-key me-1"></i>발급 코드 관리
-                        </a>
-                        <a href="/" class="btn-admin">
-                            <i class="fas fa-external-link-alt me-1"></i>사이트 보기
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 최근 활동 -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="recent-activity">
-                    <h5><i class="fas fa-clock me-2"></i>최근 할인 사용 이력</h5>
-                    
-                    <% if (recentUsages && recentUsages.length > 0) { %>
-                        <% recentUsages.forEach(usage => { %>
-                            <div class="activity-item">
-                                <div class="row align-items-center">
-                                    <div class="col-md-3">
-                                        <strong><%= usage.customer_name %></strong>
-                                        <small class="text-muted d-block"><%= usage.agency_name %></small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <i class="fas fa-store me-1"></i><%= usage.store_code %>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <i class="fas fa-clock me-1"></i>
-                                        <%= new Date(usage.used_at).toLocaleString('ko-KR') %>
-                                    </div>
-                                    <div class="col-md-3 text-end">
-                                        <span class="badge bg-success">사용 완료</span>
-                                    </div>
-                                </div>
+            <div class="col-md-7">
+                <div class="dashboard-card">
+                    <h5 class="card-title">📊 워크플로우 현황</h5>
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="workflow-item">
+                                <div class="text-muted small mb-1">대기중</div>
+                                <h4 class="mb-0"><%= workflow.pending %></h4>
                             </div>
+                        </div>
+                        <div class="col-auto workflow-arrow">→</div>
+                        <div class="col">
+                            <div class="workflow-item">
+                                <div class="text-muted small mb-1">수배중</div>
+                                <h4 class="mb-0"><%= workflow.in_progress %></h4>
+                            </div>
+                        </div>
+                        <div class="col-auto workflow-arrow">→</div>
+                        <div class="col">
+                            <div class="workflow-item">
+                                <div class="text-muted small mb-1">확정</div>
+                                <h4 class="mb-0"><%= workflow.confirmed %></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-5">
+                <div class="dashboard-card">
+                    <h5 class="card-title">📈 오늘의 숫자</h5>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="today-stat">
+                                <div class="stat-value text-primary"><%= todayStats.newReservations %></div>
+                                <div class="stat-label">신규예약</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="today-stat">
+                                <div class="stat-value text-success"><%= todayStats.completed %></div>
+                                <div class="stat-label">처리완료</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="today-stat">
+                                <div class="stat-value text-warning">$<%= Math.round(todayStats.revenue) %></div>
+                                <div class="stat-label">매출액</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 2: 알림 센터 & 캘린더 -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h5 class="card-title">🔔 알림 센터</h5>
+                    <% if (dataIssues && dataIssues.length > 0) { %>
+                        <% dataIssues.forEach(issue => { %>
+                        <div class="alert-item" onclick="location.href='/admin/reservations'">
+                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                            <div class="flex-grow-1">
+                                <strong><%= issue.issue_type %></strong>
+                                <p class="mb-0 small text-muted">
+                                    <%= issue.reservation_number %> - <%= issue.korean_name || '예약자' %>
+                                </p>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </div>
                         <% }); %>
                     <% } else { %>
                         <div class="text-center text-muted py-4">
-                            <i class="fas fa-inbox fa-2x mb-3"></i>
-                            <p>아직 사용 이력이 없습니다.</p>
+                            <i class="fas fa-check-circle fa-2x mb-2" style="color: #28a745;"></i>
+                            <p>모든 데이터가 정상입니다!</p>
                         </div>
                     <% } %>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="dashboard-card">
+                    <h5 class="card-title">📅 이번주 일정</h5>
+                    <div class="row g-2">
+                        <% 
+                        const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
+                        const today = new Date().toISOString().split('T')[0];
+                        
+                        for (let i = 0; i < 7; i++) {
+                            const date = new Date(Date.now() + i * 86400000);
+                            const dateStr = date.toISOString().split('T')[0];
+                            const dayOfWeek = daysOfWeek[date.getDay()];
+                            const calendarItem = weeklyCalendar.find(item => item.usage_date === dateStr);
+                            const count = calendarItem ? calendarItem.count : 0;
+                            const isToday = dateStr === today;
+                        %>
+                        <div class="col">
+                            <div class="calendar-day <%= isToday ? 'today' : '' %>" onclick="location.href='/admin/reservations?date=<%= dateStr %>'">
+                                <div class="day-name"><%= dayOfWeek %></div>
+                                <div class="day-count"><%= count %></div>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card mt-3">
+                    <h5 class="card-title">💰 정산 요약</h5>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="settlement-box">
+                                <div class="text-muted small">확정 예약</div>
+                                <div class="settlement-amount"><%= settlements.unpaidCount %>건</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="settlement-box">
+                                <div class="text-muted small">총 예상 매출</div>
+                                <div class="settlement-amount">$<%= Math.round(settlements.unpaidAmount) %></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

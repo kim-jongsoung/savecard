@@ -3193,42 +3193,157 @@ app.post('/card/use', async (req, res) => {
     }
 });
 
-// 관리자 대시보드
+// 관리자 대시보드 (ERP 중심)
 app.get('/admin/dashboard', requireAuth, async (req, res) => {
     try {
-        const [users, agencies, stores, usages, banners] = await Promise.all([
-            dbHelpers.getUsers(),
-            dbHelpers.getAgencies(),
-            dbHelpers.getStores(),
-            dbHelpers.getUsages(),
-            dbHelpers.getBanners()
-        ]);
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        
+        // Phase 1 데이터 조회
+        // 1. 오늘 해야 할 일 (긴급 액션)
+        const urgentTodayDeparture = await pool.query(`
+            SELECT COUNT(*) as count FROM reservations 
+            WHERE usage_date = $1 AND (
+                payment_status = 'in_progress' OR 
+                payment_status = 'pending'
+            )
+        `, [today]);
+        
+        const pendingOver24h = await pool.query(`
+            SELECT COUNT(*) as count FROM reservations 
+            WHERE payment_status = 'pending' 
+            AND created_at < NOW() - INTERVAL '24 hours'
+        `);
+        
+        const tomorrowDepartures = await pool.query(`
+            SELECT COUNT(*) as count FROM reservations 
+            WHERE usage_date = $1 AND payment_status != 'cancelled'
+        `, [tomorrow]);
+        
+        // 2. 워크플로우 현황
+        const workflowStats = await pool.query(`
+            SELECT 
+                payment_status,
+                COUNT(*) as count
+            FROM reservations
+            WHERE payment_status != 'cancelled'
+            GROUP BY payment_status
+        `);
+        
+        // 3. 오늘의 숫자
+        const todayNew = await pool.query(`
+            SELECT COUNT(*) as count FROM reservations 
+            WHERE DATE(created_at) = $1
+        `, [today]);
+        
+        const todayCompleted = await pool.query(`
+            SELECT COUNT(*) as count FROM reservations 
+            WHERE DATE(updated_at) = $1 AND payment_status = 'confirmed'
+        `, [today]);
+        
+        const todayRevenue = await pool.query(`
+            SELECT SUM(
+                (COALESCE(adult_price, 0) * COALESCE(people_adult, 0)) +
+                (COALESCE(child_price, 0) * COALESCE(people_child, 0)) +
+                (COALESCE(infant_price, 0) * COALESCE(people_infant, 0))
+            ) as total
+            FROM reservations 
+            WHERE DATE(created_at) = $1
+        `, [today]);
+        
+        // Phase 2 데이터 조회
+        // 4. 알림 센터 (데이터 검증 이슈)
+        const dataIssues = await pool.query(`
+            SELECT 
+                reservation_number,
+                product_name,
+                korean_name,
+                CASE 
+                    WHEN email IS NULL OR email = '' THEN '이메일 누락'
+                    WHEN kakao_id IS NULL OR kakao_id = '' THEN '카카오ID 누락'
+                    WHEN english_last_name IS NULL OR english_first_name IS NULL THEN '영문명 누락'
+                END as issue_type
+            FROM reservations
+            WHERE payment_status != 'cancelled'
+            AND (
+                email IS NULL OR email = '' OR
+                kakao_id IS NULL OR kakao_id = '' OR
+                english_last_name IS NULL OR english_first_name IS NULL
+            )
+            ORDER BY created_at DESC
+            LIMIT 10
+        `);
+        
+        // 5. 캘린더 뷰 (이번주 날짜별 예약 수)
+        const weeklyCalendar = await pool.query(`
+            SELECT 
+                usage_date,
+                COUNT(*) as count
+            FROM reservations
+            WHERE usage_date >= $1 
+            AND usage_date <= $1 + INTERVAL '6 days'
+            AND payment_status != 'cancelled'
+            GROUP BY usage_date
+            ORDER BY usage_date
+        `, [today]);
+        
+        // 6. 정산 요약
+        const unpaidSettlements = await pool.query(`
+            SELECT 
+                COUNT(*) as count,
+                SUM(
+                    (COALESCE(adult_price, 0) * COALESCE(people_adult, 0)) +
+                    (COALESCE(child_price, 0) * COALESCE(people_child, 0)) +
+                    (COALESCE(infant_price, 0) * COALESCE(people_infant, 0))
+                ) as total_amount
+            FROM reservations
+            WHERE payment_status = 'confirmed'
+        `);
+        
+        const workflow = {};
+        workflowStats.rows.forEach(row => {
+            workflow[row.payment_status] = parseInt(row.count);
+        });
         
         res.render('admin/dashboard', {
-            title: '관리자 대시보드',
+            title: 'Save ERP 대시보드',
             adminUsername: req.session.adminUsername || 'admin',
-            stats: {
-                total_agencies: agencies.length,
-                total_users: users.length,
-                total_usages: usages.length,
-                total_stores: stores.length,
-                active_banners: (banners || []).length
+            // Phase 1
+            urgentActions: {
+                todayDeparture: parseInt(urgentTodayDeparture.rows[0].count),
+                pendingOver24h: parseInt(pendingOver24h.rows[0].count),
+                tomorrowDepartures: parseInt(tomorrowDepartures.rows[0].count)
             },
-            recentUsages: []
+            workflow: {
+                pending: workflow.pending || 0,
+                in_progress: workflow.in_progress || 0,
+                confirmed: workflow.confirmed || 0
+            },
+            todayStats: {
+                newReservations: parseInt(todayNew.rows[0].count),
+                completed: parseInt(todayCompleted.rows[0].count),
+                revenue: parseFloat(todayRevenue.rows[0].total || 0)
+            },
+            // Phase 2
+            dataIssues: dataIssues.rows,
+            weeklyCalendar: weeklyCalendar.rows,
+            settlements: {
+                unpaidCount: parseInt(unpaidSettlements.rows[0].count || 0),
+                unpaidAmount: parseFloat(unpaidSettlements.rows[0].total_amount || 0)
+            }
         });
     } catch (error) {
-        console.error('관리자 대시보드 오류:', error);
+        console.error('❌ 대시보드 데이터 조회 오류:', error);
         res.render('admin/dashboard', {
-            title: '관리자 대시보드',
+            title: 'Save ERP 대시보드',
             adminUsername: req.session.adminUsername || 'admin',
-            stats: { 
-                total_agencies: 0, 
-                total_users: 0, 
-                total_usages: 0, 
-                total_stores: 0,
-                active_banners: 0 
-            },
-            recentUsages: []
+            urgentActions: { todayDeparture: 0, pendingOver24h: 0, tomorrowDepartures: 0 },
+            workflow: { pending: 0, in_progress: 0, confirmed: 0 },
+            todayStats: { newReservations: 0, completed: 0, revenue: 0 },
+            dataIssues: [],
+            weeklyCalendar: [],
+            settlements: { unpaidCount: 0, unpaidAmount: 0 }
         });
     }
 });
