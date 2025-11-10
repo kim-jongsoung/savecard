@@ -139,13 +139,13 @@ class BizonService {
                 destinations: [
                     {
                         to: phoneNumber,
-                        // 템플릿 변수 치환 (키는 #{} 없이)
+                        // 템플릿 변수 치환 (#{} 포함 형식으로 재시도)
                         replaceWords: {
-                            'NAME': name,
-                            'PLATFORM_NAME': platformName,
-                            'PRODUCT_NAME': productName,
-                            'USAGE_DATE': usageDate,
-                            'TOKEN': voucherToken
+                            '#{NAME}': name,
+                            '#{PLATFORM_NAME}': platformName,
+                            '#{PRODUCT_NAME}': productName,
+                            '#{USAGE_DATE}': usageDate,
+                            '#{TOKEN}': voucherToken
                         }
                     }
                 ]
