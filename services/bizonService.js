@@ -35,31 +35,41 @@ class BizonService {
             // 전화번호 포맷 정리 (하이픈 제거)
             const phoneNumber = to.replace(/[^0-9]/g, '');
 
-            // 비즈고 API 요청 (Communication API 형식)
+            // 비즈고 API 정확한 요청 형식
             const requestBody = {
-                message_type: 'AT',  // 알림톡
-                phn: phoneNumber,
-                profile: this.apiKey,  // 발신프로필 키
-                tmplId: 'ISSUE_CODE_001',  // 템플릿 ID (실제 승인받은 ID로 변경 필요)
-                msg: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, ${name}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: ${code}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: ${expireDate}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
-                button: [
+                messageFlow: [
                     {
-                        type: 'WL',
-                        name: '카드 발급하기',
-                        url_mobile: 'https://www.guamsavecard.com/register',
-                        url_pc: 'https://www.guamsavecard.com/register'
-                    },
+                        alimtalk: {
+                            senderKey: this.apiKey,  // 발신프로필 키
+                            msgType: 'AT',  // 알림톡 텍스트
+                            templateCode: 'ISSUE_CODE_001',  // 템플릿 코드 (실제 승인받은 코드로 변경 필요)
+                            text: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, ${name}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: ${code}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: ${expireDate}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
+                            button: [
+                                {
+                                    type: 'WL',
+                                    name: '카드 발급하기',
+                                    urlMobile: 'https://www.guamsavecard.com/register',
+                                    urlPc: 'https://www.guamsavecard.com/register'
+                                },
+                                {
+                                    type: 'WL',
+                                    name: '가맹점 보기',
+                                    urlMobile: 'https://www.guamsavecard.com/stores',
+                                    urlPc: 'https://www.guamsavecard.com/stores'
+                                }
+                            ]
+                        }
+                    }
+                ],
+                destinations: [
                     {
-                        type: 'WL',
-                        name: '가맹점 보기',
-                        url_mobile: 'https://www.guamsavecard.com/stores',
-                        url_pc: 'https://www.guamsavecard.com/stores'
+                        to: phoneNumber
                     }
                 ]
             };
 
             const response = await axios.post(
-                `${this.baseURL}/api/comm/send`,
+                `${this.baseURL}/api/comm/v1/send/omni`,
                 requestBody,
                 { headers: this.getHeaders() }
             );
@@ -106,29 +116,39 @@ class BizonService {
             // 바우처 URL
             const voucherUrl = `https://www.guamsavecard.com/voucher/${voucherToken}`;
 
-            // 비즈고 API 요청 (Communication API 형식)
+            // 비즈고 API 정확한 요청 형식
             const requestBody = {
-                message_type: 'AT',  // 알림톡
-                phn: phoneNumber,
-                profile: this.apiKey,  // 발신프로필 키
-                tmplId: 'VOUCHER_001',  // 바우처 전송 템플릿
-                msg: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
-                button: [
+                messageFlow: [
                     {
-                        type: 'WL',
-                        name: '바우처 보기',
-                        url_mobile: voucherUrl,
-                        url_pc: voucherUrl
-                    },
+                        alimtalk: {
+                            senderKey: this.apiKey,  // 발신프로필 키
+                            msgType: 'AT',  // 알림톡 텍스트
+                            templateCode: 'VOUCHER_001',  // 템플릿 코드
+                            text: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
+                            button: [
+                                {
+                                    type: 'WL',
+                                    name: '바우처 보기',
+                                    urlMobile: voucherUrl,
+                                    urlPc: voucherUrl
+                                },
+                                {
+                                    type: 'MD',
+                                    name: '문의하기'
+                                }
+                            ]
+                        }
+                    }
+                ],
+                destinations: [
                     {
-                        type: 'MD',
-                        name: '문의하기'
+                        to: phoneNumber
                     }
                 ]
             };
 
             const response = await axios.post(
-                `${this.baseURL}/api/comm/send`,
+                `${this.baseURL}/api/comm/v1/send/omni`,
                 requestBody,
                 { headers: this.getHeaders() }
             );
