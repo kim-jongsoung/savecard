@@ -114,10 +114,7 @@ class BizonService {
             // 전화번호 포맷 정리 (하이픈 제거)
             const phoneNumber = to.replace(/[^0-9]/g, '');
 
-            // 바우처 URL
-            const voucherUrl = `https://www.guamsavecard.com/voucher/${voucherToken}`;
-
-            // 비즈고 API 정확한 요청 형식 (text에 실제 값을 치환)
+            // 비즈고 API 정확한 요청 형식 (템플릿 변수 그대로 + replaceWords)
             const requestBody = {
                 messageFlow: [
                     {
@@ -125,14 +122,15 @@ class BizonService {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
                             msgType: 'AT',  // 알림톡 텍스트
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
-                            // 변수를 실제 값으로 치환한 텍스트
-                            text: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
+                            // 템플릿 원본 그대로 (변수 포함)
+                            text: `[#{PRODUCT_NAME} 바우처]\n\n안녕하세요, #{NAME}님\n\n#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: #{PRODUCT_NAME}\n▶ 이용일: #{USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
                             button: [
                                 {
                                     type: 'WL',
-                                    name: '바우처보기',  // 템플릿과 정확히 일치
-                                    urlMobile: voucherUrl,
-                                    urlPc: voucherUrl
+                                    name: '바우처보기',
+                                    // 버튼 URL에도 변수 사용
+                                    urlMobile: `https://www.guamsavecard.com/voucher/#{TOKEN}`,
+                                    urlPc: `https://www.guamsavecard.com/voucher/#{TOKEN}`
                                 }
                             ]
                         }
@@ -140,7 +138,15 @@ class BizonService {
                 ],
                 destinations: [
                     {
-                        to: phoneNumber
+                        to: phoneNumber,
+                        // 변수 치환 (키는 변수명만, #{} 제외)
+                        replaceWords: {
+                            'NAME': name,
+                            'PLATFORM_NAME': platformName,
+                            'PRODUCT_NAME': productName,
+                            'USAGE_DATE': usageDate,
+                            'TOKEN': voucherToken
+                        }
                     }
                 ]
             };
