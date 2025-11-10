@@ -463,6 +463,7 @@
         let parsedData = null;
         let preprocessingRules = [];
         let customPrompt = '';
+        let customParsingRules = []; // DB에서 로드될 데이터
 
         // 페이지 로드 시 설정 불러오기
         document.addEventListener('DOMContentLoaded', function() {
@@ -479,16 +480,48 @@
             modal.show();
         }
 
-        // 설정 불러오기
-        function loadParsingSettings() {
-            const savedRules = localStorage.getItem('preprocessingRules');
-            const savedPrompt = localStorage.getItem('customPrompt');
-            
-            if (savedRules) {
-                preprocessingRules = JSON.parse(savedRules);
-                console.log('✅ 저장된 전처리 규칙 로드:', preprocessingRules.length + '개');
-            } else {
-                // 기본 전처리 규칙
+        // 설정 불러오기 (DB에서)
+        async function loadParsingSettings() {
+            try {
+                const response = await fetch('/api/parsing-settings');
+                const data = await response.json();
+                
+                if (data.success && data.settings) {
+                    // DB에서 로드된 설정 사용
+                    preprocessingRules = data.settings.preprocessing_rules || [];
+                    customPrompt = data.settings.custom_prompt || '';
+                    customParsingRules = data.settings.custom_parsing_rules || [];
+                    
+                    console.log('✅ DB에서 파싱 설정 로드:', {
+                        전처리규칙: preprocessingRules.length + '개',
+                        활성화된규칙: preprocessingRules.filter(r => r.enabled).length + '개',
+                        커스텀프롬프트: customPrompt ? '있음' : '없음',
+                        커스텀파싱규칙: customParsingRules.length + '개'
+                    });
+                } else {
+                    // 기본값 사용
+                    preprocessingRules = [
+                        { pattern: 'logo_', replacement: '', type: 'remove', enabled: true },
+                        { pattern: 'image_', replacement: '', type: 'remove', enabled: true },
+                        { pattern: 'icon_', replacement: '', type: 'remove', enabled: true },
+                        { pattern: 'img_', replacement: '', type: 'remove', enabled: true },
+                        { pattern: 'photo_', replacement: '', type: 'remove', enabled: true }
+                    ];
+                    customParsingRules = [];
+                    console.log('✅ 기본 파싱 설정 로드');
+                }
+                
+                const promptTextarea = document.getElementById('customPromptText');
+                if (promptTextarea) {
+                    promptTextarea.value = customPrompt;
+                }
+                
+                // 파싱 규칙 테이블 업데이트
+                updateParsingRulesTable();
+                
+            } catch (error) {
+                console.error('❌ 파싱 설정 로드 실패:', error);
+                // 기본값 사용
                 preprocessingRules = [
                     { pattern: 'logo_', replacement: '', type: 'remove', enabled: true },
                     { pattern: 'image_', replacement: '', type: 'remove', enabled: true },
@@ -496,40 +529,40 @@
                     { pattern: 'img_', replacement: '', type: 'remove', enabled: true },
                     { pattern: 'photo_', replacement: '', type: 'remove', enabled: true }
                 ];
-                console.log('✅ 기본 전처리 규칙 로드:', preprocessingRules.length + '개');
+                customParsingRules = [];
             }
-            
-            customPrompt = savedPrompt || '';
-            const promptTextarea = document.getElementById('customPromptText');
-            if (promptTextarea) {
-                promptTextarea.value = customPrompt;
-            }
-            
-            console.log('✅ 파싱 설정 로드 완료:', {
-                전처리규칙: preprocessingRules.length + '개',
-                활성화된규칙: preprocessingRules.filter(r => r.enabled).length + '개',
-                커스텀프롬프트: customPrompt ? '있음' : '없음'
-            });
         }
 
-        // 설정 저장
-        function saveParsingSettings() {
-            customPrompt = document.getElementById('customPromptText').value;
-            
-            localStorage.setItem('preprocessingRules', JSON.stringify(preprocessingRules));
-            localStorage.setItem('customPrompt', customPrompt);
-            
-            console.log('💾 파싱 설정 저장:');
-            console.log('  - 전처리규칙:', preprocessingRules.length + '개');
-            console.log('  - 활성화된규칙:', preprocessingRules.filter(r => r.enabled).length + '개');
-            console.log('  - 커스텀프롬프트:', customPrompt ? `있음 (${customPrompt.length}자)` : '없음');
-            if (customPrompt) {
-                console.log('  - 저장할 프롬프트 전체 내용:');
-                console.log(customPrompt);
+        // 설정 저장 (DB에)
+        async function saveParsingSettings() {
+            try {
+                customPrompt = document.getElementById('customPromptText').value;
+                
+                const response = await fetch('/api/parsing-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        preprocessing_rules: preprocessingRules,
+                        custom_prompt: customPrompt,
+                        custom_parsing_rules: customParsingRules
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('✅ DB에 파싱 설정 저장 완료');
+                    showNotification('파싱 설정이 저장되었습니다.', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('parsingSettingsModal')).hide();
+                } else {
+                    throw new Error(data.message || '저장 실패');
+                }
+            } catch (error) {
+                console.error('❌ 파싱 설정 저장 실패:', error);
+                showNotification('파싱 설정 저장에 실패했습니다: ' + error.message, 'danger');
             }
-            
-            showNotification('파싱 설정이 저장되었습니다.', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('parsingSettingsModal')).hide();
         }
 
         // ==================== 전처리 규칙 관리 ====================
@@ -678,12 +711,11 @@
             }
 
             try {
-                // 0단계: 최신 설정 불러오기 (localStorage에서)
-                const latestPrompt = localStorage.getItem('customPrompt') || '';
-                customPrompt = latestPrompt;
-                
-                console.log('🔄 최신 설정 로드:');
+                // 0단계: 이미 DB에서 로드된 설정 사용 (customPrompt, preprocessingRules)
+                console.log('🔄 현재 설정 상태:');
                 console.log('  - 커스텀프롬프트:', customPrompt ? `있음 (${customPrompt.length}자)` : '없음');
+                console.log('  - 전처리규칙:', preprocessingRules.length + '개');
+                console.log('  - 커스텀파싱규칙:', customParsingRules.length + '개');
                 if (customPrompt) {
                     console.log('  - 프롬프트 내용:', customPrompt);
                 }
@@ -1071,8 +1103,7 @@
             modal.show();
         }
 
-        // 파싱 보정 규칙 저장소 (로컬스토리지 사용)
-        let customParsingRules = JSON.parse(localStorage.getItem('customParsingRules') || '[]');
+        // 파싱 보정 규칙은 이제 loadParsingSettings()에서 DB로부터 로드됨
 
         // 파싱 보정 규칙 추가
         function addParsingRule() {
@@ -1106,7 +1137,8 @@
             };
 
             customParsingRules.push(newRule);
-            localStorage.setItem('customParsingRules', JSON.stringify(customParsingRules));
+            // DB에 즉시 저장
+            saveParsingRulesToDB();
             
             // 폼 초기화
             document.getElementById('newConditionType').value = 'product';
@@ -1127,9 +1159,34 @@
         function deleteParsingRule(ruleId) {
             if (confirm('이 규칙을 삭제하시겠습니까?')) {
                 customParsingRules = customParsingRules.filter(rule => rule.id !== ruleId);
-                localStorage.setItem('customParsingRules', JSON.stringify(customParsingRules));
+                // DB에 즉시 저장
+                saveParsingRulesToDB();
                 updateParsingRulesTable();
                 showRuleNotification('🗑️ 규칙이 삭제되었습니다.');
+            }
+        }
+        
+        // 파싱 규칙만 DB에 저장하는 헬퍼 함수
+        async function saveParsingRulesToDB() {
+            try {
+                const response = await fetch('/api/parsing-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        preprocessing_rules: preprocessingRules,
+                        custom_prompt: customPrompt,
+                        custom_parsing_rules: customParsingRules
+                    })
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    console.error('❌ 파싱 규칙 저장 실패:', data.message);
+                }
+            } catch (error) {
+                console.error('❌ 파싱 규칙 저장 오류:', error);
             }
         }
 
