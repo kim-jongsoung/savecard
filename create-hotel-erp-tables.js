@@ -39,8 +39,19 @@ async function createHotelTables() {
                 room_type_name VARCHAR(100) NOT NULL,
                 room_type_code VARCHAR(50) NOT NULL,
                 description TEXT,
-                max_occupancy INTEGER DEFAULT 2,
-                standard_rate DECIMAL(10, 2),
+                
+                -- 인원 제한
+                max_adults INTEGER DEFAULT 2,
+                max_children INTEGER DEFAULT 1,
+                max_total_occupancy INTEGER DEFAULT 3,
+                
+                -- 요금 구조
+                base_room_rate DECIMAL(10, 2),  -- 기본 객실 요금
+                breakfast_included BOOLEAN DEFAULT false,  -- 조식 포함 여부
+                breakfast_rate_per_person DECIMAL(10, 2) DEFAULT 0,  -- 1인당 조식 요금
+                extra_adult_rate DECIMAL(10, 2) DEFAULT 0,  -- 추가 성인 요금
+                extra_child_rate DECIMAL(10, 2) DEFAULT 0,  -- 추가 소아 요금
+                
                 is_active BOOLEAN DEFAULT true,
                 created_at TIMESTAMP DEFAULT NOW(),
                 updated_at TIMESTAMP DEFAULT NOW(),
@@ -104,7 +115,7 @@ async function createHotelTables() {
                 check_out_date DATE NOT NULL,
                 nights INTEGER NOT NULL,
                 
-                -- 예약자 정보
+                -- 예약 대표자 정보
                 korean_name VARCHAR(100),
                 english_first_name VARCHAR(100),
                 english_last_name VARCHAR(100),
@@ -112,13 +123,35 @@ async function createHotelTables() {
                 phone VARCHAR(50),
                 kakao_id VARCHAR(100),
                 
+                -- 투숙객 전체 명단 (JSON 배열)
+                guests JSONB,
+                -- 예시: [
+                --   {"type": "adult", "first_name": "John", "last_name": "Doe"},
+                --   {"type": "adult", "first_name": "Jane", "last_name": "Doe"},
+                --   {"type": "child", "first_name": "Tom", "last_name": "Doe", "age": 8}
+                -- ]
+                
                 -- 인원
                 adults INTEGER DEFAULT 2,
                 children INTEGER DEFAULT 0,
                 
-                -- 가격 정보
-                room_rate DECIMAL(10, 2),
-                total_amount DECIMAL(10, 2),
+                -- 항공편 정보
+                arrival_flight VARCHAR(50),  -- 도착 항공편명 (예: KE123)
+                arrival_date DATE,
+                arrival_time TIME,
+                departure_flight VARCHAR(50),  -- 출발 항공편명
+                departure_date DATE,
+                departure_time TIME,
+                
+                -- 조식 옵션
+                breakfast_included BOOLEAN DEFAULT false,
+                breakfast_count INTEGER DEFAULT 0,  -- 조식 인원 수
+                
+                -- 가격 상세
+                base_room_rate DECIMAL(10, 2),  -- 기본 객실 요금
+                breakfast_amount DECIMAL(10, 2) DEFAULT 0,  -- 조식 총액
+                extra_person_amount DECIMAL(10, 2) DEFAULT 0,  -- 추가 인원 요금
+                total_amount DECIMAL(10, 2),  -- 최종 총액
                 currency VARCHAR(10) DEFAULT 'USD',
                 
                 -- 상태 관리
@@ -151,6 +184,10 @@ async function createHotelTables() {
         await client.query(`
             CREATE INDEX IF NOT EXISTS idx_hotel_res_assigned 
             ON hotel_reservations(assigned_to)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_hotel_res_guests 
+            ON hotel_reservations USING GIN(guests)
         `);
         console.log('✅ hotel_reservations 테이블 + 인덱스 생성 완료');
         
@@ -190,11 +227,22 @@ async function createHotelTables() {
         console.log('\n🎉 호텔 ERP 테이블 생성 완료!');
         console.log('\n생성된 테이블:');
         console.log('  1. hotels - 호텔 마스터');
-        console.log('  2. room_types - 객실 타입');
+        console.log('  2. room_types - 객실 타입 (인원 제한, 조식, 요금 구조)');
         console.log('  3. room_availability - 객실 RAG (가능 여부)');
         console.log('  4. availability_uploads - 업로드 히스토리');
-        console.log('  5. hotel_reservations - 호텔 예약');
+        console.log('  5. hotel_reservations - 호텔 예약 (투숙객 전체, 항공편, 가격 상세)');
         console.log('  6. hotel_assignments - 호텔 수배 관리');
+        console.log('\n📋 주요 기능:');
+        console.log('  ✅ 투숙객 전체 명단 (guests JSONB)');
+        console.log('  ✅ 룸타입별 인원 제한 (성인/소아 구분)');
+        console.log('  ✅ 항공편 정보 (도착/출발 편명)');
+        console.log('  ✅ 조식 옵션 및 요금');
+        console.log('  ✅ 가격 상세: 객실요금 + 조식요금 + 추가인원요금');
+        console.log('\n💡 요금 계산 예시:');
+        console.log('  기본 객실 요금: $200 (성인2명 기준)');
+        console.log('  조식 요금: $15 x 4명 = $60');
+        console.log('  추가 소아 요금: $30 x 2명 = $60');
+        console.log('  최종 총액: $200 + $60 + $60 = $320');
         
     } catch (error) {
         await client.query('ROLLBACK');
