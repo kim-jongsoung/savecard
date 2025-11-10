@@ -3,10 +3,10 @@
     <div class="container-fluid px-4">
         <div class="d-flex flex-column w-100">
             <!-- 상단: 로고 + SaveCard 메뉴 + 사용자 -->
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <a class="navbar-brand fw-bold mb-0" href="/admin">Save ERP</a>
+            <div class="d-flex align-items-center mb-2">
+                <a class="navbar-brand fw-bold mb-0" href="/admin" style="width: 120px; flex-shrink: 0;">Save ERP</a>
                 
-                <ul class="navbar-nav flex-row">
+                <ul class="navbar-nav flex-row flex-grow-1">
                     <li class="nav-item"><span class="nav-section-label">SaveCard</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자</a></li>
@@ -16,7 +16,7 @@
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'issue-codes' ? 'active' : '' %>" href="/admin/issue-codes">발급코드</a></li>
                 </ul>
                 
-                <div class="nav-item dropdown">
+                <div class="nav-item dropdown" style="margin-left: auto;">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><%= adminUsername %></a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
@@ -24,8 +24,9 @@
                 </div>
             </div>
             
-            <!-- 하단: ERP 메뉴 + 공항픽업 -->
+            <!-- 하단: ERP 메뉴 + 공항픽업 (로고 너비만큼 들여쓰기) -->
             <div class="d-flex align-items-center">
+                <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
                     <li class="nav-item"><span class="nav-section-label">ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a></li>
