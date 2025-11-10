@@ -46,6 +46,7 @@ if (fs.existsSync('./railsql.env')) {
 const { pool, dbMode, testConnection, createTables, ensureAllColumns, migrateFromJSON } = require('./database');
 const { normalizeReservationData } = require('./utils/normalize');
 const { parseBooking } = require('./utils/aiParser');
+const { createHotelTables } = require('./create-hotel-erp-tables');
 let jsonDB;
 
 try {
@@ -15677,6 +15678,14 @@ async function startServer() {
                 // 정산관리 마이그레이션 실행
                 await runSettlementsMigration();
                 console.log('✅ 정산관리 마이그레이션 완료');
+                
+                // 호텔 ERP 테이블 생성
+                try {
+                    await createHotelTables();
+                    console.log('✅ 호텔 ERP 테이블 생성 완료');
+                } catch (hotelErr) {
+                    console.warn('⚠️ 호텔 테이블 생성 경고:', hotelErr.message);
+                }
                 
                 // 공항픽업 마감날짜 테이블 생성
                 try {
