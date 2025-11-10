@@ -60,6 +60,34 @@ async function createHotelTables() {
         `);
         console.log('✅ room_types 테이블 생성 완료');
         
+        // room_types 새 컬럼 마이그레이션
+        const roomTypeNewColumns = [
+            'max_adults INTEGER DEFAULT 2',
+            'max_children INTEGER DEFAULT 1',
+            'max_total_occupancy INTEGER DEFAULT 3',
+            'base_room_rate DECIMAL(10, 2)',
+            'breakfast_included BOOLEAN DEFAULT false',
+            'breakfast_rate_per_person DECIMAL(10, 2) DEFAULT 0',
+            'extra_adult_rate DECIMAL(10, 2) DEFAULT 0',
+            'extra_child_rate DECIMAL(10, 2) DEFAULT 0'
+        ];
+        
+        for (const col of roomTypeNewColumns) {
+            const colName = col.split(' ')[0];
+            await client.query(`
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (
+                        SELECT FROM information_schema.columns 
+                        WHERE table_name = 'room_types' AND column_name = '${colName}'
+                    ) THEN
+                        ALTER TABLE room_types ADD COLUMN ${col};
+                    END IF;
+                END $$;
+            `);
+        }
+        console.log('✅ room_types 컬럼 마이그레이션 완료');
+        
         // 3. 객실 가능 여부 (RAG 핵심!)
         await client.query(`
             CREATE TABLE IF NOT EXISTS room_availability (
@@ -171,6 +199,39 @@ async function createHotelTables() {
                 updated_at TIMESTAMP DEFAULT NOW()
             )
         `);
+        console.log('✅ hotel_reservations 테이블 생성 완료');
+        
+        // hotel_reservations 새 컬럼 마이그레이션
+        const hotelResNewColumns = [
+            'guests JSONB',
+            'arrival_flight VARCHAR(50)',
+            'arrival_date DATE',
+            'arrival_time TIME',
+            'departure_flight VARCHAR(50)',
+            'departure_date DATE',
+            'departure_time TIME',
+            'breakfast_included BOOLEAN DEFAULT false',
+            'breakfast_count INTEGER DEFAULT 0',
+            'base_room_rate DECIMAL(10, 2)',
+            'breakfast_amount DECIMAL(10, 2) DEFAULT 0',
+            'extra_person_amount DECIMAL(10, 2) DEFAULT 0'
+        ];
+        
+        for (const col of hotelResNewColumns) {
+            const colName = col.split(' ')[0];
+            await client.query(`
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (
+                        SELECT FROM information_schema.columns 
+                        WHERE table_name = 'hotel_reservations' AND column_name = '${colName}'
+                    ) THEN
+                        ALTER TABLE hotel_reservations ADD COLUMN ${col};
+                    END IF;
+                END $$;
+            `);
+        }
+        console.log('✅ hotel_reservations 컬럼 마이그레이션 완료');
         
         // 인덱스
         await client.query(`
@@ -185,11 +246,19 @@ async function createHotelTables() {
             CREATE INDEX IF NOT EXISTS idx_hotel_res_assigned 
             ON hotel_reservations(assigned_to)
         `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_hotel_res_guests 
-            ON hotel_reservations USING GIN(guests)
-        `);
-        console.log('✅ hotel_reservations 테이블 + 인덱스 생성 완료');
+        
+        // guests 컬럼이 있을 때만 GIN 인덱스 생성
+        try {
+            await client.query(`
+                CREATE INDEX IF NOT EXISTS idx_hotel_res_guests 
+                ON hotel_reservations USING GIN(guests)
+            `);
+            console.log('✅ guests JSONB 인덱스 생성 완료');
+        } catch (err) {
+            console.log('⚠️  guests 인덱스 생성 건너뜀 (컬럼 없음)');
+        }
+        
+        console.log('✅ hotel_reservations 인덱스 생성 완료');
         
         // 6. 호텔 수배 관리
         await client.query(`
