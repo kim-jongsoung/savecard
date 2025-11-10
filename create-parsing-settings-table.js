@@ -53,13 +53,13 @@ async function createParsingSettingsTable() {
         `);
         console.log('✅ 자동 업데이트 트리거 생성 완료');
         
-        // 기본 관리자 계정 설정 추가 (luxfind01)
+        // 공유 설정 추가 (모든 관리자가 사용)
         await pool.query(`
             INSERT INTO parsing_settings (admin_username, preprocessing_rules, custom_parsing_rules)
-            VALUES ('luxfind01', '[]'::jsonb, '[]'::jsonb)
+            VALUES ('shared', '[]'::jsonb, '[]'::jsonb)
             ON CONFLICT (admin_username) DO NOTHING
         `);
-        console.log('✅ 기본 관리자 설정 추가 완료');
+        console.log('✅ 공유 파싱 설정 추가 완료 (모든 관리자가 사용)');
         
         console.log('');
         console.log('🎉 parsing_settings 테이블 생성 완료!');

@@ -480,9 +480,10 @@
             modal.show();
         }
 
-        // 설정 불러오기 (DB에서)
+        // 설정 불러오기 (DB에서 - 모든 관리자 공유)
         async function loadParsingSettings() {
             try {
+                // 모든 관리자가 동일한 파싱 설정을 공유합니다
                 const response = await fetch('/api/parsing-settings');
                 const data = await response.json();
                 

@@ -10218,14 +10218,15 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
 // 파싱 설정 관리 API (로컬스토리지 → DB 전환)
 // ============================================
 
-// 파싱 설정 조회
+// 파싱 설정 조회 (모든 관리자 공유)
 app.get('/api/parsing-settings', requireAuth, async (req, res) => {
     try {
-        const adminUsername = req.session.adminUsername || 'luxfind01';
+        // 모든 관리자가 'shared' 설정 사용
+        const sharedUsername = 'shared';
         
         const result = await pool.query(
             'SELECT * FROM parsing_settings WHERE admin_username = $1',
-            [adminUsername]
+            [sharedUsername]
         );
         
         if (result.rows.length === 0) {
@@ -10234,8 +10235,10 @@ app.get('/api/parsing-settings', requireAuth, async (req, res) => {
                 `INSERT INTO parsing_settings (admin_username, preprocessing_rules, custom_parsing_rules)
                  VALUES ($1, '[]'::jsonb, '[]'::jsonb)
                  RETURNING *`,
-                [adminUsername]
+                [sharedUsername]
             );
+            
+            console.log('✅ 공유 파싱 설정 생성 완료 (shared)');
             
             return res.json({
                 success: true,
@@ -10256,14 +10259,14 @@ app.get('/api/parsing-settings', requireAuth, async (req, res) => {
     }
 });
 
-// 파싱 설정 저장
+// 파싱 설정 저장 (모든 관리자 공유)
 app.post('/api/parsing-settings', requireAuth, async (req, res) => {
     try {
-        const adminUsername = req.session.adminUsername || 'luxfind01';
+        // 모든 관리자가 'shared' 설정 사용
+        const sharedUsername = 'shared';
         const { preprocessing_rules, custom_prompt, custom_parsing_rules } = req.body;
         
-        console.log('💾 파싱 설정 저장 요청:', {
-            adminUsername,
+        console.log('💾 파싱 설정 저장 요청 (공유):', {
             preprocessing_rules: preprocessing_rules?.length || 0,
             custom_prompt: custom_prompt ? '있음' : '없음',
             custom_parsing_rules: custom_parsing_rules?.length || 0
@@ -10282,18 +10285,18 @@ app.post('/api/parsing-settings', requireAuth, async (req, res) => {
                 updated_at = CURRENT_TIMESTAMP
              RETURNING *`,
             [
-                adminUsername,
+                sharedUsername,
                 JSON.stringify(preprocessing_rules || []),
                 custom_prompt || '',
                 JSON.stringify(custom_parsing_rules || [])
             ]
         );
         
-        console.log('✅ 파싱 설정 저장 완료');
+        console.log('✅ 공유 파싱 설정 저장 완료');
         
         res.json({
             success: true,
-            message: '파싱 설정이 저장되었습니다.',
+            message: '파싱 설정이 저장되었습니다. (모든 관리자 공유)',
             settings: result.rows[0]
         });
     } catch (error) {
