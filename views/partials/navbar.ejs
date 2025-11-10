@@ -8,7 +8,7 @@
                 
                 <ul class="navbar-nav flex-row flex-grow-1">
                     <li class="nav-item"><span class="nav-section-label">SaveCard</span></li>
-                    <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin">대시보드</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'savecard-dashboard' ? 'active' : '' %>" href="/admin/savecard-dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'stores' ? 'active' : '' %>" href="/admin/stores">제휴업체</a></li>
@@ -29,6 +29,7 @@
                 <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
                     <li class="nav-item"><span class="nav-section-label">ERP</span></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'assignments' ? 'active' : '' %>" href="/admin/assignments">수배관리</a></li>

@@ -1992,13 +1992,13 @@ app.post('/admin/stores/:id/toggle', requireAuth, async (req, res) => {
 
 // ==================== 관리자 페이지 라우트 ====================
 
-// 관리자 메인 페이지 (대시보드로 리다이렉트)
+// 관리자 메인 페이지 (ERP 대시보드로 리다이렉트)
 app.get('/admin', requireAuth, (req, res) => {
     res.redirect('/admin/dashboard');
 });
 
-// 관리자 대시보드
-app.get('/admin/dashboard', requireAuth, async (req, res) => {
+// SaveCard 대시보드 (별도)
+app.get('/admin/savecard-dashboard', requireAuth, async (req, res) => {
     try {
         // 통계 데이터 수집
         const [users, agencies, stores, usages] = await Promise.all([
@@ -2013,27 +2013,31 @@ app.get('/admin/dashboard', requireAuth, async (req, res) => {
             .sort((a, b) => new Date(b.used_at) - new Date(a.used_at))
             .slice(0, 10);
 
-        res.render('admin/dashboard', {
-            title: '관리자 대시보드',
+        res.render('admin/savecard-dashboard', {
+            title: 'SaveCard 대시보드',
             adminUsername: req.session.adminUsername || 'admin',
             stats: {
-                totalUsers: users.length,
-                totalAgencies: agencies.length,
-                totalStores: stores.length,
-                totalUsages: usages.length
+                total_agencies: agencies.length,
+                total_users: users.length,
+                total_usages: usages.length,
+                total_stores: stores.length,
+                active_banners: 0
             },
-            recentUsages,
-            success: req.query.success,
-            error: req.query.error
+            recentUsages
         });
     } catch (error) {
-        console.error('관리자 대시보드 오류:', error);
-        res.render('admin/dashboard', {
-            title: '관리자 대시보드',
+        console.error('SaveCard 대시보드 오류:', error);
+        res.render('admin/savecard-dashboard', {
+            title: 'SaveCard 대시보드',
             adminUsername: req.session.adminUsername || 'admin',
-            stats: { totalUsers: 0, totalAgencies: 0, totalStores: 0, totalUsages: 0 },
-            recentUsages: [],
-            error: 'dashboard_error'
+            stats: { 
+                total_agencies: 0, 
+                total_users: 0, 
+                total_usages: 0, 
+                total_stores: 0,
+                active_banners: 0 
+            },
+            recentUsages: []
         });
     }
 });
