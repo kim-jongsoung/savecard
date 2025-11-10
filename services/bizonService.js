@@ -114,10 +114,7 @@ class BizonService {
             // 전화번호 포맷 정리 (하이픈 제거)
             const phoneNumber = to.replace(/[^0-9]/g, '');
 
-            // 바우처 URL
-            const voucherUrl = `https://www.guamsavecard.com/voucher/${voucherToken}`;
-
-            // 비즈고 API 정확한 요청 형식
+            // 비즈고 API 정확한 요청 형식 (승인받은 템플릿 그대로 사용)
             const requestBody = {
                 messageFlow: [
                     {
@@ -125,13 +122,15 @@ class BizonService {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
                             msgType: 'AT',  // 알림톡 텍스트
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
-                            text: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
+                            // 승인받은 템플릿 그대로 (변수 치환 없이)
+                            text: `[#{PRODUCT_NAME} 바우처]\n\n안녕하세요, #{NAME}님\n\n#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: #{PRODUCT_NAME}\n▶ 이용일: #{USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
                             button: [
                                 {
                                     type: 'WL',
                                     name: '바우처 보기',
-                                    urlMobile: voucherUrl,
-                                    urlPc: voucherUrl
+                                    // 템플릿 변수 사용
+                                    urlMobile: 'https://www.guamsavecard.com/voucher/#{TOKEN}',
+                                    urlPc: 'https://www.guamsavecard.com/voucher/#{TOKEN}'
                                 },
                                 {
                                     type: 'MD',
@@ -143,7 +142,15 @@ class BizonService {
                 ],
                 destinations: [
                     {
-                        to: phoneNumber
+                        to: phoneNumber,
+                        // 템플릿 변수 치환
+                        replaceWords: {
+                            '#{NAME}': name,
+                            '#{PLATFORM_NAME}': platformName,
+                            '#{PRODUCT_NAME}': productName,
+                            '#{USAGE_DATE}': usageDate,
+                            '#{TOKEN}': voucherToken
+                        }
                     }
                 ]
             };
@@ -157,8 +164,10 @@ class BizonService {
             console.log('✅ 바우처 알림톡 전송 성공:', {
                 to: phoneNumber,
                 name,
+                platformName,
                 productName,
-                voucherUrl,
+                usageDate,
+                voucherToken,
                 result: response.data
             });
 
