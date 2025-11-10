@@ -151,6 +151,9 @@ class BizonService {
                 ]
             };
 
+            // 요청 데이터 로그
+            console.log('📤 비즈고 API 요청:', JSON.stringify(requestBody, null, 2));
+            
             const response = await axios.post(
                 `${this.baseURL}/api/comm/v1/send/omni`,
                 requestBody,
@@ -163,9 +166,11 @@ class BizonService {
                 platformName,
                 productName,
                 usageDate,
-                voucherToken,
-                result: response.data
+                voucherToken
             });
+            
+            // 응답 데이터 상세 로그
+            console.log('📋 API 응답 상세:', JSON.stringify(response.data, null, 2));
 
             return {
                 success: true,
