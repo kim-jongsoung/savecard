@@ -24,11 +24,11 @@
                 </div>
             </div>
             
-            <!-- 하단: ERP 메뉴 + 공항픽업 (로고 너비만큼 들여쓰기) -->
-            <div class="d-flex align-items-center">
+            <!-- 중간: 즐길거리 ERP 메뉴 (로고 너비만큼 들여쓰기) -->
+            <div class="d-flex align-items-center mb-2">
                 <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
-                    <li class="nav-item"><span class="nav-section-label">ERP</span></li>
+                    <li class="nav-item"><span class="nav-section-label">즐길거리</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a></li>
@@ -40,6 +40,21 @@
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'settings' ? 'active' : '' %>" href="/admin/settings">설정</a></li>
                     <li class="nav-item"><span class="nav-divider">|</span></li>
                     <li class="nav-item"><a class="nav-link nav-link-pickup <%= currentPage === 'pickup' ? 'active' : '' %>" href="/pickup">공항픽업</a></li>
+                </ul>
+            </div>
+            
+            <!-- 하단: 호텔 ERP 메뉴 -->
+            <div class="d-flex align-items-center">
+                <div style="width: 120px; flex-shrink: 0;"></div>
+                <ul class="navbar-nav flex-row">
+                    <li class="nav-item"><span class="nav-section-label nav-section-hotel">호텔</span></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-rooms' ? 'active' : '' %>" href="/admin/hotel/rooms">객실RAG</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-inbox' ? 'active' : '' %>" href="/admin/hotel/inbox">인박스</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-reservations' ? 'active' : '' %>" href="/admin/hotel/reservations">예약관리</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-assignments' ? 'active' : '' %>" href="/admin/hotel/assignments">수배관리</a></li>
+                    <li class="nav-item"><span class="nav-divider">|</span></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-list' ? 'active' : '' %>" href="/admin/hotel/list">호텔관리</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-room-types' ? 'active' : '' %>" href="/admin/hotel/room-types">객실타입</a></li>
                 </ul>
             </div>
         </div>
@@ -68,7 +83,7 @@
     letter-spacing: -0.5px;
 }
 
-/* 섹션 라벨 (SaveCard, ERP) */
+/* 섹션 라벨 (SaveCard, 즐길거리, 호텔) */
 .nav-section-label {
     font-size: 0.8rem;
     font-weight: 700;
@@ -79,6 +94,12 @@
     margin-right: 0.5rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* 호텔 섹션 강조 */
+.nav-section-hotel {
+    background: #fff3e0;
+    color: #e65100;
 }
 
 /* 구분선 */
