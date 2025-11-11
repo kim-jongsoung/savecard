@@ -90,12 +90,12 @@ class BizonService {
             };
 
             console.log('📤 발급 코드 알림톡 API 요청:', JSON.stringify(requestBody, null, 2));
-            console.log('🔑 비즈고 설정:', {
-                baseURL: this.baseURL,
-                senderKey: this.senderKey,
-                senderPhone: this.senderPhone,
-                apiKey: this.apiKey ? '설정됨' : '❌ 없음'
-            });
+            console.log('🔑 비즈고 설정 (전체):');
+            console.log('  - Base URL:', this.baseURL);
+            console.log('  - API Key (전체):', this.apiKey);
+            console.log('  - Sender Key (전체):', this.senderKey);
+            console.log('  - Sender Phone:', this.senderPhone);
+            console.log('  - 요청 URL:', `${this.baseURL}/api/comm/v1/send/omni`);
 
             const response = await axios.post(
                 `${this.baseURL}/api/comm/v1/send/omni`,
