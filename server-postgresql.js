@@ -5728,17 +5728,19 @@ app.post('/admin/issue-codes/send-alimtalk', requireAuth, async (req, res) => {
                     // 전달 완료 표시 업데이트 + 메모에 이름/연락처 저장
                     const memoText = `알림톡 전송: ${name} / ${phone}`;
                     await pool.query(
-                        'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), user_name = $1, user_phone = $2, notes = $3 WHERE code = $4',
-                        [name, phone, memoText, code]
+                        'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW(), notes = COALESCE(notes, \'\') || $1 WHERE code = $2',
+                        [`\n${memoText}`, code]
                     );
                     
                     console.log(`✅ 알림톡 전송 성공: ${name} (${phone}) - 코드: ${code}`);
+                    console.log(`📋 API 응답:`, JSON.stringify(result.result, null, 2));
                     
                     res.json({
                         success: true,
                         message: '알림톡이 전송되었습니다.'
                     });
                 } else {
+                    console.error(`❌ 알림톡 전송 실패:`, result);
                     res.status(500).json({
                         success: false,
                         message: result.message || '알림톡 전송에 실패했습니다.'
