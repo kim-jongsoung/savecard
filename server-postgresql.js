@@ -5777,6 +5777,36 @@ app.post('/admin/issue-codes/send-alimtalk', requireAuth, async (req, res) => {
     }
 });
 
+// 템플릿 조회 API (디버깅용)
+app.get('/admin/alimtalk/template/:templateCode', requireAuth, async (req, res) => {
+    try {
+        const { templateCode } = req.params;
+        
+        console.log(`🔍 템플릿 조회 요청: ${templateCode}`);
+        
+        const result = await bizonService.getTemplate(templateCode);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                data: result.data
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: '템플릿 조회 실패',
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('❌ 템플릿 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '템플릿 조회 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 인박스 페이지 (파싱·검수·등록 통합)
 app.get('/admin/inbox', requireAuth, async (req, res) => {
     try {

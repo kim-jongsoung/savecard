@@ -246,6 +246,36 @@ class BizonService {
     }
 
     /**
+     * 템플릿 조회 (디버깅용)
+     * @param {string} templateCode - 템플릿 코드 (예: SAVECARD_CODE_001)
+     */
+    async getTemplate(templateCode) {
+        try {
+            const url = `${this.baseURL}/api/comm/v1/center/alimtalk/template?senderKey=${this.senderKey}&templateCode=${templateCode}`;
+            
+            console.log('🔍 템플릿 조회 요청:', { templateCode, senderKey: this.senderKey });
+            
+            const response = await axios.get(url, {
+                headers: this.getHeaders()
+            });
+
+            console.log('✅ 템플릿 조회 성공:', JSON.stringify(response.data, null, 2));
+
+            return {
+                success: true,
+                data: response.data
+            };
+
+        } catch (error) {
+            console.error('❌ 템플릿 조회 실패:', error.response?.data || error.message);
+            return {
+                success: false,
+                error: error.response?.data || error.message
+            };
+        }
+    }
+
+    /**
      * SMS 대체 발송 (알림톡 실패 시)
      */
     async sendSMS({ to, text }) {
