@@ -11,6 +11,19 @@ class BizonService {
         this.apiKey = process.env.BIZON_API_KEY;  // API Key (Authorization 헤더용)
         this.senderKey = process.env.BIZON_SENDER_KEY;  // 카카오 발신프로필키
         this.senderPhone = process.env.BIZON_SENDER_PHONE;
+        
+        // 초기화 로그 (서버 시작 시 한 번만)
+        console.log('🔧 BizonService 초기화:');
+        console.log('  - Base URL:', this.baseURL);
+        console.log('  - API Key:', this.apiKey ? `${this.apiKey.substring(0, 15)}...` : '❌ 설정되지 않음');
+        console.log('  - Sender Key:', this.senderKey ? `${this.senderKey.substring(0, 20)}...` : '❌ 설정되지 않음');
+        console.log('  - Sender Phone:', this.senderPhone || '❌ 설정되지 않음');
+        
+        // 필수 설정 체크
+        if (!this.apiKey || !this.senderKey || !this.senderPhone) {
+            console.error('❌ 비즈고 설정 오류: 필수 환경변수가 설정되지 않았습니다!');
+            console.error('   필요한 환경변수: BIZON_API_KEY, BIZON_SENDER_KEY, BIZON_SENDER_PHONE');
+        }
     }
 
     /**
@@ -76,18 +89,26 @@ class BizonService {
                 ]
             };
 
+            console.log('📤 발급 코드 알림톡 API 요청:', JSON.stringify(requestBody, null, 2));
+            console.log('🔑 비즈고 설정:', {
+                baseURL: this.baseURL,
+                senderKey: this.senderKey,
+                senderPhone: this.senderPhone,
+                apiKey: this.apiKey ? '설정됨' : '❌ 없음'
+            });
+
             const response = await axios.post(
                 `${this.baseURL}/api/comm/v1/send/omni`,
                 requestBody,
                 { headers: this.getHeaders() }
             );
 
-            console.log('✅ 알림톡 전송 성공:', {
+            console.log('✅ 발급 코드 알림톡 전송 성공:', {
                 to: phoneNumber,
                 name,
-                code,
-                result: response.data
+                code
             });
+            console.log('📋 API 응답 상세:', JSON.stringify(response.data, null, 2));
 
             return {
                 success: true,
