@@ -122,15 +122,15 @@ class BizonService {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
                             msgType: 'AT',  // 알림톡 텍스트
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
-                            // 템플릿 원본 그대로 (비즈고 변수 형식: ${변수명})
-                            text: `[\${PRODUCT_NAME} 바우처]\n\n안녕하세요, \${NAME}님\n\n\${PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: \${PRODUCT_NAME}\n▶ 이용일: \${USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
+                            // 템플릿 원본 그대로 (비즈고 변수 형식: #{변수명})
+                            text: `[#{PRODUCT_NAME} 바우처]\n\n안녕하세요, #{NAME}님\n\n#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: #{PRODUCT_NAME}\n▶ 이용일: #{USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
                             button: [
                                 {
                                     type: 'WL',
                                     name: '바우처보기',
-                                    // 버튼 URL에 변수 사용 가능 (비즈고 형식: ${변수})
-                                    urlMobile: `https://www.guamsavecard.com/voucher/\${TOKEN}`,
-                                    urlPc: `https://www.guamsavecard.com/voucher/\${TOKEN}`
+                                    // 버튼 URL에 변수 사용 가능 (예시: http://kakao.com/#{변수})
+                                    urlMobile: `https://www.guamsavecard.com/voucher/#{TOKEN}`,
+                                    urlPc: `https://www.guamsavecard.com/voucher/#{TOKEN}`
                                 }
                             ]
                         }
