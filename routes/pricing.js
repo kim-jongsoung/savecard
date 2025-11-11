@@ -267,7 +267,7 @@ module.exports = (pool) => {
                 platform_name,
                 vendor_id || null,
                 product_name,
-                commission_rate || 15,
+                commission_rate ?? 15,  // 0% 허용 (null/undefined만 15로 대체)
                 packageOptionsJsonStr, // JSON 문자열로 전달, ::jsonb로 명시적 캐스팅
                 notes || null
             ]);
@@ -406,7 +406,7 @@ module.exports = (pool) => {
                 platform_name,
                 vendor_id || null,
                 product_name,
-                commission_rate || 15,
+                commission_rate ?? 15,  // 0% 허용 (null/undefined만 15로 대체)
                 packageOptionsJsonStr, // JSON 문자열로 전달
                 notes || null,
                 id
