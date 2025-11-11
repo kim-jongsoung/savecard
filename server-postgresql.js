@@ -12707,8 +12707,8 @@ app.post('/api/reservations/:id/confirm', requireAuth, async (req, res) => {
             // 바우처 토큰 생성 (없으면)
             let voucherToken = reservation.voucher_token;
             if (!voucherToken) {
-                voucherToken = crypto.randomBytes(32).toString('hex');
-                console.log('🎫 바우처 토큰 생성:', voucherToken);
+                voucherToken = crypto.randomBytes(12).toString('hex');
+                console.log('🎫 바우처 토큰 생성 (24자):', voucherToken);
             }
             
             // 예약 상태를 '확정완료'로 변경 + 바우처 토큰 저장
@@ -12791,7 +12791,7 @@ app.post('/api/vouchers/auto-generate/:reservationId', requireAuth, async (req, 
         // 바우처 토큰 생성 (없으면)
         let voucherToken = reservation.voucher_token;
         if (!voucherToken) {
-            voucherToken = crypto.randomBytes(32).toString('hex');
+            voucherToken = crypto.randomBytes(12).toString('hex');
             
             await pool.query(`
                 UPDATE reservations 
@@ -13466,8 +13466,8 @@ app.post('/api/vouchers/regenerate/:reservationId', requireAuth, async (req, res
     try {
         const { reservationId } = req.params;
         
-        // 새 토큰 생성
-        const newToken = crypto.randomBytes(32).toString('hex');
+        // 새 토큰 생성 (12바이트 = 24자)
+        const newToken = crypto.randomBytes(12).toString('hex');
         
         await pool.query(`
             UPDATE reservations 
