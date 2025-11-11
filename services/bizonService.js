@@ -44,8 +44,8 @@ class BizonService {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
                             msgType: 'AL',  // 알림톡 텍스트 (AL: 알림톡, AI: 알림톡 이미지)
                             templateCode: 'ISSUE_CODE_001',  // 템플릿 코드
-                            // 실제 데이터를 넣어서 전송
-                            text: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, ${name}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: ${code}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: ${expireDate}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
+                            // 템플릿 원본 그대로 (#{변수명} 형식)
+                            text: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, #{NAME}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: #{CODE}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: #{EXPIRE_DATE}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
                             button: [
                                 {
                                     type: 'WL',
@@ -67,6 +67,12 @@ class BizonService {
                     {
                         to: phoneNumber,
                         ref: code,  // 추적용 참조값 (발급 코드)
+                        // 변수 치환 (키는 변수명만, #{} 제외)
+                        replaceWords: {
+                            'NAME': name,
+                            'CODE': code,
+                            'EXPIRE_DATE': expireDate
+                        },
                         // 알림톡 실패 시 자동 SMS 발송
                         fallback: {
                             from: this.senderPhone,
@@ -99,10 +105,26 @@ class BizonService {
         } catch (error) {
             console.error('❌ 알림톡 전송 실패:', error.response?.data || error.message);
             
+            // 에러 메시지 정리
+            let errorMessage = '알림톡 전송에 실패했습니다.';
+            if (error.response?.data) {
+                // 비즈고 API 에러 응답 처리
+                const errorData = error.response.data;
+                if (errorData.message) {
+                    errorMessage += ` (${errorData.message})`;
+                } else if (errorData.error) {
+                    errorMessage += ` (${errorData.error})`;
+                } else {
+                    errorMessage += ` (상태: ${error.response.status})`;
+                }
+            } else if (error.message) {
+                errorMessage += ` (${error.message})`;
+            }
+            
             return {
                 success: false,
                 error: error.response?.data || error.message,
-                message: '알림톡 전송에 실패했습니다.'
+                message: errorMessage
             };
         }
     }
@@ -130,15 +152,15 @@ class BizonService {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
                             msgType: 'AL',  // 알림톡 텍스트 (AL: 알림톡, AI: 알림톡 이미지)
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
-                            // 실제 데이터를 넣어서 전송
-                            text: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
+                            // 템플릿 원본 그대로 (#{변수명} 형식)
+                            text: `[#{PRODUCT_NAME} 바우처]\n\n안녕하세요, #{NAME}님\n\n#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: #{PRODUCT_NAME}\n▶ 이용일: #{USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
                             button: [
                                 {
                                     type: 'WL',
                                     name: '바우처보기',
-                                    // 실제 URL 전송
-                                    urlMobile: `https://www.guamsavecard.com/voucher/${voucherToken}`,
-                                    urlPc: `https://www.guamsavecard.com/voucher/${voucherToken}`
+                                    // 버튼 URL도 #{변수명} 형식
+                                    urlMobile: `https://www.guamsavecard.com/voucher/#{TOKEN}`,
+                                    urlPc: `https://www.guamsavecard.com/voucher/#{TOKEN}`
                                 }
                             ]
                         }
@@ -148,6 +170,14 @@ class BizonService {
                     {
                         to: phoneNumber,
                         ref: voucherToken,  // 추적용 참조값 (바우처 토큰)
+                        // 변수 치환 (키는 변수명만, #{} 제외)
+                        replaceWords: {
+                            'PRODUCT_NAME': productName,
+                            'NAME': name,
+                            'PLATFORM_NAME': platformName,
+                            'USAGE_DATE': usageDate,
+                            'TOKEN': voucherToken
+                        },
                         // 알림톡 실패 시 자동 SMS 발송
                         fallback: {
                             from: this.senderPhone,
@@ -188,10 +218,26 @@ class BizonService {
         } catch (error) {
             console.error('❌ 바우처 알림톡 전송 실패:', error.response?.data || error.message);
             
+            // 에러 메시지 정리
+            let errorMessage = '바우처 알림톡 전송에 실패했습니다.';
+            if (error.response?.data) {
+                // 비즈고 API 에러 응답 처리
+                const errorData = error.response.data;
+                if (errorData.message) {
+                    errorMessage += ` (${errorData.message})`;
+                } else if (errorData.error) {
+                    errorMessage += ` (${errorData.error})`;
+                } else {
+                    errorMessage += ` (상태: ${error.response.status})`;
+                }
+            } else if (error.message) {
+                errorMessage += ` (${error.message})`;
+            }
+            
             return {
                 success: false,
                 error: error.response?.data || error.message,
-                message: '바우처 알림톡 전송에 실패했습니다.'
+                message: errorMessage
             };
         }
     }
