@@ -24,12 +24,12 @@ class BizonService {
     }
 
     /**
-     * 발급 코드 알림톡 전송
+     * 발급 코드 알림톡 전송 (SAVECARD_CODE_001 템플릿)
      * @param {Object} params - 전송 파라미터
      * @param {string} params.to - 수신자 전화번호 (01012345678)
      * @param {string} params.name - 고객 이름
      * @param {string} params.code - 발급 코드
-     * @param {string} params.expireDate - 유효기간
+     * @param {string} params.expireDate - 유효기간 (사용하지 않음 - 템플릿에 없음)
      */
     async sendIssueCodeAlimtalk({ to, name, code, expireDate }) {
         try {
@@ -43,21 +43,15 @@ class BizonService {
                         alimtalk: {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
                             msgType: 'AT',  // 알림톡 (비즈고 API: AT)
-                            templateCode: 'ISSUE_CODE_001',  // 템플릿 코드
+                            templateCode: 'SAVECARD_CODE_001',  // 템플릿 코드
                             // 템플릿 원본 그대로 (#{변수명} 형식)
-                            text: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, #{NAME}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: #{CODE}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: #{EXPIRE_DATE}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
+                            text: `[괌세이브카드 발급 코드 안내]\n\n안녕하세요, #{NAME}님!\n**구매하신 괌 즐길거리 상품의 혜택**으로 괌세이브카드 발급 코드를 안내해 드립니다.\n괌세이브카드 발급 절차를 위한 코드를 안내해 드립니다.\n\n**[1단계: 발급 코드]**\n  코드: #{CODE}\n\n**[2단계: QR 발급]**\n 웹사이트에 접속하여 위 코드를 입력하신 후, 세이브카드 QR을 발급받으세요.\n\n**[3단계: 현지 이용]**\n 괌 현지 매장 이용 시 발급받으신 QR을 제시해 주시면 됩니다.\n\n감사합니다.\n\n- 이 메시지는 구매하신 상품(서비스)의 사은품으로 지급된 쿠폰 안내 메시지입니다.`,
                             button: [
                                 {
                                     type: 'WL',
-                                    name: '카드 발급하기',
+                                    name: '코드등록및발급하기',
                                     urlMobile: 'https://www.guamsavecard.com/register',
                                     urlPc: 'https://www.guamsavecard.com/register'
-                                },
-                                {
-                                    type: 'WL',
-                                    name: '가맹점 보기',
-                                    urlMobile: 'https://www.guamsavecard.com/stores',
-                                    urlPc: 'https://www.guamsavecard.com/stores'
                                 }
                             ]
                         }
@@ -70,13 +64,12 @@ class BizonService {
                         // 변수 치환 (키는 변수명만, #{} 제외)
                         replaceWords: {
                             'NAME': name,
-                            'CODE': code,
-                            'EXPIRE_DATE': expireDate
+                            'CODE': code
                         },
                         // 알림톡 실패 시 자동 SMS 발송
                         fallback: {
                             from: this.senderPhone,
-                            text: `[괌세이브카드 발급코드]\n\n${name}님, 발급코드: ${code}\n\n유효기간: ${expireDate}까지\n발급하기: https://www.guamsavecard.com/register`,
+                            text: `[괌세이브카드 발급코드]\n\n${name}님, 발급코드: ${code}\n\n발급하기: https://www.guamsavecard.com/register`,
                             type: 'LMS'
                         }
                     }
