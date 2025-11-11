@@ -32,7 +32,7 @@ class BizonService {
     getHeaders() {
         return {
             'Content-Type': 'application/json',
-            'Authorization': `ApiKey ${this.apiKey}`  // "ApiKey" 접두사 추가
+            'Authorization': this.apiKey  // API Key만 전달 (원래 방식)
         };
     }
 
