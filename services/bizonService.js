@@ -42,8 +42,9 @@ class BizonService {
                     {
                         alimtalk: {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
-                            msgType: 'AT',  // 알림톡 텍스트
-                            templateCode: 'ISSUE_CODE_001',  // 템플릿 코드 (실제 승인받은 코드로 변경 필요)
+                            msgType: 'AL',  // 알림톡 텍스트 (AL: 알림톡, AI: 알림톡 이미지)
+                            templateCode: 'ISSUE_CODE_001',  // 템플릿 코드
+                            // 실제 데이터를 넣어서 전송
                             text: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, ${name}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: ${code}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: ${expireDate}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
                             button: [
                                 {
@@ -64,7 +65,14 @@ class BizonService {
                 ],
                 destinations: [
                     {
-                        to: phoneNumber
+                        to: phoneNumber,
+                        ref: code,  // 추적용 참조값 (발급 코드)
+                        // 알림톡 실패 시 자동 SMS 발송
+                        fallback: {
+                            from: this.senderPhone,
+                            text: `[괌세이브카드 발급코드]\n\n${name}님, 발급코드: ${code}\n\n유효기간: ${expireDate}까지\n발급하기: https://www.guamsavecard.com/register`,
+                            type: 'LMS'
+                        }
                     }
                 ]
             };
@@ -120,17 +128,17 @@ class BizonService {
                     {
                         alimtalk: {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
-                            msgType: 'AT',  // 알림톡 텍스트
+                            msgType: 'AL',  // 알림톡 텍스트 (AL: 알림톡, AI: 알림톡 이미지)
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
-                            // 템플릿 원본 그대로 (비즈고 변수 형식: #{변수명})
-                            text: `[#{PRODUCT_NAME} 바우처]\n\n안녕하세요, #{NAME}님\n\n#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: #{PRODUCT_NAME}\n▶ 이용일: #{USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
+                            // 실제 데이터를 넣어서 전송
+                            text: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
                             button: [
                                 {
                                     type: 'WL',
                                     name: '바우처보기',
-                                    // 버튼 URL에 변수 사용 가능 (예시: http://kakao.com/#{변수})
-                                    urlMobile: `https://www.guamsavecard.com/voucher/#{TOKEN}`,
-                                    urlPc: `https://www.guamsavecard.com/voucher/#{TOKEN}`
+                                    // 실제 URL 전송
+                                    urlMobile: `https://www.guamsavecard.com/voucher/${voucherToken}`,
+                                    urlPc: `https://www.guamsavecard.com/voucher/${voucherToken}`
                                 }
                             ]
                         }
@@ -139,13 +147,12 @@ class BizonService {
                 destinations: [
                     {
                         to: phoneNumber,
-                        // 변수 치환 (키는 변수명만, ${} 제외)
-                        replaceWords: {
-                            'NAME': name,
-                            'PLATFORM_NAME': platformName,
-                            'PRODUCT_NAME': productName,
-                            'USAGE_DATE': usageDate,
-                            'TOKEN': voucherToken
+                        ref: voucherToken,  // 추적용 참조값 (바우처 토큰)
+                        // 알림톡 실패 시 자동 SMS 발송
+                        fallback: {
+                            from: this.senderPhone,
+                            text: `[괌세이브카드 바우처]\n\n${name}님, ${productName} 바우처가 발급되었습니다.\n\n이용일: ${usageDate}\n바우처 확인: https://www.guamsavecard.com/voucher/${voucherToken}`,
+                            type: 'LMS'  // 긴 문자는 LMS
                         }
                     }
                 ]
