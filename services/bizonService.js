@@ -59,14 +59,16 @@ class BizonService {
                             templateCode: 'SAVECARD_CODE_001',  // 템플릿 코드
                             // ✅ 치환된 실제 값을 직접 입력 (API 문서 Footnote[5])
                             text: `[괌세이브카드 발급 코드 안내]\n\n안녕하세요, ${name}님!\n**구매하신 괌 즐길거리 상품의 혜택**으로 괌세이브카드 발급 코드를 안내해 드립니다.\n괌세이브카드 발급 절차를 위한 코드를 안내해 드립니다.\n\n**[1단계: 발급 코드]**\n  코드: ${code}\n\n**[2단계: QR 발급]**\n 웹사이트에 접속하여 위 코드를 입력하신 후, 세이브카드 QR을 발급받으세요.\n\n**[3단계: 현지 이용]**\n 괌 현지 매장 이용 시 발급받으신 QR을 제시해 주시면 됩니다.\n\n감사합니다.\n\n- 이 메시지는 구매하신 상품(서비스)의 사은품으로 지급된 쿠폰 안내 메시지입니다.`,
-                            button: [
-                                {
-                                    type: 'WL',
-                                    name: '코드등록및발급하기',
-                                    urlMobile: 'https://www.guamsavecard.com/register',
-                                    urlPc: 'https://www.guamsavecard.com/register'
-                                }
-                            ]
+                            attachment: {
+                                button: [
+                                    {
+                                        type: 'WL',
+                                        name: '코드등록및발급하기',
+                                        urlMobile: 'https://www.guamsavecard.com/register',
+                                        urlPc: 'https://www.guamsavecard.com/register'
+                                    }
+                                ]
+                            }
                         }
                     }
                 ],
@@ -164,15 +166,17 @@ class BizonService {
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
                             // ✅ 치환된 실제 값을 직접 입력 (#{변수} 아님!)
                             text: `[${productName} 바우처]\n\n안녕하세요, ${name}님\n\n${platformName}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: ${productName}\n▶ 이용일: ${usageDate}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
-                            button: [
-                                {
-                                    type: 'WL',
-                                    name: '바우처보기',
-                                    // ✅ 버튼 URL도 실제 값 사용
-                                    urlMobile: `https://www.guamsavecard.com/voucher/${voucherToken}`,
-                                    urlPc: `https://www.guamsavecard.com/voucher/${voucherToken}`
-                                }
-                            ]
+                            attachment: {
+                                button: [
+                                    {
+                                        type: 'WL',
+                                        name: '바우처보기',
+                                        // ✅ 버튼 URL도 실제 값 사용
+                                        urlMobile: `https://www.guamsavecard.com/voucher/${voucherToken}`,
+                                        urlPc: `https://www.guamsavecard.com/voucher/${voucherToken}`
+                                    }
+                                ]
+                            }
                         }
                     }
                 ],
