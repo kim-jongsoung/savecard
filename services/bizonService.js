@@ -42,7 +42,7 @@ class BizonService {
                     {
                         alimtalk: {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
-                            msgType: 'AL',  // 알림톡 텍스트 (AL: 알림톡, AI: 알림톡 이미지)
+                            msgType: 'AT',  // 알림톡 (비즈고 API: AT)
                             templateCode: 'ISSUE_CODE_001',  // 템플릿 코드
                             // 템플릿 원본 그대로 (#{변수명} 형식)
                             text: `[괌세이브카드] 발급코드 안내\n\n안녕하세요, #{NAME}님!\n괌세이브카드 발급코드를 안내드립니다.\n\n━━━━━━━━━━━━━━━━━━\n📌 발급코드: #{CODE}\n━━━━━━━━━━━━━━━━━━\n\n위 코드로 괌세이브카드를 발급받으실 수 있습니다.\n\n※ 발급코드는 1회만 사용 가능합니다.\n※ 발급 유효기간: #{EXPIRE_DATE}까지\n\n문의사항이 있으시면 언제든 연락주세요.\n감사합니다.`,
@@ -150,7 +150,7 @@ class BizonService {
                     {
                         alimtalk: {
                             senderKey: this.senderKey,  // 카카오 발신프로필키
-                            msgType: 'AL',  // 알림톡 텍스트 (AL: 알림톡, AI: 알림톡 이미지)
+                            msgType: 'AT',  // 알림톡 (비즈고 API: AT)
                             templateCode: 'VOUCHER_001',  // 템플릿 코드
                             // 템플릿 원본 그대로 (#{변수명} 형식)
                             text: `[#{PRODUCT_NAME} 바우처]\n\n안녕하세요, #{NAME}님\n\n#{PLATFORM_NAME}에서 예약하신 상품의 바우처가 발급되었습니다.\n\n▶ 상품명: #{PRODUCT_NAME}\n▶ 이용일: #{USAGE_DATE}\n\n아래 버튼을 눌러 바우처와 이용시 안내사항을 꼭 확인하세요.`,
