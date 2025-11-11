@@ -13,13 +13,20 @@ const cron = require('node-cron');
 const axios = require('axios');
 const XLSX = require('xlsx');
 
-// 비즈온 서비스 조건부 로드 (SDK가 있을 때만)
+// 비즈고 서비스 초기화 (싱글톤 인스턴스)
 let bizonService = null;
 try {
     bizonService = require('./services/bizonService');
-    console.log('✅ 비즈온 알림톡 서비스 로드 성공');
+    console.log('✅ 비즈고 알림톡 서비스 로드 성공');
+    console.log('📋 비즈고 설정:', {
+        baseURL: bizonService.baseURL,
+        apiKey: bizonService.apiKey ? `${bizonService.apiKey.substring(0, 20)}...` : '❌ 없음',
+        senderKey: bizonService.senderKey ? `${bizonService.senderKey.substring(0, 20)}...` : '❌ 없음',
+        senderPhone: bizonService.senderPhone || '❌ 없음'
+    });
 } catch (error) {
-    console.log('⚠️  비즈온 SDK 미설치 - 알림톡 기능 비활성화');
+    console.error('❌ 비즈고 서비스 초기화 실패:', error.message);
+    bizonService = null;
 }
 
 // nodemailer 명시적 로드 (Railway 배포용 - v6.9.15)
