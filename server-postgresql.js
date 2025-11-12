@@ -6443,6 +6443,25 @@ async function matchPricingFromRAG(platform_name, product_name, package_type) {
         
         if (pricingResult.rows.length === 0) {
             console.log('⚠️ 요금 RAG에 매칭되는 상품 없음');
+            
+            // 🔍 디버그: 유사한 데이터 검색
+            const similarResult = await pool.query(`
+                SELECT id, platform_name, product_name, is_active
+                FROM product_pricing
+                WHERE (platform_name ILIKE $1 OR product_name ILIKE $2)
+                AND is_active = true
+                LIMIT 5
+            `, [`%${platform_name}%`, `%${product_name}%`]);
+            
+            if (similarResult.rows.length > 0) {
+                console.log('💡 유사한 등록 데이터:');
+                similarResult.rows.forEach((row, idx) => {
+                    console.log(`   ${idx + 1}. [${row.id}] "${row.platform_name}" / "${row.product_name}"`);
+                });
+            } else {
+                console.log('💡 유사한 데이터도 없음. 요금 RAG에 데이터를 등록하세요.');
+            }
+            
             return null;
         }
         
