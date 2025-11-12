@@ -3332,10 +3332,14 @@
         
         // 전송 시간 업데이트 (YY/MM/DD HH:mm 형식) - 모든 전송 기록 표시
         function updateSendTimeHistory(method, records) {
+            console.log(`🔄 updateSendTimeHistory 호출: method=${method}, records=`, records);
+            
             const elementId = method === 'kakao' ? 'alimtalk-last-sent' : 
                              method === 'savecard' ? 'savecard-last-sent' :
                              `${method}-last-sent`;
             const element = document.getElementById(elementId);
+            
+            console.log(`📍 element 찾기: ${elementId}`, element);
             
             if (!element) {
                 console.warn(`⚠️ 전송 시간 표시 요소를 찾을 수 없습니다: ${elementId}`);
@@ -3343,6 +3347,8 @@
             }
             
             if (records && records.length > 0) {
+                console.log(`📝 ${records.length}개의 기록 처리 중...`);
+                
                 // 모든 전송 기록을 한 줄씩 표시
                 const lines = records.slice(0, 5).map(record => { // 최대 5개까지만 표시
                     const sentDate = new Date(record.sent_at);
@@ -3366,13 +3372,24 @@
                     return formatted;
                 });
                 
+                console.log(`📄 생성된 라인:`, lines);
+                
                 // 여러 줄로 표시 (줄바꿈으로 구분)
                 const spanElement = element.querySelector('span');
-                spanElement.innerHTML = lines.join('<br>');
+                
+                if (!spanElement) {
+                    console.error(`❌ span 요소를 찾을 수 없습니다! element:`, element);
+                    // span이 없으면 직접 element에 추가
+                    element.innerHTML = `<i class="bi bi-check-circle"></i> <span>${lines.join('<br>')}</span>`;
+                } else {
+                    spanElement.innerHTML = lines.join('<br>');
+                }
+                
                 element.style.display = 'block';
                 
-                console.log(`✅ ${method} 전송 기록 업데이트: ${records.length}건`);
+                console.log(`✅ ${method} 전송 기록 업데이트 완료: ${records.length}건`);
             } else {
+                console.log(`ℹ️ ${method} 기록 없음`);
                 element.style.display = 'none';
             }
         }

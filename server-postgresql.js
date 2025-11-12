@@ -13588,18 +13588,42 @@ app.post('/api/vouchers/send-savecard/:reservationId', requireAuth, async (req, 
                     `);
                     
                     if (tableExists.rows[0].exists) {
-                        await pool.query(`
-                            INSERT INTO voucher_sends (
-                                reservation_id, voucher_token, send_method, recipient,
-                                sent_by, status, notes
-                            ) VALUES ($1, $2, 'savecard', $3, $4, 'sent', $5)
-                        `, [
-                            reservationId,
-                            reservation.voucher_token || '',
-                            reservation.phone,
-                            req.session.adminName || req.session.adminUsername,
-                            `발급코드: ${issueCode}`
-                        ]);
+                        // notes 컬럼 존재 여부 확인
+                        const notesColumnCheck = await pool.query(`
+                            SELECT column_name 
+                            FROM information_schema.columns 
+                            WHERE table_name = 'voucher_sends' 
+                            AND column_name = 'notes'
+                        `);
+                        
+                        const hasNotesColumn = notesColumnCheck.rows.length > 0;
+                        
+                        if (hasNotesColumn) {
+                            await pool.query(`
+                                INSERT INTO voucher_sends (
+                                    reservation_id, voucher_token, send_method, recipient,
+                                    sent_by, status, notes
+                                ) VALUES ($1, $2, 'savecard', $3, $4, 'sent', $5)
+                            `, [
+                                reservationId,
+                                reservation.voucher_token || '',
+                                reservation.phone,
+                                req.session.adminName || req.session.adminUsername,
+                                `발급코드: ${issueCode}`
+                            ]);
+                        } else {
+                            await pool.query(`
+                                INSERT INTO voucher_sends (
+                                    reservation_id, voucher_token, send_method, recipient,
+                                    sent_by, status
+                                ) VALUES ($1, $2, 'savecard', $3, $4, 'sent')
+                            `, [
+                                reservationId,
+                                reservation.voucher_token || '',
+                                reservation.phone,
+                                req.session.adminName || req.session.adminUsername
+                            ]);
+                        }
                         console.log('✅ 세이브카드 전송 기록 저장 완료');
                     }
                 } catch (historyError) {
@@ -13647,7 +13671,19 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
     try {
         const { reservationId } = req.params;
         
-        const result = await pool.query(`
+        // 컬럼 존재 여부 확인
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'voucher_sends' 
+            AND column_name IN ('viewed_at', 'notes')
+        `);
+        
+        const hasViewedAt = columnCheck.rows.some(row => row.column_name === 'viewed_at');
+        const hasNotes = columnCheck.rows.some(row => row.column_name === 'notes');
+        
+        // 동적으로 SELECT 쿼리 생성
+        let selectQuery = `
             SELECT 
                 id,
                 send_method as method,
@@ -13661,12 +13697,14 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
                 recipient,
                 status,
                 sent_at,
-                viewed_at,
-                notes
+                ${hasViewedAt ? 'viewed_at' : 'NULL as viewed_at'},
+                ${hasNotes ? 'notes' : 'NULL as notes'}
             FROM voucher_sends
             WHERE reservation_id = $1
             ORDER BY sent_at DESC
-        `, [reservationId]);
+        `;
+        
+        const result = await pool.query(selectQuery, [reservationId]);
         
         res.json({
             success: true,
@@ -15191,18 +15229,19 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
             });
         }
         
-        // viewed_at 컬럼 존재 확인
+        // viewed_at, notes 컬럼 존재 확인
         const columnCheck = await pool.query(`
             SELECT column_name 
             FROM information_schema.columns 
             WHERE table_name = 'voucher_sends' 
-            AND column_name = 'viewed_at'
+            AND column_name IN ('viewed_at', 'notes')
         `);
         
-        const hasViewedAt = columnCheck.rows.length > 0;
+        const hasViewedAt = columnCheck.rows.some(row => row.column_name === 'viewed_at');
+        const hasNotes = columnCheck.rows.some(row => row.column_name === 'notes');
         
-        // 전송 기록 조회 (viewed_at 컬럼 조건부 포함)
-        const historyQuery = hasViewedAt ? `
+        // 전송 기록 조회 (viewed_at, notes 컬럼 조건부 포함)
+        const historyQuery = `
             SELECT 
                 id,
                 send_method,
@@ -15210,25 +15249,10 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
                 subject,
                 status,
                 sent_at,
-                viewed_at,
+                ${hasViewedAt ? 'viewed_at' : 'NULL as viewed_at'},
                 sent_by,
                 error_message,
-                notes
-            FROM voucher_sends
-            WHERE reservation_id = $1
-            ORDER BY sent_at DESC
-        ` : `
-            SELECT 
-                id,
-                send_method,
-                recipient,
-                subject,
-                status,
-                sent_at,
-                NULL as viewed_at,
-                sent_by,
-                error_message,
-                notes
+                ${hasNotes ? 'notes' : 'NULL as notes'}
             FROM voucher_sends
             WHERE reservation_id = $1
             ORDER BY sent_at DESC
