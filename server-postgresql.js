@@ -13462,6 +13462,165 @@ app.post('/api/vouchers/send-sms/:reservationId', requireAuth, async (req, res) 
     }
 });
 
+// 세이브카드 발급 코드 생성 및 알림톡 전송 API
+app.post('/api/vouchers/send-savecard/:reservationId', requireAuth, async (req, res) => {
+    try {
+        const { reservationId } = req.params;
+        
+        console.log('💳 세이브카드 발급 코드 생성 및 알림톡 전송:', reservationId);
+        
+        // 예약 정보 조회
+        const result = await pool.query(`
+            SELECT * FROM reservations WHERE id = $1
+        `, [reservationId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        const reservation = result.rows[0];
+        
+        // 전화번호 확인
+        if (!reservation.phone) {
+            return res.status(400).json({
+                success: false,
+                message: '예약자 전화번호가 없습니다.'
+            });
+        }
+        
+        // 발급 코드 생성 (a1234b 형식, 6자리)
+        let issueCode;
+        let isUnique = false;
+        let attempts = 0;
+        
+        while (!isUnique && attempts < 10) {
+            const letters = 'abcdefghijklmnopqrstuvwxyz';
+            const numbers = '0123456789';
+            
+            const firstLetter = letters[Math.floor(Math.random() * letters.length)];
+            const lastLetter = letters[Math.floor(Math.random() * letters.length)];
+            const middleNumbers = Array.from({length: 4}, () => 
+                numbers[Math.floor(Math.random() * numbers.length)]
+            ).join('');
+            
+            issueCode = firstLetter + middleNumbers + lastLetter;
+            
+            // 중복 확인
+            const duplicateCheck = await pool.query(
+                'SELECT id FROM issue_codes WHERE code = $1',
+                [issueCode]
+            );
+            
+            if (duplicateCheck.rows.length === 0) {
+                isUnique = true;
+            }
+            attempts++;
+        }
+        
+        if (!isUnique) {
+            return res.status(500).json({
+                success: false,
+                message: '고유한 코드 생성에 실패했습니다. 다시 시도해주세요.'
+            });
+        }
+        
+        console.log('✅ 발급 코드 생성:', issueCode);
+        
+        // issue_codes 테이블에 저장
+        const notes = `예약 ID: ${reservationId} | ${reservation.korean_name} | ${reservation.phone}`;
+        const codeResult = await pool.query(
+            'INSERT INTO issue_codes (code, user_name, user_phone, notes) VALUES ($1, $2, $3, $4) RETURNING *',
+            [issueCode, reservation.korean_name, reservation.phone, notes]
+        );
+        
+        console.log('✅ 발급 코드 DB 저장 완료');
+        
+        // 비즈온 서비스로 알림톡 전송
+        if (bizonService) {
+            const alimtalkResult = await bizonService.sendIssueCodeAlimtalk({
+                to: reservation.phone,
+                name: reservation.korean_name || '고객',
+                code: issueCode,
+                expireDate: '' // 템플릿에서 사용하지 않음
+            });
+            
+            if (alimtalkResult.success) {
+                console.log('✅ 세이브카드 알림톡 전송 성공:', reservation.korean_name, reservation.phone, issueCode);
+                
+                // issue_codes 테이블에 전달 완료 표시
+                await pool.query(
+                    'UPDATE issue_codes SET is_delivered = TRUE, delivered_at = NOW() WHERE code = $1',
+                    [issueCode]
+                );
+                
+                // 전송 기록 저장
+                try {
+                    const tableExists = await pool.query(`
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'voucher_sends'
+                        );
+                    `);
+                    
+                    if (tableExists.rows[0].exists) {
+                        await pool.query(`
+                            INSERT INTO voucher_sends (
+                                reservation_id, voucher_token, send_method, recipient,
+                                sent_by, status, notes
+                            ) VALUES ($1, $2, 'savecard', $3, $4, 'sent', $5)
+                        `, [
+                            reservationId,
+                            reservation.voucher_token || '',
+                            reservation.phone,
+                            req.session.adminName || req.session.adminUsername,
+                            `발급코드: ${issueCode}`
+                        ]);
+                        console.log('✅ 세이브카드 전송 기록 저장 완료');
+                    }
+                } catch (historyError) {
+                    console.error('⚠️ 전송 기록 저장 실패:', historyError.message);
+                }
+                
+                res.json({
+                    success: true,
+                    message: '세이브카드 발급 코드가 생성되어 알림톡으로 전송되었습니다.',
+                    issueCode: issueCode,
+                    result: alimtalkResult
+                });
+            } else {
+                // 알림톡 전송 실패 시에도 코드는 생성되었으므로 삭제
+                await pool.query('DELETE FROM issue_codes WHERE code = $1', [issueCode]);
+                
+                res.status(500).json({
+                    success: false,
+                    message: alimtalkResult.message || '알림톡 전송에 실패했습니다.'
+                });
+            }
+        } else {
+            // 비즈온 SDK가 없는 경우 - 코드는 생성하지만 알림톡 미전송
+            console.log('⚠️ 비즈온 SDK 미설치 - 알림톡 전송 불가');
+            
+            res.json({
+                success: true,
+                message: `발급 코드가 생성되었습니다: ${issueCode}\n(알림톡 기능이 비활성화되어 있습니다)`,
+                issueCode: issueCode,
+                devMode: true
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ 세이브카드 알림톡 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '세이브카드 알림톡 전송 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 // 바우처 전송 기록 조회 API
 app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, res) => {
     try {
@@ -13474,13 +13633,15 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
                 CASE send_method
                     WHEN 'email' THEN '이메일'
                     WHEN 'kakao' THEN '카카오 알림톡'
+                    WHEN 'savecard' THEN '세이브카드알림톡'
                     WHEN 'sms' THEN 'SMS'
                     WHEN 'link' THEN '링크 복사'
                 END as method_name,
                 recipient,
                 status,
                 sent_at,
-                viewed_at
+                viewed_at,
+                notes
             FROM voucher_sends
             WHERE reservation_id = $1
             ORDER BY sent_at DESC
@@ -15030,7 +15191,8 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
                 sent_at,
                 viewed_at,
                 sent_by,
-                error_message
+                error_message,
+                notes
             FROM voucher_sends
             WHERE reservation_id = $1
             ORDER BY sent_at DESC
@@ -15044,7 +15206,8 @@ app.get('/api/vouchers/send-history/:reservationId', requireAuth, async (req, re
                 sent_at,
                 NULL as viewed_at,
                 sent_by,
-                error_message
+                error_message,
+                notes
             FROM voucher_sends
             WHERE reservation_id = $1
             ORDER BY sent_at DESC

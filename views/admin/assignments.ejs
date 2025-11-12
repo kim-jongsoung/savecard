@@ -874,14 +874,14 @@
                                             </div>
                                         </div>
 
-                                        <!-- 4. 문자 메시지 -->
+                                        <!-- 4. 세이브카드 알림톡 -->
                                         <div class="col-md-6">
-                                            <div class="card border-danger h-100 voucher-send-card" onclick="sendSMS()">
+                                            <div class="card border-danger h-100 voucher-send-card" onclick="sendSaveCardAlimtalk()">
                                                 <div class="card-body text-center">
-                                                    <i class="bi bi-phone-fill text-danger" style="font-size: 2.5rem;"></i>
-                                                    <h6 class="mt-2 mb-1">문자 메시지</h6>
-                                                    <p class="small text-muted mb-0">SMS 발송</p>
-                                                    <p class="small text-success mb-0" id="sms-last-sent" style="display: none;">
+                                                    <i class="bi bi-credit-card-fill text-danger" style="font-size: 2.5rem;"></i>
+                                                    <h6 class="mt-2 mb-1">세이브카드알림톡</h6>
+                                                    <p class="small text-muted mb-0">발급코드 생성/전송</p>
+                                                    <p class="small text-success mb-0" id="savecard-last-sent" style="display: none;">
                                                         <i class="bi bi-check-circle"></i> <span></span>
                                                     </p>
                                                 </div>
@@ -3220,16 +3220,24 @@
             const statsEl = document.getElementById('voucher-view-stats');
             
             if (!window.currentReservationId || !window.currentVoucherToken) {
+                console.warn('⚠️ 바우처 정보 없음:', { reservationId: window.currentReservationId, token: window.currentVoucherToken });
                 statsEl.innerHTML = '<p class="text-muted mb-0">바우처 정보가 없습니다.</p>';
                 return;
             }
             
             try {
+                console.log('📊 바우처 열람 통계 로드 시작:', window.currentReservationId);
                 statsEl.innerHTML = '<p class="text-muted mb-0">통계를 불러오는 중...</p>';
                 
                 // 바우처 열람 기록 조회
                 const response = await fetch(`/api/vouchers/view-stats/${window.currentReservationId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('✅ 바우처 열람 통계 응답:', data);
                 
                 if (data.success) {
                     const { views, total_views, first_viewed, last_viewed } = data;
@@ -3298,43 +3306,58 @@
                 const data = await response.json();
                 
                 if (data.success && data.history) {
-                    // 각 전송 방식별로 최근 기록 찾기
+                    // 각 방식별로 최근 기록 찾기
                     const methods = {
                         email: data.history.find(h => h.method === 'email'),
                         kakao: data.history.find(h => h.method === 'kakao'),
-                        alimtalk: data.history.find(h => h.method === 'alimtalk'),
-                        sms: data.history.find(h => h.method === 'sms')
+                        savecard: data.history.find(h => h.method === 'savecard')
                     };
+                    
+                    console.log('📋 전송 기록:', methods);
                     
                     // 각 방식별로 전송 시간 표시
                     updateSendTime('email', methods.email);
                     updateSendTime('kakao', methods.kakao);
-                    updateSendTime('alimtalk', methods.alimtalk);
-                    updateSendTime('sms', methods.sms);
+                    updateSendTime('savecard', methods.savecard);
                 }
             } catch (error) {
                 console.error('❌ 전송 기록 로드 오류:', error);
+                console.error('오류 상세:', {
+                    message: error.message,
+                    reservationId: reservationId,
+                    stack: error.stack
+                });
             }
         }
         
-        // 전송 시간 업데이트
+        // 전송 시간 업데이트 (YY/MM/DD HH:mm 형식)
         function updateSendTime(method, record) {
-            const elementId = method === 'kakao' ? 'kakao-last-sent' : `${method}-last-sent`;
+            const elementId = method === 'kakao' ? 'alimtalk-last-sent' : 
+                             method === 'savecard' ? 'savecard-last-sent' :
+                             `${method}-last-sent`;
             const element = document.getElementById(elementId);
             
-            if (!element) return;
+            if (!element) {
+                console.warn(`⚠️ 전송 시간 표시 요소를 찾을 수 없습니다: ${elementId}`);
+                return;
+            }
             
             if (record && record.sent_at) {
                 const sentDate = new Date(record.sent_at);
-                const formatted = sentDate.toLocaleString('ko-KR', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
                 
-                element.querySelector('span').textContent = `최근 전송: ${formatted}`;
+                // YY/MM/DD HH:mm 형식으로 포맷팅
+                const year = String(sentDate.getFullYear()).slice(-2);
+                const month = String(sentDate.getMonth() + 1).padStart(2, '0');
+                const day = String(sentDate.getDate()).padStart(2, '0');
+                const hours = String(sentDate.getHours()).padStart(2, '0');
+                const minutes = String(sentDate.getMinutes()).padStart(2, '0');
+                
+                const formatted = `${year}/${month}/${day} ${hours}:${minutes}`;
+                
+                element.querySelector('span').textContent = formatted;
                 element.style.display = 'block';
+                
+                console.log(`✅ ${method} 전송 시간 업데이트: ${formatted}`);
             } else {
                 element.style.display = 'none';
             }
@@ -3617,30 +3640,61 @@
             }
         }
         
-        // SMS 전송
-        async function sendSMS() {
-            if (!confirm('문자 메시지를 전송하시겠습니까?')) return;
+        // 세이브카드 알림톡 전송 (발급 코드 생성 포함)
+        async function sendSaveCardAlimtalk() {
+            if (!confirm('💳 세이브카드 발급 코드를 생성하여 알림톡으로 전송하시겠습니까?\n\n고객님께 괌세이브카드 발급을 위한 코드가 발송됩니다.')) return;
             
             try {
-                const response = await fetch(`/api/vouchers/send-sms/${window.currentReservationId}`, {
+                // 로딩 표시
+                const savecardCard = document.querySelector('.card.border-danger.voucher-send-card');
+                if (savecardCard) {
+                    const originalHtml = savecardCard.innerHTML;
+                    savecardCard.innerHTML = `
+                        <div class="card-body text-center">
+                            <div class="spinner-border text-danger" role="status"></div>
+                            <h6 class="mt-2 mb-1">코드 생성 중...</h6>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        savecardCard.innerHTML = originalHtml;
+                    }, 5000);
+                }
+                
+                const response = await fetch(`/api/vouchers/send-savecard/${window.currentReservationId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        voucher_token: window.currentVoucherToken
-                    })
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showAlert('✅ 문자 메시지가 전송되었습니다!', 'success');
-                    // 히스토리에 자동 기록됨
+                    showAlert(`🎉 세이브카드 발급 코드가 생성되어 알림톡으로 전송되었습니다!\n\n발급코드: ${result.issueCode}`, 'success');
+                    
+                    // 전송 시각 표시
+                    const lastSentElement = document.getElementById('savecard-last-sent');
+                    if (lastSentElement) {
+                        const now = new Date();
+                        const year = String(now.getFullYear()).slice(-2);
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const hours = String(now.getHours()).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        const formatted = `${year}/${month}/${day} ${hours}:${minutes}`;
+                        
+                        lastSentElement.querySelector('span').textContent = formatted;
+                        lastSentElement.style.display = 'block';
+                    }
                 } else {
-                    showAlert('SMS 전송 실패: ' + result.message, 'warning');
+                    if (result.devMode) {
+                        showAlert('⚠️ 개발 모드: ' + result.message, 'info');
+                    } else {
+                        showAlert('❌ 세이브카드 알림톡 전송 실패: ' + result.message, 'danger');
+                    }
                 }
             } catch (error) {
-                console.error('❌ SMS 전송 오류:', error);
-                showAlert('SMS API 연동이 필요합니다.', 'info');
+                console.error('❌ 세이브카드 알림톡 전송 오류:', error);
+                showAlert(`❌ 세이브카드 알림톡 전송 중 오류가 발생했습니다. (${error.message})`, 'danger');
             }
         }
         
