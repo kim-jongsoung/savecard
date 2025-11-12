@@ -758,13 +758,14 @@
                     console.log('  - 전송할 프롬프트:', customPrompt);
                 }
 
-                // 2단계: AI 파싱 (전처리된 데이터 + 커스텀 프롬프트)
+                // 2단계: AI 파싱 (전처리된 데이터 + 커스텀 프롬프트 + 파싱 규칙)
                 const response = await fetch('/admin/reservations/parse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         reservationText: preprocessedText,
-                        customPrompt: customPrompt  // 커스텀 프롬프트 추가
+                        customPrompt: customPrompt,  // 커스텀 프롬프트
+                        customParsingRules: customParsingRules  // 파싱 규칙 추가 (요금 RAG 매칭용)
                     })
                 });
 

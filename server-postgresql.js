@@ -6512,7 +6512,7 @@ async function matchPricingFromRAG(platform_name, product_name, package_type) {
 // 예약 등록 (텍스트 파싱) - 관리자용
 app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
     try {
-        const { reservationText, customPrompt } = req.body;
+        const { reservationText, customPrompt, customParsingRules } = req.body;
         
         if (!reservationText || !reservationText.trim()) {
             return res.json({ success: false, message: '예약 데이터를 입력해주세요.' });
@@ -6521,6 +6521,9 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         console.log('📝 파싱 요청 받음 (여행사 선택 없음)');
         if (customPrompt) {
             console.log('🔧 커스텀 프롬프트 적용:', customPrompt.substring(0, 100) + '...');
+        }
+        if (customParsingRules && customParsingRules.length > 0) {
+            console.log('📋 파싱 규칙 받음:', customParsingRules.length + '개');
         }
         
         // OpenAI 지능형 텍스트 파싱 (검수형 워크플로우)
@@ -6551,14 +6554,64 @@ app.post('/admin/reservations/parse', requireAuth, async (req, res) => {
         
         console.log('✅ 파싱 완료 (여행사 정보는 파싱 결과에서 추출)');
         
-        // 요금 RAG 매칭 시도
+        // 🎯 파싱 규칙 적용 (요금 RAG 매칭 전에!)
+        if (customParsingRules && customParsingRules.length > 0) {
+            const productName = (normalizedData.product_name || '').trim();
+            const platformName = (normalizedData.platform_name || '').trim();
+            
+            customParsingRules.forEach(rule => {
+                let shouldApply = false;
+                const keyword = rule.keyword.trim();
+                
+                // 조건 매칭
+                if (rule.conditionType === 'product_exact') {
+                    shouldApply = productName.toLowerCase() === keyword.toLowerCase();
+                } else if (rule.conditionType === 'product_contains') {
+                    shouldApply = productName.toLowerCase().includes(keyword.toLowerCase());
+                } else if (rule.conditionType === 'platform_exact') {
+                    shouldApply = platformName.toLowerCase() === keyword.toLowerCase();
+                } else if (rule.conditionType === 'platform_contains') {
+                    shouldApply = platformName.toLowerCase().includes(keyword.toLowerCase());
+                }
+                // 레거시 지원
+                else if (rule.conditionType === 'product') {
+                    shouldApply = productName.toLowerCase().includes(keyword.toLowerCase());
+                } else if (rule.conditionType === 'platform') {
+                    shouldApply = platformName.toLowerCase().includes(keyword.toLowerCase());
+                }
+                
+                if (shouldApply) {
+                    // 필드명 매핑 (프론트엔드 필드명 → 서버 데이터 필드명)
+                    const fieldMapping = {
+                        'product_name': 'product_name',
+                        'platform_name': 'platform_name',
+                        'channel': 'platform_name',  // channel은 platform_name과 동일
+                        'package_type': 'package_type',
+                        'payment_status': 'payment_status',
+                        'adult_count': 'people_adult',
+                        'child_count': 'people_child',
+                        'infant_count': 'people_infant',
+                        'adult_price': 'adult_unit_price',
+                        'child_price': 'child_unit_price',
+                        'total_amount': 'total_amount'
+                    };
+                    
+                    const dataField = fieldMapping[rule.fieldType] || rule.fieldType;
+                    normalizedData[dataField] = rule.value;
+                    
+                    console.log(`🎯 파싱 규칙 적용: "${rule.description}" → ${dataField} = "${rule.value}"`);
+                }
+            });
+        }
+        
+        // 요금 RAG 매칭 시도 (파싱 규칙 적용 후!)
         let pricingMatched = false;
         let pricingInfo = null;
         
         try {
             pricingInfo = await matchPricingFromRAG(
                 normalizedData.platform_name,
-                normalizedData.product_name,
+                normalizedData.product_name,  // 파싱 규칙이 적용된 product_name 사용
                 normalizedData.package_type
             );
             
