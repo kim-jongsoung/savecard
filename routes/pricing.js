@@ -257,11 +257,18 @@ module.exports = (pool) => {
             console.log('📝 최종 JSON 문자열 길이:', packageOptionsJsonStr.length);
             console.log('📝 최종 JSON 문자열 미리보기:', packageOptionsJsonStr.substring(0, 200));
             
-            // 요금 등록 - JSONB 컬럼에 JSON 문자열 전달
+            // 요금 등록 - UPSERT 방식으로 중복 시 업데이트
             const result = await pool.query(`
                 INSERT INTO product_pricing 
                 (platform_name, vendor_id, product_name, commission_rate, package_options, notes)
                 VALUES ($1, $2, $3, $4, $5::jsonb, $6)
+                ON CONFLICT (platform_name, product_name) 
+                DO UPDATE SET
+                    vendor_id = EXCLUDED.vendor_id,
+                    commission_rate = EXCLUDED.commission_rate,
+                    package_options = EXCLUDED.package_options,
+                    notes = EXCLUDED.notes,
+                    updated_at = NOW()
                 RETURNING *
             `, [
                 platform_name,
