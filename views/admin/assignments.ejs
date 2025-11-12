@@ -3350,7 +3350,9 @@
                 console.log(`📝 ${records.length}개의 기록 처리 중...`);
                 
                 // 모든 전송 기록을 한 줄씩 표시
-                const lines = records.slice(0, 5).map(record => { // 최대 5개까지만 표시
+                const lines = records.slice(0, 5).map((record, index) => { // 최대 5개까지만 표시
+                    console.log(`📝 [${method}] 기록 #${index}:`, record);
+                    
                     const sentDate = new Date(record.sent_at);
                     
                     // YY/MM/DD HH:mm 형식으로 포맷팅
@@ -3363,10 +3365,18 @@
                     const formatted = `${year}/${month}/${day} ${hours}:${minutes}`;
                     
                     // 세이브카드의 경우 notes에서 발급코드 추출하여 표시
-                    if (method === 'savecard' && record.notes) {
-                        const codeMatch = record.notes.match(/발급코드:\s*([a-z0-9]+)/i);
-                        if (codeMatch && codeMatch[1]) {
-                            return `${formatted} | 코드: ${codeMatch[1]}`;
+                    if (method === 'savecard') {
+                        console.log(`🔍 세이브카드 notes 확인:`, record.notes);
+                        
+                        if (record.notes) {
+                            const codeMatch = record.notes.match(/발급코드:\s*([a-z0-9]+)/i);
+                            console.log(`🔍 정규식 매칭 결과:`, codeMatch);
+                            
+                            if (codeMatch && codeMatch[1]) {
+                                return `${formatted} | 코드: ${codeMatch[1]}`;
+                            }
+                        } else {
+                            console.warn(`⚠️ notes가 없습니다!`);
                         }
                     }
                     return formatted;
