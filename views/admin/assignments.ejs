@@ -3354,7 +3354,18 @@
                 
                 const formatted = `${year}/${month}/${day} ${hours}:${minutes}`;
                 
-                element.querySelector('span').textContent = formatted;
+                // 세이브카드의 경우 notes에서 발급코드 추출하여 표시
+                if (method === 'savecard' && record.notes) {
+                    const codeMatch = record.notes.match(/발급코드:\s*([a-z0-9]+)/i);
+                    if (codeMatch && codeMatch[1]) {
+                        element.querySelector('span').textContent = `${formatted} | 코드: ${codeMatch[1]}`;
+                    } else {
+                        element.querySelector('span').textContent = formatted;
+                    }
+                } else {
+                    element.querySelector('span').textContent = formatted;
+                }
+                
                 element.style.display = 'block';
                 
                 console.log(`✅ ${method} 전송 시간 업데이트: ${formatted}`);
@@ -3671,7 +3682,7 @@
                 if (result.success) {
                     showAlert(`🎉 세이브카드 발급 코드가 생성되어 알림톡으로 전송되었습니다!\n\n발급코드: ${result.issueCode}`, 'success');
                     
-                    // 전송 시각 표시
+                    // 전송 시각 및 발급코드 표시
                     const lastSentElement = document.getElementById('savecard-last-sent');
                     if (lastSentElement) {
                         const now = new Date();
@@ -3682,8 +3693,13 @@
                         const minutes = String(now.getMinutes()).padStart(2, '0');
                         const formatted = `${year}/${month}/${day} ${hours}:${minutes}`;
                         
-                        lastSentElement.querySelector('span').textContent = formatted;
+                        lastSentElement.querySelector('span').textContent = `${formatted} | 코드: ${result.issueCode}`;
                         lastSentElement.style.display = 'block';
+                    }
+                    
+                    // 전송 기록 재로드
+                    if (window.currentReservationId) {
+                        loadVoucherSendTimes(window.currentReservationId);
                     }
                 } else {
                     if (result.devMode) {

@@ -13529,12 +13529,33 @@ app.post('/api/vouchers/send-savecard/:reservationId', requireAuth, async (req, 
         
         console.log('✅ 발급 코드 생성:', issueCode);
         
-        // issue_codes 테이블에 저장
+        // issue_codes 테이블에 저장 (user_name, user_phone 컬럼이 없을 수 있으므로 notes에 저장)
         const notes = `예약 ID: ${reservationId} | ${reservation.korean_name} | ${reservation.phone}`;
-        const codeResult = await pool.query(
-            'INSERT INTO issue_codes (code, user_name, user_phone, notes) VALUES ($1, $2, $3, $4) RETURNING *',
-            [issueCode, reservation.korean_name, reservation.phone, notes]
-        );
+        
+        // 컬럼 존재 여부 확인
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'issue_codes' 
+            AND column_name IN ('user_name', 'user_phone')
+        `);
+        
+        const hasUserColumns = columnCheck.rows.length === 2;
+        
+        let codeResult;
+        if (hasUserColumns) {
+            // user_name, user_phone 컬럼이 있는 경우
+            codeResult = await pool.query(
+                'INSERT INTO issue_codes (code, user_name, user_phone, notes) VALUES ($1, $2, $3, $4) RETURNING *',
+                [issueCode, reservation.korean_name, reservation.phone, notes]
+            );
+        } else {
+            // 컬럼이 없는 경우 notes에만 저장
+            codeResult = await pool.query(
+                'INSERT INTO issue_codes (code, notes) VALUES ($1, $2) RETURNING *',
+                [issueCode, notes]
+            );
+        }
         
         console.log('✅ 발급 코드 DB 저장 완료');
         
