@@ -531,6 +531,17 @@
       return dateStr;
     }
     
+    // 시간 포맷 (HH:MM만 추출)
+    function formatTime(timeStr) {
+      if (!timeStr) return '';
+      // HH:MM:SS 형식이면 초 제거
+      if (timeStr.includes(':')) {
+        const parts = timeStr.split(':');
+        return `${parts[0]}:${parts[1]}`;
+      }
+      return timeStr;
+    }
+    
     // 금액 계산 함수
     function calculateCost(adultCount, childCount, infantCount, costPrice) {
       const adults = parseInt(adultCount) || 0;
@@ -621,7 +632,7 @@
             ${getReservationStatusBadge(p)}
           </div>
           <div class="text-muted small">
-            📅 ${p.display_date} ${p.display_time}<br>
+            📅 ${formatDate(p.display_date)} ${formatTime(p.display_time)}<br>
             🏨 ${p.hotel_name}<br>
             👥 ${costInfo.totalPax}명 (${costInfo.breakdown})<br>
             💵 <strong style="color: #dc3545; font-size: 1.1em;">${costInfo.totalPax} × $${costPrice.toFixed(2)} = $${costInfo.totalCost}</strong><br>
