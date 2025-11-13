@@ -108,9 +108,14 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
     max_total_occupancy,
     base_room_rate,
     breakfast_included,
-    breakfast_rate_per_person,
+    breakfast_rate_adult,
+    breakfast_rate_child,
+    breakfast_rate_infant,
     extra_adult_rate,
     extra_child_rate,
+    extra_infant_rate,
+    extra_bed_rate,
+    baby_cot_rate,
     is_active
   } = req.body;
   
