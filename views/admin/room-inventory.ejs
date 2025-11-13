@@ -47,6 +47,7 @@
       <button class="btn btn-success btn-sm ms-2" onclick="bulkUpdate('O')">Open</button>
       <button class="btn btn-danger btn-sm" onclick="bulkUpdate('X')">Close</button>
       <button class="btn btn-info btn-sm" onclick="bulkUpdate('V')">Check</button>
+      <span class="ms-2 small text-muted" id="inventoryTypeHint"></span>
     </div>
     
     <div id="inventoryContainer"></div>
@@ -57,6 +58,7 @@
     document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ko-KR');
     
     let hotels = [], roomTypes = [], inventory = {}, selected = new Set(), changes = {};
+    let currentHotel = null; // 현재 선택된 호텔 정보
     
     async function loadHotels() {
       const res = await fetch('/api/hotels?is_active=true');
@@ -68,6 +70,11 @@
     async function loadData() {
       const hid = document.getElementById('hotelSelect').value;
       if (!hid) return;
+      
+      // 호텔 정보 가져오기 (inventory_type 확인)
+      const hotelRes = await fetch(`/api/hotels/${hid}`);
+      currentHotel = await hotelRes.json();
+      
       const rtRes = await fetch(`/api/hotels/${hid}/room-types`);
       roomTypes = await rtRes.json();
       
@@ -82,8 +89,21 @@
         const data = await res.json();
         data.forEach(inv => {
           const key = `${inv.room_type_id}-${inv.inventory_date}`;
-          inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
+          // count 방식: 숫자 그대로, status 방식: O/X로 변환
+          if (currentHotel.inventory_type === 'count') {
+            inventory[key] = inv.available_rooms;
+          } else {
+            inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
+          }
         });
+      }
+      
+      // 재고 관리 방식 힌트 표시
+      const hint = document.getElementById('inventoryTypeHint');
+      if (currentHotel.inventory_type === 'count') {
+        hint.textContent = '💡 숫자 카운팅 방식: Open 클릭 시 객실 수 입력';
+      } else {
+        hint.textContent = '💡 상태 표시 방식: O(오픈)/X(마감)/V(확인필요)';
       }
       
       renderInventory(year, month);
@@ -108,12 +128,24 @@
           for (let d = 1; d <= days; d++) {
             const date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const key = `${rt.id}-${date}`;
-            const status = changes[key] || inventory[key] || '';
-            const cls = status ? `cell-${status}` : '';
+            const status = changes[key] !== undefined ? changes[key] : inventory[key];
+            
+            // count 방식: 숫자 표시 및 클래스 설정
+            let cls = '', displayValue = '';
+            if (currentHotel && currentHotel.inventory_type === 'count') {
+              displayValue = status !== undefined && status !== '' ? status : '';
+              if (status === 0) cls = 'cell-X';
+              else if (status > 0) cls = 'cell-O';
+            } else {
+              // status 방식: O/X/V
+              displayValue = status || '';
+              cls = status ? `cell-${status}` : '';
+            }
+            
             const sel = selected.has(key) ? ' cell-selected' : '';
             html += `<td class="${cls}${sel}" onclick="toggleCell('${key}')" data-key="${key}">
               <input type="checkbox" class="cell-chk" ${selected.has(key)?'checked':''} onclick="event.stopPropagation();toggleCell('${key}')">
-              ${status}
+              ${displayValue}
             </td>`;
           }
           html += `</tr>`;
@@ -155,7 +187,29 @@
     
     function bulkUpdate(status) {
       if (selected.size === 0) return alert('No cells selected');
-      selected.forEach(key => changes[key] = status);
+      
+      // 숫자 카운팅 방식일 때는 숫자 입력
+      if (currentHotel && currentHotel.inventory_type === 'count') {
+        let rooms;
+        if (status === 'O') {
+          rooms = prompt('객실 수를 입력하세요:', '10');
+          if (rooms === null) return; // 취소
+          rooms = parseInt(rooms);
+          if (isNaN(rooms) || rooms < 0) return alert('유효한 숫자를 입력하세요');
+        } else if (status === 'X') {
+          rooms = 0;
+        } else if (status === 'V') {
+          rooms = prompt('확인 필요 - 객실 수를 입력하세요:', '5');
+          if (rooms === null) return;
+          rooms = parseInt(rooms);
+          if (isNaN(rooms) || rooms < 0) return alert('유효한 숫자를 입력하세요');
+        }
+        selected.forEach(key => changes[key] = rooms);
+      } else {
+        // 상태 방식: O/X/V 그대로
+        selected.forEach(key => changes[key] = status);
+      }
+      
       selected.clear();
       loadData();
     }
@@ -165,9 +219,17 @@
       const hid = document.getElementById('hotelSelect').value;
       let saved = 0;
       
-      for (const [key, status] of Object.entries(changes)) {
+      for (const [key, value] of Object.entries(changes)) {
         const [rtid, date] = key.split('-', 2);
-        const rooms = status === 'O' ? 10 : (status === 'X' ? 0 : 5);
+        
+        // count 방식: 숫자 그대로, status 방식: O/X/V를 숫자로 변환
+        let rooms;
+        if (currentHotel && currentHotel.inventory_type === 'count') {
+          rooms = value; // 이미 숫자
+        } else {
+          rooms = value === 'O' ? 10 : (value === 'X' ? 0 : 5);
+        }
+        
         await fetch('/api/inventory/bulk', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
