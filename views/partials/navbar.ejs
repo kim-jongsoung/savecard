@@ -7,7 +7,7 @@
                 <a class="navbar-brand fw-bold mb-0" href="/admin" style="width: 120px; flex-shrink: 0;">Save ERP</a>
                 
                 <ul class="navbar-nav flex-row flex-grow-1">
-                    <li class="nav-item"><span class="nav-section-label nav-section-savecard">SaveCard</span></li>
+                    <li class="nav-item"><span class="nav-section-label nav-section-savecard">괌세이브 ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'savecard-dashboard' ? 'active' : '' %>" href="/admin/savecard-dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사</a></li>
@@ -28,7 +28,7 @@
             <div class="d-flex align-items-center mb-2 pb-2" style="border-bottom: 1px solid #e9ecef;">
                 <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
-                    <li class="nav-item"><span class="nav-section-label">즐길거리 ERP</span></li>
+                    <li class="nav-item"><span class="nav-section-label nav-section-activity">즐길거리 ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a></li>
@@ -47,7 +47,7 @@
             <div class="d-flex align-items-center pt-2" style="border-top: 2px solid #fff3e0;">
                 <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
-                    <li class="nav-item"><span class="nav-section-label nav-section-hotel">호텔 ERP</span></li>
+                    <li class="nav-item"><span class="nav-section-label nav-section-hotel">호텔예약 ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotels' ? 'active' : '' %>" href="/admin/hotels">호텔관리</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'room-types' ? 'active' : '' %>" href="/admin/room-types">객실타입</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'booking-agencies' ? 'active' : '' %>" href="/admin/booking-agencies">거래처</a></li>
@@ -97,15 +97,21 @@
     letter-spacing: 0.5px;
 }
 
-/* SaveCard 섹션 */
+/* 괌세이브 ERP 섹션 (하늘색) */
 .nav-section-savecard {
-    background: #e3f2fd;
-    color: #1565c0;
+    background: #b3e5fc;
+    color: #01579b;
 }
 
-/* 호텔 섹션 강조 */
+/* 즐길거리 ERP 섹션 (초록색) */
+.nav-section-activity {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+/* 호텔예약 ERP 섹션 (주황색) */
 .nav-section-hotel {
-    background: #fff3e0;
+    background: #ffe0b2;
     color: #e65100;
 }
 
