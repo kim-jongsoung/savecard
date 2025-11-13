@@ -22,7 +22,7 @@ router.get('/api/booking-agencies', requireLogin, async (req, res) => {
       SELECT 
         id, agency_code, agency_name, agency_type,
         contact_person, contact_email, contact_phone,
-        commission_rate, payment_terms, bank_info,
+        payment_terms, bank_account, notes,
         is_active, created_at, updated_at
       FROM booking_agencies
       WHERE 1=1
@@ -92,9 +92,9 @@ router.post('/api/booking-agencies', requireLogin, async (req, res) => {
     contact_person,
     contact_email,
     contact_phone,
-    commission_rate,
     payment_terms,
-    bank_info,
+    bank_account,
+    notes,
     is_active
   } = req.body;
   
@@ -113,13 +113,13 @@ router.post('/api/booking-agencies', requireLogin, async (req, res) => {
       `INSERT INTO booking_agencies (
         agency_code, agency_name, agency_type,
         contact_person, contact_email, contact_phone,
-        commission_rate, payment_terms, bank_info, is_active
+        payment_terms, bank_account, notes, is_active
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         agency_code, agency_name, agency_type,
         contact_person, contact_email, contact_phone,
-        commission_rate || 0, payment_terms, bank_info, is_active !== false
+        payment_terms, bank_account, notes, is_active !== false
       ]
     );
     
@@ -144,9 +144,9 @@ router.put('/api/booking-agencies/:id', requireLogin, async (req, res) => {
     contact_person,
     contact_email,
     contact_phone,
-    commission_rate,
     payment_terms,
-    bank_info,
+    bank_account,
+    notes,
     is_active
   } = req.body;
   
@@ -175,9 +175,9 @@ router.put('/api/booking-agencies/:id', requireLogin, async (req, res) => {
         contact_person = $4,
         contact_email = $5,
         contact_phone = $6,
-        commission_rate = $7,
-        payment_terms = $8,
-        bank_info = $9,
+        payment_terms = $7,
+        bank_account = $8,
+        notes = $9,
         is_active = $10,
         updated_at = NOW()
       WHERE id = $11
@@ -185,7 +185,7 @@ router.put('/api/booking-agencies/:id', requireLogin, async (req, res) => {
       [
         agency_code, agency_name, agency_type,
         contact_person, contact_email, contact_phone,
-        commission_rate, payment_terms, bank_info, is_active,
+        payment_terms, bank_account, notes, is_active,
         id
       ]
     );
