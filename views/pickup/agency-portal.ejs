@@ -200,6 +200,9 @@
 
       <!-- 예약 내역 -->
       <div class="tab-pane fade" id="list" role="tabpanel">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle"></i> <strong>기본 표시:</strong> 오늘 날짜 이후 예약만 표시됩니다. 과거 예약을 보려면 날짜를 지정하여 검색하세요.
+        </div>
         <div class="card mb-3">
           <div class="card-body">
             <div class="row g-3">
@@ -236,7 +239,7 @@
         <div id="pickupsList">
           <div class="text-center text-muted py-5">
             <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-            <p class="mt-2">검색 버튼을 클릭하여 예약 내역을 조회하세요</p>
+            <p class="mt-2">예약 내역을 불러오는 중...</p>
           </div>
         </div>
         
@@ -256,9 +259,11 @@
   <script>
     const AGENCY_CODE = '<%= agencyCode %>';
     const AGENCY_ID = <%= agencyId %>;
+    const COST_PRICE = <%= costPrice %>;
 
     document.addEventListener('DOMContentLoaded', () => {
       loadFlights();
+      // 초기 로드 시 빈 검색 (오늘 이후만 표시)
       loadPickups();
     });
     
@@ -526,6 +531,20 @@
       return dateStr;
     }
     
+    // 금액 계산 함수
+    function calculateCost(adultCount, childCount, infantCount, costPrice) {
+      const adults = parseInt(adultCount) || 0;
+      const children = parseInt(childCount) || 0;
+      const infants = parseInt(infantCount) || 0;
+      const totalPax = adults + children + infants;
+      const totalCost = totalPax * parseFloat(costPrice);
+      return {
+        totalPax,
+        totalCost: totalCost.toFixed(2),
+        breakdown: `성인:${adults}, 소아:${children}, 유아:${infants}`
+      };
+    }
+    
     // 예약 카드 렌더링 (출발편만 표시)
     function renderPickupCard(p) {
       // 예약 상태 배지 및 카드 스타일 결정
@@ -572,6 +591,9 @@
       const depCity = getAirportName(depAirport);
       const cardStyle = getCardStyle(p);
       
+      // 금액 계산
+      const costInfo = calculateCost(p.adult_count, p.child_count, p.infant_count, p.cost_price || COST_PRICE);
+      
       return `
         <div class="pickup-card" style="border-left: 4px solid ${cardStyle.borderColor}; background: ${cardStyle.bgColor};">
           <div class="d-flex justify-content-between align-items-start mb-2">
@@ -588,7 +610,8 @@
           <div class="text-muted small">
             📅 ${p.display_date} ${p.display_time}<br>
             🏨 ${p.hotel_name}<br>
-            👥 ${p.passenger_count}명 (성인:${p.adult_count}, 소아:${p.child_count}, 유아:${p.infant_count})<br>
+            👥 ${costInfo.totalPax}명 (${costInfo.breakdown})<br>
+            💵 <strong style="color: #dc3545; font-size: 1.1em;">${costInfo.totalPax} × $${(p.cost_price || COST_PRICE).toFixed(2)} = $${costInfo.totalCost}</strong><br>
             🧳 ${p.luggage_count}개<br>
             ${p.phone ? `📞 ${p.phone}<br>` : ''}
             ${p.kakao_id ? `💬 ${p.kakao_id}<br>` : ''}

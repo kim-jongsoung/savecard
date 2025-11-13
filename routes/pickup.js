@@ -1724,7 +1724,7 @@ router.get('/agency/:code', async (req, res) => {
   
   try {
     const result = await pool.query(
-      `SELECT id, agency_name, agency_code FROM pickup_agencies WHERE agency_code = $1 AND is_active = true`,
+      `SELECT id, agency_name, agency_code, cost_price FROM pickup_agencies WHERE agency_code = $1 AND is_active = true`,
       [code]
     );
     
@@ -1737,7 +1737,8 @@ router.get('/agency/:code', async (req, res) => {
     res.render('pickup/agency-portal', {
       agencyId: agency.id,
       agencyName: agency.agency_name,
-      agencyCode: agency.agency_code
+      agencyCode: agency.agency_code,
+      costPrice: agency.cost_price || 0
     });
   } catch (error) {
     console.error('❌ 업체 포털 로드 실패:', error);
@@ -1968,29 +1969,40 @@ router.get('/api/agency-pickups', async (req, res) => {
   
   try {
     let query = `
-      SELECT * FROM airport_pickups 
-      WHERE agency_id = $1 AND status = 'active'
+      SELECT ap.*, pa.cost_price 
+      FROM airport_pickups ap
+      LEFT JOIN pickup_agencies pa ON ap.agency_id = pa.id
+      WHERE ap.agency_id = $1 AND ap.status = 'active'
     `;
     const params = [agency_id];
     let paramIndex = 2;
     
+    // 검색 조건이 없으면 오늘 이후 예약만 표시
+    const hasSearchCondition = dateFrom || dateTo || name || status;
+    if (!hasSearchCondition) {
+      const today = new Date().toISOString().split('T')[0];
+      query += ` AND ap.display_date >= $${paramIndex}`;
+      params.push(today);
+      paramIndex++;
+    }
+    
     // 출발일 기간 검색 (시작일)
     if (dateFrom) {
-      query += ` AND display_date >= $${paramIndex}`;
+      query += ` AND ap.display_date >= $${paramIndex}`;
       params.push(dateFrom);
       paramIndex++;
     }
     
     // 출발일 기간 검색 (종료일)
     if (dateTo) {
-      query += ` AND display_date <= $${paramIndex}`;
+      query += ` AND ap.display_date <= $${paramIndex}`;
       params.push(dateTo);
       paramIndex++;
     }
     
     // 고객명 검색
     if (name) {
-      query += ` AND customer_name ILIKE $${paramIndex}`;
+      query += ` AND ap.customer_name ILIKE $${paramIndex}`;
       params.push(`%${name}%`);
       paramIndex++;
     }
@@ -1998,15 +2010,15 @@ router.get('/api/agency-pickups', async (req, res) => {
     // 상태 검색
     if (status) {
       if (status === 'settled') {
-        query += ` AND (settlement_status = 'completed' OR settlement_date IS NOT NULL)`;
+        query += ` AND (ap.settlement_status = 'completed' OR ap.settlement_date IS NOT NULL)`;
       } else {
-        query += ` AND confirmation_status = $${paramIndex}`;
+        query += ` AND ap.confirmation_status = $${paramIndex}`;
         params.push(status);
         paramIndex++;
       }
     }
     
-    query += ` ORDER BY display_date DESC, display_time DESC`;
+    query += ` ORDER BY ap.display_date DESC, ap.display_time DESC`;
     
     const result = await pool.query(query, params);
     res.json(result.rows);
