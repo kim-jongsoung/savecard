@@ -78,7 +78,7 @@
   <div class="header-brand">
     <div class="container text-center">
       <h1 class="h3 mb-2"><i class="bi bi-airplane-engines"></i> 괌호텔에서 공항 드랍서비스</h1>
-      <div class="price-badge mt-2">$8 / 1인</div>
+      <div class="price-badge mt-2">$10 / 1인</div>
       <p class="text-white-50 mt-1 mb-0 small">(성인/소아 동일 · 유아 무료 · 현금 결제)</p>
     </div>
   </div>
@@ -189,11 +189,11 @@
           <h5 class="mt-4 mb-3"><i class="bi bi-people"></i> 인원 정보</h5>
           <div class="row">
             <div class="col-md-4 mb-3">
-              <label class="form-label">성인 <small class="text-muted">($8/인)</small></label>
+              <label class="form-label">성인 <small class="text-muted">($10/인)</small></label>
               <input type="number" class="form-control" id="adultCount" min="1" value="1" required>
             </div>
             <div class="col-md-4 mb-3">
-              <label class="form-label">소아 (만 2-11세) <small class="text-muted">($8/인)</small></label>
+              <label class="form-label">소아 (만 2-11세) <small class="text-muted">($10/인)</small></label>
               <input type="number" class="form-control" id="childCount" min="0" value="0">
             </div>
             <div class="col-md-4 mb-3">
@@ -224,14 +224,14 @@
           <div class="alert alert-success">
             <h5 class="mb-2"><i class="bi bi-calculator"></i> 예상 요금</h5>
             <div class="mb-2">
-              <div>성인: <strong id="adultDisplay">1</strong>명 × $8 = <strong id="adultTotal">$8</strong></div>
-              <div>소아: <strong id="childDisplay">0</strong>명 × $8 = <strong id="childTotal">$0</strong></div>
+              <div>성인: <strong id="adultDisplay">1</strong>명 × $10 = <strong id="adultTotal">$10</strong></div>
+              <div>소아: <strong id="childDisplay">0</strong>명 × $10 = <strong id="childTotal">$0</strong></div>
               <div class="text-muted">유아: <strong id="infantDisplay">0</strong>명 × $0 = <strong>무료</strong></div>
             </div>
             <hr>
             <div class="d-flex justify-content-between align-items-center">
               <span>총 <strong id="totalPassengers">1</strong>명</span>
-              <span class="h4 mb-0"><strong id="totalPrice">$8</strong></span>
+              <span class="h4 mb-0"><strong id="totalPrice">$10</strong></span>
             </div>
             <small class="text-muted">* 현장에서 현금으로 결제 (카드 결제 불가)</small>
           </div>
@@ -284,7 +284,7 @@
             <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
               <div class="accordion-body">
                 현장에서 <strong>현금(USD)으로만 결제</strong> 가능합니다. (신용카드 결제 불가)<br>
-                요금은 <strong>성인과 소아만 1인당 $8</strong>이며, <strong>유아(만 0-1세)는 무료</strong>입니다.
+                요금은 <strong>성인과 소아만 1인당 $10</strong>이며, <strong>유아(만 0-1세)는 무료</strong>입니다.
               </div>
             </div>
           </div>
@@ -384,8 +384,8 @@
       const children = parseInt(document.getElementById('childCount').value) || 0;
       const infants = parseInt(document.getElementById('infantCount').value) || 0;
       
-      const adultPrice = adults * 8;
-      const childPrice = children * 8;
+      const adultPrice = adults * 10;
+      const childPrice = children * 10;
       const totalPassengers = adults + children + infants;
       const totalPrice = adultPrice + childPrice; // 유아는 무료
       
