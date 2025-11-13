@@ -9,12 +9,14 @@
     body { font-family: Arial, sans-serif; font-size: 11px; }
     .inventory-header { background: #2c3e50; color: white; padding: 0.5rem; text-align: center; font-weight: 700; margin: 1rem 0; }
     .month-section { margin-bottom: 2rem; page-break-inside: avoid; }
-    .month-title { background: #34495e; color: white; padding: 0.4rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
+    .month-title { background: #34495e; color: white; padding: 0.4rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; cursor: pointer; }
+    .month-title input[type="checkbox"] { cursor: pointer; }
     .avail-table { width: 100%; border-collapse: collapse; font-size: 10px; }
     .avail-table th { background: #95a5a6; color: white; padding: 0.3rem; text-align: center; font-weight: 600; border: 1px solid #7f8c8d; min-width: 22px; }
     .avail-table th.rt { min-width: 120px; text-align: left; }
     .avail-table td { padding: 0; text-align: center; border: 1px solid #ddd; cursor: pointer; font-weight: 600; min-width: 22px; height: 22px; position: relative; }
-    .avail-table td.rt-cell { background: #ecf0f1; font-weight: 700; text-align: left; padding-left: 0.4rem; cursor: default; }
+    .avail-table td.rt-cell { background: #ecf0f1; font-weight: 700; text-align: left; padding-left: 0.4rem; cursor: pointer; }
+    .avail-table td.rt-cell input[type="checkbox"] { cursor: pointer; }
     .cell-O { color: #27ae60; background: #d5f4e6; }
     .cell-X { color: #e74c3c; background: #fadbd8; }
     .cell-V { color: #3498db; background: #d6eaf8; }
@@ -42,9 +44,11 @@
       </select>
       <label class="ms-3">Start:</label>
       <input type="month" class="form-control form-control-sm d-inline-block w-auto" id="startMonth" value="2025-11" onchange="loadData()">
-      <button class="btn btn-primary btn-sm ms-2" onclick="selectAllCells()">Select All</button>
-      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">Clear</button>
-      <button class="btn btn-success btn-sm ms-2" onclick="bulkUpdate('O')">Open</button>
+      <button class="btn btn-primary btn-sm ms-2" onclick="selectAllCells()">📋 전체선택</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">❌ 선택해제</button>
+      <span class="text-muted small ms-2">| 💡 월 타이틀·룸타입명 체크박스로 일괄선택 가능</span>
+      <br class="mt-1">
+      <button class="btn btn-success btn-sm ms-2 mt-2" onclick="bulkUpdate('O')">Open</button>
       <button class="btn btn-danger btn-sm" onclick="bulkUpdate('X')">Close</button>
       <button class="btn btn-info btn-sm" onclick="bulkUpdate('V')">Check</button>
       <span class="ms-2 small text-muted" id="inventoryTypeHint"></span>
@@ -119,12 +123,20 @@
         const monthName = new Date(y, mo - 1).toLocaleString('en', { month: 'short', year: '2-digit' });
         const days = new Date(y, mo, 0).getDate();
         
-        html += `<div class="month-section"><div class="month-title">${monthName}</div><table class="avail-table"><thead><tr><th class="rt">Room Type</th>`;
+        html += `<div class="month-section">
+          <div class="month-title">
+            <input type="checkbox" class="me-2" onchange="selectMonth(${y}, ${mo})" style="transform: scale(1.2);">
+            ${monthName}
+          </div>
+          <table class="avail-table"><thead><tr><th class="rt">Room Type</th>`;
         for (let d = 1; d <= days; d++) html += `<th>${d}</th>`;
         html += `</tr></thead><tbody>`;
         
         roomTypes.forEach(rt => {
-          html += `<tr><td class="rt-cell">${rt.room_type_code}</td>`;
+          html += `<tr><td class="rt-cell">
+            <input type="checkbox" class="me-1" onchange="selectRoomType(${rt.id}, ${y}, ${mo})" style="transform: scale(0.9);">
+            ${rt.room_type_code}
+          </td>`;
           for (let d = 1; d <= days; d++) {
             const date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const key = `${rt.id}-${date}`;
@@ -160,6 +172,55 @@
     function toggleCell(key) {
       if (selected.has(key)) selected.delete(key);
       else selected.add(key);
+      loadData();
+    }
+    
+    function selectMonth(year, month) {
+      const days = new Date(year, month, 0).getDate();
+      roomTypes.forEach(rt => {
+        for (let d = 1; d <= days; d++) {
+          const date = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const key = `${rt.id}-${date}`;
+          if (event.target.checked) {
+            selected.add(key);
+          } else {
+            selected.delete(key);
+          }
+        }
+      });
+      loadData();
+    }
+    
+    function selectRoomType(roomTypeId, year, month) {
+      const days = new Date(year, month, 0).getDate();
+      for (let d = 1; d <= days; d++) {
+        const date = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const key = `${roomTypeId}-${date}`;
+        if (event.target.checked) {
+          selected.add(key);
+        } else {
+          selected.delete(key);
+        }
+      }
+      loadData();
+    }
+    
+    function selectAllRoomType(roomTypeId) {
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      for (let m = 0; m < 6; m++) {
+        const y = month + m > 12 ? year + 1 : year;
+        const mo = month + m > 12 ? month + m - 12 : month + m;
+        const days = new Date(y, mo, 0).getDate();
+        for (let d = 1; d <= days; d++) {
+          const date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const key = `${roomTypeId}-${date}`;
+          if (event.target.checked) {
+            selected.add(key);
+          } else {
+            selected.delete(key);
+          }
+        }
+      }
       loadData();
     }
     
