@@ -3,7 +3,7 @@ const router = express.Router();
 
 // 미들웨어: 로그인 체크
 function requireLogin(req, res, next) {
-  if (!req.session.user) {
+  if (!req.session.adminId) {
     return res.status(401).json({ error: '로그인이 필요합니다.' });
   }
   next();
