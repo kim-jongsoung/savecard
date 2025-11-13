@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>거래처 관리 - 괌 세이브카드</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* 전체 폰트 크기 30% 축소 */
+    body {
+      font-size: 0.7rem;
+    }
+    h2 {
+      font-size: 1.4rem;
+    }
+    h6 {
+      font-size: 0.85rem;
+    }
+    .btn {
+      font-size: 0.7rem;
+      padding: 0.3rem 0.7rem;
+    }
+    .form-label {
+      font-size: 0.7rem;
+      margin-bottom: 0.3rem;
+    }
+    .form-control, .form-select, .form-control textarea {
+      font-size: 0.7rem;
+      padding: 0.3rem 0.5rem;
+    }
+    .modal-title {
+      font-size: 1.1rem;
+    }
+    .table {
+      font-size: 0.7rem;
+    }
+    .table th {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.5rem;
+    }
+    .table td {
+      padding: 0.5rem;
+    }
+    .badge {
+      font-size: 0.65rem;
+      padding: 0.25rem 0.5rem;
+    }
+    .filter-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+  
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <div class="col-12">
+        <!-- 헤더 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2><i class="bi bi-building"></i> 거래처 관리 (한국 여행사)</h2>
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <i class="bi bi-plus-circle"></i> 거래처 등록
+          </button>
+        </div>
+        
+        <!-- 필터 -->
+        <div class="filter-card">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">검색</label>
+              <input type="text" class="form-control" id="filterSearch" placeholder="거래처명, 코드, 담당자" onkeyup="if(event.key==='Enter') loadAgencies();">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">상태</label>
+              <select class="form-select" id="filterActive" onchange="loadAgencies();">
+                <option value="">전체</option>
+                <option value="true" selected>활성</option>
+                <option value="false">비활성</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <button class="btn btn-secondary me-2" onclick="loadAgencies();">
+                <i class="bi bi-search"></i> 검색
+              </button>
+              <button class="btn btn-outline-secondary" onclick="resetFilters();">
+                <i class="bi bi-arrow-clockwise"></i> 초기화
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 거래처 테이블 -->
+        <div class="card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 10%;">코드</th>
+                    <th style="width: 15%;">거래처명</th>
+                    <th style="width: 10%;">유형</th>
+                    <th style="width: 10%;">담당자</th>
+                    <th style="width: 15%;">연락처</th>
+                    <th style="width: 8%;">수수료율</th>
+                    <th style="width: 12%;">결제조건</th>
+                    <th style="width: 8%;">상태</th>
+                    <th style="width: 12%;">관리</th>
+                  </tr>
+                </thead>
+                <tbody id="agenciesList">
+                  <!-- 동적으로 로드 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 로딩 스피너 -->
+        <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">로딩 중...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 거래처 등록/수정 모달 -->
+  <div class="modal fade" id="agencyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">거래처 등록</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="agencyForm">
+            <input type="hidden" id="agencyId">
+            
+            <!-- 기본 정보 -->
+            <h6 class="mb-3"><i class="bi bi-info-circle"></i> 기본 정보</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">거래처 코드 *</label>
+                <input type="text" class="form-control" id="agencyCode" required placeholder="예: HOTELPASS">
+                <small class="text-muted">영문, 숫자로 구성</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">거래처명 *</label>
+                <input type="text" class="form-control" id="agencyName" required placeholder="호텔패스">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">유형</label>
+                <select class="form-select" id="agencyType">
+                  <option value="">선택</option>
+                  <option value="여행사">여행사</option>
+                  <option value="OTA">OTA</option>
+                  <option value="직판">직판</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- 담당자 정보 -->
+            <h6 class="mb-3"><i class="bi bi-person"></i> 담당자 정보</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-4">
+                <label class="form-label">담당자명</label>
+                <input type="text" class="form-control" id="contactPerson" placeholder="홍길동">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">이메일</label>
+                <input type="email" class="form-control" id="contactEmail" placeholder="contact@agency.com">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">전화번호</label>
+                <input type="text" class="form-control" id="contactPhone" placeholder="02-1234-5678">
+              </div>
+            </div>
+            
+            <!-- 정산 정보 -->
+            <h6 class="mb-3"><i class="bi bi-cash-coin"></i> 정산 정보</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">수수료율 (%)</label>
+                <input type="number" class="form-control" id="commissionRate" step="0.01" value="0" min="0" max="100" placeholder="10.00">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">결제 조건</label>
+                <input type="text" class="form-control" id="paymentTerms" placeholder="월말 정산">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">계좌 정보</label>
+                <textarea class="form-control" id="bankInfo" rows="2" placeholder="은행명 계좌번호 예금주"></textarea>
+              </div>
+            </div>
+            
+            <!-- 상태 -->
+            <div class="row g-3">
+              <div class="col-md-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="isActive" checked>
+                  <label class="form-check-label" for="isActive">
+                    활성화 (활성화된 거래처만 예약 가능)
+                  </label>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" onclick="saveAgency()">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let currentAgencies = [];
+    
+    // 페이지 로드 시
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAgencies();
+    });
+    
+    // 거래처 목록 로드
+    async function loadAgencies() {
+      const search = document.getElementById('filterSearch').value;
+      const is_active = document.getElementById('filterActive').value;
+      
+      document.getElementById('loadingSpinner').style.display = 'block';
+      document.getElementById('agenciesList').innerHTML = '';
+      
+      try {
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (is_active) params.append('is_active', is_active);
+        
+        const res = await fetch(`/api/booking-agencies?${params}`);
+        const agencies = await res.json();
+        
+        currentAgencies = agencies;
+        renderAgencies(agencies);
+      } catch (error) {
+        console.error('거래처 목록 로드 실패:', error);
+        alert('거래처 목록 로드 실패: ' + error.message);
+      } finally {
+        document.getElementById('loadingSpinner').style.display = 'none';
+      }
+    }
+    
+    // 거래처 목록 렌더링
+    function renderAgencies(agencies) {
+      const tbody = document.getElementById('agenciesList');
+      
+      if (agencies.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="text-center py-5">
+              <i class="bi bi-inbox" style="font-size: 2rem; color: #6c757d;"></i>
+              <p class="text-muted mt-3">등록된 거래처가 없습니다.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+      
+      tbody.innerHTML = agencies.map(agency => `
+        <tr>
+          <td><span class="badge bg-primary">${agency.agency_code}</span></td>
+          <td><strong>${agency.agency_name}</strong></td>
+          <td>${agency.agency_type || '-'}</td>
+          <td>${agency.contact_person || '-'}</td>
+          <td>
+            ${agency.contact_email ? `<div><i class="bi bi-envelope"></i> ${agency.contact_email}</div>` : ''}
+            ${agency.contact_phone ? `<div><i class="bi bi-telephone"></i> ${agency.contact_phone}</div>` : ''}
+            ${!agency.contact_email && !agency.contact_phone ? '-' : ''}
+          </td>
+          <td>${agency.commission_rate ? agency.commission_rate + '%' : '0%'}</td>
+          <td>${agency.payment_terms || '-'}</td>
+          <td>
+            ${agency.is_active ? 
+              '<span class="badge bg-success">활성</span>' : 
+              '<span class="badge bg-secondary">비활성</span>'
+            }
+          </td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="editAgency(${agency.id})">
+              <i class="bi bi-pencil"></i> 수정
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteAgency(${agency.id})">
+              <i class="bi bi-trash"></i> 삭제
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+    
+    // 필터 초기화
+    function resetFilters() {
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterActive').value = 'true';
+      loadAgencies();
+    }
+    
+    // 거래처 등록 모달 열기
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = '거래처 등록';
+      document.getElementById('agencyForm').reset();
+      document.getElementById('agencyId').value = '';
+      document.getElementById('isActive').checked = true;
+      document.getElementById('commissionRate').value = 0;
+      
+      new bootstrap.Modal(document.getElementById('agencyModal')).show();
+    }
+    
+    // 거래처 수정
+    async function editAgency(id) {
+      try {
+        const res = await fetch(`/api/booking-agencies/${id}`);
+        const agency = await res.json();
+        
+        document.getElementById('modalTitle').textContent = '거래처 수정';
+        document.getElementById('agencyId').value = agency.id;
+        document.getElementById('agencyCode').value = agency.agency_code;
+        document.getElementById('agencyName').value = agency.agency_name;
+        document.getElementById('agencyType').value = agency.agency_type || '';
+        document.getElementById('contactPerson').value = agency.contact_person || '';
+        document.getElementById('contactEmail').value = agency.contact_email || '';
+        document.getElementById('contactPhone').value = agency.contact_phone || '';
+        document.getElementById('commissionRate').value = agency.commission_rate || 0;
+        document.getElementById('paymentTerms').value = agency.payment_terms || '';
+        document.getElementById('bankInfo').value = agency.bank_info || '';
+        document.getElementById('isActive').checked = agency.is_active;
+        
+        new bootstrap.Modal(document.getElementById('agencyModal')).show();
+      } catch (error) {
+        console.error('거래처 정보 로드 실패:', error);
+        alert('거래처 정보 로드 실패: ' + error.message);
+      }
+    }
+    
+    // 거래처 저장
+    async function saveAgency() {
+      const id = document.getElementById('agencyId').value;
+      const data = {
+        agency_code: document.getElementById('agencyCode').value,
+        agency_name: document.getElementById('agencyName').value,
+        agency_type: document.getElementById('agencyType').value,
+        contact_person: document.getElementById('contactPerson').value,
+        contact_email: document.getElementById('contactEmail').value,
+        contact_phone: document.getElementById('contactPhone').value,
+        commission_rate: parseFloat(document.getElementById('commissionRate').value) || 0,
+        payment_terms: document.getElementById('paymentTerms').value,
+        bank_info: document.getElementById('bankInfo').value,
+        is_active: document.getElementById('isActive').checked
+      };
+      
+      // 필수값 체크
+      if (!data.agency_code || !data.agency_name) {
+        alert('필수 항목을 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const url = id ? `/api/booking-agencies/${id}` : '/api/booking-agencies';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (result.error) {
+          alert('저장 실패: ' + result.error);
+          return;
+        }
+        
+        alert('저장되었습니다.');
+        bootstrap.Modal.getInstance(document.getElementById('agencyModal')).hide();
+        loadAgencies();
+      } catch (error) {
+        console.error('저장 실패:', error);
+        alert('저장 실패: ' + error.message);
+      }
+    }
+    
+    // 거래처 삭제
+    async function deleteAgency(id) {
+      if (!confirm('정말 삭제하시겠습니까?\n예약이 있는 경우 비활성화 처리됩니다.')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/booking-agencies/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        
+        if (result.error) {
+          alert('삭제 실패: ' + result.error);
+          return;
+        }
+        
+        alert(result.message);
+        loadAgencies();
+      } catch (error) {
+        console.error('삭제 실패:', error);
+        alert('삭제 실패: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
