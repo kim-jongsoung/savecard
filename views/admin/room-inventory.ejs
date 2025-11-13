@@ -2,534 +2,186 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>객실 재고 관리 - 괌 세이브카드</title>
+  <title>Room Availability - 괌 세이브카드</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    /* 전체 폰트 크기 30% 축소 */
-    body {
-      font-size: 0.7rem;
-    }
-    h2 {
-      font-size: 1.4rem;
-    }
-    h6 {
-      font-size: 0.85rem;
-    }
-    .btn {
-      font-size: 0.7rem;
-      padding: 0.3rem 0.7rem;
-    }
-    .form-label {
-      font-size: 0.7rem;
-      margin-bottom: 0.3rem;
-    }
-    .form-control, .form-select {
-      font-size: 0.7rem;
-      padding: 0.3rem 0.5rem;
-    }
-    .modal-title {
-      font-size: 1.1rem;
-    }
-    .filter-card {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    /* 달력 스타일 */
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 2px;
-      background: #dee2e6;
-      border: 1px solid #dee2e6;
-    }
-    .calendar-header {
-      background: #495057;
-      color: white;
-      padding: 0.5rem;
-      text-align: center;
-      font-weight: 600;
-      font-size: 0.75rem;
-    }
-    .calendar-day {
-      background: white;
-      min-height: 80px;
-      padding: 0.3rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .calendar-day:hover {
-      background: #f8f9fa;
-    }
-    .calendar-day.other-month {
-      background: #f8f9fa;
-      opacity: 0.5;
-    }
-    .calendar-day.today {
-      background: #fff3cd;
-    }
-    .calendar-day.has-inventory {
-      background: #d1ecf1;
-    }
-    .day-number {
-      font-weight: 600;
-      margin-bottom: 0.2rem;
-      font-size: 0.75rem;
-    }
-    .inventory-info {
-      font-size: 0.65rem;
-      line-height: 1.2;
-    }
-    .inventory-info div {
-      margin-bottom: 0.1rem;
-    }
+    body { font-family: Arial, sans-serif; font-size: 11px; }
+    .inventory-header { background: #2c3e50; color: white; padding: 0.5rem; text-align: center; font-weight: 700; margin: 1rem 0; }
+    .month-section { margin-bottom: 2rem; page-break-inside: avoid; }
+    .month-title { background: #34495e; color: white; padding: 0.4rem; font-weight: 700; text-align: center; margin-bottom: 0.5rem; }
+    .avail-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .avail-table th { background: #95a5a6; color: white; padding: 0.3rem; text-align: center; font-weight: 600; border: 1px solid #7f8c8d; min-width: 22px; }
+    .avail-table th.rt { min-width: 120px; text-align: left; }
+    .avail-table td { padding: 0; text-align: center; border: 1px solid #ddd; cursor: pointer; font-weight: 600; min-width: 22px; height: 22px; position: relative; }
+    .avail-table td.rt-cell { background: #ecf0f1; font-weight: 700; text-align: left; padding-left: 0.4rem; cursor: default; }
+    .cell-O { color: #27ae60; background: #d5f4e6; }
+    .cell-X { color: #e74c3c; background: #fadbd8; }
+    .cell-V { color: #3498db; background: #d6eaf8; }
+    .cell-updated { background: #fff59d !important; }
+    .cell-selected { background: #bbdefb !important; outline: 2px solid #2196f3; }
+    .cell-chk { position: absolute; top: 1px; left: 1px; transform: scale(0.7); }
+    .btn-sm { font-size: 10px; padding: 0.2rem 0.4rem; }
   </style>
 </head>
 <body>
   <%- include('../partials/navbar') %>
-  
-  <div class="container-fluid mt-4">
-    <div class="row">
-      <div class="col-12">
-        <!-- 헤더 -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h2><i class="bi bi-calendar3"></i> 객실 재고 관리</h2>
-          <button class="btn btn-primary" onclick="openBulkModal()">
-            <i class="bi bi-calendar-plus"></i> 재고 일괄 등록
-          </button>
-        </div>
-        
-        <!-- 필터 -->
-        <div class="filter-card">
-          <div class="row g-3">
-            <div class="col-md-3">
-              <label class="form-label">호텔 선택 *</label>
-              <select class="form-select" id="filterHotel" onchange="loadRoomTypes(); loadInventory();">
-                <option value="">호텔을 선택하세요</option>
-              </select>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">객실 타입 선택 *</label>
-              <select class="form-select" id="filterRoomType" onchange="loadInventory();">
-                <option value="">객실 타입을 선택하세요</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">년도</label>
-              <select class="form-select" id="filterYear" onchange="loadInventory();"></select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">월</label>
-              <select class="form-select" id="filterMonth" onchange="loadInventory();"></select>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-              <button class="btn btn-secondary w-100" onclick="prevMonth()">
-                <i class="bi bi-chevron-left"></i> 이전 달
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 달력 -->
-        <div class="card">
-          <div class="card-body">
-            <h5 class="card-title mb-3" id="calendarTitle">달력</h5>
-            <div id="calendarGrid" class="calendar-grid">
-              <!-- 동적으로 생성 -->
-            </div>
-          </div>
-        </div>
+  <div class="container-fluid mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h4>Room Availability</h4>
+      <div>
+        Prepared by <%= adminUsername %> | <span id="todayDate"></span>
+        <button class="btn btn-warning btn-sm ms-2" onclick="saveChanges()">Update</button>
       </div>
     </div>
-  </div>
-  
-  <!-- 재고 일괄 등록 모달 -->
-  <div class="modal fade" id="bulkModal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">재고 일괄 등록</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <form id="bulkForm">
-            <div class="mb-3">
-              <label class="form-label">호텔 *</label>
-              <select class="form-select" id="bulkHotel" required onchange="loadBulkRoomTypes()">
-                <option value="">호텔을 선택하세요</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">객실 타입 *</label>
-              <select class="form-select" id="bulkRoomType" required>
-                <option value="">객실 타입을 선택하세요</option>
-              </select>
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <label class="form-label">시작일 *</label>
-                <input type="date" class="form-control" id="bulkStartDate" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">종료일 *</label>
-                <input type="date" class="form-control" id="bulkEndDate" required>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">적용 요일 (선택 안 하면 모든 요일)</label>
-              <div class="btn-group w-100" role="group">
-                <input type="checkbox" class="btn-check" id="day0" value="0">
-                <label class="btn btn-outline-primary btn-sm" for="day0">일</label>
-                
-                <input type="checkbox" class="btn-check" id="day1" value="1">
-                <label class="btn btn-outline-primary btn-sm" for="day1">월</label>
-                
-                <input type="checkbox" class="btn-check" id="day2" value="2">
-                <label class="btn btn-outline-primary btn-sm" for="day2">화</label>
-                
-                <input type="checkbox" class="btn-check" id="day3" value="3">
-                <label class="btn btn-outline-primary btn-sm" for="day3">수</label>
-                
-                <input type="checkbox" class="btn-check" id="day4" value="4">
-                <label class="btn btn-outline-primary btn-sm" for="day4">목</label>
-                
-                <input type="checkbox" class="btn-check" id="day5" value="5">
-                <label class="btn btn-outline-primary btn-sm" for="day5">금</label>
-                
-                <input type="checkbox" class="btn-check" id="day6" value="6">
-                <label class="btn btn-outline-primary btn-sm" for="day6">토</label>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">가능한 객실 수 *</label>
-              <input type="number" class="form-control" id="bulkAvailableRooms" required min="0" value="10">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">메모</label>
-              <textarea class="form-control" id="bulkNotes" rows="2"></textarea>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-          <button type="button" class="btn btn-primary" onclick="saveBulkInventory()">저장</button>
-        </div>
-      </div>
+    
+    <div class="mb-2">
+      <label>Hotel:</label>
+      <select class="form-select form-select-sm d-inline-block w-auto" id="hotelSelect" onchange="loadData()">
+        <option value="">Select Hotel</option>
+      </select>
+      <label class="ms-3">Start:</label>
+      <input type="month" class="form-control form-control-sm d-inline-block w-auto" id="startMonth" value="2025-11" onchange="loadData()">
+      <button class="btn btn-primary btn-sm ms-2" onclick="selectAllCells()">Select All</button>
+      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">Clear</button>
+      <button class="btn btn-success btn-sm ms-2" onclick="bulkUpdate('O')">Open</button>
+      <button class="btn btn-danger btn-sm" onclick="bulkUpdate('X')">Close</button>
+      <button class="btn btn-info btn-sm" onclick="bulkUpdate('V')">Check</button>
     </div>
+    
+    <div id="inventoryContainer"></div>
   </div>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let hotels = [];
-    let currentInventory = [];
-    let currentYear = new Date().getFullYear();
-    let currentMonth = new Date().getMonth() + 1;
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ko-KR');
     
-    // 페이지 로드 시
-    document.addEventListener('DOMContentLoaded', () => {
-      initYearMonth();
-      loadHotels();
-    });
+    let hotels = [], roomTypes = [], inventory = {}, selected = new Set(), changes = {};
     
-    // 년도/월 초기화
-    function initYearMonth() {
-      const yearSelect = document.getElementById('filterYear');
-      const monthSelect = document.getElementById('filterMonth');
-      
-      // 현재 년도 기준 ±2년
-      for (let y = currentYear - 1; y <= currentYear + 2; y++) {
-        const option = document.createElement('option');
-        option.value = y;
-        option.textContent = y + '년';
-        if (y === currentYear) option.selected = true;
-        yearSelect.appendChild(option);
-      }
-      
-      // 1-12월
-      for (let m = 1; m <= 12; m++) {
-        const option = document.createElement('option');
-        option.value = m;
-        option.textContent = m + '월';
-        if (m === currentMonth) option.selected = true;
-        monthSelect.appendChild(option);
-      }
-    }
-    
-    // 호텔 목록 로드
     async function loadHotels() {
-      try {
-        const res = await fetch('/api/hotels?is_active=true');
-        hotels = await res.json();
-        
-        const selects = ['filterHotel', 'bulkHotel'];
-        selects.forEach(id => {
-          const select = document.getElementById(id);
-          select.innerHTML = '<option value="">호텔을 선택하세요</option>';
-          hotels.forEach(hotel => {
-            select.innerHTML += `<option value="${hotel.id}">${hotel.hotel_name} (${hotel.country})</option>`;
-          });
+      const res = await fetch('/api/hotels?is_active=true');
+      hotels = await res.json();
+      const sel = document.getElementById('hotelSelect');
+      hotels.forEach(h => sel.innerHTML += `<option value="${h.id}">${h.hotel_name}</option>`);
+    }
+    
+    async function loadData() {
+      const hid = document.getElementById('hotelSelect').value;
+      if (!hid) return;
+      const rtRes = await fetch(`/api/hotels/${hid}/room-types`);
+      roomTypes = await rtRes.json();
+      
+      const start = document.getElementById('startMonth').value.split('-');
+      const year = parseInt(start[0]), month = parseInt(start[1]);
+      inventory = {};
+      
+      for (let m = 0; m < 6; m++) {
+        const y = month + m > 12 ? year + 1 : year;
+        const mo = month + m > 12 ? month + m - 12 : month + m;
+        const res = await fetch(`/api/inventory?hotel_id=${hid}&year=${y}&month=${mo}`);
+        const data = await res.json();
+        data.forEach(inv => {
+          const key = `${inv.room_type_id}-${inv.inventory_date}`;
+          inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
         });
-      } catch (error) {
-        console.error('호텔 목록 로드 실패:', error);
       }
+      
+      renderInventory(year, month);
     }
     
-    // 객실 타입 로드
-    async function loadRoomTypes() {
-      const hotelId = document.getElementById('filterHotel').value;
-      const roomTypeSelect = document.getElementById('filterRoomType');
-      
-      roomTypeSelect.innerHTML = '<option value="">객실 타입을 선택하세요</option>';
-      
-      if (!hotelId) return;
-      
-      try {
-        const res = await fetch(`/api/hotels/${hotelId}/room-types`);
-        const roomTypes = await res.json();
-        
-        roomTypes.forEach(rt => {
-          roomTypeSelect.innerHTML += `<option value="${rt.id}">${rt.room_type_name} (${rt.room_type_code})</option>`;
-        });
-      } catch (error) {
-        console.error('객실 타입 로드 실패:', error);
-      }
-    }
-    
-    // 재고 로드
-    async function loadInventory() {
-      const hotelId = document.getElementById('filterHotel').value;
-      const roomTypeId = document.getElementById('filterRoomType').value;
-      const year = document.getElementById('filterYear').value;
-      const month = document.getElementById('filterMonth').value;
-      
-      if (!hotelId || !roomTypeId) {
-        document.getElementById('calendarGrid').innerHTML = '<div class="p-5 text-center text-muted">호텔과 객실 타입을 선택하세요</div>';
-        return;
-      }
-      
-      currentYear = parseInt(year);
-      currentMonth = parseInt(month);
-      
-      try {
-        const params = new URLSearchParams({ hotel_id: hotelId, room_type_id: roomTypeId, year, month });
-        const res = await fetch(`/api/inventory?${params}`);
-        currentInventory = await res.json();
-        
-        renderCalendar();
-      } catch (error) {
-        console.error('재고 로드 실패:', error);
-        alert('재고 로드 실패: ' + error.message);
-      }
-    }
-    
-    // 달력 렌더링
-    function renderCalendar() {
-      const grid = document.getElementById('calendarGrid');
-      const title = document.getElementById('calendarTitle');
-      
-      title.textContent = `${currentYear}년 ${currentMonth}월 재고 현황`;
-      
-      // 달력 헤더
-      const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+    function renderInventory(year, month) {
+      const container = document.getElementById('inventoryContainer');
       let html = '';
-      weekDays.forEach(day => {
-        html += `<div class="calendar-header">${day}</div>`;
-      });
       
-      // 첫날과 마지막날
-      const firstDay = new Date(currentYear, currentMonth - 1, 1);
-      const lastDay = new Date(currentYear, currentMonth, 0);
-      const startDayOfWeek = firstDay.getDay();
-      const daysInMonth = lastDay.getDate();
-      
-      // 이전 달 빈칸
-      for (let i = 0; i < startDayOfWeek; i++) {
-        html += '<div class="calendar-day other-month"></div>';
-      }
-      
-      // 현재 달 날짜들
-      const today = new Date();
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const inventory = currentInventory.find(inv => inv.inventory_date === dateStr);
+      for (let m = 0; m < 6; m++) {
+        const y = month + m > 12 ? year + 1 : year;
+        const mo = month + m > 12 ? month + m - 12 : month + m;
+        const monthName = new Date(y, mo - 1).toLocaleString('en', { month: 'short', year: '2-digit' });
+        const days = new Date(y, mo, 0).getDate();
         
-        const isToday = today.getFullYear() === currentYear && 
-                        (today.getMonth() + 1) === currentMonth && 
-                        today.getDate() === day;
-        
-        let classes = 'calendar-day';
-        if (isToday) classes += ' today';
-        if (inventory) classes += ' has-inventory';
-        
-        html += `<div class="${classes}" onclick="editDayInventory('${dateStr}', ${inventory ? inventory.id : null})">`;
-        html += `<div class="day-number">${day}</div>`;
-        
-        if (inventory) {
-          html += '<div class="inventory-info">';
-          html += `<div>가능: ${inventory.available_rooms || 0}</div>`;
-          html += `<div>배정: ${inventory.allocated_rooms || 0}</div>`;
-          html += `<div>예약: ${inventory.reserved_rooms || 0}</div>`;
-          html += `<div class="text-success fw-bold">잔여: ${(inventory.available_rooms || 0) - (inventory.allocated_rooms || 0) - (inventory.reserved_rooms || 0)}</div>`;
-          html += '</div>';
-        } else {
-          html += '<div class="inventory-info text-muted">재고 없음</div>';
-        }
-        
-        html += '</div>';
-      }
-      
-      grid.innerHTML = html;
-    }
-    
-    // 이전 달
-    function prevMonth() {
-      currentMonth--;
-      if (currentMonth < 1) {
-        currentMonth = 12;
-        currentYear--;
-      }
-      document.getElementById('filterYear').value = currentYear;
-      document.getElementById('filterMonth').value = currentMonth;
-      loadInventory();
-    }
-    
-    // 일괄 등록 모달 열기
-    function openBulkModal() {
-      const hotelId = document.getElementById('filterHotel').value;
-      const roomTypeId = document.getElementById('filterRoomType').value;
-      
-      document.getElementById('bulkForm').reset();
-      document.getElementById('bulkHotel').value = hotelId || '';
-      if (hotelId) {
-        loadBulkRoomTypes();
-        document.getElementById('bulkRoomType').value = roomTypeId || '';
-      }
-      
-      // 기본 날짜 설정
-      const today = new Date();
-      document.getElementById('bulkStartDate').value = today.toISOString().split('T')[0];
-      const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      document.getElementById('bulkEndDate').value = nextMonth.toISOString().split('T')[0];
-      
-      document.getElementById('bulkAvailableRooms').value = 10;
-      
-      new bootstrap.Modal(document.getElementById('bulkModal')).show();
-    }
-    
-    // 일괄 등록용 객실 타입 로드
-    async function loadBulkRoomTypes() {
-      const hotelId = document.getElementById('bulkHotel').value;
-      const select = document.getElementById('bulkRoomType');
-      
-      select.innerHTML = '<option value="">객실 타입을 선택하세요</option>';
-      
-      if (!hotelId) return;
-      
-      try {
-        const res = await fetch(`/api/hotels/${hotelId}/room-types`);
-        const roomTypes = await res.json();
+        html += `<div class="month-section"><div class="month-title">${monthName}</div><table class="avail-table"><thead><tr><th class="rt">Room Type</th>`;
+        for (let d = 1; d <= days; d++) html += `<th>${d}</th>`;
+        html += `</tr></thead><tbody>`;
         
         roomTypes.forEach(rt => {
-          select.innerHTML += `<option value="${rt.id}">${rt.room_type_name} (${rt.room_type_code})</option>`;
-        });
-      } catch (error) {
-        console.error('객실 타입 로드 실패:', error);
-      }
-    }
-    
-    // 재고 일괄 저장
-    async function saveBulkInventory() {
-      const hotel_id = document.getElementById('bulkHotel').value;
-      const room_type_id = document.getElementById('bulkRoomType').value;
-      const start_date = document.getElementById('bulkStartDate').value;
-      const end_date = document.getElementById('bulkEndDate').value;
-      const available_rooms = parseInt(document.getElementById('bulkAvailableRooms').value);
-      const notes = document.getElementById('bulkNotes').value;
-      
-      // 선택된 요일 가져오기
-      const days_of_week = [];
-      for (let i = 0; i <= 6; i++) {
-        const checkbox = document.getElementById(`day${i}`);
-        if (checkbox && checkbox.checked) {
-          days_of_week.push(i);
-        }
-      }
-      
-      if (!hotel_id || !room_type_id || !start_date || !end_date) {
-        alert('필수 항목을 입력해주세요.');
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/inventory/bulk', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hotel_id, room_type_id, start_date, end_date, days_of_week, available_rooms, notes })
+          html += `<tr><td class="rt-cell">${rt.room_type_code}</td>`;
+          for (let d = 1; d <= days; d++) {
+            const date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const key = `${rt.id}-${date}`;
+            const status = changes[key] || inventory[key] || '';
+            const cls = status ? `cell-${status}` : '';
+            const sel = selected.has(key) ? ' cell-selected' : '';
+            html += `<td class="${cls}${sel}" onclick="toggleCell('${key}')" data-key="${key}">
+              <input type="checkbox" class="cell-chk" ${selected.has(key)?'checked':''} onclick="event.stopPropagation();toggleCell('${key}')">
+              ${status}
+            </td>`;
+          }
+          html += `</tr>`;
         });
         
-        const result = await res.json();
-        
-        if (result.error) {
-          alert('저장 실패: ' + result.error);
-          return;
-        }
-        
-        alert(result.message);
-        bootstrap.Modal.getInstance(document.getElementById('bulkModal')).hide();
-        loadInventory();
-      } catch (error) {
-        console.error('저장 실패:', error);
-        alert('저장 실패: ' + error.message);
+        html += `</tbody></table></div>`;
       }
+      
+      container.innerHTML = html;
     }
     
-    // 개별 날짜 재고 수정 (간단한 prompt 사용)
-    function editDayInventory(date, inventoryId) {
-      const hotelId = document.getElementById('filterHotel').value;
-      const roomTypeId = document.getElementById('filterRoomType').value;
-      
-      if (!hotelId || !roomTypeId) return;
-      
-      const inventory = currentInventory.find(inv => inv.inventory_date === date);
-      const currentValue = inventory ? inventory.available_rooms : 0;
-      
-      const newValue = prompt(`${date}\n가능한 객실 수를 입력하세요:`, currentValue);
-      
-      if (newValue === null) return;
-      
-      const available_rooms = parseInt(newValue) || 0;
-      
-      // 일괄 등록 API 사용 (1일짜리)
-      fetch('/api/inventory/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hotel_id: hotelId,
-          room_type_id: roomTypeId,
-          start_date: date,
-          end_date: date,
-          days_of_week: [],
-          available_rooms: available_rooms,
-          notes: ''
-        })
-      })
-      .then(res => res.json())
-      .then(result => {
-        if (result.error) {
-          alert('저장 실패: ' + result.error);
-          return;
+    function toggleCell(key) {
+      if (selected.has(key)) selected.delete(key);
+      else selected.add(key);
+      loadData();
+    }
+    
+    function selectAllCells() {
+      selected.clear();
+      roomTypes.forEach(rt => {
+        const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+        for (let m = 0; m < 6; m++) {
+          const y = month + m > 12 ? year + 1 : year;
+          const mo = month + m > 12 ? month + m - 12 : month + m;
+          const days = new Date(y, mo, 0).getDate();
+          for (let d = 1; d <= days; d++) {
+            const date = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            selected.add(`${rt.id}-${date}`);
+          }
         }
-        loadInventory();
-      })
-      .catch(error => {
-        console.error('저장 실패:', error);
-        alert('저장 실패: ' + error.message);
       });
+      loadData();
     }
+    
+    function clearSelection() {
+      selected.clear();
+      loadData();
+    }
+    
+    function bulkUpdate(status) {
+      if (selected.size === 0) return alert('No cells selected');
+      selected.forEach(key => changes[key] = status);
+      selected.clear();
+      loadData();
+    }
+    
+    async function saveChanges() {
+      if (Object.keys(changes).length === 0) return alert('No changes to save');
+      const hid = document.getElementById('hotelSelect').value;
+      let saved = 0;
+      
+      for (const [key, status] of Object.entries(changes)) {
+        const [rtid, date] = key.split('-', 2);
+        const rooms = status === 'O' ? 10 : (status === 'X' ? 0 : 5);
+        await fetch('/api/inventory/bulk', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms})
+        });
+        saved++;
+      }
+      
+      alert(`${saved} cells updated`);
+      changes = {};
+      loadData();
+    }
+    
+    loadHotels();
   </script>
 </body>
 </html>
