@@ -205,24 +205,28 @@
             <!-- 요금 정보 -->
             <h6 class="mb-3"><i class="bi bi-cash"></i> 기본 요금 정보 (참고용)</h6>
             <div class="row g-3 mb-4">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label class="form-label">기본 객실 요금 (USD)</label>
                 <input type="number" class="form-control" id="baseRoomRate" step="0.01" placeholder="150.00">
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label class="form-label">추가 성인 요금 (USD)</label>
                 <input type="number" class="form-control" id="extraAdultRate" step="0.01" value="0" placeholder="30.00">
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <label class="form-label">추가 소아 요금 (USD)</label>
                 <input type="number" class="form-control" id="extraChildRate" step="0.01" value="0" placeholder="15.00">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">추가 유아 요금 (USD)</label>
+                <input type="number" class="form-control" id="extraInfantRate" step="0.01" value="0" placeholder="10.00">
               </div>
             </div>
             
             <!-- 조식 정보 -->
             <h6 class="mb-3"><i class="bi bi-cup-hot"></i> 조식 정보</h6>
             <div class="row g-3 mb-4">
-              <div class="col-md-6">
+              <div class="col-md-3">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" id="breakfastIncluded">
                   <label class="form-check-label" for="breakfastIncluded">
@@ -230,9 +234,30 @@
                   </label>
                 </div>
               </div>
+              <div class="col-md-3">
+                <label class="form-label">조식 요금 - 성인 (USD)</label>
+                <input type="number" class="form-control" id="breakfastRateAdult" step="0.01" value="0" placeholder="20.00">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">조식 요금 - 소아 (USD)</label>
+                <input type="number" class="form-control" id="breakfastRateChild" step="0.01" value="0" placeholder="10.00">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">조식 요금 - 유아 (USD)</label>
+                <input type="number" class="form-control" id="breakfastRateInfant" step="0.01" value="0" placeholder="0">
+              </div>
+            </div>
+            
+            <!-- 부가 시설 요금 -->
+            <h6 class="mb-3"><i class="bi bi-plus-circle"></i> 부가 시설 요금</h6>
+            <div class="row g-3 mb-4">
               <div class="col-md-6">
-                <label class="form-label">조식 요금 (1인당, USD)</label>
-                <input type="number" class="form-control" id="breakfastRatePerPerson" step="0.01" value="0" placeholder="20.00">
+                <label class="form-label">엑스트라베드 요금 (1개당, USD)</label>
+                <input type="number" class="form-control" id="extraBedRate" step="0.01" value="0" placeholder="50.00">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">베이비 코트 요금 (1개당, USD)</label>
+                <input type="number" class="form-control" id="babyCotRate" step="0.01" value="0" placeholder="0">
               </div>
             </div>
             
@@ -395,7 +420,12 @@
       document.getElementById('maxTotalOccupancy').value = 3;
       document.getElementById('extraAdultRate').value = 0;
       document.getElementById('extraChildRate').value = 0;
-      document.getElementById('breakfastRatePerPerson').value = 0;
+      document.getElementById('extraInfantRate').value = 0;
+      document.getElementById('breakfastRateAdult').value = 0;
+      document.getElementById('breakfastRateChild').value = 0;
+      document.getElementById('breakfastRateInfant').value = 0;
+      document.getElementById('extraBedRate').value = 0;
+      document.getElementById('babyCotRate').value = 0;
       
       new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
     }
@@ -420,8 +450,13 @@
         document.getElementById('baseRoomRate').value = rt.base_room_rate || '';
         document.getElementById('extraAdultRate').value = rt.extra_adult_rate || 0;
         document.getElementById('extraChildRate').value = rt.extra_child_rate || 0;
+        document.getElementById('extraInfantRate').value = rt.extra_infant_rate || 0;
         document.getElementById('breakfastIncluded').checked = rt.breakfast_included;
-        document.getElementById('breakfastRatePerPerson').value = rt.breakfast_rate_per_person || 0;
+        document.getElementById('breakfastRateAdult').value = rt.breakfast_rate_adult || 0;
+        document.getElementById('breakfastRateChild').value = rt.breakfast_rate_child || 0;
+        document.getElementById('breakfastRateInfant').value = rt.breakfast_rate_infant || 0;
+        document.getElementById('extraBedRate').value = rt.extra_bed_rate || 0;
+        document.getElementById('babyCotRate').value = rt.baby_cot_rate || 0;
         document.getElementById('isActive').checked = rt.is_active;
         
         new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
@@ -447,8 +482,13 @@
         base_room_rate: parseFloat(document.getElementById('baseRoomRate').value) || null,
         extra_adult_rate: parseFloat(document.getElementById('extraAdultRate').value) || 0,
         extra_child_rate: parseFloat(document.getElementById('extraChildRate').value) || 0,
+        extra_infant_rate: parseFloat(document.getElementById('extraInfantRate').value) || 0,
         breakfast_included: document.getElementById('breakfastIncluded').checked,
-        breakfast_rate_per_person: parseFloat(document.getElementById('breakfastRatePerPerson').value) || 0,
+        breakfast_rate_adult: parseFloat(document.getElementById('breakfastRateAdult').value) || 0,
+        breakfast_rate_child: parseFloat(document.getElementById('breakfastRateChild').value) || 0,
+        breakfast_rate_infant: parseFloat(document.getElementById('breakfastRateInfant').value) || 0,
+        extra_bed_rate: parseFloat(document.getElementById('extraBedRate').value) || 0,
+        baby_cot_rate: parseFloat(document.getElementById('babyCotRate').value) || 0,
         is_active: document.getElementById('isActive').checked
       };
       
