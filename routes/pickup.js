@@ -1871,8 +1871,11 @@ router.post('/api/customer-booking', async (req, res) => {
   const {
     flight_date, flight_number, customer_name, hotel_name,
     adult_count, child_count, infant_count, luggage_count,
-    phone, kakao_id, memo
+    phone, memo
   } = req.body;
+  
+  // kakao_id는 선택사항 (기본값 null)
+  const kakao_id = req.body.kakao_id || null;
   
   try {
     // 항공편 정보 가져오기
