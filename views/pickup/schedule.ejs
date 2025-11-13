@@ -1200,7 +1200,7 @@
           <td class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
           <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
           <td>${flightNumber}</td>
-          <td>${pickup.agency_name || '-'}</td>
+          <td>${pickup.agency_name || (pickup.agency_id === null ? '고객직접예약' : '-')}</td>
           <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
           <td>${pickup.special_request || '-'}</td>
           <td class="editable" data-field="remark">${pickup.remark || ''}</td>
@@ -1420,7 +1420,7 @@
           <td class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
           <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
           <td>${flightNumber}</td>
-          <td>${pickup.agency_name || '-'}</td>
+          <td>${pickup.agency_name || (pickup.agency_id === null ? '고객직접예약' : '-')}</td>
           <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
           <td>${pickup.special_request || '-'}</td>
           <td class="editable" data-field="remark">${pickup.remark || ''}</td>

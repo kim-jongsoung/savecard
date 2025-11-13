@@ -1944,7 +1944,7 @@ router.post('/api/customer-booking', async (req, res) => {
       status: 'active',
       confirmation_status: 'pending',
       agency_id: null, // 일반 고객은 agency_id 없음
-      agency_name: '고객직접예약' // 고객 직접 예약 표시
+      pickup_source: 'customer_direct' // 고객 직접 예약 표시용
     };
     
     const columns = Object.keys(pickupData).join(', ');
