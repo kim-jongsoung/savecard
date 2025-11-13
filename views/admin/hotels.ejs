@@ -227,6 +227,17 @@
                 <textarea class="form-control" id="description" rows="3" placeholder="호텔에 대한 간단한 설명"></textarea>
               </div>
               <div class="col-md-12">
+                <label class="form-label">재고 관리 방식 *</label>
+                <select class="form-select" id="inventoryType" required>
+                  <option value="count">숫자 카운팅 방식 (예: 10개, 5개, 0개)</option>
+                  <option value="status">상태 표시 방식 (O/X/V)</option>
+                </select>
+                <small class="text-muted">
+                  • 숫자 방식: 예약 시 재고 자동 차감<br>
+                  • 상태 방식: 단순 오픈/마감 표시만
+                </small>
+              </div>
+              <div class="col-md-12">
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" id="isActive" checked>
                   <label class="form-check-label" for="isActive">
@@ -398,6 +409,7 @@
       document.getElementById('isActive').checked = true;
       document.getElementById('checkInTime').value = '15:00';
       document.getElementById('checkOutTime').value = '11:00';
+      document.getElementById('inventoryType').value = 'count';
       
       new bootstrap.Modal(document.getElementById('hotelModal')).show();
     }
@@ -424,6 +436,7 @@
         document.getElementById('checkInTime').value = hotel.check_in_time ? hotel.check_in_time.substring(0,5) : '15:00';
         document.getElementById('checkOutTime').value = hotel.check_out_time ? hotel.check_out_time.substring(0,5) : '11:00';
         document.getElementById('description').value = hotel.description || '';
+        document.getElementById('inventoryType').value = hotel.inventory_type || 'count';
         document.getElementById('isActive').checked = hotel.is_active;
         
         new bootstrap.Modal(document.getElementById('hotelModal')).show();
@@ -451,6 +464,7 @@
         check_in_time: document.getElementById('checkInTime').value,
         check_out_time: document.getElementById('checkOutTime').value,
         description: document.getElementById('description').value,
+        inventory_type: document.getElementById('inventoryType').value,
         is_active: document.getElementById('isActive').checked
       };
       

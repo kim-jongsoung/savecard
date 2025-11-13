@@ -136,8 +136,8 @@ router.post('/api/hotels', requireLogin, async (req, res) => {
         country, region, address,
         contact_email, contact_phone,
         reservation_email, reservation_fax, contact_person,
-        check_in_time, check_out_time, description, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        check_in_time, check_out_time, description, inventory_type, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         hotel_code, hotel_name, hotel_name_en,
@@ -145,7 +145,7 @@ router.post('/api/hotels', requireLogin, async (req, res) => {
         contact_email, contact_phone,
         reservation_email, reservation_fax, contact_person,
         check_in_time || '15:00', check_out_time || '11:00',
-        description, is_active !== false
+        description, inventory_type || 'count', is_active !== false
       ]
     );
     
@@ -178,6 +178,7 @@ router.put('/api/hotels/:id', requireLogin, async (req, res) => {
     check_in_time,
     check_out_time,
     description,
+    inventory_type,
     is_active
   } = req.body;
   
@@ -214,16 +215,17 @@ router.put('/api/hotels/:id', requireLogin, async (req, res) => {
         check_in_time = $12,
         check_out_time = $13,
         description = $14,
-        is_active = $15,
+        inventory_type = $15,
+        is_active = $16,
         updated_at = NOW()
-      WHERE id = $16
+      WHERE id = $17
       RETURNING *`,
       [
         hotel_code, hotel_name, hotel_name_en,
         country, region, address,
         contact_email, contact_phone,
         reservation_email, reservation_fax, contact_person,
-        check_in_time, check_out_time, description, is_active,
+        check_in_time, check_out_time, description, inventory_type || 'count', is_active,
         id
       ]
     );
