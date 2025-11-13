@@ -851,6 +851,15 @@ try {
     console.error('⚠️ 호텔 관리 라우트 연결 실패:', error.message);
 }
 
+// 객실 타입 라우트 연결 ⭐ 신규
+try {
+    const roomTypesRouter = require('./routes/room-types');
+    app.use('/', roomTypesRouter);
+    console.log('✅ 객실 타입 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 객실 타입 관리 라우트 연결 실패:', error.message);
+}
+
 // 공항 픽업 페이지 라우트 ⭐
 app.get('/pickup', requireAuth, (req, res) => {
     res.render('pickup/admin', {
@@ -886,6 +895,14 @@ app.get('/admin/hotels', requireAuth, (req, res) => {
         title: '호텔 관리',
         adminUsername: req.session.adminUsername,
         currentPage: 'hotels'
+    });
+});
+
+app.get('/admin/room-types', requireAuth, (req, res) => {
+    res.render('admin/room-types', {
+        title: '객실 타입 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'room-types'
     });
 });
 
