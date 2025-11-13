@@ -869,6 +869,15 @@ try {
     console.error('⚠️ 거래처 관리 라우트 연결 실패:', error.message);
 }
 
+// 객실 재고 관리 라우트 연결 ⭐ 신규
+try {
+    const roomInventoryRouter = require('./routes/room-inventory');
+    app.use('/', roomInventoryRouter);
+    console.log('✅ 객실 재고 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 객실 재고 관리 라우트 연결 실패:', error.message);
+}
+
 // 공항 픽업 페이지 라우트 ⭐
 app.get('/pickup', requireAuth, (req, res) => {
     res.render('pickup/admin', {
@@ -920,6 +929,14 @@ app.get('/admin/booking-agencies', requireAuth, (req, res) => {
         title: '거래처 관리',
         adminUsername: req.session.adminUsername,
         currentPage: 'booking-agencies'
+    });
+});
+
+app.get('/admin/room-inventory', requireAuth, (req, res) => {
+    res.render('admin/room-inventory', {
+        title: '객실 재고 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'room-inventory'
     });
 });
 
