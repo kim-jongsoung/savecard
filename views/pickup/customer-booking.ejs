@@ -90,10 +90,11 @@
       <ol class="mb-0">
         <li class="mb-2"><strong>신청:</strong> 아래 양식을 작성하여 예약 신청</li>
         <li class="mb-2"><strong>카카오 친구추가:</strong> <span class="highlight">@괌공항픽업</span> 카카오톡 친구추가</li>
-        <li class="mb-2"><strong>예약확정:</strong> 카카오톡으로 예약 확정 및 안내를 받으세요</li>
+        <li class="mb-2"><strong>예약완료 메시지 전송:</strong> 카카오톡으로 예약 완료했다고 메시지를 먼저 보내주세요</li>
+        <li class="mb-2"><strong>예약확정:</strong> 관리자가 확인 후 예약을 확정해 드립니다</li>
       </ol>
       <div class="alert alert-warning mt-3 mb-0">
-        <i class="bi bi-exclamation-triangle"></i> <strong>필수!</strong> 신청 후 반드시 <strong>@괌공항픽업</strong> 카카오톡 친구추가 하셔야 예약이 확정됩니다.
+        <i class="bi bi-exclamation-triangle"></i> <strong>필수!</strong> 신청 후 반드시 <strong>@괌공항픽업</strong> 카카오톡 친구추가 후, <strong>예약 완료했다고 먼저 메시지를 보내주셔야</strong> 예약이 확정됩니다.
       </div>
     </div>
 
@@ -268,8 +269,9 @@
             </h2>
             <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
               <div class="accordion-body">
-                예약 신청 후 <strong>@괌공항픽업</strong> 카카오톡 친구추가를 하시면,
-                픽업 당일 아침에 정확한 픽업 시간과 차량 정보를 안내해 드립니다.
+                예약 신청 후 <strong>@괌공항픽업</strong> 카카오톡 친구추가를 하시고, 
+                <strong>먼저 예약 완료했다고 메시지를 보내주세요.</strong>
+                관리자가 확인 후 예약을 확정해 드리며, 픽업 당일 아침에 정확한 픽업 시간과 차량 정보를 안내해 드립니다.
               </div>
             </div>
           </div>
@@ -431,7 +433,7 @@
         const result = await res.json();
 
         if (result.success) {
-          alert('✅ 예약 신청이 완료되었습니다!\n\n다음 단계:\n1. 카카오톡에서 "@괌공항픽업" 검색\n2. 친구 추가하기\n3. 예약 확정 및 안내 받기\n\n감사합니다!');
+          alert('✅ 예약 신청이 완료되었습니다!\n\n⚠️ 다음 단계를 반드시 진행해주세요:\n1. 카카오톡에서 "@괌공항픽업" 검색\n2. 친구 추가하기\n3. 예약 완료했다고 메시지 먼저 보내기\n4. 관리자 확인 후 예약 확정\n\n감사합니다!');
           document.getElementById('bookingForm').reset();
           $('#flightNumber').val(null).trigger('change');
           $('#hotelName').val(null).trigger('change');
