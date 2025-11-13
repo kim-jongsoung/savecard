@@ -1436,20 +1436,49 @@
       return airportNames[code] || code;
     }
     
-    // 날짜 포맷 (YYYY-MM-DD만 추출)
+    // 날짜 포맷 (YYYY/MM/DD만 추출)
     function formatDate(dateStr) {
       if (!dateStr) return '';
       if (dateStr.includes('T') || dateStr.includes('Z')) {
-        return dateStr.split('T')[0];
+        dateStr = dateStr.split('T')[0];
       }
-      return dateStr;
+      // YYYY-MM-DD → YYYY/MM/DD
+      return dateStr.replace(/-/g, '/');
     }
     
-    // 예약 카드 렌더링 (출발편만 표시)
+    // 날짜+시간 포맷 (YYYY/MM/DD HH:mm)
+    function formatDateTime(dateStr, timeStr) {
+      if (!dateStr || !timeStr) return '';
+      const formattedDate = formatDate(dateStr);
+      const formattedTime = timeStr.substring(0, 5); // HH:mm만 추출
+      return `${formattedDate} ${formattedTime}`;
+    }
+    
+    // 예약 카드 렌더링 (출발+도착 둘 다 표시)
     function renderReservationCard(pickup, type) {
-      const hasRoundtrip = pickup.arrival_record;
+      const hasArrival = pickup.arrival_record;
       const depAirport = pickup.departure_airport || 'GUM';
       const depCity = getAirportName(depAirport);
+      
+      // 출발 정보
+      const departureDateTime = formatDateTime(pickup.departure_date, pickup.departure_time);
+      
+      // 도착 정보 (arrival_record가 있으면 표시)
+      let arrivalInfo = '';
+      if (hasArrival) {
+        const arrAirport = hasArrival.arrival_airport || 'GUM';
+        const arrCity = getAirportName(arrAirport);
+        const arrivalDateTime = formatDateTime(hasArrival.arrival_date, hasArrival.arrival_time);
+        
+        arrivalInfo = `
+          <div class="mt-2 pt-2" style="border-top: 2px dashed #90caf9;">
+            <h6 class="mb-1" style="color: #f44336;">🛬 <strong>${arrCity}도착</strong></h6>
+            <div class="text-muted small">
+              📅 ${arrivalDateTime}
+            </div>
+          </div>
+        `;
+      }
       
       return `
         <div class="card mb-3" style="border-left: 4px solid #2196f3;">
@@ -1468,7 +1497,7 @@
             </div>
             
             <div class="text-muted small mb-3">
-              📅 ${pickup.display_date} ${pickup.display_time}<br>
+              📅 ${departureDateTime}<br>
               🏨 ${pickup.hotel_name}<br>
               👥 ${pickup.passenger_count}명 (성인:${pickup.adult_count}, 소아:${pickup.child_count}, 유아:${pickup.infant_count})<br>
               🧳 ${pickup.luggage_count}개<br>
@@ -1477,7 +1506,9 @@
               ${pickup.memo ? `📝 ${pickup.memo}` : ''}
             </div>
             
-            <div class="btn-group w-100" role="group">
+            ${arrivalInfo}
+            
+            <div class="btn-group w-100 mt-3" role="group">
               ${type === 'pending' ? `
                 <button class="btn btn-primary" onclick="confirmReservation(${pickup.id}, ${pickup.linked_id || 'null'})">
                   <i class="bi bi-check-circle-fill"></i> 예약 확정
