@@ -842,6 +842,15 @@ try {
     console.error('⚠️ 공항 픽업 라우트 연결 실패:', error.message);
 }
 
+// 호텔 ERP 라우트 연결 ⭐ 신규
+try {
+    const hotelsRouter = require('./routes/hotels');
+    app.use('/', hotelsRouter);
+    console.log('✅ 호텔 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 호텔 관리 라우트 연결 실패:', error.message);
+}
+
 // 공항 픽업 페이지 라우트 ⭐
 app.get('/pickup', requireAuth, (req, res) => {
     res.render('pickup/admin', {
@@ -868,6 +877,15 @@ app.get('/pickup/flights', requireAuth, (req, res) => {
 app.get('/pickup/driver', (req, res) => {
     res.render('pickup/driver', {
         title: '기사 화면'
+    });
+});
+
+// 호텔 ERP 페이지 라우트 ⭐ 신규
+app.get('/admin/hotels', requireAuth, (req, res) => {
+    res.render('admin/hotels', {
+        title: '호텔 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'hotels'
     });
 });
 

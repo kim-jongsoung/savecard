@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>호텔 관리 - 괌 세이브카드</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .hotel-card {
+      border-left: 4px solid #0d6efd;
+      transition: all 0.3s;
+    }
+    .hotel-card:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .hotel-card.inactive {
+      border-left-color: #6c757d;
+      opacity: 0.7;
+    }
+    .country-badge {
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+    }
+    .filter-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+  
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <div class="col-12">
+        <!-- 헤더 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2><i class="bi bi-building"></i> 호텔 관리</h2>
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <i class="bi bi-plus-circle"></i> 호텔 등록
+          </button>
+        </div>
+        
+        <!-- 필터 -->
+        <div class="filter-card">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label class="form-label">국가</label>
+              <select class="form-select" id="filterCountry" onchange="loadRegions(); loadHotels();">
+                <option value="">전체</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">지역</label>
+              <select class="form-select" id="filterRegion" onchange="loadHotels();">
+                <option value="">전체</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">검색</label>
+              <input type="text" class="form-control" id="filterSearch" placeholder="호텔명 또는 코드" onkeyup="if(event.key==='Enter') loadHotels();">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">상태</label>
+              <select class="form-select" id="filterActive" onchange="loadHotels();">
+                <option value="">전체</option>
+                <option value="true" selected>활성</option>
+                <option value="false">비활성</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button class="btn btn-secondary me-2" onclick="loadHotels();">
+                <i class="bi bi-search"></i> 검색
+              </button>
+              <button class="btn btn-outline-secondary" onclick="resetFilters();">
+                <i class="bi bi-arrow-clockwise"></i> 초기화
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 호텔 목록 -->
+        <div id="hotelsList" class="row">
+          <!-- 동적으로 로드 -->
+        </div>
+        
+        <!-- 로딩 스피너 -->
+        <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">로딩 중...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 호텔 등록/수정 모달 -->
+  <div class="modal fade" id="hotelModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">호텔 등록</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="hotelForm">
+            <input type="hidden" id="hotelId">
+            
+            <!-- 기본 정보 -->
+            <h6 class="mb-3"><i class="bi bi-info-circle"></i> 기본 정보</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">호텔 코드 *</label>
+                <input type="text" class="form-control" id="hotelCode" required placeholder="예: HYATT-GUAM">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">호텔명 (한글) *</label>
+                <input type="text" class="form-control" id="hotelName" required placeholder="하얏트 리젠시 괌">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">호텔명 (영문)</label>
+                <input type="text" class="form-control" id="hotelNameEn" placeholder="Hyatt Regency Guam">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">국가 *</label>
+                <input type="text" class="form-control" id="country" required placeholder="괌">
+                <small class="text-muted">예: 괌, 베트남, 일본</small>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">지역</label>
+                <input type="text" class="form-control" id="region" placeholder="타무닝">
+                <small class="text-muted">예: 타무닝, 투몬, 하갓냐</small>
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">주소</label>
+                <textarea class="form-control" id="address" rows="2" placeholder="1155 Pale San Vitores Road, Tamuning, GU 96913"></textarea>
+              </div>
+            </div>
+            
+            <!-- 연락처 정보 -->
+            <h6 class="mb-3"><i class="bi bi-telephone"></i> 연락처 정보</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">대표 이메일</label>
+                <input type="email" class="form-control" id="contactEmail" placeholder="info@hotel.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">대표 전화</label>
+                <input type="text" class="form-control" id="contactPhone" placeholder="+1-671-123-4567">
+              </div>
+            </div>
+            
+            <!-- 예약과 정보 -->
+            <h6 class="mb-3"><i class="bi bi-envelope"></i> 예약과 정보 (수배서 발송용)</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">예약과 이메일</label>
+                <input type="email" class="form-control" id="reservationEmail" placeholder="reservations@hotel.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">예약과 팩스</label>
+                <input type="text" class="form-control" id="reservationFax" placeholder="+1-671-123-4568">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">담당자명</label>
+                <input type="text" class="form-control" id="contactPerson" placeholder="John Doe">
+              </div>
+            </div>
+            
+            <!-- 체크인/아웃 시간 -->
+            <h6 class="mb-3"><i class="bi bi-clock"></i> 체크인/아웃 시간</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">체크인 시간</label>
+                <input type="time" class="form-control" id="checkInTime" value="15:00">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">체크아웃 시간</label>
+                <input type="time" class="form-control" id="checkOutTime" value="11:00">
+              </div>
+            </div>
+            
+            <!-- 기타 -->
+            <h6 class="mb-3"><i class="bi bi-card-text"></i> 기타</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-12">
+                <label class="form-label">호텔 설명</label>
+                <textarea class="form-control" id="description" rows="3" placeholder="호텔에 대한 간단한 설명"></textarea>
+              </div>
+              <div class="col-md-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="isActive" checked>
+                  <label class="form-check-label" for="isActive">
+                    활성화 (활성화된 호텔만 예약 가능)
+                  </label>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" onclick="saveHotel()">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let currentHotels = [];
+    
+    // 페이지 로드 시
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCountries();
+      loadHotels();
+    });
+    
+    // 국가 목록 로드
+    async function loadCountries() {
+      try {
+        const res = await fetch('/api/hotels/meta/countries');
+        const countries = await res.json();
+        
+        const select = document.getElementById('filterCountry');
+        select.innerHTML = '<option value="">전체</option>';
+        countries.forEach(country => {
+          select.innerHTML += `<option value="${country}">${country}</option>`;
+        });
+      } catch (error) {
+        console.error('국가 목록 로드 실패:', error);
+      }
+    }
+    
+    // 지역 목록 로드 (국가별)
+    async function loadRegions() {
+      const country = document.getElementById('filterCountry').value;
+      
+      try {
+        const res = await fetch(`/api/hotels/meta/regions${country ? '?country=' + country : ''}`);
+        const regions = await res.json();
+        
+        const select = document.getElementById('filterRegion');
+        select.innerHTML = '<option value="">전체</option>';
+        regions.forEach(region => {
+          select.innerHTML += `<option value="${region}">${region}</option>`;
+        });
+      } catch (error) {
+        console.error('지역 목록 로드 실패:', error);
+      }
+    }
+    
+    // 호텔 목록 로드
+    async function loadHotels() {
+      const country = document.getElementById('filterCountry').value;
+      const region = document.getElementById('filterRegion').value;
+      const search = document.getElementById('filterSearch').value;
+      const is_active = document.getElementById('filterActive').value;
+      
+      document.getElementById('loadingSpinner').style.display = 'block';
+      document.getElementById('hotelsList').innerHTML = '';
+      
+      try {
+        const params = new URLSearchParams();
+        if (country) params.append('country', country);
+        if (region) params.append('region', region);
+        if (search) params.append('search', search);
+        if (is_active) params.append('is_active', is_active);
+        
+        const res = await fetch(`/api/hotels?${params}`);
+        const hotels = await res.json();
+        
+        currentHotels = hotels;
+        renderHotels(hotels);
+      } catch (error) {
+        console.error('호텔 목록 로드 실패:', error);
+        alert('호텔 목록 로드 실패: ' + error.message);
+      } finally {
+        document.getElementById('loadingSpinner').style.display = 'none';
+      }
+    }
+    
+    // 호텔 목록 렌더링
+    function renderHotels(hotels) {
+      const container = document.getElementById('hotelsList');
+      
+      if (hotels.length === 0) {
+        container.innerHTML = `
+          <div class="col-12 text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>
+            <p class="text-muted mt-3">등록된 호텔이 없습니다.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = hotels.map(hotel => `
+        <div class="col-md-6 col-lg-4 mb-3">
+          <div class="card hotel-card ${!hotel.is_active ? 'inactive' : ''}">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <span class="badge country-badge bg-primary">${hotel.country || '-'}</span>
+                  ${hotel.region ? `<span class="badge bg-secondary ms-1">${hotel.region}</span>` : ''}
+                  ${!hotel.is_active ? '<span class="badge bg-secondary ms-1">비활성</span>' : ''}
+                </div>
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots-vertical"></i>
+                  </button>
+                  <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="editHotel(${hotel.id}); return false;">
+                      <i class="bi bi-pencil"></i> 수정
+                    </a></li>
+                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteHotel(${hotel.id}); return false;">
+                      <i class="bi bi-trash"></i> 삭제
+                    </a></li>
+                  </ul>
+                </div>
+              </div>
+              
+              <h5 class="card-title">${hotel.hotel_name}</h5>
+              ${hotel.hotel_name_en ? `<p class="text-muted small">${hotel.hotel_name_en}</p>` : ''}
+              
+              <hr>
+              
+              <div class="small">
+                <div class="mb-1"><i class="bi bi-tag"></i> <strong>코드:</strong> ${hotel.hotel_code}</div>
+                ${hotel.address ? `<div class="mb-1"><i class="bi bi-geo-alt"></i> ${hotel.address}</div>` : ''}
+                ${hotel.contact_phone ? `<div class="mb-1"><i class="bi bi-telephone"></i> ${hotel.contact_phone}</div>` : ''}
+                ${hotel.reservation_email ? `<div class="mb-1"><i class="bi bi-envelope"></i> ${hotel.reservation_email}</div>` : ''}
+                <div class="mb-1">
+                  <i class="bi bi-clock"></i> 
+                  체크인 ${hotel.check_in_time ? hotel.check_in_time.substring(0,5) : '15:00'} / 
+                  체크아웃 ${hotel.check_out_time ? hotel.check_out_time.substring(0,5) : '11:00'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 필터 초기화
+    function resetFilters() {
+      document.getElementById('filterCountry').value = '';
+      document.getElementById('filterRegion').value = '';
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterActive').value = 'true';
+      loadRegions();
+      loadHotels();
+    }
+    
+    // 호텔 등록 모달 열기
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = '호텔 등록';
+      document.getElementById('hotelForm').reset();
+      document.getElementById('hotelId').value = '';
+      document.getElementById('isActive').checked = true;
+      document.getElementById('checkInTime').value = '15:00';
+      document.getElementById('checkOutTime').value = '11:00';
+      
+      new bootstrap.Modal(document.getElementById('hotelModal')).show();
+    }
+    
+    // 호텔 수정
+    async function editHotel(id) {
+      try {
+        const res = await fetch(`/api/hotels/${id}`);
+        const hotel = await res.json();
+        
+        document.getElementById('modalTitle').textContent = '호텔 수정';
+        document.getElementById('hotelId').value = hotel.id;
+        document.getElementById('hotelCode').value = hotel.hotel_code;
+        document.getElementById('hotelName').value = hotel.hotel_name;
+        document.getElementById('hotelNameEn').value = hotel.hotel_name_en || '';
+        document.getElementById('country').value = hotel.country || '';
+        document.getElementById('region').value = hotel.region || '';
+        document.getElementById('address').value = hotel.address || '';
+        document.getElementById('contactEmail').value = hotel.contact_email || '';
+        document.getElementById('contactPhone').value = hotel.contact_phone || '';
+        document.getElementById('reservationEmail').value = hotel.reservation_email || '';
+        document.getElementById('reservationFax').value = hotel.reservation_fax || '';
+        document.getElementById('contactPerson').value = hotel.contact_person || '';
+        document.getElementById('checkInTime').value = hotel.check_in_time ? hotel.check_in_time.substring(0,5) : '15:00';
+        document.getElementById('checkOutTime').value = hotel.check_out_time ? hotel.check_out_time.substring(0,5) : '11:00';
+        document.getElementById('description').value = hotel.description || '';
+        document.getElementById('isActive').checked = hotel.is_active;
+        
+        new bootstrap.Modal(document.getElementById('hotelModal')).show();
+      } catch (error) {
+        console.error('호텔 정보 로드 실패:', error);
+        alert('호텔 정보 로드 실패: ' + error.message);
+      }
+    }
+    
+    // 호텔 저장
+    async function saveHotel() {
+      const id = document.getElementById('hotelId').value;
+      const data = {
+        hotel_code: document.getElementById('hotelCode').value,
+        hotel_name: document.getElementById('hotelName').value,
+        hotel_name_en: document.getElementById('hotelNameEn').value,
+        country: document.getElementById('country').value,
+        region: document.getElementById('region').value,
+        address: document.getElementById('address').value,
+        contact_email: document.getElementById('contactEmail').value,
+        contact_phone: document.getElementById('contactPhone').value,
+        reservation_email: document.getElementById('reservationEmail').value,
+        reservation_fax: document.getElementById('reservationFax').value,
+        contact_person: document.getElementById('contactPerson').value,
+        check_in_time: document.getElementById('checkInTime').value,
+        check_out_time: document.getElementById('checkOutTime').value,
+        description: document.getElementById('description').value,
+        is_active: document.getElementById('isActive').checked
+      };
+      
+      // 필수값 체크
+      if (!data.hotel_code || !data.hotel_name || !data.country) {
+        alert('필수 항목을 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const url = id ? `/api/hotels/${id}` : '/api/hotels';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (result.error) {
+          alert('저장 실패: ' + result.error);
+          return;
+        }
+        
+        alert('저장되었습니다.');
+        bootstrap.Modal.getInstance(document.getElementById('hotelModal')).hide();
+        loadHotels();
+        loadCountries();
+      } catch (error) {
+        console.error('저장 실패:', error);
+        alert('저장 실패: ' + error.message);
+      }
+    }
+    
+    // 호텔 삭제
+    async function deleteHotel(id) {
+      if (!confirm('정말 삭제하시겠습니까?\n예약이 있는 경우 비활성화 처리됩니다.')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/hotels/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        
+        if (result.error) {
+          alert('삭제 실패: ' + result.error);
+          return;
+        }
+        
+        alert(result.message);
+        loadHotels();
+      } catch (error) {
+        console.error('삭제 실패:', error);
+        alert('삭제 실패: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
