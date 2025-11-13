@@ -16011,6 +16011,38 @@ async function startServer() {
             console.warn('⚠️  마이그레이션 경고:', migrateErr.message);
         }
         
+        // 거래처 테이블 마이그레이션
+        try {
+            console.log('🏢 거래처 테이블 컬럼 확인 중...');
+            await pool.query(`
+                ALTER TABLE booking_agencies 
+                ADD COLUMN IF NOT EXISTS bank_account TEXT
+            `);
+            await pool.query(`
+                ALTER TABLE booking_agencies 
+                ADD COLUMN IF NOT EXISTS notes TEXT
+            `);
+            await pool.query(`
+                ALTER TABLE booking_agencies 
+                ADD COLUMN IF NOT EXISTS payment_terms VARCHAR(100)
+            `);
+            await pool.query(`
+                ALTER TABLE booking_agencies 
+                DROP COLUMN IF EXISTS margin_rate
+            `);
+            await pool.query(`
+                ALTER TABLE booking_agencies 
+                DROP COLUMN IF EXISTS commission_rate
+            `);
+            await pool.query(`
+                ALTER TABLE booking_agencies 
+                DROP COLUMN IF EXISTS bank_info
+            `);
+            console.log('✅ 거래처 테이블 마이그레이션 완료');
+        } catch (migrateErr) {
+            console.warn('⚠️  거래처 마이그레이션 경고:', migrateErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
