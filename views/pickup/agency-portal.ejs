@@ -557,6 +557,10 @@
         if (pickup.confirmation_status === 'confirmed' || pickup.vehicle_ready || pickup.status === 'confirmed' || pickup.status === 'pending_vehicle') {
           return '<span class="badge bg-primary" style="font-size: 0.85rem;">✅ 확정</span>';
         }
+        // 미확정 (관리자가 거부함)
+        if (pickup.confirmation_status === 'rejected') {
+          return '<span class="badge" style="background: #ff5722; color: white; font-size: 0.85rem;">⚠️ 미확정</span>';
+        }
         // 검수 대기 (신규, pending, new)
         return '<span class="badge bg-warning" style="font-size: 0.85rem;">📋 검수대기</span>';
       };
@@ -577,6 +581,14 @@
             borderColor: '#2196f3',
             bgColor: '#e3f2fd',
             textColor: '#2196f3'
+          };
+        }
+        // 미확정 - 주황색 (rejected)
+        if (pickup.confirmation_status === 'rejected') {
+          return {
+            borderColor: '#ff5722',
+            bgColor: '#ffe0db',
+            textColor: '#d32f2f'
           };
         }
         // 검수 대기 - 노란색
@@ -616,7 +628,8 @@
             🧳 ${p.luggage_count}개<br>
             ${p.phone ? `📞 ${p.phone}<br>` : ''}
             ${p.kakao_id ? `💬 ${p.kakao_id}<br>` : ''}
-            ${p.memo ? `📝 ${p.memo}` : ''}
+            ${p.memo ? `📝 ${p.memo}<br>` : ''}
+            ${p.confirmation_status === 'rejected' && p.rejection_reason ? `<strong style="color: #d32f2f;">⚠️ 미확정 사유: ${p.rejection_reason}</strong>` : ''}
           </div>
         </div>
       `;
