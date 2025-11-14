@@ -1668,10 +1668,16 @@
                                                 const fields = guestCard.querySelectorAll('[data-guest-field]');
                                                 fields.forEach(field => {
                                                     const fieldName = field.dataset.guestField;
-                                                    // ⭐ 조건 제거: null이나 빈 값도 항상 채우기
-                                                    field.value = guest[fieldName] !== undefined && guest[fieldName] !== null ? guest[fieldName] : '';
+                                                    let value = guest[fieldName] !== undefined && guest[fieldName] !== null ? guest[fieldName] : '';
+                                                    
+                                                    // ⭐ date_of_birth는 ISO → YYYY-MM-DD 변환 필수!
+                                                    if (fieldName === 'date_of_birth' && value) {
+                                                        value = formatDateForInput(value);
+                                                    }
+                                                    
+                                                    field.value = value;
                                                 });
-                                                console.log(`  ✅ 객실 ${currentRoomNum} 투숙객 ${guestIdx + 1} 정보 채움 (이름: ${guest.guest_name_ko})`);
+                                                console.log(`  ✅ 객실 ${currentRoomNum} 투숙객 ${guestIdx + 1} 정보 채움 (이름: ${guest.guest_name_ko}, 생년월일: ${formatDateForInput(guest.date_of_birth)})`);
                                             }
                                         }, 100 * guestIdx);
                                     });
