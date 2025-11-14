@@ -186,7 +186,7 @@
                             </div>
                             <div class="col-md-4 mb-2">
                                 <label class="form-label">거래처 (한국 여행사)</label>
-                                <select class="form-control" id="booking_agency_id">
+                                <select class="form-control" id="booking_agency_id" onchange="calculateAgencyFee()">
                                     <option value="">직접 예약</option>
                                 </select>
                             </div>
@@ -301,11 +301,24 @@
                                 <div class="total-summary">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span>총 객실 요금:</span>
-                                        <strong id="totalRoomCharge">$0.00</strong>
+                                        <div class="input-group input-group-sm" style="width: 150px;">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="totalRoomCharge" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold;">
+                                        </div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span>추가 항목 요금:</span>
-                                        <strong id="totalExtrasCharge">$0.00</strong>
+                                        <div class="input-group input-group-sm" style="width: 150px;">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="totalExtrasCharge" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold;">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2" id="agencyFeeRow" style="display: none;">
+                                        <span>수배피 (<span id="agencyFeeName"></span>):</span>
+                                        <div class="input-group input-group-sm" style="width: 150px;">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="agencyFee" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold;">
+                                        </div>
                                     </div>
                                     <hr style="border-color: rgba(255,255,255,0.3);">
                                     <div class="d-flex justify-content-between align-items-center">
@@ -358,11 +371,13 @@
         let allHotels = [];
         let allRoomTypes = [];
         let allAgencies = [];
+        let allAgencyFees = [];
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
             loadHotels();
             loadAgencies();
+            loadAgencyFees();
         });
 
         // 호텔 목록 로드
@@ -422,8 +437,69 @@
             if (checkIn && checkOut) {
                 const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
                 document.getElementById('nights').value = nights > 0 ? nights : 0;
+                calculateAgencyFee(); // 박수가 변경되면 수배피 재계산
                 calculateTotal();
             }
+        }
+
+        // 수배피 정보 로드
+        async function loadAgencyFees() {
+            try {
+                const response = await fetch('/api/agency-fees');
+                if (response.ok) {
+                    allAgencyFees = await response.json();
+                    console.log('수배피 정보 로드:', allAgencyFees.length, '개');
+                }
+            } catch (error) {
+                console.error('수배피 로드 오류:', error);
+            }
+        }
+
+        // 수배피 자동 계산
+        function calculateAgencyFee() {
+            const agencyId = document.getElementById('booking_agency_id').value;
+            const nights = parseInt(document.getElementById('nights').value) || 0;
+            
+            if (!agencyId || nights === 0) {
+                // 거래처 미선택 또는 박수 0이면 수배피 숨김
+                document.getElementById('agencyFeeRow').style.display = 'none';
+                document.getElementById('agencyFee').value = 0;
+                calculateTotal();
+                return;
+            }
+            
+            // 해당 거래처의 수배피 정보 찾기
+            const agency = allAgencies.find(a => a.id === parseInt(agencyId));
+            const agencyFeeInfo = allAgencyFees.find(f => f.booking_agency_id === parseInt(agencyId));
+            
+            if (!agencyFeeInfo) {
+                console.warn('수배피 정보 없음:', agencyId);
+                document.getElementById('agencyFeeRow').style.display = 'none';
+                document.getElementById('agencyFee').value = 0;
+                calculateTotal();
+                return;
+            }
+            
+            // 수배피 계산: 박수 기준
+            let fee = 0;
+            if (agencyFeeInfo.fee_type === 'per_night') {
+                // 박당 요금
+                fee = parseFloat(agencyFeeInfo.fee_amount) * nights;
+            } else if (agencyFeeInfo.fee_type === 'per_booking') {
+                // 건당 요금
+                fee = parseFloat(agencyFeeInfo.fee_amount);
+            } else if (agencyFeeInfo.fee_type === 'percentage') {
+                // 퍼센트 요금 (총 객실 요금 기준)
+                const totalRoom = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+                fee = totalRoom * (parseFloat(agencyFeeInfo.fee_amount) / 100);
+            }
+            
+            // 수배피 표시
+            document.getElementById('agencyFeeRow').style.display = 'flex';
+            document.getElementById('agencyFeeName').textContent = agency ? agency.agency_name : '';
+            document.getElementById('agencyFee').value = fee.toFixed(2);
+            
+            calculateTotal();
         }
 
         // 호텔 데이터 파싱
@@ -580,7 +656,7 @@
                 if (bestPromotion) {
                     currentPromotion = bestPromotion;
                     displayPromotionResult(bestPromotion);
-                    calculateRoomRates();
+                    updateRoomCharges();
                 }
             } catch (error) {
                 console.error('프로모션 조회 오류:', error);
@@ -918,6 +994,18 @@
             }
             
             document.getElementById(`extra_${extraNum}_total`).value = `$${total.toFixed(2)}`;
+            
+            // 모든 추가 항목 합계 계산
+            let totalExtras = 0;
+            document.querySelectorAll('.extra-item-card').forEach(extra => {
+                const totalInput = extra.querySelector('[id$="_total"]');
+                if (totalInput && totalInput.value) {
+                    const amount = parseFloat(totalInput.value.replace('$', '')) || 0;
+                    totalExtras += amount;
+                }
+            });
+            document.getElementById('totalExtrasCharge').value = totalExtras.toFixed(2);
+            
             calculateTotal();
         }
 
@@ -948,9 +1036,20 @@
 
         // 총 요금 계산
         function calculateTotal() {
-            const nights = parseInt(document.getElementById('nights').value) || 0;
+            // input 필드에서 값 읽기 (수동 수정 가능)
+            const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+            const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
+            const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0;
+            
+            // 총 판매가 계산
+            const grandTotal = totalRoomCharge + totalExtrasCharge + agencyFee;
+            
+            document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
+        }
+
+        // 객실 요금 자동 업데이트 (프로모션 적용 시)
+        function updateRoomCharges() {
             let totalRoomCharge = 0;
-            let totalExtrasCharge = 0;
             
             // 객실 요금 계산
             if (currentPromotion && currentPromotion.total_room_rate) {
@@ -958,18 +1057,9 @@
                 totalRoomCharge = currentPromotion.total_room_rate * roomCount;
             }
             
-            // 추가 항목 요금 계산
-            document.querySelectorAll('.extra-item-card').forEach(extra => {
-                const totalInput = extra.querySelector('[id$="_total"]');
-                if (totalInput && totalInput.value) {
-                    const amount = parseFloat(totalInput.value.replace('$', '')) || 0;
-                    totalExtrasCharge += amount;
-                }
-            });
-            
-            document.getElementById('totalRoomCharge').textContent = `$${totalRoomCharge.toFixed(2)}`;
-            document.getElementById('totalExtrasCharge').textContent = `$${totalExtrasCharge.toFixed(2)}`;
-            document.getElementById('grandTotal').textContent = `$${(totalRoomCharge + totalExtrasCharge).toFixed(2)}`;
+            document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
+            calculateAgencyFee(); // 객실 요금 변경 시 수배피 재계산
+            calculateTotal();
         }
 
         // 미리보기 초기화
@@ -1018,6 +1108,10 @@
                 departure_flight: document.getElementById('departure_flight').value || null,
                 special_requests: document.getElementById('special_requests').value,
                 internal_memo: document.getElementById('internal_memo').value,
+                total_room_rate: parseFloat(document.getElementById('totalRoomCharge').value) || 0,
+                total_extras_rate: parseFloat(document.getElementById('totalExtrasCharge').value) || 0,
+                agency_fee: parseFloat(document.getElementById('agencyFee').value) || 0,
+                grand_total: parseFloat(document.getElementById('grandTotal').textContent.replace('$', '')) || 0,
                 rooms: [],
                 extras: []
             };

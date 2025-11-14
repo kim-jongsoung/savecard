@@ -31,21 +31,41 @@ router.post('/check-and-get-rates', async (req, res) => {
         
         const promotion = promoResult.rows[0];
         
-        // 2. 날짜별 요금 조회
+        // 2. 총 박수 계산
+        const checkInDate = new Date(check_in_date);
+        const checkOutDate = new Date(check_out_date);
+        const totalNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+        
+        // 3. 날짜별 요금 조회 (연박 조건에 맞는 최저가만 선택)
         const ratesResult = await pool.query(`
+            WITH RankedRates AS (
+                SELECT 
+                    stay_date,
+                    min_nights,
+                    rate_per_night,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY stay_date 
+                        ORDER BY 
+                            CASE WHEN min_nights <= $5 THEN min_nights ELSE 0 END DESC,
+                            rate_per_night ASC
+                    ) as rn
+                FROM promotion_daily_rates
+                WHERE promotion_id = $1
+                  AND room_type_id = $2
+                  AND stay_date >= $3::date
+                  AND stay_date < $4::date
+                  AND min_nights <= $5
+            )
             SELECT 
                 stay_date,
                 min_nights,
                 rate_per_night
-            FROM promotion_daily_rates
-            WHERE promotion_id = $1
-              AND room_type_id = $2
-              AND stay_date >= $3::date
-              AND stay_date < $4::date
+            FROM RankedRates
+            WHERE rn = 1
             ORDER BY stay_date ASC
-        `, [promotion.id, room_type_id, check_in_date, check_out_date]);
+        `, [promotion.id, room_type_id, check_in_date, check_out_date, totalNights]);
         
-        // 3. 총 요금 계산 (날짜별 요금 합산)
+        // 4. 총 요금 계산 (날짜별 요금 합산)
         let total_room_rate = 0;
         const daily_rates = [];
         
