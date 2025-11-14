@@ -149,20 +149,37 @@ router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, r
     let calculatedFee = 0;
     let calculation = '';
     
+    console.log('📋 수배피 정책:', {
+      fee_type: feePolicy.fee_type,
+      fee_per_night: feePolicy.fee_per_night,
+      flat_fee_amount: feePolicy.flat_fee_amount,
+      max_nights_for_fee: feePolicy.max_nights_for_fee
+    });
+    
     if (feePolicy.fee_type === 'per_night') {
       // 1박당 방식
-      calculatedFee = feePolicy.fee_per_night * nightsNum;
+      calculatedFee = (feePolicy.fee_per_night || 0) * nightsNum;
       calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
     } else if (feePolicy.fee_type === 'flat') {
       // 정액제 방식
-      if (feePolicy.max_nights_for_fee && nightsNum > feePolicy.max_nights_for_fee) {
+      if (feePolicy.max_nights_for_fee && nightsNum >= feePolicy.max_nights_for_fee) {
         // N박 이상 정액 고정
-        calculatedFee = feePolicy.flat_fee_amount;
-        calculation = `${nightsNum}박 (${feePolicy.max_nights_for_fee}박 초과) = $${calculatedFee} 고정`;
+        calculatedFee = feePolicy.flat_fee_amount || 0;
+        calculation = `정액제 (${nightsNum}박, ${feePolicy.max_nights_for_fee}박 이상) = $${calculatedFee}`;
+      } else if (feePolicy.max_nights_for_fee && nightsNum < feePolicy.max_nights_for_fee) {
+        // N박 미만은 1박당 계산 (fee_per_night가 설정된 경우)
+        if (feePolicy.fee_per_night) {
+          calculatedFee = feePolicy.fee_per_night * nightsNum;
+          calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 (${feePolicy.max_nights_for_fee}박 미만) = $${calculatedFee}`;
+        } else {
+          // fee_per_night가 없으면 정액제 적용
+          calculatedFee = feePolicy.flat_fee_amount || 0;
+          calculation = `정액제 = $${calculatedFee}`;
+        }
       } else {
-        // N박까지는 1박당
-        calculatedFee = feePolicy.fee_per_night * nightsNum;
-        calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
+        // max_nights_for_fee 설정 없으면 항상 정액
+        calculatedFee = feePolicy.flat_fee_amount || 0;
+        calculation = `정액제 = $${calculatedFee}`;
       }
     }
     
