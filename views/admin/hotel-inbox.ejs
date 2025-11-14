@@ -645,11 +645,58 @@
             
             calculateNights();
             
-            // 첫 번째 객실 자동 추가
-            if (roomCounter === 0) {
+            // 객실 자동 추가 (rooms 배열이 있으면 해당 수만큼, 없으면 1개)
+            if (data.rooms && Array.isArray(data.rooms) && data.rooms.length > 0) {
+                // AI가 rooms 배열로 파싱한 경우 (신규)
+                console.log('🏨 객실 추가:', data.rooms.length + '개');
+                
+                data.rooms.forEach((room, roomIndex) => {
+                    addRoom();
+                    const roomNum = roomIndex + 1;
+                    
+                    setTimeout(() => {
+                        // 투숙객 추가
+                        if (room.guests && Array.isArray(room.guests)) {
+                            room.guests.forEach((guest, guestIndex) => {
+                                if (guestIndex > 0) {
+                                    // 2번째 투숙객부터는 추가
+                                    addGuest(roomNum);
+                                }
+                                
+                                const guestNum = guestIndex + 1;
+                                
+                                setTimeout(() => {
+                                    if (guest.name_ko) {
+                                        const input = document.querySelector(`[data-guest-field="guest_name_ko"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                        if (input) input.value = guest.name_ko;
+                                    }
+                                    if (guest.name_en) {
+                                        const input = document.querySelector(`[data-guest-field="guest_name_en"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                        if (input) input.value = guest.name_en;
+                                    }
+                                    if (guest.age_category) {
+                                        const input = document.querySelector(`[data-guest-field="age_category"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                        if (input) input.value = guest.age_category;
+                                    }
+                                    if (guest.phone && roomIndex === 0 && guestIndex === 0) {
+                                        const input = document.querySelector(`[data-guest-field="phone"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                        if (input) input.value = guest.phone;
+                                    }
+                                    if (guest.email && roomIndex === 0 && guestIndex === 0) {
+                                        const input = document.querySelector(`[data-guest-field="email"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                        if (input) input.value = guest.email;
+                                    }
+                                }, 50 * guestIndex);
+                            });
+                            
+                            console.log(`✅ 객실 ${roomNum}: ${room.guests.length}명 투숙객 추가`);
+                        }
+                    }, 200 * (roomIndex + 1));
+                });
+            } else {
+                // 기존 방식 (guests 배열만 있거나 인원수만 있는 경우)
                 addRoom();
                 
-                // 투숙객 정보 채우기 (guests 배열이 있으면 사용, 없으면 인원수로 계산)
                 setTimeout(() => {
                     if (data.guests && Array.isArray(data.guests) && data.guests.length > 0) {
                         // AI가 guests 배열로 파싱한 경우
