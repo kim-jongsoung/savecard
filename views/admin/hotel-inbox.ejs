@@ -372,6 +372,7 @@
         let allRoomTypes = [];
         let allAgencies = [];
         let allAgencyFees = [];
+        let roomPromotions = {}; // 객실별 프로모션 저장
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -442,62 +443,45 @@
             }
         }
 
-        // 수배피 정보 로드
+        // 수배피 정보 로드 (사용 안 함, API로 직접 조회)
         async function loadAgencyFees() {
-            try {
-                const response = await fetch('/api/agency-fees');
-                if (response.ok) {
-                    allAgencyFees = await response.json();
-                    console.log('수배피 정보 로드:', allAgencyFees.length, '개');
-                }
-            } catch (error) {
-                console.error('수배피 로드 오류:', error);
-            }
+            // agency-procurement-fees API를 직접 호출하므로 여기서는 로드하지 않음
+            console.log('수배피는 API로 직접 계산합니다.');
         }
 
-        // 수배피 자동 계산
-        function calculateAgencyFee() {
+        // 수배피 자동 계산 (agency-procurement-fees API 사용)
+        async function calculateAgencyFee() {
             const agencyId = document.getElementById('booking_agency_id').value;
+            const hotelId = document.getElementById('hotel_id').value;
             const nights = parseInt(document.getElementById('nights').value) || 0;
+            const checkIn = document.getElementById('check_in_date').value;
             
             if (!agencyId || nights === 0) {
-                // 거래처 미선택 또는 박수 0이면 수배피 숨김
                 document.getElementById('agencyFeeRow').style.display = 'none';
                 document.getElementById('agencyFee').value = 0;
                 calculateTotal();
                 return;
             }
             
-            // 해당 거래처의 수배피 정보 찾기
-            const agency = allAgencies.find(a => a.id === parseInt(agencyId));
-            const agencyFeeInfo = allAgencyFees.find(f => f.booking_agency_id === parseInt(agencyId));
-            
-            if (!agencyFeeInfo) {
-                console.warn('수배피 정보 없음:', agencyId);
+            try {
+                // API로 수배피 계산
+                const response = await fetch(`/api/agency-procurement-fees/calculate?agency_id=${agencyId}&hotel_id=${hotelId}&nights=${nights}&check_in_date=${checkIn}`);
+                const data = await response.json();
+                
+                if (data.fee > 0) {
+                    const agency = allAgencies.find(a => a.id === parseInt(agencyId));
+                    document.getElementById('agencyFeeRow').style.display = 'flex';
+                    document.getElementById('agencyFeeName').textContent = `${agency ? agency.agency_name : ''} - ${data.calculation || ''}`;
+                    document.getElementById('agencyFee').value = data.fee.toFixed(2);
+                } else {
+                    document.getElementById('agencyFeeRow').style.display = 'none';
+                    document.getElementById('agencyFee').value = 0;
+                }
+            } catch (error) {
+                console.error('수배피 계산 오류:', error);
                 document.getElementById('agencyFeeRow').style.display = 'none';
                 document.getElementById('agencyFee').value = 0;
-                calculateTotal();
-                return;
             }
-            
-            // 수배피 계산: 박수 기준
-            let fee = 0;
-            if (agencyFeeInfo.fee_type === 'per_night') {
-                // 박당 요금
-                fee = parseFloat(agencyFeeInfo.fee_amount) * nights;
-            } else if (agencyFeeInfo.fee_type === 'per_booking') {
-                // 건당 요금
-                fee = parseFloat(agencyFeeInfo.fee_amount);
-            } else if (agencyFeeInfo.fee_type === 'percentage') {
-                // 퍼센트 요금 (총 객실 요금 기준)
-                const totalRoom = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
-                fee = totalRoom * (parseFloat(agencyFeeInfo.fee_amount) / 100);
-            }
-            
-            // 수배피 표시
-            document.getElementById('agencyFeeRow').style.display = 'flex';
-            document.getElementById('agencyFeeName').textContent = agency ? agency.agency_name : '';
-            document.getElementById('agencyFee').value = fee.toFixed(2);
             
             calculateTotal();
         }
@@ -787,7 +771,7 @@
                     <div class="row mb-2">
                         <div class="col-md-6">
                             <label class="form-label">객실 타입 *</label>
-                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="autoApplyPromotion()">
+                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="onRoomTypeChange(${roomCounter})">
                                 <option value="">객실 타입 선택</option>
                             </select>
                         </div>
@@ -1047,15 +1031,91 @@
             document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
         }
 
-        // 객실 요금 자동 업데이트 (프로모션 적용 시)
+        // 객실별 룸타입 변경 시 프로모션 조회
+        async function onRoomTypeChange(roomNum) {
+            const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"]`);
+            const roomTypeId = roomTypeSelect.value;
+            const hotelId = document.getElementById('hotel_id').value;
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            const bookingDate = new Date().toISOString().split('T')[0];
+            
+            if (!roomTypeId || !hotelId || !checkIn || !checkOut) {
+                return;
+            }
+            
+            try {
+                // 해당 룸타입의 최적 프로모션 찾기
+                const bestPromotion = await findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut);
+                
+                if (bestPromotion) {
+                    roomPromotions[roomNum] = bestPromotion;
+                    document.getElementById(`room_${roomNum}_rate`).value = `$${bestPromotion.total_room_rate.toFixed(2)} (프로모션)`;
+                } else {
+                    roomPromotions[roomNum] = null;
+                    document.getElementById(`room_${roomNum}_rate`).value = '프로모션 없음';
+                }
+                
+                // 전체 객실 요금 합산
+                updateRoomCharges();
+            } catch (error) {
+                console.error('룸타입 프로모션 조회 오류:', error);
+            }
+        }
+        
+        // 특정 룸타입의 최적 프로모션 찾기
+        async function findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut) {
+            try {
+                const response = await fetch('/api/hotel-promotions/list?hotel_id=' + hotelId + '&is_active=true');
+                const promotions = await response.json();
+                
+                if (!promotions || promotions.length === 0) {
+                    return null;
+                }
+                
+                let bestPromotion = null;
+                let lowestRate = Infinity;
+                
+                for (const promo of promotions) {
+                    const checkResult = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            promo_code: promo.promo_code,
+                            hotel_id: hotelId,
+                            room_type_id: roomTypeId,
+                            check_in_date: checkIn,
+                            check_out_date: checkOut,
+                            booking_date: new Date().toISOString().split('T')[0]
+                        })
+                    });
+                    
+                    const result = await checkResult.json();
+                    
+                    if (result.valid && result.total_room_rate < lowestRate) {
+                        lowestRate = result.total_room_rate;
+                        bestPromotion = result;
+                    }
+                }
+                
+                return bestPromotion;
+            } catch (error) {
+                console.error('프로모션 조회 오류:', error);
+                return null;
+            }
+        }
+        
+        // 객실 요금 자동 업데이트 (모든 객실의 프로모션 합산)
         function updateRoomCharges() {
             let totalRoomCharge = 0;
             
-            // 객실 요금 계산
-            if (currentPromotion && currentPromotion.total_room_rate) {
-                const roomCount = document.querySelectorAll('.room-card').length;
-                totalRoomCharge = currentPromotion.total_room_rate * roomCount;
-            }
+            // 각 객실의 프로모션 요금 합산
+            document.querySelectorAll('.room-card').forEach(room => {
+                const roomNum = room.dataset.roomId;
+                if (roomPromotions[roomNum] && roomPromotions[roomNum].total_room_rate) {
+                    totalRoomCharge += roomPromotions[roomNum].total_room_rate;
+                }
+            });
             
             document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
             calculateAgencyFee(); // 객실 요금 변경 시 수배피 재계산
