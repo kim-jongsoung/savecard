@@ -815,6 +815,12 @@ app.use('/admin', adminRoutes);
 // app.locals에 pool 설정 (API 라우트에서 사용)
 app.locals.pool = pool;
 
+// 시즌 관리 자동 마이그레이션 (서버 시작 시)
+const { autoMigrate } = require('./scripts/auto-migrate');
+if (pool) {
+    autoMigrate(pool).catch(err => console.error('자동 마이그레이션 오류:', err));
+}
+
 // 수배업체 API 라우트 연결
 try {
     const vendorsRouter = require('./routes/vendors');
