@@ -74,6 +74,112 @@ router.get('/api/agency-procurement-fees', requireLogin, async (req, res) => {
 });
 
 // ==========================================
+// 수배피 계산 (예약 시스템용) - /:id 보다 먼저 정의해야 함
+// GET /api/agency-procurement-fees/calculate
+// ==========================================
+router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { agency_id, hotel_id, check_in_date, nights } = req.query;
+  
+  try {
+    console.log('🔍 수배피 계산 API 호출:', { agency_id, hotel_id, check_in_date, nights });
+    
+    if (!agency_id || !nights) {
+      console.log('⚠️ 필수 파라미터 누락');
+      return res.status(400).json({ error: '거래처, 숙박일수를 입력해주세요.' });
+    }
+    
+    const nightsNum = parseInt(nights);
+    
+    // 테이블 존재 확인
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'agency_procurement_fees'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('⚠️ agency_procurement_fees 테이블이 존재하지 않습니다.');
+      return res.json({ 
+        fee: 0, 
+        message: '수배피 테이블이 설정되지 않았습니다.',
+        details: null 
+      });
+    }
+    
+    // 해당 거래처의 수배피 조회 (우선순위: 호텔별 > 전체)
+    let query = `
+      SELECT * FROM agency_procurement_fees
+      WHERE agency_id = $1
+        AND is_active = true
+    `;
+    const params = [agency_id];
+    let paramIndex = 2;
+    
+    if (hotel_id) {
+      query += ` AND (hotel_id = $${paramIndex} OR hotel_id IS NULL)`;
+      params.push(hotel_id);
+      paramIndex++;
+    }
+    
+    if (check_in_date) {
+      query += ` AND (effective_date IS NULL OR effective_date <= $${paramIndex})`;
+      params.push(check_in_date);
+      paramIndex++;
+      
+      query += ` AND (expiry_date IS NULL OR expiry_date >= $${paramIndex - 1})`;
+    }
+    
+    query += ` ORDER BY hotel_id DESC NULLS LAST, effective_date DESC NULLS LAST LIMIT 1`;
+    
+    console.log('📝 수배피 조회 쿼리:', query, params);
+    const result = await pool.query(query, params);
+    console.log('📊 수배피 조회 결과:', result.rows.length, '건');
+    
+    if (result.rows.length === 0) {
+      return res.json({ 
+        fee: 0, 
+        message: '적용 가능한 수배피가 없습니다.',
+        details: null 
+      });
+    }
+    
+    const feePolicy = result.rows[0];
+    let calculatedFee = 0;
+    let calculation = '';
+    
+    if (feePolicy.fee_type === 'per_night') {
+      // 1박당 방식
+      calculatedFee = feePolicy.fee_per_night * nightsNum;
+      calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
+    } else if (feePolicy.fee_type === 'flat') {
+      // 정액제 방식
+      if (feePolicy.max_nights_for_fee && nightsNum > feePolicy.max_nights_for_fee) {
+        // N박 이상 정액 고정
+        calculatedFee = feePolicy.flat_fee_amount;
+        calculation = `${nightsNum}박 (${feePolicy.max_nights_for_fee}박 초과) = $${calculatedFee} 고정`;
+      } else {
+        // N박까지는 1박당
+        calculatedFee = feePolicy.fee_per_night * nightsNum;
+        calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
+      }
+    }
+    
+    console.log('✅ 수배피 계산 완료:', { fee: calculatedFee, calculation });
+    res.json({
+      fee: calculatedFee,
+      calculation,
+      details: feePolicy
+    });
+  } catch (error) {
+    console.error('❌ 수배피 계산 오류:', error);
+    console.error('스택:', error.stack);
+    res.status(500).json({ error: error.message, details: error.stack });
+  }
+});
+
+// ==========================================
 // 수배피 상세 조회
 // GET /api/agency-procurement-fees/:id
 // ==========================================
@@ -265,112 +371,6 @@ router.delete('/api/agency-procurement-fees/:id', requireLogin, async (req, res)
   } catch (error) {
     console.error('❌ 수배피 삭제 오류:', error);
     res.status(500).json({ error: error.message });
-  }
-});
-
-// ==========================================
-// 수배피 계산 (예약 시스템용)
-// GET /api/agency-procurement-fees/calculate
-// ==========================================
-router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, res) => {
-  const pool = req.app.locals.pool;
-  const { agency_id, hotel_id, check_in_date, nights } = req.query;
-  
-  try {
-    console.log('🔍 수배피 계산 API 호출:', { agency_id, hotel_id, check_in_date, nights });
-    
-    if (!agency_id || !nights) {
-      console.log('⚠️ 필수 파라미터 누락');
-      return res.status(400).json({ error: '거래처, 숙박일수를 입력해주세요.' });
-    }
-    
-    const nightsNum = parseInt(nights);
-    
-    // 테이블 존재 확인
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'agency_procurement_fees'
-      );
-    `);
-    
-    if (!tableCheck.rows[0].exists) {
-      console.log('⚠️ agency_procurement_fees 테이블이 존재하지 않습니다.');
-      return res.json({ 
-        fee: 0, 
-        message: '수배피 테이블이 설정되지 않았습니다.',
-        details: null 
-      });
-    }
-    
-    // 해당 거래처의 수배피 조회 (우선순위: 호텔별 > 전체)
-    let query = `
-      SELECT * FROM agency_procurement_fees
-      WHERE agency_id = $1
-        AND is_active = true
-    `;
-    const params = [agency_id];
-    let paramIndex = 2;
-    
-    if (hotel_id) {
-      query += ` AND (hotel_id = $${paramIndex} OR hotel_id IS NULL)`;
-      params.push(hotel_id);
-      paramIndex++;
-    }
-    
-    if (check_in_date) {
-      query += ` AND (effective_date IS NULL OR effective_date <= $${paramIndex})`;
-      params.push(check_in_date);
-      paramIndex++;
-      
-      query += ` AND (expiry_date IS NULL OR expiry_date >= $${paramIndex - 1})`;
-    }
-    
-    query += ` ORDER BY hotel_id DESC NULLS LAST, effective_date DESC NULLS LAST LIMIT 1`;
-    
-    console.log('📝 수배피 조회 쿼리:', query, params);
-    const result = await pool.query(query, params);
-    console.log('📊 수배피 조회 결과:', result.rows.length, '건');
-    
-    if (result.rows.length === 0) {
-      return res.json({ 
-        fee: 0, 
-        message: '적용 가능한 수배피가 없습니다.',
-        details: null 
-      });
-    }
-    
-    const feePolicy = result.rows[0];
-    let calculatedFee = 0;
-    let calculation = '';
-    
-    if (feePolicy.fee_type === 'per_night') {
-      // 1박당 방식
-      calculatedFee = feePolicy.fee_per_night * nightsNum;
-      calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
-    } else if (feePolicy.fee_type === 'flat') {
-      // 정액제 방식
-      if (feePolicy.max_nights_for_fee && nightsNum > feePolicy.max_nights_for_fee) {
-        // N박 이상 정액 고정
-        calculatedFee = feePolicy.flat_fee_amount;
-        calculation = `${nightsNum}박 (${feePolicy.max_nights_for_fee}박 초과) = $${calculatedFee} 고정`;
-      } else {
-        // N박까지는 1박당
-        calculatedFee = feePolicy.fee_per_night * nightsNum;
-        calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
-      }
-    }
-    
-    console.log('✅ 수배피 계산 완료:', { fee: calculatedFee, calculation });
-    res.json({
-      fee: calculatedFee,
-      calculation,
-      details: feePolicy
-    });
-  } catch (error) {
-    console.error('❌ 수배피 계산 오류:', error);
-    console.error('스택:', error.stack);
-    res.status(500).json({ error: error.message, details: error.stack });
   }
 });
 
