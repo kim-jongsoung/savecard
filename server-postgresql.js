@@ -16263,6 +16263,66 @@ async function startServer() {
                     console.warn('⚠️ 호텔 테이블 생성 경고:', hotelErr.message);
                 }
                 
+                // 호텔 예약 reservation_date 컬럼 추가 (인박스 입력일)
+                try {
+                    await pool.query(`
+                        ALTER TABLE hotel_reservations 
+                        ADD COLUMN IF NOT EXISTS reservation_date DATE DEFAULT CURRENT_DATE
+                    `);
+                    
+                    // 기존 데이터 업데이트
+                    await pool.query(`
+                        UPDATE hotel_reservations 
+                        SET reservation_date = DATE(created_at)
+                        WHERE reservation_date IS NULL
+                    `);
+                    
+                    // 인덱스 생성
+                    await pool.query(`
+                        CREATE INDEX IF NOT EXISTS idx_hotel_res_reservation_date 
+                        ON hotel_reservations(reservation_date)
+                    `);
+                    
+                    console.log('✅ hotel_reservations.reservation_date 컬럼 추가 완료');
+                } catch (resDateErr) {
+                    console.warn('⚠️ reservation_date 컬럼 추가 경고:', resDateErr.message);
+                }
+                
+                // 호텔 예약 status 컬럼 제약조건 업데이트
+                try {
+                    // 기존 CHECK 제약조건 삭제
+                    const constraints = await pool.query(`
+                        SELECT constraint_name 
+                        FROM information_schema.table_constraints 
+                        WHERE table_name = 'hotel_reservations' 
+                        AND constraint_type = 'CHECK'
+                        AND constraint_name LIKE '%status%'
+                    `);
+                    
+                    for (const row of constraints.rows) {
+                        await pool.query(`
+                            ALTER TABLE hotel_reservations 
+                            DROP CONSTRAINT IF EXISTS ${row.constraint_name}
+                        `);
+                    }
+                    
+                    // 새로운 CHECK 제약조건 추가
+                    await pool.query(`
+                        ALTER TABLE hotel_reservations 
+                        DROP CONSTRAINT IF EXISTS hotel_reservations_status_check
+                    `);
+                    
+                    await pool.query(`
+                        ALTER TABLE hotel_reservations 
+                        ADD CONSTRAINT hotel_reservations_status_check 
+                        CHECK (status IN ('pending', 'processing', 'confirmed', 'cancelled', 'modifying', 'completed'))
+                    `);
+                    
+                    console.log('✅ hotel_reservations.status 제약조건 업데이트 완료');
+                } catch (statusErr) {
+                    console.warn('⚠️ status 제약조건 업데이트 경고:', statusErr.message);
+                }
+                
                 // 공항픽업 마감날짜 테이블 생성
                 try {
                     await pool.query(`
