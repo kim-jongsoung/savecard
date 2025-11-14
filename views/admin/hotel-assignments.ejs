@@ -466,6 +466,26 @@
                         </div>
                     </div>
 
+                    <!-- 프로모션 코드 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-tag me-2"></i>프로모션 요금
+                            </h6>
+                        </div>
+                        <div class="col-md-12">
+                            <div id="promoResult" style="display: none;">
+                                <!-- 프로모션 결과가 표시됨 -->
+                            </div>
+                            <div id="promoLoading" style="display: none;" class="text-center py-2">
+                                <i class="fas fa-spinner fa-spin"></i> 프로모션 요금 조회 중...
+                            </div>
+                            <div id="noPromo" class="alert alert-info py-2">
+                                프로모션 정보 없음
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 객실 정보 섹션 -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -1011,6 +1031,8 @@
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
                 const data = await response.json();
                 
+                console.log('📥 로드된 예약 데이터:', data);
+                
                 // 모달 오픈 전에 초기화
                 roomCounter = 0;
                 extraCounter = 0;
@@ -1030,23 +1052,104 @@
                 document.getElementById('special_requests').value = data.special_requests || '';
                 document.getElementById('internal_memo').value = data.internal_memo || '';
                 document.getElementById('totalRoomCharge').value = data.total_selling_price || 0;
-                document.getElementById('totalExtrasCharge').value = 0;
                 
                 // 박수 계산
                 calculateNights();
                 
+                // 거래처 수배피 계산
+                if (data.booking_agency_id) {
+                    calculateAgencyFee();
+                }
+                
                 // 객실 타입 로드
                 await loadRoomTypes();
                 
+                // 프로모션 정보 표시
+                if (data.promotion_code) {
+                    document.getElementById('noPromo').style.display = 'none';
+                    document.getElementById('promoResult').style.display = 'block';
+                    document.getElementById('promoResult').innerHTML = `
+                        <div class="alert alert-success py-2">
+                            <strong>📌 프로모션 코드:</strong> ${data.promotion_code}
+                            ${data.rate_condition_id ? `<br><small>Rate Condition ID: ${data.rate_condition_id}</small>` : ''}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('noPromo').style.display = 'block';
+                    document.getElementById('promoResult').style.display = 'none';
+                }
+                
                 // 객실 및 투숙객 정보 추가
                 if (data.rooms && data.rooms.length > 0) {
-                    for (const room of data.rooms) {
+                    for (let i = 0; i < data.rooms.length; i++) {
+                        const room = data.rooms[i];
                         addRoom();
-                        // 객실 정보 채우기는 간단하게 표시만
+                        
+                        // 객실 타입 선택
+                        const roomSelect = document.querySelector(`[data-room="${roomCounter}"]`);
+                        if (roomSelect && room.room_type_id) {
+                            roomSelect.value = room.room_type_id;
+                        }
+                        
+                        // 객실 요금 표시
+                        const rateInput = document.getElementById(`room_${roomCounter}_rate`);
+                        if (rateInput && room.total_selling_price) {
+                            rateInput.value = `$${parseFloat(room.total_selling_price).toFixed(2)}`;
+                        }
+                        
+                        // 투숙객 정보 채우기
+                        if (room.guests && room.guests.length > 0) {
+                            const guestsContainer = document.getElementById(`guests_${roomCounter}`);
+                            // 첫 번째 투숙객은 이미 추가되어 있음
+                            room.guests.forEach((guest, guestIdx) => {
+                                if (guestIdx > 0) {
+                                    // 2번째 투숙객부터 추가
+                                    addGuest(roomCounter);
+                                }
+                                
+                                // 투숙객 정보 채우기
+                                const guestCard = document.getElementById(`guest_${roomCounter}_${guestIdx + 1}`);
+                                if (guestCard) {
+                                    const fields = guestCard.querySelectorAll('[data-guest-field]');
+                                    fields.forEach(field => {
+                                        const fieldName = field.dataset.guestField;
+                                        if (guest[fieldName]) {
+                                            field.value = guest[fieldName];
+                                        }
+                                    });
+                                }
+                            });
+                        }
                     }
                 } else {
                     addRoom(); // 최소 1개 객실
                 }
+                
+                // 추가 항목 로드
+                let totalExtras = 0;
+                if (data.extras && data.extras.length > 0) {
+                    for (const extra of data.extras) {
+                        addExtraItem();
+                        
+                        // 추가 항목 정보 채우기
+                        const extraCard = document.getElementById(`extra_${extraCounter}`);
+                        if (extraCard) {
+                            const itemNameInput = extraCard.querySelector('[data-extra-field="item_name"]');
+                            const quantityInput = extraCard.querySelector('[data-extra-field="quantity"]');
+                            const unitPriceInput = extraCard.querySelector('[data-extra-field="unit_price"]');
+                            
+                            if (itemNameInput) itemNameInput.value = extra.item_name || '';
+                            if (quantityInput) quantityInput.value = extra.quantity || 1;
+                            if (unitPriceInput) unitPriceInput.value = extra.unit_price || extra.total_selling_price || 0;
+                            
+                            totalExtras += parseFloat(extra.total_selling_price || 0);
+                        }
+                    }
+                }
+                document.getElementById('totalExtrasCharge').value = totalExtras.toFixed(2);
+                
+                // 총 요금 계산
+                calculateTotal();
                 
                 // 모달 오픈
                 const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
