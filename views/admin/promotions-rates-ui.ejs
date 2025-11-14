@@ -52,19 +52,23 @@
   
   <div class="rate-input-group">
     <div class="row g-2 mb-2">
-      <div class="col-md-3">
-        <label class="form-label small">1박만 (1박 요금)</label>
+      <div class="col-md-2">
+        <label class="form-label small">1박 요금</label>
         <input type="number" class="form-control" id="rate1Night" placeholder="200.00" step="0.01">
       </div>
-      <div class="col-md-3">
-        <label class="form-label small">2박시 (1박 요금)</label>
+      <div class="col-md-2">
+        <label class="form-label small">2박 요금</label>
         <input type="number" class="form-control" id="rate2Nights" placeholder="180.00" step="0.01">
       </div>
-      <div class="col-md-3">
-        <label class="form-label small">3박 이상 (1박 요금)</label>
-        <input type="number" class="form-control" id="rate3PlusNights" placeholder="160.00" step="0.01">
+      <div class="col-md-2">
+        <label class="form-label small">3박 요금</label>
+        <input type="number" class="form-control" id="rate3Nights" placeholder="160.00" step="0.01">
       </div>
-      <div class="col-md-3 d-flex align-items-end">
+      <div class="col-md-2">
+        <label class="form-label small">4박+ 요금</label>
+        <input type="number" class="form-control" id="rate4PlusNights" placeholder="150.00" step="0.01">
+      </div>
+      <div class="col-md-4 d-flex align-items-end">
         <button type="button" class="btn btn-primary w-100" onclick="applyRatesToSelected()">
           <i class="bi bi-check-circle"></i> 선택 날짜에 적용
         </button>
@@ -72,7 +76,7 @@
     </div>
     <div class="text-muted small">
       <i class="bi bi-info-circle"></i> 각 연박 조건별로 1박당 요금을 입력하세요. 
-      예: 3박 예약시 총 요금 = $160 × 3박 = $480
+      예: 3박 예약시 총 요금 = $160 × 3박 = $480 / 4박 이상은 4박+ 요금 적용
     </div>
   </div>
 </div>
@@ -112,7 +116,7 @@
     rateCalendarData = {};
     
     rates.forEach(r => {
-      const key = r.stay_date;
+      const key = r.stay_date.split('T')[0];  // 날짜 포맷팅
       if (!rateCalendarData[key]) {
         rateCalendarData[key] = {
           room_type_id: r.room_type_id,
@@ -171,10 +175,26 @@
         const hasRate = rateCalendarData[dateStr] && rateCalendarData[dateStr].room_type_id == roomTypeId;
         const isSelected = selectedDates.has(dateStr);
         
+        // 요금 표시
+        let rateDisplay = '';
+        if (hasRate) {
+          const rates = rateCalendarData[dateStr].rates;
+          const rate1 = rates.find(r => r.min_nights === 1)?.rate_per_night;
+          const rate2 = rates.find(r => r.min_nights === 2)?.rate_per_night;
+          const rate3 = rates.find(r => r.min_nights === 3)?.rate_per_night;
+          const rate4 = rates.find(r => r.min_nights === 4)?.rate_per_night;
+          rateDisplay = `<div class="small" style="font-size:0.65rem;line-height:1.1;">`;
+          if (rate1) rateDisplay += `1박:$${rate1}<br>`;
+          if (rate2) rateDisplay += `2박:$${rate2}<br>`;
+          if (rate3) rateDisplay += `3박:$${rate3}<br>`;
+          if (rate4) rateDisplay += `4박:$${rate4}`;
+          rateDisplay += `</div>`;
+        }
+        
         html += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${hasRate ? 'has-rate' : ''}" 
                       onclick="toggleDate('${dateStr}')">
                   <div><strong>${day}</strong></div>
-                  ${hasRate ? '<div class="small text-success">✓</div>' : ''}
+                  ${rateDisplay}
                 </div>`;
       }
       
@@ -238,17 +258,20 @@
     const roomTypeId = document.getElementById('rateRoomType').value;
     const rate1 = parseFloat(document.getElementById('rate1Night').value);
     const rate2 = parseFloat(document.getElementById('rate2Nights').value);
-    const rate3 = parseFloat(document.getElementById('rate3PlusNights').value);
+    const rate3 = parseFloat(document.getElementById('rate3Nights').value);
+    const rate4 = parseFloat(document.getElementById('rate4PlusNights').value);
     
     if (!roomTypeId) {
       alert('객실 타입을 선택하세요');
       return;
     }
     
-    if (!rate1 && !rate2 && !rate3) {
+    if (!rate1 && !rate2 && !rate3 && !rate4) {
       alert('최소 하나의 요금을 입력하세요');
       return;
     }
+    
+    const count = selectedDates.size;
     
     selectedDates.forEach(dateStr => {
       if (!rateCalendarData[dateStr]) {
@@ -269,21 +292,25 @@
         rateCalendarData[dateStr].rates.push({ min_nights: 2, max_nights: 2, rate_per_night: rate2 });
       }
       if (rate3) {
-        rateCalendarData[dateStr].rates.push({ min_nights: 3, max_nights: null, rate_per_night: rate3 });
+        rateCalendarData[dateStr].rates.push({ min_nights: 3, max_nights: 3, rate_per_night: rate3 });
+      }
+      if (rate4) {
+        rateCalendarData[dateStr].rates.push({ min_nights: 4, max_nights: null, rate_per_night: rate4 });
       }
     });
     
     // 입력 필드 초기화
     document.getElementById('rate1Night').value = '';
     document.getElementById('rate2Nights').value = '';
-    document.getElementById('rate3PlusNights').value = '';
+    document.getElementById('rate3Nights').value = '';
+    document.getElementById('rate4PlusNights').value = '';
     
     selectedDates.clear();
     renderRateCalendar();
     updateRateInputSection();
     renderSavedRates();
     
-    alert(`${selectedDates.size}개 날짜에 요금이 적용되었습니다`);
+    alert(`${count}개 날짜에 요금이 적용되었습니다`);
   }
   
   function renderSavedRates() {
@@ -306,19 +333,21 @@
     }
     
     let html = '<div class="table-responsive"><table class="table table-sm table-bordered">';
-    html += '<thead><tr><th>날짜</th><th>1박</th><th>2박</th><th>3박+</th><th></th></tr></thead><tbody>';
+    html += '<thead><tr><th>날짜</th><th>1박</th><th>2박</th><th>3박</th><th>4박+</th><th></th></tr></thead><tbody>';
     
     dates.forEach(date => {
       const data = rateCalendarData[date];
       const rate1 = data.rates.find(r => r.min_nights === 1)?.rate_per_night || '-';
       const rate2 = data.rates.find(r => r.min_nights === 2)?.rate_per_night || '-';
       const rate3 = data.rates.find(r => r.min_nights === 3)?.rate_per_night || '-';
+      const rate4 = data.rates.find(r => r.min_nights === 4)?.rate_per_night || '-';
       
       html += `<tr>
         <td>${date}</td>
         <td>${rate1}</td>
         <td>${rate2}</td>
         <td>${rate3}</td>
+        <td>${rate4}</td>
         <td><button class="btn btn-sm btn-danger" onclick="deleteRate('${date}')"><i class="bi bi-trash"></i></button></td>
       </tr>`;
     });
