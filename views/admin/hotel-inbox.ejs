@@ -164,6 +164,9 @@
                                 <span id="parseBtnText">AI 파싱</span>
                                 <span id="parseBtnSpinner" class="spinner-border spinner-border-sm ms-1" style="display: none;"></span>
                             </button>
+                            <button type="button" class="btn btn-danger" onclick="resetForm()" title="초기화">
+                                <i class="fas fa-redo"></i>
+                            </button>
                             <button type="button" class="btn btn-outline-secondary" onclick="openParsingSettings()" title="AI 파싱 설정">
                                 <i class="fas fa-cog"></i>
                             </button>
@@ -852,6 +855,99 @@
                     }
                 }, 200);
             }
+        }
+
+        // 폼 초기화
+        function resetForm() {
+            if (!confirm('모든 입력 내용을 초기화하시겠습니까?')) {
+                return;
+            }
+            
+            console.log('🔄 폼 초기화 시작');
+            
+            // 원본 데이터 초기화
+            document.getElementById('raw_data').value = '';
+            
+            // 기본 정보 초기화
+            document.getElementById('reservation_number').value = '';
+            document.getElementById('booking_agency_id').value = '';
+            document.getElementById('hotel_id').value = '';
+            document.getElementById('check_in_date').value = '';
+            document.getElementById('check_out_date').value = '';
+            document.getElementById('nights').value = '';
+            document.getElementById('special_requests').value = '';
+            
+            // 객실 타입 드롭다운 초기화
+            allRoomTypes = [];
+            
+            // 모든 객실 제거 (첫 번째 객실만 남기기)
+            const roomsContainer = document.getElementById('roomsContainer');
+            const allRoomCards = roomsContainer.querySelectorAll('.room-card');
+            allRoomCards.forEach((card, index) => {
+                if (index > 0) {
+                    card.remove();
+                }
+            });
+            
+            // 첫 번째 객실 내용 초기화
+            if (allRoomCards.length > 0) {
+                const firstRoom = allRoomCards[0];
+                
+                // 객실 타입 초기화
+                const roomTypeSelect = firstRoom.querySelector('.room-type-select');
+                if (roomTypeSelect) roomTypeSelect.value = '';
+                
+                // 프로모션 초기화
+                const promoSelect = firstRoom.querySelector('.promotion-select');
+                if (promoSelect) promoSelect.value = '';
+                
+                // 가격 필드 초기화
+                const priceFields = firstRoom.querySelectorAll('input[type="number"]');
+                priceFields.forEach(field => {
+                    if (!field.classList.contains('guest-age')) {
+                        field.value = '0';
+                    }
+                });
+                
+                // 조식 체크박스 초기화
+                const breakfastCheckboxes = firstRoom.querySelectorAll('input[type="checkbox"]');
+                breakfastCheckboxes.forEach(cb => cb.checked = false);
+                
+                // 모든 투숙객 제거 (첫 번째 투숙객만 남기기)
+                const allGuests = firstRoom.querySelectorAll('.guest-entry');
+                allGuests.forEach((guest, index) => {
+                    if (index > 0) {
+                        guest.remove();
+                    }
+                });
+                
+                // 첫 번째 투숙객 정보 초기화
+                if (allGuests.length > 0) {
+                    const firstGuest = allGuests[0];
+                    const inputs = firstGuest.querySelectorAll('input, select');
+                    inputs.forEach(input => {
+                        if (input.tagName === 'SELECT') {
+                            input.value = 'adult'; // 기본값
+                        } else {
+                            input.value = '';
+                        }
+                    });
+                }
+            }
+            
+            // 카운터 초기화
+            roomCounter = 1;
+            guestCounters = { 1: 1 };
+            
+            // 총 금액 초기화
+            document.getElementById('total_price').value = '0';
+            document.getElementById('agency_fee').value = '0';
+            document.getElementById('final_price').value = '0';
+            
+            // 미리보기 카드 숨기기
+            document.getElementById('previewCard').style.display = 'none';
+            
+            console.log('✅ 폼 초기화 완료');
         }
 
         // 자동 프로모션 적용
