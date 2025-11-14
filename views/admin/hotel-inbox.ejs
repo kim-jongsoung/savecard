@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>호텔 인박스 - SaveCard ERP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px 8px 0 0;
+            margin-bottom: 1.5rem;
+        }
+        .room-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: #f8f9fa;
+        }
+        .room-card.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .guest-card {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+        }
+        .extra-item-card {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #fff;
+        }
+        .promo-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        .rate-display {
+            background: #e7f3ff;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid #2196F3;
+        }
+        .benefit-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            margin-right: 0.5rem;
+        }
+        .btn-add-room, .btn-add-guest, .btn-add-extra {
+            border: 2px dashed #667eea;
+            color: #667eea;
+            background: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-add-room:hover, .btn-add-guest:hover, .btn-add-extra:hover {
+            background: #667eea;
+            color: white;
+            border-style: solid;
+        }
+        .total-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar') %>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2 class="mb-4">
+                    <i class="fas fa-hotel me-2"></i>호텔 인박스
+                    <small class="text-muted">- 예약 데이터 파싱 및 등록</small>
+                </h2>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 좌측: 원본 데이터 입력 -->
+            <div class="col-md-5">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-edit me-2"></i>예약 원본 데이터</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">예약 데이터 입력</label>
+                            <textarea 
+                                class="form-control" 
+                                id="rawData" 
+                                rows="20" 
+                                placeholder="이메일이나 메시지에서 예약 정보를 복사하여 붙여넣기 하세요...
+
+예시:
+예약번호: HOT123456
+호텔: Hilton Guam
+체크인: 2025-12-01
+체크아웃: 2025-12-04
+객실: Deluxe Ocean View
+투숙객: 홍길동 / HONG GILDONG
+전화: 010-1234-5678
+이메일: hong@email.com
+성인: 2명
+소아: 1명"></textarea>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" onclick="parseHotelData()">
+                            <i class="fas fa-magic me-2"></i>데이터 파싱하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 우측: 파싱 결과 미리보기 -->
+            <div class="col-md-7">
+                <div class="card shadow-sm" id="previewCard" style="display: none;">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-eye me-2"></i>예약 정보 미리보기</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 80vh; overflow-y: auto;">
+                        
+                        <!-- 기본 예약 정보 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-info-circle me-2"></i>기본 예약 정보
+                                </h6>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">예약번호</label>
+                                <input type="text" class="form-control" id="reservation_number" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">거래처 (한국 여행사)</label>
+                                <select class="form-control" id="booking_agency_id">
+                                    <option value="">직접 예약</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">호텔 선택 *</label>
+                                <select class="form-control" id="hotel_id" required onchange="loadRoomTypes()">
+                                    <option value="">호텔 선택</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">예약 상태</label>
+                                <select class="form-control" id="status">
+                                    <option value="pending">대기중</option>
+                                    <option value="processing">처리중</option>
+                                    <option value="confirmed">확정</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 날짜 정보 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-calendar me-2"></i>날짜 정보
+                                </h6>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">체크인 날짜 *</label>
+                                <input type="date" class="form-control" id="check_in_date" required onchange="calculateNights()">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">체크아웃 날짜 *</label>
+                                <input type="date" class="form-control" id="check_out_date" required onchange="calculateNights()">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">박수</label>
+                                <input type="number" class="form-control fw-bold" id="nights" readonly style="background: #f0f0f0; font-size: 1.2rem;">
+                            </div>
+                        </div>
+
+                        <!-- 프로모션 코드 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-tag me-2"></i>프로모션 코드
+                                </h6>
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">프로모션 코드 입력</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="promo_code" placeholder="예: WINTER2025">
+                                    <button class="btn btn-primary" type="button" onclick="checkPromotion()">
+                                        <i class="fas fa-check me-1"></i>적용
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div id="promoResult" style="display: none;">
+                                    <!-- 프로모션 결과가 여기 표시됨 -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 객실 정보 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-bed me-2"></i>객실 정보
+                                </h6>
+                            </div>
+                            <div class="col-12" id="roomsContainer">
+                                <!-- 객실이 동적으로 추가됨 -->
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-add-room w-100" onclick="addRoom()">
+                                    <i class="fas fa-plus-circle me-2"></i>객실 추가
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 추가 항목 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-plus-square me-2"></i>추가 항목 (공항픽업, 꽃바구니 등)
+                                </h6>
+                            </div>
+                            <div class="col-12" id="extrasContainer">
+                                <!-- 추가 항목이 동적으로 추가됨 -->
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-add-extra w-100" onclick="addExtraItem()">
+                                    <i class="fas fa-plus-circle me-2"></i>항목 추가
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 총 요금 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="total-summary">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>총 객실 요금:</span>
+                                        <strong id="totalRoomCharge">$0.00</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>추가 항목 요금:</span>
+                                        <strong id="totalExtrasCharge">$0.00</strong>
+                                    </div>
+                                    <hr style="border-color: rgba(255,255,255,0.3);">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">총 판매가:</h5>
+                                        <h4 class="mb-0" id="grandTotal">$0.00</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 메모 섹션 -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-sticky-note me-2"></i>메모
+                                </h6>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">특별 요청사항</label>
+                                <textarea class="form-control" id="special_requests" rows="3"></textarea>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="form-label">내부 메모</label>
+                                <textarea class="form-control" id="internal_memo" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 액션 버튼 -->
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-success btn-lg flex-fill" onclick="saveHotelReservation()">
+                                <i class="fas fa-save me-1"></i>예약 저장
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg" onclick="clearPreview()">
+                                <i class="fas fa-times me-1"></i>취소
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 전역 변수
+        let roomCounter = 0;
+        let extraCounter = 0;
+        let currentPromotion = null;
+        let allHotels = [];
+        let allRoomTypes = [];
+        let allAgencies = [];
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHotels();
+            loadAgencies();
+        });
+
+        // 호텔 목록 로드
+        async function loadHotels() {
+            try {
+                const response = await fetch('/api/hotels?is_active=true');
+                const hotels = await response.json();
+                allHotels = hotels;
+                
+                const select = document.getElementById('hotel_id');
+                select.innerHTML = '<option value="">호텔 선택</option>' +
+                    hotels.map(h => `<option value="${h.id}">${h.hotel_name}</option>`).join('');
+            } catch (error) {
+                console.error('호텔 목록 로드 오류:', error);
+            }
+        }
+
+        // 거래처 목록 로드
+        async function loadAgencies() {
+            try {
+                const response = await fetch('/api/booking-agencies?is_active=true');
+                const agencies = await response.json();
+                allAgencies = agencies;
+                
+                const select = document.getElementById('booking_agency_id');
+                select.innerHTML = '<option value="">직접 예약</option>' +
+                    agencies.map(a => `<option value="${a.id}">${a.agency_name}</option>`).join('');
+            } catch (error) {
+                console.error('거래처 목록 로드 오류:', error);
+            }
+        }
+
+        // 객실 타입 로드
+        async function loadRoomTypes() {
+            const hotelId = document.getElementById('hotel_id').value;
+            if (!hotelId) return;
+            
+            try {
+                const response = await fetch(`/api/room-types?hotel_id=${hotelId}&is_active=true`);
+                allRoomTypes = await response.json();
+                
+                // 모든 객실의 select를 업데이트
+                document.querySelectorAll('.room-type-select').forEach(select => {
+                    select.innerHTML = '<option value="">객실 타입 선택</option>' +
+                        allRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
+                });
+            } catch (error) {
+                console.error('객실 타입 로드 오류:', error);
+            }
+        }
+
+        // 박수 계산
+        function calculateNights() {
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            if (checkIn && checkOut) {
+                const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
+                document.getElementById('nights').value = nights > 0 ? nights : 0;
+                calculateTotal();
+            }
+        }
+
+        // 호텔 데이터 파싱
+        function parseHotelData() {
+            const rawData = document.getElementById('rawData').value.trim();
+            if (!rawData) {
+                alert('예약 데이터를 입력해주세요.');
+                return;
+            }
+            
+            // 간단한 패턴 매칭 파싱 (향후 AI 파싱으로 업그레이드 가능)
+            const parsed = {};
+            
+            // 예약번호
+            const resNumMatch = rawData.match(/예약번호[:\s]+([A-Z0-9]+)/i);
+            if (resNumMatch) parsed.reservation_number = resNumMatch[1];
+            
+            // 호텔명
+            const hotelMatch = rawData.match(/호텔[:\s]+([^\n]+)/i);
+            if (hotelMatch) {
+                const hotelName = hotelMatch[1].trim();
+                const hotel = allHotels.find(h => h.hotel_name.toLowerCase().includes(hotelName.toLowerCase()));
+                if (hotel) parsed.hotel_id = hotel.id;
+            }
+            
+            // 체크인/체크아웃
+            const checkInMatch = rawData.match(/체크[\s-]?인[:\s]+(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/i);
+            if (checkInMatch) parsed.check_in_date = checkInMatch[1].replace(/\//g, '-');
+            
+            const checkOutMatch = rawData.match(/체크[\s-]?아웃[:\s]+(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/i);
+            if (checkOutMatch) parsed.check_out_date = checkOutMatch[1].replace(/\//g, '-');
+            
+            // 투숙객 정보
+            const guestKoMatch = rawData.match(/투숙객[:\s]+([가-힣]+)/i);
+            if (guestKoMatch) parsed.guest_name_ko = guestKoMatch[1];
+            
+            const guestEnMatch = rawData.match(/[\/\s]([A-Z]+\s+[A-Z]+)/);
+            if (guestEnMatch) parsed.guest_name_en = guestEnMatch[1];
+            
+            // 전화번호
+            const phoneMatch = rawData.match(/전화[:\s]+([\d-]+)/i);
+            if (phoneMatch) parsed.phone = phoneMatch[1];
+            
+            // 이메일
+            const emailMatch = rawData.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/);
+            if (emailMatch) parsed.email = emailMatch[1];
+            
+            // 인원
+            const adultMatch = rawData.match(/성인[:\s]+(\d+)/i);
+            if (adultMatch) parsed.adults = parseInt(adultMatch[1]);
+            
+            const childMatch = rawData.match(/소아[:\s]+(\d+)/i);
+            if (childMatch) parsed.children = parseInt(childMatch[1]);
+            
+            // 파싱 결과 적용
+            fillParsedData(parsed);
+            
+            // 미리보기 카드 표시
+            document.getElementById('previewCard').style.display = 'block';
+            document.getElementById('previewCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 파싱 결과를 폼에 채우기
+        function fillParsedData(data) {
+            if (data.reservation_number) document.getElementById('reservation_number').value = data.reservation_number;
+            if (data.hotel_id) {
+                document.getElementById('hotel_id').value = data.hotel_id;
+                loadRoomTypes();
+            }
+            if (data.check_in_date) document.getElementById('check_in_date').value = data.check_in_date;
+            if (data.check_out_date) document.getElementById('check_out_date').value = data.check_out_date;
+            
+            calculateNights();
+            
+            // 첫 번째 객실 자동 추가
+            if (roomCounter === 0) {
+                addRoom();
+                
+                // 투숙객 정보 채우기
+                setTimeout(() => {
+                    if (data.guest_name_ko) document.querySelector('[data-guest-field="guest_name_ko"]').value = data.guest_name_ko;
+                    if (data.guest_name_en) document.querySelector('[data-guest-field="guest_name_en"]').value = data.guest_name_en;
+                    if (data.phone) document.querySelector('[data-guest-field="phone"]').value = data.phone;
+                    if (data.email) document.querySelector('[data-guest-field="email"]').value = data.email;
+                }, 100);
+            }
+        }
+
+        // 프로모션 체크
+        async function checkPromotion() {
+            const promoCode = document.getElementById('promo_code').value.trim();
+            const hotelId = document.getElementById('hotel_id').value;
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            if (!promoCode || !hotelId || !checkIn || !checkOut) {
+                alert('프로모션 코드를 적용하려면 호텔, 체크인/체크아웃 날짜를 먼저 선택해주세요.');
+                return;
+            }
+            
+            // 첫 번째 객실의 room_type_id 가져오기
+            const firstRoomType = document.querySelector('.room-type-select');
+            if (!firstRoomType || !firstRoomType.value) {
+                alert('프로모션을 적용하려면 객실 타입을 먼저 선택해주세요.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        promo_code: promoCode,
+                        hotel_id: parseInt(hotelId),
+                        room_type_id: parseInt(firstRoomType.value),
+                        check_in_date: checkIn,
+                        check_out_date: checkOut,
+                        booking_date: new Date().toISOString().split('T')[0]
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.valid) {
+                    currentPromotion = result;
+                    displayPromotionResult(result);
+                    calculateRoomRates();
+                } else {
+                    alert(result.message || '유효하지 않은 프로모션 코드입니다.');
+                    currentPromotion = null;
+                }
+            } catch (error) {
+                console.error('프로모션 체크 오류:', error);
+                alert('프로모션 확인 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 프로모션 결과 표시
+        function displayPromotionResult(result) {
+            const promoResult = document.getElementById('promoResult');
+            
+            let benefitsHtml = '';
+            if (result.benefits && result.benefits.length > 0) {
+                benefitsHtml = '<div class="mt-2">' +
+                    result.benefits.map(b => {
+                        let text = '';
+                        if (b.benefit_type === 'drink_coupon') text = `🍹 드링크 쿠폰 ${b.quantity}매`;
+                        else if (b.benefit_type === 'late_checkout') text = `🕐 레이트 체크아웃 (${b.value})`;
+                        else if (b.benefit_type === 'breakfast') text = `🍳 조식 ${b.quantity}인분`;
+                        else text = b.description || b.benefit_type;
+                        return `<span class="benefit-badge">${text}</span>`;
+                    }).join('') +
+                    '</div>';
+            }
+            
+            promoResult.innerHTML = `
+                <div class="alert alert-success">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle me-2 fs-4"></i>
+                        <div class="flex-fill">
+                            <strong>프로모션 적용 완료!</strong>
+                            <span class="promo-badge">${result.promotion.promo_name}</span>
+                            <div class="small mt-1">
+                                예약 기간: ${result.promotion.booking_start_date} ~ ${result.promotion.booking_end_date}<br>
+                                투숙 기간: ${result.promotion.stay_start_date} ~ ${result.promotion.stay_end_date}
+                            </div>
+                            ${benefitsHtml}
+                        </div>
+                    </div>
+                </div>
+                <div class="rate-display">
+                    <h6 class="mb-2"><i class="fas fa-dollar-sign me-1"></i>날짜별 프로모션 요금</h6>
+                    ${result.daily_rates.map(r => `
+                        <div class="d-flex justify-content-between">
+                            <span>${r.stay_date}:</span>
+                            <strong>$${r.rate_per_night.toFixed(2)}</strong>
+                        </div>
+                    `).join('')}
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>1객실 총액:</strong>
+                        <strong class="text-primary fs-5">$${result.total_room_rate.toFixed(2)}</strong>
+                    </div>
+                </div>
+            `;
+            
+            promoResult.style.display = 'block';
+        }
+
+        // 객실 추가
+        function addRoom() {
+            roomCounter++;
+            const roomId = `room_${roomCounter}`;
+            
+            const roomHtml = `
+                <div class="room-card" id="${roomId}" data-room-id="${roomCounter}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-bed me-2"></i>객실 ${roomCounter}</h6>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeRoom('${roomId}')">
+                            <i class="fas fa-trash"></i> 삭제
+                        </button>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">객실 타입 *</label>
+                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="calculateRoomRates()">
+                                <option value="">객실 타입 선택</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">1박당 요금 (자동)</label>
+                            <input type="text" class="form-control" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="d-block mb-2"><i class="fas fa-users me-2"></i>투숙객 정보</strong>
+                        <div id="guests_${roomCounter}">
+                            ${createGuestHtml(roomCounter, 1, true)}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-add-guest mt-2" onclick="addGuest(${roomCounter})">
+                            <i class="fas fa-user-plus me-1"></i>동반 투숙객 추가
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('roomsContainer').insertAdjacentHTML('beforeend', roomHtml);
+            
+            // 객실 타입 옵션 채우기
+            if (allRoomTypes.length > 0) {
+                const select = document.querySelector(`#${roomId} .room-type-select`);
+                select.innerHTML = '<option value="">객실 타입 선택</option>' +
+                    allRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
+            }
+        }
+
+        // 투숙객 HTML 생성
+        function createGuestHtml(roomNum, guestNum, isPrimary = false) {
+            return `
+                <div class="guest-card" id="guest_${roomNum}_${guestNum}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>${isPrimary ? '대표 투숙객' : '동반 투숙객 ' + guestNum}</strong>
+                        ${!isPrimary ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGuest(${roomNum}, ${guestNum})"><i class="fas fa-times"></i></button>` : ''}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="한글명" data-guest-field="guest_name_ko" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="영문명" data-guest-field="guest_name_en" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control form-control-sm" data-guest-field="age_category" data-room="${roomNum}" data-guest="${guestNum}">
+                                <option value="adult">성인</option>
+                                <option value="child">소아</option>
+                                <option value="infant">유아</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control form-control-sm" placeholder="생년월일" data-guest-field="date_of_birth" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        ${isPrimary ? `
+                        <div class="col-md-2">
+                            <input type="tel" class="form-control form-control-sm" placeholder="전화번호" data-guest-field="phone" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="email" class="form-control form-control-sm" placeholder="이메일" data-guest-field="email" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 투숙객 추가
+        function addGuest(roomNum) {
+            const guestsContainer = document.getElementById(`guests_${roomNum}`);
+            const guestCount = guestsContainer.querySelectorAll('.guest-card').length + 1;
+            
+            guestsContainer.insertAdjacentHTML('beforeend', createGuestHtml(roomNum, guestCount, false));
+        }
+
+        // 투숙객 제거
+        function removeGuest(roomNum, guestNum) {
+            const guestCard = document.getElementById(`guest_${roomNum}_${guestNum}`);
+            if (guestCard) guestCard.remove();
+        }
+
+        // 객실 제거
+        function removeRoom(roomId) {
+            if (confirm('이 객실을 삭제하시겠습니까?')) {
+                document.getElementById(roomId).remove();
+                calculateTotal();
+            }
+        }
+
+        // 추가 항목 추가
+        function addExtraItem() {
+            extraCounter++;
+            const extraId = `extra_${extraCounter}`;
+            
+            const extraHtml = `
+                <div class="extra-item-card" id="${extraId}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>추가 항목 ${extraCounter}</h6>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeExtra('${extraId}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">항목명 *</label>
+                            <input type="text" class="form-control" placeholder="예: 공항픽업, 꽃바구니" data-extra-field="item_name" data-extra="${extraCounter}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">수량</label>
+                            <input type="number" class="form-control" value="1" min="1" data-extra-field="quantity" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">유형</label>
+                            <select class="form-control" data-extra-field="pricing_type" data-extra="${extraCounter}" onchange="toggleExtraPricing(${extraCounter})">
+                                <option value="per_person">인원별 요금</option>
+                                <option value="flat">정액 요금</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-2" id="perPersonPricing_${extraCounter}">
+                        <div class="col-md-3">
+                            <label class="form-label small">성인 수</label>
+                            <input type="number" class="form-control" value="0" min="0" data-extra-field="adult_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">성인 단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="adult_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">소아 수</label>
+                            <input type="number" class="form-control" value="0" min="0" data-extra-field="child_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">소아 단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="child_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">유아 수</label>
+                            <input type="number" class="form-control" value="0" min="0" data-extra-field="infant_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">유아 단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="infant_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-2" id="flatPricing_${extraCounter}" style="display:none;">
+                        <div class="col-md-6">
+                            <label class="form-label small">단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="unit_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-12">
+                            <label class="form-label small">소계</label>
+                            <input type="text" class="form-control fw-bold" id="extra_${extraCounter}_total" readonly style="background: #e7f3ff; color: #2196F3;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
+        }
+
+        // 추가 항목 가격 유형 전환
+        function toggleExtraPricing(extraNum) {
+            const type = document.querySelector(`[data-extra-field="pricing_type"][data-extra="${extraNum}"]`).value;
+            
+            if (type === 'per_person') {
+                document.getElementById(`perPersonPricing_${extraNum}`).style.display = 'flex';
+                document.getElementById(`flatPricing_${extraNum}`).style.display = 'none';
+            } else {
+                document.getElementById(`perPersonPricing_${extraNum}`).style.display = 'none';
+                document.getElementById(`flatPricing_${extraNum}`).style.display = 'flex';
+            }
+            
+            calculateExtraTotal(extraNum);
+        }
+
+        // 추가 항목 소계 계산
+        function calculateExtraTotal(extraNum) {
+            const type = document.querySelector(`[data-extra-field="pricing_type"][data-extra="${extraNum}"]`).value;
+            const quantity = parseInt(document.querySelector(`[data-extra-field="quantity"][data-extra="${extraNum}"]`).value) || 1;
+            
+            let total = 0;
+            
+            if (type === 'per_person') {
+                const adultCount = parseInt(document.querySelector(`[data-extra-field="adult_count"][data-extra="${extraNum}"]`).value) || 0;
+                const adultPrice = parseFloat(document.querySelector(`[data-extra-field="adult_price"][data-extra="${extraNum}"]`).value) || 0;
+                const childCount = parseInt(document.querySelector(`[data-extra-field="child_count"][data-extra="${extraNum}"]`).value) || 0;
+                const childPrice = parseFloat(document.querySelector(`[data-extra-field="child_price"][data-extra="${extraNum}"]`).value) || 0;
+                const infantCount = parseInt(document.querySelector(`[data-extra-field="infant_count"][data-extra="${extraNum}"]`).value) || 0;
+                const infantPrice = parseFloat(document.querySelector(`[data-extra-field="infant_price"][data-extra="${extraNum}"]`).value) || 0;
+                
+                total = (adultCount * adultPrice + childCount * childPrice + infantCount * infantPrice) * quantity;
+            } else {
+                const unitPrice = parseFloat(document.querySelector(`[data-extra-field="unit_price"][data-extra="${extraNum}"]`).value) || 0;
+                total = unitPrice * quantity;
+            }
+            
+            document.getElementById(`extra_${extraNum}_total`).value = `$${total.toFixed(2)}`;
+            calculateTotal();
+        }
+
+        // 추가 항목 제거
+        function removeExtra(extraId) {
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
+                document.getElementById(extraId).remove();
+                calculateTotal();
+            }
+        }
+
+        // 객실 요금 계산
+        function calculateRoomRates() {
+            // 프로모션 적용된 경우 프로모션 요금 사용
+            if (currentPromotion && currentPromotion.daily_rates) {
+                const totalRate = currentPromotion.total_room_rate;
+                
+                document.querySelectorAll('.room-card').forEach((room, index) => {
+                    const rateInput = room.querySelector('[id$="_rate"]');
+                    if (rateInput) {
+                        rateInput.value = `$${totalRate.toFixed(2)} (프로모션)`;
+                    }
+                });
+            }
+            
+            calculateTotal();
+        }
+
+        // 총 요금 계산
+        function calculateTotal() {
+            const nights = parseInt(document.getElementById('nights').value) || 0;
+            let totalRoomCharge = 0;
+            let totalExtrasCharge = 0;
+            
+            // 객실 요금 계산
+            if (currentPromotion && currentPromotion.total_room_rate) {
+                const roomCount = document.querySelectorAll('.room-card').length;
+                totalRoomCharge = currentPromotion.total_room_rate * roomCount;
+            }
+            
+            // 추가 항목 요금 계산
+            document.querySelectorAll('.extra-item-card').forEach(extra => {
+                const totalInput = extra.querySelector('[id$="_total"]');
+                if (totalInput && totalInput.value) {
+                    const amount = parseFloat(totalInput.value.replace('$', '')) || 0;
+                    totalExtrasCharge += amount;
+                }
+            });
+            
+            document.getElementById('totalRoomCharge').textContent = `$${totalRoomCharge.toFixed(2)}`;
+            document.getElementById('totalExtrasCharge').textContent = `$${totalExtrasCharge.toFixed(2)}`;
+            document.getElementById('grandTotal').textContent = `$${(totalRoomCharge + totalExtrasCharge).toFixed(2)}`;
+        }
+
+        // 미리보기 초기화
+        function clearPreview() {
+            if (confirm('입력한 내용을 모두 지우시겠습니까?')) {
+                document.getElementById('rawData').value = '';
+                document.getElementById('previewCard').style.display = 'none';
+                document.getElementById('roomsContainer').innerHTML = '';
+                document.getElementById('extrasContainer').innerHTML = '';
+                roomCounter = 0;
+                extraCounter = 0;
+                currentPromotion = null;
+            }
+        }
+
+        // 호텔 예약 저장
+        async function saveHotelReservation() {
+            // 필수 필드 검증
+            const reservationNumber = document.getElementById('reservation_number').value.trim();
+            const hotelId = document.getElementById('hotel_id').value;
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            if (!reservationNumber || !hotelId || !checkIn || !checkOut) {
+                alert('예약번호, 호텔, 체크인/체크아웃 날짜는 필수입니다.');
+                return;
+            }
+            
+            if (document.querySelectorAll('.room-card').length === 0) {
+                alert('최소 1개 이상의 객실을 추가해주세요.');
+                return;
+            }
+            
+            // 데이터 수집
+            const data = {
+                reservation_number: reservationNumber,
+                booking_agency_id: document.getElementById('booking_agency_id').value || null,
+                hotel_id: parseInt(hotelId),
+                check_in_date: checkIn,
+                check_out_date: checkOut,
+                nights: parseInt(document.getElementById('nights').value),
+                status: document.getElementById('status').value,
+                promotion_id: currentPromotion ? currentPromotion.promotion.id : null,
+                promo_code: currentPromotion ? currentPromotion.promotion.promo_code : null,
+                special_requests: document.getElementById('special_requests').value,
+                internal_memo: document.getElementById('internal_memo').value,
+                rooms: [],
+                extras: []
+            };
+            
+            // 객실 데이터 수집
+            document.querySelectorAll('.room-card').forEach(room => {
+                const roomNum = room.dataset.roomId;
+                const roomTypeId = room.querySelector('.room-type-select').value;
+                
+                if (!roomTypeId) return;
+                
+                const roomData = {
+                    room_type_id: parseInt(roomTypeId),
+                    guests: []
+                };
+                
+                // 투숙객 데이터 수집
+                room.querySelectorAll('.guest-card').forEach(guest => {
+                    const guestData = {};
+                    guest.querySelectorAll('[data-guest-field]').forEach(field => {
+                        const fieldName = field.dataset.guestField;
+                        guestData[fieldName] = field.value;
+                    });
+                    roomData.guests.push(guestData);
+                });
+                
+                data.rooms.push(roomData);
+            });
+            
+            // 추가 항목 데이터 수집
+            document.querySelectorAll('.extra-item-card').forEach(extra => {
+                const extraNum = extra.id.replace('extra_', '');
+                const extraData = {};
+                
+                extra.querySelectorAll('[data-extra-field]').forEach(field => {
+                    const fieldName = field.dataset.guestField;
+                    extraData[fieldName] = field.value;
+                });
+                
+                data.extras.push(extraData);
+            });
+            
+            try {
+                const response = await fetch('/api/hotel-reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ 호텔 예약이 성공적으로 저장되었습니다!');
+                    window.location.href = '/admin/hotel-assignments';
+                } else {
+                    alert('❌ 저장 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('저장 오류:', error);
+                alert('❌ 저장 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>

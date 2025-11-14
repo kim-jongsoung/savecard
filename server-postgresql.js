@@ -1062,6 +1062,15 @@ app.get('/admin/agency-fees', requireAuth, (req, res) => {
     });
 });
 
+// 호텔 인박스 페이지 ⭐ 신규
+app.get('/admin/hotel-inbox', requireAuth, (req, res) => {
+    res.render('admin/hotel-inbox', {
+        title: '호텔 인박스',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'hotel-inbox'
+    });
+});
+
 // 임시 테스트 API (구체적인 라우트를 먼저 배치)
 app.get('/api/test', (req, res) => {
     res.json({ 
@@ -1165,6 +1174,22 @@ try {
 } catch (error) {
     console.error('❌ API 라우트 연결 오류:', error.message);
     console.log('⚠️ 일부 API 라우트를 사용할 수 없습니다. 기본 기능은 정상 작동합니다.');
+}
+
+// 호텔 관련 API 라우트
+try {
+    const hotelPromotionsRoutes = require('./routes/hotel-promotions');
+    const hotelReservationsRoutes = require('./routes/hotel-reservations');
+    
+    app.set('pool', pool); // 라우트에서 pool 사용 가능하도록 설정
+    
+    app.use('/api/hotel-promotions', hotelPromotionsRoutes);
+    app.use('/api/hotel-reservations', hotelReservationsRoutes);
+    
+    console.log('✅ 호텔 API 라우트 연결 완료');
+} catch (error) {
+    console.error('❌ 호텔 API 라우트 연결 오류:', error.message);
+    console.log('⚠️ 호텔 API를 사용할 수 없습니다.');
 }
 
 // 서버 시작 시 PostgreSQL 스키마 보정: 테이블 생성 → 컬럼 보정
