@@ -1057,6 +1057,14 @@
             }
             
             try {
+                // 해당 룸타입 정보 가져오기
+                const roomType = allRoomTypes.find(rt => rt.id == roomTypeId);
+                
+                // 조식 설정에 따라 추가 항목에 자동 추가
+                if (roomType) {
+                    await addBreakfastFromRoomType(roomNum, roomType);
+                }
+                
                 // 해당 룸타입의 최적 프로모션 찾기
                 const bestPromotion = await findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut);
                 
@@ -1073,6 +1081,90 @@
             } catch (error) {
                 console.error('룸타입 프로모션 조회 오류:', error);
             }
+        }
+        
+        // 룸타입의 조식 설정에 따라 추가 항목에 자동 추가
+        async function addBreakfastFromRoomType(roomNum, roomType) {
+            if (!roomType) return;
+            
+            const breakfastIncluded = roomType.breakfast_included || false;
+            const breakfastRateAdult = parseFloat(roomType.breakfast_rate_adult) || 0;
+            const breakfastRateChild = parseFloat(roomType.breakfast_rate_child) || 0;
+            
+            // 해당 객실의 투숙객 수 확인
+            const guestsContainer = document.getElementById(`guests_${roomNum}`);
+            const guestCards = guestsContainer.querySelectorAll('.guest-card');
+            
+            let adultCount = 0;
+            let childCount = 0;
+            
+            guestCards.forEach(card => {
+                const ageCategory = card.querySelector('[data-guest-field="age_category"]')?.value || 'adult';
+                if (ageCategory === 'adult') adultCount++;
+                else if (ageCategory === 'child') childCount++;
+            });
+            
+            // 기존 조식 항목 제거 (중복 방지)
+            const existingBreakfast = document.querySelector(`[data-breakfast-room="${roomNum}"]`);
+            if (existingBreakfast) {
+                existingBreakfast.remove();
+            }
+            
+            // 조식 포함/불포함 항목 추가
+            extraCounter++;
+            const extraId = `extra_${extraCounter}`;
+            
+            let itemName, quantity, unitPrice, notes;
+            
+            if (breakfastIncluded) {
+                // 조식 포함
+                itemName = '조식 (포함)';
+                quantity = adultCount + childCount;
+                unitPrice = 0;
+                notes = `객실 ${roomNum} - 조식 포함`;
+            } else {
+                // 조식 불포함 (옵션으로 추가 가능)
+                itemName = '조식 (불포함 - 추가 시 별도 요금)';
+                quantity = 0;
+                unitPrice = breakfastRateAdult;
+                notes = `객실 ${roomNum} - 성인: $${breakfastRateAdult}, 소아: $${breakfastRateChild}`;
+            }
+            
+            const extraHtml = `
+                <div class="extra-item-card" id="${extraId}" data-breakfast-room="${roomNum}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong><i class="fas fa-utensils me-2"></i>추가 항목 ${extraCounter}</strong>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExtra('${extraId}')">
+                            <i class="fas fa-times"></i> 삭제
+                        </button>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">항목명</label>
+                            <input type="text" class="form-control form-control-sm" placeholder="예: 조식, 공항픽업" value="${itemName}" data-extra-field="item_name" data-extra="${extraCounter}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">수량</label>
+                            <input type="number" class="form-control form-control-sm" value="${quantity}" data-extra-field="quantity" data-extra="${extraCounter}" onchange="calculateExtrasTotal()">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">단가 (USD)</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" value="${unitPrice}" data-extra-field="unit_price" data-extra="${extraCounter}" onchange="calculateExtrasTotal()">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">소계 (USD)</label>
+                            <input type="text" class="form-control form-control-sm bg-light" readonly value="${(quantity * unitPrice).toFixed(2)}" id="extra_${extraCounter}_subtotal">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">비고</label>
+                            <input type="text" class="form-control form-control-sm" placeholder="비고" value="${notes}" data-extra-field="notes" data-extra="${extraCounter}">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
+            calculateExtrasTotal();
         }
         
         // 특정 룸타입의 최적 프로모션 찾기
