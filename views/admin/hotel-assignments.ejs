@@ -808,6 +808,7 @@
         let extraCounter = 0;
         let currentPromotion = null;
         let roomPromotions = {};
+        let isLoadingData = false;  // ⭐ 데이터 로드 중 플래그 (조식 중복 방지)
         
         // 모달 오픈 시 호텔/거래처 로드
         document.getElementById('editReservationModal').addEventListener('show.bs.modal', async function() {
@@ -1177,6 +1178,12 @@
             const breakfastIncluded = roomType.breakfast_included || false;
             const breakfastRateAdult = parseFloat(roomType.breakfast_rate_adult) || 0;
             const breakfastRateChild = parseFloat(roomType.breakfast_rate_child) || 0;
+            
+            // ⭐ 데이터 로드 중에는 조식 자동 추가 안 함 (중복 방지)
+            if (isLoadingData) {
+                console.log(`🚫 데이터 로드 중이므로 조식 자동 추가 건너뜀`);
+                return;
+            }
             
             // 해당 객실의 투숙객 수 확인
             const guestsContainer = document.getElementById(`guests_${roomNum}`);
@@ -1550,6 +1557,9 @@
                 
                 // 모달이 완전히 열린 후에 데이터 채우기
                 setTimeout(async () => {
+                    // ⭐ 데이터 로드 시작
+                    isLoadingData = true;
+                    
                     // 초기화
                     roomCounter = 0;
                     extraCounter = 0;
@@ -1653,22 +1663,22 @@
                                                 const fields = guestCard.querySelectorAll('[data-guest-field]');
                                                 fields.forEach(field => {
                                                     const fieldName = field.dataset.guestField;
-                                                    if (guest[fieldName]) {
-                                                        field.value = guest[fieldName];
-                                                    }
+                                                    // ⭐ 조건 제거: null이나 빈 값도 항상 채우기
+                                                    field.value = guest[fieldName] !== undefined && guest[fieldName] !== null ? guest[fieldName] : '';
                                                 });
-                                                console.log(`  ✅ 투숙객 ${guestIdx + 1} 정보 채움`);
+                                                console.log(`  ✅ 투숙객 ${guestIdx + 1} 정보 채움 (생년월일: ${guest.date_of_birth})`);
                                             }
-                                        }, 100);
+                                        }, 100 * guestIdx);
                                     });
                                 }
                                 
-                                // 프로모션 자동 조회 (저장된 프로모션이 있으면 조회)
-                                if (room.promotion_code || room.room_type_id) {
-                                    setTimeout(async () => {
-                                        await onRoomTypeChange(roomCounter);
-                                        console.log(`🔍 객실 ${roomCounter} 프로모션 조회 완료`);
-                                    }, 200);
+                                // 프로모션 정보 저장 (onRoomTypeChange 호출을 위해)
+                                if (room.promotion_code) {
+                                    roomPromotions[roomCounter] = {
+                                        promotion: { promo_code: room.promotion_code },
+                                        rate_condition_id: room.rate_condition_id,
+                                        total_room_rate: room.total_selling_price
+                                    };
                                 }
                             }, 100 * i);
                         }
@@ -1728,7 +1738,15 @@
                             
                             setTimeout(() => {
                                 calculateTotal();
+                                
+                                // ⭐ 데이터 로드 완료 - 이제 프로모션 조회 가능
+                                isLoadingData = false;
+                                console.log('✅ 데이터 로드 완료 - 프로모션 조회 활성화');
                             }, 100 * data.extras.length + 100);
+                        } else {
+                            // 추가 항목이 없는 경우도 로드 완료 처리
+                            isLoadingData = false;
+                            console.log('✅ 데이터 로드 완료 (추가 항목 없음)');
                         }
                     }, 500);
                     
