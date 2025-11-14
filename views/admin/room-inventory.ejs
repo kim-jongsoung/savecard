@@ -29,29 +29,28 @@
 <body>
   <%- include('../partials/navbar') %>
   <div class="container-fluid mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h4>Room Availability</h4>
-      <div>
-        Prepared by <%= adminUsername %> | <span id="todayDate"></span>
-        <button class="btn btn-warning btn-sm ms-2" onclick="saveChanges()">Update</button>
+    <div class="mb-3">
+      <div class="d-flex align-items-center mb-2">
+        <h4 class="mb-0 me-3">Room Availability</h4>
+        <label class="me-2">Hotel:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto me-3" id="hotelSelect" onchange="loadData()">
+          <option value="">Select Hotel</option>
+        </select>
+        <label class="me-2">Start:</label>
+        <input type="month" class="form-control form-control-sm d-inline-block w-auto me-3" id="startMonth" value="2025-11" onchange="loadData()">
+        <span class="text-muted small">by <%= adminUsername %> | <span id="todayDate"></span></span>
       </div>
-    </div>
-    
-    <div class="mb-2">
-      <label>Hotel:</label>
-      <select class="form-select form-select-sm d-inline-block w-auto" id="hotelSelect" onchange="loadData()">
-        <option value="">Select Hotel</option>
-      </select>
-      <label class="ms-3">Start:</label>
-      <input type="month" class="form-control form-control-sm d-inline-block w-auto" id="startMonth" value="2025-11" onchange="loadData()">
-      <button class="btn btn-primary btn-sm ms-2" onclick="selectAllCells()">📋 전체선택</button>
-      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">❌ 선택해제</button>
-      <span class="text-muted small ms-2">| 💡 월 타이틀·룸타입명 체크박스로 일괄선택 가능</span>
-      <br class="mt-1">
-      <button class="btn btn-success btn-sm ms-2 mt-2" onclick="bulkUpdate('O')">Open</button>
-      <button class="btn btn-danger btn-sm" onclick="bulkUpdate('X')">Close</button>
-      <button class="btn btn-info btn-sm" onclick="bulkUpdate('V')">Check</button>
-      <span class="ms-2 small text-muted" id="inventoryTypeHint"></span>
+      <div class="d-flex align-items-center">
+        <button class="btn btn-primary btn-sm me-2" onclick="selectAllCells()">전체선택</button>
+        <button class="btn btn-secondary btn-sm me-2" onclick="clearSelection()">선택해제</button>
+        <span class="text-muted me-2">|</span>
+        <button class="btn btn-success btn-sm me-2" onclick="bulkUpdate('O')">Open</button>
+        <button class="btn btn-danger btn-sm me-2" onclick="bulkUpdate('X')">Close</button>
+        <button class="btn btn-info btn-sm me-2" onclick="bulkUpdate('V')">Check</button>
+        <span class="text-muted me-2">|</span>
+        <button class="btn btn-warning btn-sm me-3" onclick="saveChanges()">💾 저장</button>
+        <span class="small text-muted" id="inventoryTypeHint"></span>
+      </div>
     </div>
     
     <div id="inventoryContainer"></div>
@@ -172,7 +171,8 @@
     function toggleCell(key) {
       if (selected.has(key)) selected.delete(key);
       else selected.add(key);
-      loadData();
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderInventory(year, month);
     }
     
     function selectMonth(year, month) {
@@ -188,7 +188,8 @@
           }
         }
       });
-      loadData();
+      const [startYear, startMonth] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderInventory(startYear, startMonth);
     }
     
     function selectRoomType(roomTypeId, year, month) {
@@ -202,7 +203,8 @@
           selected.delete(key);
         }
       }
-      loadData();
+      const [startYear, startMonth] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderInventory(startYear, startMonth);
     }
     
     function selectAllRoomType(roomTypeId) {
@@ -221,13 +223,13 @@
           }
         }
       }
-      loadData();
+      renderInventory(year, month);
     }
     
     function selectAllCells() {
       selected.clear();
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
       roomTypes.forEach(rt => {
-        const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
         for (let m = 0; m < 6; m++) {
           const y = month + m > 12 ? year + 1 : year;
           const mo = month + m > 12 ? month + m - 12 : month + m;
@@ -238,12 +240,13 @@
           }
         }
       });
-      loadData();
+      renderInventory(year, month);
     }
     
     function clearSelection() {
       selected.clear();
-      loadData();
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderInventory(year, month);
     }
     
     function bulkUpdate(status) {
@@ -272,7 +275,8 @@
       }
       
       selected.clear();
-      loadData();
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderInventory(year, month);
     }
     
     async function saveChanges() {
