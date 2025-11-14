@@ -307,4 +307,87 @@ router.get('/', async (req, res) => {
     }
 });
 
+/**
+ * 호텔 예약 데이터 AI 파싱
+ * POST /admin/hotel-reservations/parse
+ */
+router.post('/parse', async (req, res) => {
+    const { reservationText, customPrompt } = req.body;
+    
+    if (!reservationText) {
+        return res.json({
+            success: false,
+            message: '파싱할 예약 데이터가 없습니다.'
+        });
+    }
+    
+    try {
+        const { OpenAI } = require('openai');
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+        
+        // 호텔 예약 파싱 프롬프트
+        let prompt = `다음은 호텔 예약 정보입니다. 이를 JSON 형식으로 파싱해주세요.
+
+예약 정보:
+"""
+${reservationText}
+"""
+
+다음 필드를 추출해주세요:
+- reservation_number: 예약번호
+- hotel_name: 호텔명 (정확한 이름)
+- check_in_date: 체크인 날짜 (YYYY-MM-DD 형식)
+- check_out_date: 체크아웃 날짜 (YYYY-MM-DD 형식)
+- guest_name_ko: 투숙객 한글명
+- guest_name_en: 투숙객 영문명 (대문자)
+- phone: 전화번호
+- email: 이메일 주소
+- adults: 성인 인원수 (숫자)
+- children: 소아 인원수 (숫자)
+- infants: 유아 인원수 (숫자)
+- room_type: 객실 타입
+- special_requests: 특별 요청사항`;
+
+        if (customPrompt) {
+            prompt += `\n\n추가 지침:\n${customPrompt}`;
+        }
+
+        prompt += `\n\nJSON 형식으로만 응답해주세요. 다른 설명은 포함하지 마세요.`;
+
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'system',
+                    content: '당신은 호텔 예약 정보를 정확하게 파싱하는 전문가입니다.'
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            temperature: 0.1,
+            response_format: { type: 'json_object' }
+        });
+
+        const parsedData = JSON.parse(completion.choices[0].message.content);
+        
+        console.log('🤖 AI 파싱 완료 (호텔):', parsedData);
+        
+        res.json({
+            success: true,
+            parsed_data: parsedData,
+            parsing_method: 'OpenAI GPT-4o-mini'
+        });
+    } catch (error) {
+        console.error('❌ AI 파싱 오류:', error);
+        res.json({
+            success: false,
+            message: 'AI 파싱 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 module.exports = router;

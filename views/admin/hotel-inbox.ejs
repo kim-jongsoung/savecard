@@ -588,7 +588,7 @@
                 console.log('🤖 AI 파싱 요청 (호텔 예약)');
 
                 // 2단계: AI 파싱
-                const response = await fetch('/admin/hotel-reservations/parse', {
+                const response = await fetch('/api/hotel-reservations/parse', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -624,10 +624,22 @@
         // 파싱 결과를 폼에 채우기
         function fillParsedData(data) {
             if (data.reservation_number) document.getElementById('reservation_number').value = data.reservation_number;
-            if (data.hotel_id) {
+            
+            // 호텔명으로 호텔 ID 찾기
+            if (data.hotel_name) {
+                const hotel = allHotels.find(h => 
+                    h.hotel_name.toLowerCase().includes(data.hotel_name.toLowerCase()) ||
+                    data.hotel_name.toLowerCase().includes(h.hotel_name.toLowerCase())
+                );
+                if (hotel) {
+                    document.getElementById('hotel_id').value = hotel.id;
+                    loadRoomTypes();
+                }
+            } else if (data.hotel_id) {
                 document.getElementById('hotel_id').value = data.hotel_id;
                 loadRoomTypes();
             }
+            
             if (data.check_in_date) document.getElementById('check_in_date').value = data.check_in_date;
             if (data.check_out_date) document.getElementById('check_out_date').value = data.check_out_date;
             
