@@ -869,6 +869,15 @@ try {
     console.error('⚠️ 거래처 관리 라우트 연결 실패:', error.message);
 }
 
+// 시즌 관리 라우트 연결 ⭐ 신규 (요금RAG 시스템)
+try {
+    const seasonsRouter = require('./routes/seasons');
+    app.use('/', seasonsRouter);
+    console.log('✅ 시즌 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 시즌 관리 라우트 연결 실패:', error.message);
+}
+
 // 객실 재고 관리 라우트 연결 ⭐ 신규
 try {
     const roomInventoryRouter = require('./routes/room-inventory');
@@ -937,6 +946,14 @@ app.get('/admin/room-inventory', requireAuth, (req, res) => {
         title: '객실 재고 관리',
         adminUsername: req.session.adminUsername,
         currentPage: 'room-inventory'
+    });
+});
+
+app.get('/admin/seasons', requireAuth, (req, res) => {
+    res.render('admin/seasons', {
+        title: '시즌 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'seasons'
     });
 });
 
