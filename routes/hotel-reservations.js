@@ -10,6 +10,7 @@ router.post('/', async (req, res) => {
         reservation_number,
         booking_agency_id,
         hotel_id,
+        reservation_date,  // ⭐ 인박스 입력일 (중요!)
         check_in_date,
         check_out_date,
         nights,
@@ -34,6 +35,7 @@ router.post('/', async (req, res) => {
                 reservation_number,
                 booking_agency_id,
                 hotel_id,
+                reservation_date,
                 check_in_date,
                 check_out_date,
                 nights,
@@ -41,12 +43,13 @@ router.post('/', async (req, res) => {
                 special_requests,
                 internal_memo,
                 created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
             RETURNING id
         `, [
             reservation_number,
             booking_agency_id || null,
             hotel_id,
+            reservation_date || new Date().toISOString().split('T')[0],  // 없으면 오늘 날짜
             check_in_date,
             check_out_date,
             nights,

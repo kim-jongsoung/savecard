@@ -1734,6 +1734,7 @@
                 reservation_number: reservationNumber,
                 booking_agency_id: document.getElementById('booking_agency_id').value || null,
                 hotel_id: parseInt(hotelId),
+                reservation_date: document.getElementById('reservation_date').value,  // ⭐ 인박스 입력일 (중요!)
                 check_in_date: checkIn,
                 check_out_date: checkOut,
                 nights: parseInt(document.getElementById('nights').value),
