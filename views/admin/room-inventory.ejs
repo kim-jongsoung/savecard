@@ -55,6 +55,12 @@
         </a>
         <span class="small text-muted" id="inventoryTypeHint"></span>
       </div>
+      
+      <!-- 마지막 업데이트 시간 -->
+      <div id="lastUpdateInfo" class="alert alert-info alert-dismissible fade show" role="alert" style="display: none; padding: 8px 12px; font-size: 11px;">
+        <strong>📅 재고 최종 업데이트:</strong> <span id="lastUpdateTime"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 6px;"></button>
+      </div>
     </div>
     
     <div id="inventoryContainer"></div>
@@ -88,6 +94,7 @@
       const start = document.getElementById('startMonth').value.split('-');
       const year = parseInt(start[0]), month = parseInt(start[1]);
       inventory = {};
+      let latestUpdate = null;
       
       for (let m = 0; m < 6; m++) {
         const y = month + m > 12 ? year + 1 : year;
@@ -107,7 +114,29 @@
             inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
           }
           console.log(`  → inventory["${key}"] = ${inventory[key]}`);
+          
+          // 가장 최근 업데이트 시간 추적
+          if (inv.updated_at) {
+            const updateTime = new Date(inv.updated_at);
+            if (!latestUpdate || updateTime > latestUpdate) {
+              latestUpdate = updateTime;
+            }
+          }
         });
+      }
+      
+      // 마지막 업데이트 시간 표시
+      if (latestUpdate) {
+        const year = latestUpdate.getFullYear();
+        const month = String(latestUpdate.getMonth() + 1).padStart(2, '0');
+        const day = String(latestUpdate.getDate()).padStart(2, '0');
+        const hour = String(latestUpdate.getHours()).padStart(2, '0');
+        const minute = String(latestUpdate.getMinutes()).padStart(2, '0');
+        
+        document.getElementById('lastUpdateTime').textContent = `${year}/${month}/${day} ${hour}:${minute}`;
+        document.getElementById('lastUpdateInfo').style.display = 'block';
+      } else {
+        document.getElementById('lastUpdateInfo').style.display = 'none';
       }
       
       // 재고 관리 방식 힌트 표시
