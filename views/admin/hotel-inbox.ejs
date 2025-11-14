@@ -262,11 +262,15 @@
                                     <option value="modifying">수정중(예약변경)</option>
                                 </select>
                             </div>
-                            <div class="col-md-12 mb-2">
+                            <div class="col-md-8 mb-2">
                                 <label class="form-label">호텔 선택 *</label>
                                 <select class="form-control" id="hotel_id" required onchange="loadRoomTypes(); autoApplyPromotion();">
                                     <option value="">호텔 선택</option>
                                 </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label">예약일 (인박스 입력일)</label>
+                                <input type="date" class="form-control fw-bold" id="reservation_date" readonly style="background: #f0f0f0;">
                             </div>
                         </div>
 
@@ -455,6 +459,9 @@
                 // 변경 이벤트 리스너
                 statusSelect.addEventListener('change', updateStatusColor);
             }
+            
+            // 예약일 현재 날짜로 초기화
+            setReservationDate();
         });
         
         // 예약 상태 색상 업데이트 함수
@@ -470,6 +477,20 @@
             // 선택된 값에 따라 클래스 추가
             if (value) {
                 statusSelect.classList.add(`status-${value}`);
+            }
+        }
+        
+        // 예약일 설정 함수 (현재 날짜)
+        function setReservationDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+            
+            const reservationDateField = document.getElementById('reservation_date');
+            if (reservationDateField) {
+                reservationDateField.value = formattedDate;
             }
         }
 
