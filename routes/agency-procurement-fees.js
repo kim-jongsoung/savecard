@@ -158,34 +158,39 @@ router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, r
     
     if (feePolicy.fee_type === 'per_night') {
       // 1박당 방식
-      calculatedFee = (feePolicy.fee_per_night || 0) * nightsNum;
-      calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 = $${calculatedFee}`;
+      const feePerNight = parseFloat(feePolicy.fee_per_night) || 0;
+      calculatedFee = feePerNight * nightsNum;
+      calculation = `$${feePerNight} × ${nightsNum}박 = $${calculatedFee}`;
     } else if (feePolicy.fee_type === 'flat') {
       // 정액제 방식
-      if (feePolicy.max_nights_for_fee && nightsNum >= feePolicy.max_nights_for_fee) {
+      const flatAmount = parseFloat(feePolicy.flat_fee_amount) || 0;
+      const feePerNight = parseFloat(feePolicy.fee_per_night) || 0;
+      const maxNights = parseInt(feePolicy.max_nights_for_fee) || 0;
+      
+      if (maxNights > 0 && nightsNum >= maxNights) {
         // N박 이상 정액 고정
-        calculatedFee = feePolicy.flat_fee_amount || 0;
-        calculation = `정액제 (${nightsNum}박, ${feePolicy.max_nights_for_fee}박 이상) = $${calculatedFee}`;
-      } else if (feePolicy.max_nights_for_fee && nightsNum < feePolicy.max_nights_for_fee) {
+        calculatedFee = flatAmount;
+        calculation = `정액제 (${nightsNum}박, ${maxNights}박 이상) = $${calculatedFee}`;
+      } else if (maxNights > 0 && nightsNum < maxNights) {
         // N박 미만은 1박당 계산 (fee_per_night가 설정된 경우)
-        if (feePolicy.fee_per_night) {
-          calculatedFee = feePolicy.fee_per_night * nightsNum;
-          calculation = `$${feePolicy.fee_per_night} × ${nightsNum}박 (${feePolicy.max_nights_for_fee}박 미만) = $${calculatedFee}`;
+        if (feePerNight > 0) {
+          calculatedFee = feePerNight * nightsNum;
+          calculation = `$${feePerNight} × ${nightsNum}박 (${maxNights}박 미만) = $${calculatedFee}`;
         } else {
           // fee_per_night가 없으면 정액제 적용
-          calculatedFee = feePolicy.flat_fee_amount || 0;
+          calculatedFee = flatAmount;
           calculation = `정액제 = $${calculatedFee}`;
         }
       } else {
         // max_nights_for_fee 설정 없으면 항상 정액
-        calculatedFee = feePolicy.flat_fee_amount || 0;
+        calculatedFee = flatAmount;
         calculation = `정액제 = $${calculatedFee}`;
       }
     }
     
     console.log('✅ 수배피 계산 완료:', { fee: calculatedFee, calculation });
     res.json({
-      fee: calculatedFee,
+      fee: parseFloat(calculatedFee) || 0,  // 확실히 숫자로 반환
       calculation,
       details: feePolicy
     });

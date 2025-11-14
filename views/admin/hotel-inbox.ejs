@@ -476,11 +476,14 @@
                 const data = await response.json();
                 console.log('수배피 계산 결과:', data);
                 
-                if (data.fee > 0) {
+                // fee를 안전하게 숫자로 변환
+                const fee = parseFloat(data.fee) || 0;
+                
+                if (fee > 0) {
                     const agency = allAgencies.find(a => a.id === parseInt(agencyId));
                     document.getElementById('agencyFeeRow').style.display = 'flex';
                     document.getElementById('agencyFeeName').textContent = `${agency ? agency.agency_name : ''} - ${data.calculation || ''}`;
-                    document.getElementById('agencyFee').value = data.fee.toFixed(2);
+                    document.getElementById('agencyFee').value = fee.toFixed(2);
                 } else {
                     console.log('수배피 없음:', data.message);
                     document.getElementById('agencyFeeRow').style.display = 'none';
