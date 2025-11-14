@@ -533,15 +533,29 @@ router.put('/:id', async (req, res) => {
                     }
                 }
                 
-                // 객실별 인원 수 업데이트
+                // ⭐ 객실별 인원 수 + 조식 정보 업데이트
                 await client.query(`
                     UPDATE hotel_reservation_rooms
                     SET adults_count = $1,
                         children_count = $2,
                         infants_count = $3,
-                        total_guests = $4
-                    WHERE id = $5
-                `, [roomAdults, roomChildren, roomInfants, roomAdults + roomChildren + roomInfants, roomId]);
+                        total_guests = $4,
+                        breakfast_included = $5,
+                        breakfast_days = $6,
+                        breakfast_adult_price = $7,
+                        breakfast_child_price = $8
+                    WHERE id = $9
+                `, [
+                    roomAdults, 
+                    roomChildren, 
+                    roomInfants, 
+                    roomAdults + roomChildren + roomInfants, 
+                    room.breakfast_included || false,
+                    room.breakfast_days || 0,
+                    room.breakfast_adult_price || 0,
+                    room.breakfast_child_price || 0,
+                    roomId
+                ]);
                 
                 totalAdults += roomAdults;
                 totalChildren += roomChildren;

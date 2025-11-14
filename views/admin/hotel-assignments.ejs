@@ -1754,15 +1754,31 @@
                                     });
                                 }
                                 
-                                // ⭐ 조식 정보 표시 (객실 타입 기본값)
-                                if (room.room_type_id) {
-                                    const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
-                                    if (roomType) {
-                                        setTimeout(() => {
+                                // ⭐ 조식 정보 표시 (저장된 값 또는 객실 타입 기본값)
+                                setTimeout(() => {
+                                    if (room.breakfast_included !== undefined && room.breakfast_included !== null) {
+                                        // 저장된 조식 정보가 있으면 그대로 표시
+                                        console.log(`🍳 객실 ${currentRoomNum} 저장된 조식 로드:`, room.breakfast_included, room.breakfast_days, room.breakfast_adult_price, room.breakfast_child_price);
+                                        
+                                        const breakfastCheckbox = document.getElementById(`breakfast_included_${currentRoomNum}`);
+                                        const breakfastDays = document.getElementById(`breakfast_days_${currentRoomNum}`);
+                                        const breakfastAdultPrice = document.getElementById(`breakfast_adult_price_${currentRoomNum}`);
+                                        const breakfastChildPrice = document.getElementById(`breakfast_child_price_${currentRoomNum}`);
+                                        
+                                        if (breakfastCheckbox) breakfastCheckbox.checked = room.breakfast_included;
+                                        if (breakfastDays) breakfastDays.value = room.breakfast_days || 1;
+                                        if (breakfastAdultPrice) breakfastAdultPrice.value = parseFloat(room.breakfast_adult_price || 0).toFixed(2);
+                                        if (breakfastChildPrice) breakfastChildPrice.value = parseFloat(room.breakfast_child_price || 0).toFixed(2);
+                                        
+                                        toggleBreakfastFields(currentRoomNum);
+                                    } else if (room.room_type_id) {
+                                        // 저장된 정보가 없으면 객실 타입 기본값 사용
+                                        const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
+                                        if (roomType) {
                                             displayBreakfastInfo(currentRoomNum, roomType);
-                                        }, 150);
+                                        }
                                     }
-                                }
+                                }, 150);
                                 
                                 // ⭐ 프로모션 정보 표시 (새로 조회하지 않고 저장된 정보 표시)
                                 if (room.promotion_code) {
@@ -1949,15 +1965,26 @@
                 // 프로모션 정보
                 const roomPromo = roomPromotions[roomNum];
                 
+                // ⭐ 조식 정보 수집
+                const breakfastIncluded = document.getElementById(`breakfast_included_${roomNum}`)?.checked || false;
+                const breakfastDays = parseInt(document.getElementById(`breakfast_days_${roomNum}`)?.value) || 1;
+                const breakfastAdultPrice = parseFloat(document.getElementById(`breakfast_adult_price_${roomNum}`)?.value) || 0;
+                const breakfastChildPrice = parseFloat(document.getElementById(`breakfast_child_price_${roomNum}`)?.value) || 0;
+                
                 rooms.push({
                     room_type_id: parseInt(roomTypeId),
                     guests: guests,
                     promotion_code: roomPromo?.promotion?.promo_code || null,
                     rate_condition_id: roomPromo?.rate_condition_id || null,
-                    total_selling_price: roomPromo?.total_room_rate || 0
+                    total_selling_price: roomPromo?.total_room_rate || 0,
+                    // ⭐ 조식 정보 추가
+                    breakfast_included: breakfastIncluded,
+                    breakfast_days: breakfastIncluded ? breakfastDays : 0,
+                    breakfast_adult_price: breakfastIncluded ? breakfastAdultPrice : 0,
+                    breakfast_child_price: breakfastIncluded ? breakfastChildPrice : 0
                 });
                 
-                console.log(`  → 객실 ${roomNum} 저장: 룸타입=${roomTypeId}, 프로모션=${roomPromo?.promotion?.promo_code}, 요금=$${roomPromo?.total_room_rate || 0}`);
+                console.log(`  → 객실 ${roomNum} 저장: 룸타입=${roomTypeId}, 프로모션=${roomPromo?.promotion?.promo_code}, 요금=$${roomPromo?.total_room_rate || 0}, 조식=${breakfastIncluded}`);
             });
             
             if (rooms.length === 0) {
