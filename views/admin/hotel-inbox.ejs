@@ -1897,9 +1897,16 @@
                 const breakfastAdultPrice = parseFloat(document.getElementById(`breakfast_adult_price_${roomNum}`)?.value) || 0;
                 const breakfastChildPrice = parseFloat(document.getElementById(`breakfast_child_price_${roomNum}`)?.value) || 0;
                 
+                // ⭐ 프로모션 정보 수집
+                const roomPromo = roomPromotions[roomNum];
+                
                 const roomData = {
                     room_type_id: parseInt(roomTypeId),
                     guests: [],
+                    // ⭐ 프로모션 정보 추가
+                    promotion_code: roomPromo?.promotion?.promo_code || null,
+                    rate_condition_id: roomPromo?.rate_condition_id || null,
+                    total_selling_price: roomPromo?.total_room_rate || 0,
                     // ⭐ 조식 정보 추가
                     breakfast_included: breakfastIncluded,
                     breakfast_days: breakfastIncluded ? breakfastDays : 0,
@@ -1917,7 +1924,11 @@
                     roomData.guests.push(guestData);
                 });
                 
-                console.log(`✅ 객실 ${roomNum} 조식: 포함=${breakfastIncluded}, 횟수=${breakfastDays}일, 성인=$${breakfastAdultPrice}, 소아=$${breakfastChildPrice}`);
+                console.log(`✅ 객실 ${roomNum} 수집 완료:`);
+                console.log(`  → 룸타입 ID: ${roomTypeId}`);
+                console.log(`  → 프로모션: ${roomPromo?.promotion?.promo_code || '없음'}, 요금: $${roomPromo?.total_room_rate || 0}`);
+                console.log(`  → 조식: 포함=${breakfastIncluded}, 횟수=${breakfastDays}일, 성인=$${breakfastAdultPrice}, 소아=$${breakfastChildPrice}`);
+                console.log(`  → 투숙객: ${roomData.guests.length}명`);
                 
                 data.rooms.push(roomData);
             });
