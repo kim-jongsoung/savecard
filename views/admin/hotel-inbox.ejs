@@ -940,13 +940,31 @@
             roomCounter = 1;
             guestCounters = { 1: 1 };
             
+            // 추가 항목 모두 제거
+            const extrasContainer = document.getElementById('extrasContainer');
+            if (extrasContainer) {
+                extrasContainer.innerHTML = '';
+            }
+            extraCounter = 0;
+            
             // 총 금액 초기화
-            document.getElementById('total_price').value = '0';
-            document.getElementById('agency_fee').value = '0';
-            document.getElementById('final_price').value = '0';
+            const totalRoomCharge = document.getElementById('totalRoomCharge');
+            const totalExtrasCharge = document.getElementById('totalExtrasCharge');
+            const agencyFee = document.getElementById('agencyFee');
+            const grandTotal = document.getElementById('grandTotal');
+            
+            if (totalRoomCharge) totalRoomCharge.value = '0';
+            if (totalExtrasCharge) totalExtrasCharge.value = '0';
+            if (agencyFee) agencyFee.value = '0';
+            if (grandTotal) grandTotal.textContent = '$0.00';
+            
+            // 프로모션 관련 초기화
+            roomPromotions = {};
+            currentPromotion = null;
             
             // 미리보기 카드 숨기기
-            document.getElementById('previewCard').style.display = 'none';
+            const previewCard = document.getElementById('previewCard');
+            if (previewCard) previewCard.style.display = 'none';
             
             console.log('✅ 폼 초기화 완료');
         }
@@ -1397,6 +1415,32 @@
             calculateTotal();
         }
 
+        // 추가 항목 총액 계산
+        function calculateExtrasTotal() {
+            let total = 0;
+            
+            document.querySelectorAll('.extra-item-card').forEach(card => {
+                const extraNum = card.querySelector('[data-extra-field="quantity"]')?.dataset.extra;
+                if (!extraNum) return;
+                
+                const quantity = parseFloat(card.querySelector('[data-extra-field="quantity"]')?.value) || 0;
+                const unitPrice = parseFloat(card.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
+                const subtotal = quantity * unitPrice;
+                
+                // 소계 업데이트
+                const subtotalField = document.getElementById(`extra_${extraNum}_subtotal`);
+                if (subtotalField) {
+                    subtotalField.value = subtotal.toFixed(2);
+                }
+                
+                total += subtotal;
+            });
+            
+            // 총 추가 항목 요금 업데이트
+            document.getElementById('totalExtrasCharge').value = total.toFixed(2);
+            calculateTotal();
+        }
+        
         // 총 요금 계산
         function calculateTotal() {
             // input 필드에서 값 읽기 (수동 수정 가능)
