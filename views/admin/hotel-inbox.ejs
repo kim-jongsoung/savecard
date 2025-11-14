@@ -601,7 +601,7 @@
                 
                 if (result.success) {
                     const parsed = result.parsed_data;
-                    fillParsedData(parsed);
+                    await fillParsedData(parsed);
                     
                     // 미리보기 카드 표시
                     document.getElementById('previewCard').style.display = 'block';
@@ -622,7 +622,7 @@
         }
 
         // 파싱 결과를 폼에 채우기
-        function fillParsedData(data) {
+        async function fillParsedData(data) {
             if (data.reservation_number) document.getElementById('reservation_number').value = data.reservation_number;
             
             // 호텔명으로 호텔 ID 찾기
@@ -633,17 +633,20 @@
                 );
                 if (hotel) {
                     document.getElementById('hotel_id').value = hotel.id;
-                    loadRoomTypes();
+                    await loadRoomTypes(); // 객실 타입 로드 대기
                 }
             } else if (data.hotel_id) {
                 document.getElementById('hotel_id').value = data.hotel_id;
-                loadRoomTypes();
+                await loadRoomTypes(); // 객실 타입 로드 대기
             }
             
             if (data.check_in_date) document.getElementById('check_in_date').value = data.check_in_date;
             if (data.check_out_date) document.getElementById('check_out_date').value = data.check_out_date;
             
             calculateNights();
+            
+            // 객실 타입 로드 후 약간의 지연
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             // 객실 자동 추가 (rooms 배열이 있으면 해당 수만큼, 없으면 1개)
             if (data.rooms && Array.isArray(data.rooms) && data.rooms.length > 0) {
@@ -655,6 +658,27 @@
                     const roomNum = roomIndex + 1;
                     
                     setTimeout(() => {
+                        // 객실 타입 자동 선택
+                        if (room.room_type && allRoomTypes.length > 0) {
+                            const roomType = allRoomTypes.find(rt => 
+                                rt.room_type_name.toLowerCase().includes(room.room_type.toLowerCase()) ||
+                                room.room_type.toLowerCase().includes(rt.room_type_name.toLowerCase())
+                            );
+                            
+                            if (roomType) {
+                                const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
+                                if (roomTypeSelect) {
+                                    roomTypeSelect.value = roomType.id;
+                                    console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name}`);
+                                    
+                                    // 프로모션 조회 (비동기)
+                                    setTimeout(() => {
+                                        onRoomTypeChange(roomNum);
+                                    }, 100);
+                                }
+                            }
+                        }
+                        
                         // 투숙객 추가
                         if (room.guests && Array.isArray(room.guests)) {
                             room.guests.forEach((guest, guestIndex) => {
