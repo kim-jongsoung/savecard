@@ -878,6 +878,15 @@ try {
     console.error('⚠️ 시즌 관리 라우트 연결 실패:', error.message);
 }
 
+// 호텔 요금 관리 라우트 연결 ⭐ 신규 (요금RAG 시스템)
+try {
+    const hotelRatesRouter = require('./routes/hotel-rates');
+    app.use('/', hotelRatesRouter);
+    console.log('✅ 호텔 요금 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 호텔 요금 관리 라우트 연결 실패:', error.message);
+}
+
 // 객실 재고 관리 라우트 연결 ⭐ 신규
 try {
     const roomInventoryRouter = require('./routes/room-inventory');
@@ -954,6 +963,14 @@ app.get('/admin/seasons', requireAuth, (req, res) => {
         title: '시즌 관리',
         adminUsername: req.session.adminUsername,
         currentPage: 'seasons'
+    });
+});
+
+app.get('/admin/hotel-rates', requireAuth, (req, res) => {
+    res.render('admin/hotel-rates', {
+        title: '요금 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'hotel-rates'
     });
 });
 
