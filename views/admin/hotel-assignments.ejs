@@ -1712,18 +1712,49 @@
                                     });
                                 }
                                 
-                                // ⭐ 프로모션 정보 자동 조회 - onRoomTypeChange 호출
-                                if (room.room_type_id) {
-                                    // 로드 중 플래그 임시 해제 (조식 중복 방지 위해 객실별로)
-                                    setTimeout(async () => {
-                                        const wasLoading = isLoadingData;
-                                        isLoadingData = false;
+                                // ⭐ 프로모션 정보 표시 (새로 조회하지 않고 저장된 정보 표시)
+                                if (room.promotion_code) {
+                                    // roomPromotions에 저장
+                                    roomPromotions[currentRoomNum] = {
+                                        promotion: { promo_code: room.promotion_code },
+                                        rate_condition_id: room.rate_condition_id,
+                                        total_room_rate: room.total_selling_price
+                                    };
+                                    
+                                    // 프로모션 정보 UI에 직접 표시
+                                    setTimeout(() => {
+                                        const roomCard = document.querySelector(`[data-room-id="${currentRoomNum}"]`);
+                                        if (roomCard) {
+                                            // 프로모션 표시 영역 찾기 또는 생성
+                                            let promoDisplayArea = roomCard.querySelector('.room-promo-display');
+                                            if (!promoDisplayArea) {
+                                                const roomTypeSelect = roomCard.querySelector(`[data-room="${currentRoomNum}"]`)?.parentElement;
+                                                if (roomTypeSelect) {
+                                                    promoDisplayArea = document.createElement('div');
+                                                    promoDisplayArea.className = 'room-promo-display mt-2';
+                                                    roomTypeSelect.after(promoDisplayArea);
+                                                }
+                                            }
+                                            
+                                            if (promoDisplayArea) {
+                                                promoDisplayArea.innerHTML = `
+                                                    <div class="alert alert-info py-2 mb-2">
+                                                        <i class="fas fa-tag me-2"></i>
+                                                        <strong>프로모션:</strong> <code class="bg-light px-2 py-1">${room.promotion_code}</code>
+                                                        ${room.rate_condition_id ? `<br><small class="text-muted">Rate ID: ${room.rate_condition_id}</small>` : ''}
+                                                        <br><small class="text-muted">객실 요금: <strong>$${parseFloat(room.total_selling_price).toFixed(2)}</strong></small>
+                                                    </div>
+                                                `;
+                                                console.log(`📌 객실 ${currentRoomNum} 프로모션 표시: ${room.promotion_code} ($${room.total_selling_price})`);
+                                            }
+                                        }
                                         
-                                        await onRoomTypeChange(currentRoomNum);
-                                        console.log(`🔍 객실 ${currentRoomNum} 프로모션 자동 조회 완료`);
-                                        
-                                        isLoadingData = wasLoading;
-                                    }, 300 + (i * 100));
+                                        // 객실 요금 입력 필드에도 반영
+                                        const rateInput = document.getElementById(`room_${currentRoomNum}_rate`);
+                                        if (rateInput) {
+                                            rateInput.value = `$${parseFloat(room.total_selling_price).toFixed(2)}`;
+                                        }
+                                    }, 200);
                                 }
                             }, 100 * i);
                         }
