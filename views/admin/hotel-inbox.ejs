@@ -635,12 +635,25 @@
         }
         
         // 유연한 문자열 매칭 (부분 일치)
-        function fuzzyMatch(str1, str2) {
+        function fuzzyMatch(str1, str2, debugLabel = '') {
             const normalized1 = normalizeString(str1);
             const normalized2 = normalizeString(str2);
             
-            return normalized1.includes(normalized2) || 
-                   normalized2.includes(normalized1);
+            const isMatch = normalized1.includes(normalized2) || 
+                           normalized2.includes(normalized1);
+            
+            // 디버깅 로그
+            if (debugLabel) {
+                console.log(`[${debugLabel}] 매칭:`, {
+                    '원본1': str1,
+                    '원본2': str2,
+                    '정규화1': normalized1,
+                    '정규화2': normalized2,
+                    '결과': isMatch ? '✅ 매칭 성공' : '❌ 매칭 실패'
+                });
+            }
+            
+            return isMatch;
         }
         
         // 파싱 결과를 폼에 채우기
@@ -649,12 +662,16 @@
             
             // 거래처명으로 거래처 ID 찾기 (유연한 매칭)
             if (data.booking_agency && allAgencies.length > 0) {
-                const agency = allAgencies.find(a => fuzzyMatch(a.agency_name, data.booking_agency));
+                console.log('📋 거래처 목록:', allAgencies.map(a => a.agency_name));
+                console.log('🔍 파싱된 거래처:', data.booking_agency);
+                
+                const agency = allAgencies.find(a => fuzzyMatch(a.agency_name, data.booking_agency, '거래처'));
                 if (agency) {
                     document.getElementById('booking_agency_id').value = agency.id;
                     console.log('🏢 거래처 선택:', agency.agency_name, '(파싱:', data.booking_agency + ')');
                 } else {
                     console.log('⚠️ 거래처 매칭 실패:', data.booking_agency);
+                    console.log('💡 가능한 거래처:', allAgencies.map(a => a.agency_name).join(', '));
                 }
             }
             
@@ -698,7 +715,10 @@
                     
                     // 객실 타입 자동 선택 (유연한 매칭)
                     if (room.room_type && allRoomTypes.length > 0) {
-                        const roomType = allRoomTypes.find(rt => fuzzyMatch(rt.room_type_name, room.room_type));
+                        console.log(`📋 객실 ${roomNum} - 타입 목록:`, allRoomTypes.map(rt => rt.room_type_name));
+                        console.log(`🔍 객실 ${roomNum} - 파싱된 타입:`, room.room_type);
+                        
+                        const roomType = allRoomTypes.find(rt => fuzzyMatch(rt.room_type_name, room.room_type, `객실${roomNum} 타입`));
                         
                         if (roomType) {
                             const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
@@ -712,6 +732,7 @@
                             }
                         } else {
                             console.log(`⚠️ 객실 ${roomNum} 타입 매칭 실패: ${room.room_type}`);
+                            console.log(`💡 가능한 타입:`, allRoomTypes.map(rt => rt.room_type_name).join(', '));
                         }
                     }
                     
