@@ -261,6 +261,12 @@
       renderPromos();
     }
     
+    // 날짜 포맷팅 함수
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      return dateStr.split('T')[0];  // YYYY-MM-DD만 추출
+    }
+    
     function renderPromos() {
       const container = document.getElementById('promoList');
       
@@ -279,8 +285,8 @@
                 <div class="mt-1"><strong>${p.promo_name}</strong></div>
                 <div class="text-muted small">${p.hotel_name}</div>
                 <div class="mt-2">
-                  <span class="badge bg-primary">예약: ${p.booking_start_date} ~ ${p.booking_end_date}</span>
-                  <span class="badge bg-success">투숙: ${p.stay_start_date} ~ ${p.stay_end_date}</span>
+                  <span class="badge bg-primary">예약: ${formatDate(p.booking_start_date)} ~ ${formatDate(p.booking_end_date)}</span>
+                  <span class="badge bg-success">투숙: ${formatDate(p.stay_start_date)} ~ ${formatDate(p.stay_end_date)}</span>
                   <span class="badge bg-info">${p.rate_count}개 요금</span>
                   <span class="badge bg-warning">${p.benefit_count}개 베네핏</span>
                   ${p.is_active ? '<span class="badge bg-success">활성</span>' : '<span class="badge bg-secondary">비활성</span>'}
@@ -334,10 +340,10 @@
       document.getElementById('hotelId').value = promo.hotel_id;
       document.getElementById('promoCode').value = promo.promo_code;
       document.getElementById('promoName').value = promo.promo_name;
-      document.getElementById('bookingStartDate').value = promo.booking_start_date;
-      document.getElementById('bookingEndDate').value = promo.booking_end_date;
-      document.getElementById('stayStartDate').value = promo.stay_start_date;
-      document.getElementById('stayEndDate').value = promo.stay_end_date;
+      document.getElementById('bookingStartDate').value = formatDate(promo.booking_start_date);
+      document.getElementById('bookingEndDate').value = formatDate(promo.booking_end_date);
+      document.getElementById('stayStartDate').value = formatDate(promo.stay_start_date);
+      document.getElementById('stayEndDate').value = formatDate(promo.stay_end_date);
       document.getElementById('description').value = promo.description || '';
       document.getElementById('isActive').checked = promo.is_active;
       
