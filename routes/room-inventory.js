@@ -3,9 +3,11 @@ const router = express.Router();
 
 // 미들웨어: 로그인 체크
 function requireLogin(req, res, next) {
-  if (!req.session.adminId) {
+  if (!req.session.adminUsername && !req.session.adminId) {
+    console.log('❌ 로그인 안됨:', req.session);
     return res.status(401).json({ error: '로그인이 필요합니다.' });
   }
+  console.log('✅ 로그인 확인:', req.session.adminUsername || req.session.adminId);
   next();
 }
 
@@ -16,6 +18,8 @@ function requireLogin(req, res, next) {
 router.get('/api/inventory', requireLogin, async (req, res) => {
   const pool = req.app.locals.pool;
   const { hotel_id, room_type_id, year, month } = req.query;
+  
+  console.log('📥 재고 조회 요청:', { hotel_id, room_type_id, year, month });
   
   try {
     // 기본값: 현재 년월
@@ -58,6 +62,7 @@ router.get('/api/inventory', requireLogin, async (req, res) => {
     query += ` ORDER BY ra.availability_date, h.hotel_name, rt.room_type_code`;
     
     const result = await pool.query(query, params);
+    console.log(`✅ 재고 조회 결과: ${result.rows.length}개`);
     res.json(result.rows);
   } catch (error) {
     console.error('❌ 재고 조회 오류:', error);
@@ -73,8 +78,10 @@ router.post('/api/inventory/bulk', requireLogin, async (req, res) => {
   const pool = req.app.locals.pool;
   const { hotel_id, room_type_id, start_date, end_date, days_of_week, available_rooms, notes } = req.body;
   
+  console.log('📥 재고 일괄 저장 요청:', { hotel_id, room_type_id, start_date, end_date, available_rooms, notes });
+  
   try {
-    if (!hotel_id || !room_type_id || !start_date || !end_date) {
+    if (!room_type_id || !start_date || !end_date) {
       return res.status(400).json({ error: '필수 항목을 입력해주세요.' });
     }
     
@@ -104,7 +111,7 @@ router.post('/api/inventory/bulk', requireLogin, async (req, res) => {
       try {
         const dateStr = date.toISOString().split('T')[0];
         
-        await pool.query(`
+        const result = await pool.query(`
           INSERT INTO room_availability (
             room_type_id, availability_date, status, available_rooms, memo
           ) VALUES ($1, $2, $3, $4, $5)
@@ -114,8 +121,10 @@ router.post('/api/inventory/bulk', requireLogin, async (req, res) => {
             available_rooms = EXCLUDED.available_rooms,
             memo = EXCLUDED.memo,
             updated_at = NOW()
+          RETURNING *
         `, [room_type_id, dateStr, available_rooms > 0 ? 'available' : 'closed', available_rooms || 0, notes]);
         
+        console.log(`✅ 저장 성공 (${dateStr}):`, result.rows[0]);
         successCount++;
       } catch (error) {
         console.error(`재고 등록 실패 (${date}):`, error);

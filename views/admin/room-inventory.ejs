@@ -283,6 +283,9 @@
       if (Object.keys(changes).length === 0) return alert('No changes to save');
       const hid = document.getElementById('hotelSelect').value;
       let saved = 0;
+      let failed = 0;
+      
+      console.log('💾 저장 시작, 변경사항:', Object.keys(changes).length);
       
       for (const [key, value] of Object.entries(changes)) {
         const [rtid, date] = key.split('-', 2);
@@ -295,23 +298,38 @@
           rooms = value === 'O' ? 10 : (value === 'X' ? 0 : 5);
         }
         
-        await fetch('/api/inventory/bulk', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms})
-        });
+        const payload = {hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms, notes: ''};
+        console.log('📤 API 요청:', payload);
         
-        // 저장한 내용을 inventory에 반영 (화면 업데이트용)
-        inventory[key] = value;
-        saved++;
+        try {
+          const response = await fetch('/api/inventory/bulk', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+          });
+          
+          const result = await response.json();
+          console.log('📥 API 응답:', result);
+          
+          if (!response.ok || !result.success) {
+            console.error('❌ 저장 실패:', result);
+            failed++;
+          } else {
+            // 저장한 내용을 inventory에 반영 (화면 업데이트용)
+            inventory[key] = value;
+            saved++;
+          }
+        } catch (error) {
+          console.error('❌ API 오류:', error);
+          failed++;
+        }
       }
       
-      alert(`${saved} cells updated`);
+      alert(`저장 완료: ${saved}개 성공${failed > 0 ? `, ${failed}개 실패` : ''}`);
       changes = {};
       
-      // 화면만 다시 렌더링 (데이터는 이미 inventory에 반영됨)
-      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
-      renderInventory(year, month);
+      // 서버에서 데이터 다시 불러오기
+      await loadData();
     }
     
     loadHotels();
