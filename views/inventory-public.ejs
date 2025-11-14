@@ -27,24 +27,16 @@
       margin: 0;
     }
     .content-wrapper {
-      display: grid;
-      grid-template-columns: 1fr 400px;
-      gap: 20px;
+      display: block;
+      width: 100%;
     }
     .calendar-section {
       background: white;
       border-radius: 15px;
       padding: 30px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-    }
-    .chat-section {
-      background: white;
-      border-radius: 15px;
-      padding: 30px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      max-height: 800px;
+      max-width: 1400px;
+      margin: 0 auto;
     }
     .month-section {
       margin-bottom: 30px;
@@ -85,142 +77,12 @@
     .cell-closed { background: #f8d7da; color: #721c24; font-weight: bold; }
     .cell-limited { background: #fff3cd; color: #856404; font-weight: bold; }
     
-    /* 챗봇 스타일 */
-    .chat-header {
-      border-bottom: 2px solid #667eea;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-    }
-    .chat-header h3 {
-      color: #667eea;
-      margin: 0;
-      font-size: 20px;
-      font-weight: bold;
-    }
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 20px;
-      padding: 15px;
-      background: #f8f9fa;
-      border-radius: 10px;
-      max-height: 500px;
-    }
-    .message {
-      margin-bottom: 15px;
-      display: flex;
-      gap: 10px;
-    }
-    .message.user {
-      flex-direction: row-reverse;
-    }
-    .message-bubble {
-      max-width: 80%;
-      padding: 12px 16px;
-      border-radius: 15px;
-      line-height: 1.5;
-    }
-    .message.user .message-bubble {
-      background: #667eea;
-      color: white;
-      border-bottom-right-radius: 5px;
-    }
-    .message.bot .message-bubble {
-      background: white;
-      color: #333;
-      border-bottom-left-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .message-time {
-      font-size: 11px;
-      color: #999;
-      margin-top: 5px;
-    }
-    .chat-input-wrapper {
-      display: flex;
-      gap: 10px;
-    }
-    .chat-input {
-      flex: 1;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 10px;
-      font-size: 14px;
-    }
-    .chat-input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    .btn-send {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .btn-send:hover {
-      transform: translateY(-2px);
-    }
-    .btn-send:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .typing-indicator {
-      display: none;
-      padding: 12px;
-      background: white;
-      border-radius: 15px;
-      width: fit-content;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .typing-indicator.active {
-      display: block;
-    }
-    .typing-indicator span {
-      height: 8px;
-      width: 8px;
-      background: #999;
-      border-radius: 50%;
-      display: inline-block;
-      margin: 0 2px;
-      animation: typing 1.4s infinite;
-    }
-    .typing-indicator span:nth-child(2) {
-      animation-delay: 0.2s;
-    }
-    .typing-indicator span:nth-child(3) {
-      animation-delay: 0.4s;
-    }
-    @keyframes typing {
-      0%, 60%, 100% { transform: translateY(0); }
-      30% { transform: translateY(-10px); }
-    }
-    .example-questions {
-      margin-bottom: 15px;
-      font-size: 12px;
-    }
-    .example-questions button {
-      background: #f0f0f0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      padding: 5px 10px;
-      margin: 3px;
-      font-size: 11px;
-      cursor: pointer;
-    }
-    .example-questions button:hover {
-      background: #e0e0e0;
-    }
-    
-    @media (max-width: 1200px) {
-      .content-wrapper {
-        grid-template-columns: 1fr;
+    @media (max-width: 768px) {
+      .calendar-section {
+        padding: 15px;
       }
-      .chat-section {
-        max-height: 600px;
+      .avail-table {
+        font-size: 11px;
       }
     }
   </style>
@@ -255,49 +117,6 @@
         </div>
 
         <div id="inventoryContainer"></div>
-      </div>
-
-      <!-- 챗봇 섹션 -->
-      <div class="chat-section">
-        <div class="chat-header">
-          <h3>🤖 객실 예약 도우미</h3>
-          <p class="text-muted small mb-0">원하는 날짜와 호텔을 물어보세요!</p>
-        </div>
-
-        <div class="example-questions">
-          <strong>💡 예시 질문:</strong><br>
-          <button onclick="sendExample('두짓타니 12월 3일부터 3박 가능해?')">두짓타니 12월 3일부터 3박 가능해?</button>
-          <button onclick="sendExample('하얏트 리젠시 크리스마스 주간 가능해?')">하얏트 크리스마스 가능해?</button>
-          <button onclick="sendExample('다음주 월요일부터 2박 가능한 호텔?')">다음주 2박 가능한 호텔?</button>
-        </div>
-
-        <div class="chat-messages" id="chatMessages">
-          <div class="message bot">
-            <div class="message-bubble">
-              안녕하세요! 👋<br>
-              객실 예약 도우미입니다.<br>
-              원하시는 호텔과 날짜를 알려주시면<br>
-              실시간 재고를 확인해드릴게요!
-            </div>
-          </div>
-        </div>
-
-        <div class="typing-indicator" id="typingIndicator">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-
-        <div class="chat-input-wrapper">
-          <input 
-            type="text" 
-            id="chatInput" 
-            class="chat-input" 
-            placeholder="예: 두짓타니 12월 3일부터 3박 가능해?"
-            onkeypress="if(event.key==='Enter') sendMessage()"
-          >
-          <button class="btn-send" onclick="sendMessage()" id="sendBtn">전송</button>
-        </div>
       </div>
     </div>
   </div>
@@ -443,69 +262,6 @@
       }
       
       container.innerHTML = html;
-    }
-
-    // 챗봇 기능
-    function addMessage(text, isUser = false) {
-      const messagesDiv = document.getElementById('chatMessages');
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
-      
-      const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-      
-      messageDiv.innerHTML = `
-        <div class="message-bubble">
-          ${text}
-          <div class="message-time">${time}</div>
-        </div>
-      `;
-      
-      messagesDiv.appendChild(messageDiv);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function sendExample(text) {
-      document.getElementById('chatInput').value = text;
-      sendMessage();
-    }
-
-    async function sendMessage() {
-      const input = document.getElementById('chatInput');
-      const message = input.value.trim();
-      if (!message) return;
-
-      const sendBtn = document.getElementById('sendBtn');
-      const typingIndicator = document.getElementById('typingIndicator');
-
-      // 사용자 메시지 표시
-      addMessage(message, true);
-      input.value = '';
-      
-      // 로딩 표시
-      sendBtn.disabled = true;
-      typingIndicator.classList.add('active');
-
-      try {
-        // 현재 선택된 호텔 ID 전달
-        const hotelId = document.getElementById('hotelSelect').value || null;
-        
-        const res = await fetch('/api/inventory/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, hotelId })
-        });
-
-        const data = await res.json();
-        
-        // 봇 응답 표시
-        typingIndicator.classList.remove('active');
-        addMessage(data.reply, false);
-      } catch (error) {
-        typingIndicator.classList.remove('active');
-        addMessage('죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.', false);
-      } finally {
-        sendBtn.disabled = false;
-      }
     }
 
     // 페이지 로드 시 호텔 목록 로드
