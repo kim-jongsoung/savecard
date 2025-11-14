@@ -91,7 +91,7 @@
         const res = await fetch(`/api/inventory?hotel_id=${hid}&year=${y}&month=${mo}`);
         const data = await res.json();
         data.forEach(inv => {
-          const key = `${inv.room_type_id}-${inv.inventory_date}`;
+          const key = `${inv.room_type_id}-${inv.availability_date}`;
           // count 방식: 숫자 그대로, status 방식: O/X로 변환
           if (currentHotel.inventory_type === 'count') {
             inventory[key] = inv.available_rooms;

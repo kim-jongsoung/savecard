@@ -29,33 +29,33 @@ router.get('/api/inventory', requireLogin, async (req, res) => {
     
     let query = `
       SELECT 
-        ri.*,
+        ra.*,
         h.hotel_name,
         h.hotel_code,
         rt.room_type_code,
         rt.room_type_name
-      FROM room_inventory ri
-      LEFT JOIN hotels h ON ri.hotel_id = h.id
-      LEFT JOIN room_types rt ON ri.room_type_id = rt.id
-      WHERE ri.inventory_date >= $1 AND ri.inventory_date <= $2
+      FROM room_availability ra
+      LEFT JOIN room_types rt ON ra.room_type_id = rt.id
+      LEFT JOIN hotels h ON rt.hotel_id = h.id
+      WHERE ra.availability_date >= $1 AND ra.availability_date <= $2
     `;
     
     const params = [startDate, endDateStr];
     let paramIndex = 3;
     
     if (hotel_id) {
-      query += ` AND ri.hotel_id = $${paramIndex}`;
+      query += ` AND rt.hotel_id = $${paramIndex}`;
       params.push(hotel_id);
       paramIndex++;
     }
     
     if (room_type_id) {
-      query += ` AND ri.room_type_id = $${paramIndex}`;
+      query += ` AND ra.room_type_id = $${paramIndex}`;
       params.push(room_type_id);
       paramIndex++;
     }
     
-    query += ` ORDER BY ri.inventory_date, h.hotel_name, rt.room_type_code`;
+    query += ` ORDER BY ra.availability_date, h.hotel_name, rt.room_type_code`;
     
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -105,15 +105,16 @@ router.post('/api/inventory/bulk', requireLogin, async (req, res) => {
         const dateStr = date.toISOString().split('T')[0];
         
         await pool.query(`
-          INSERT INTO room_inventory (
-            hotel_id, room_type_id, inventory_date, available_rooms, notes
+          INSERT INTO room_availability (
+            room_type_id, availability_date, status, available_rooms, memo
           ) VALUES ($1, $2, $3, $4, $5)
-          ON CONFLICT (hotel_id, room_type_id, inventory_date)
+          ON CONFLICT (room_type_id, availability_date)
           DO UPDATE SET
+            status = EXCLUDED.status,
             available_rooms = EXCLUDED.available_rooms,
-            notes = EXCLUDED.notes,
+            memo = EXCLUDED.memo,
             updated_at = NOW()
-        `, [hotel_id, room_type_id, dateStr, available_rooms || 0, notes]);
+        `, [room_type_id, dateStr, available_rooms > 0 ? 'available' : 'closed', available_rooms || 0, notes]);
         
         successCount++;
       } catch (error) {
@@ -145,11 +146,12 @@ router.put('/api/inventory/:id', requireLogin, async (req, res) => {
   
   try {
     const result = await pool.query(`
-      UPDATE room_inventory SET
+      UPDATE room_availability SET
         available_rooms = $1,
-        allocated_rooms = $2,
-        reserved_rooms = $3,
-        notes = $4,
+        total_allocation = $2,
+        booked_rooms = $3,
+        memo = $4,
+        status = CASE WHEN $1 > 0 THEN 'available' ELSE 'closed' END,
         updated_at = NOW()
       WHERE id = $5
       RETURNING *
@@ -180,12 +182,11 @@ router.post('/api/inventory/delete-bulk', requireLogin, async (req, res) => {
     }
     
     const result = await pool.query(`
-      DELETE FROM room_inventory
-      WHERE hotel_id = $1 
-        AND room_type_id = $2 
-        AND inventory_date >= $3 
-        AND inventory_date <= $4
-    `, [hotel_id, room_type_id, start_date, end_date]);
+      DELETE FROM room_availability
+      WHERE room_type_id = $1 
+        AND availability_date >= $2 
+        AND availability_date <= $3
+    `, [room_type_id, start_date, end_date]);
     
     res.json({ 
       success: true, 
@@ -216,14 +217,14 @@ router.get('/api/inventory/summary', requireLogin, async (req, res) => {
         rt.id as room_type_id,
         rt.room_type_code,
         rt.room_type_name,
-        SUM(ri.available_rooms) as total_available,
-        SUM(ri.allocated_rooms) as total_allocated,
-        SUM(ri.reserved_rooms) as total_reserved,
-        SUM(ri.available_rooms - ri.allocated_rooms - ri.reserved_rooms) as remaining
+        SUM(ra.available_rooms) as total_available,
+        SUM(ra.total_allocation) as total_allocated,
+        SUM(ra.booked_rooms) as total_reserved,
+        SUM(ra.available_rooms - COALESCE(ra.booked_rooms, 0)) as remaining
       FROM room_types rt
-      LEFT JOIN room_inventory ri ON rt.id = ri.room_type_id 
-        AND ri.inventory_date >= $2 
-        AND ri.inventory_date <= $3
+      LEFT JOIN room_availability ra ON rt.id = ra.room_type_id 
+        AND ra.availability_date >= $2 
+        AND ra.availability_date <= $3
       WHERE rt.hotel_id = $1 AND rt.is_active = true
       GROUP BY rt.id, rt.room_type_code, rt.room_type_name
       ORDER BY rt.room_type_code
