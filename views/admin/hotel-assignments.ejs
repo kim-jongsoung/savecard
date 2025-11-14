@@ -1677,13 +1677,42 @@
                                     });
                                 }
                                 
-                                // 프로모션 정보 저장 (onRoomTypeChange 호출을 위해)
+                                // 프로모션 정보 저장 및 표시
                                 if (room.promotion_code) {
                                     roomPromotions[currentRoomNum] = {
                                         promotion: { promo_code: room.promotion_code },
                                         rate_condition_id: room.rate_condition_id,
                                         total_room_rate: room.total_selling_price
                                     };
+                                    
+                                    // ⭐ 객실별 프로모션 표시 영역에 저장된 프로모션 표시
+                                    setTimeout(() => {
+                                        const roomCard = document.querySelector(`[data-room-id="${currentRoomNum}"]`);
+                                        if (roomCard) {
+                                            let promoDisplayArea = roomCard.querySelector('.room-promo-display');
+                                            if (!promoDisplayArea) {
+                                                // 프로모션 표시 영역 생성
+                                                const roomTypeSelect = roomCard.querySelector(`[data-room="${currentRoomNum}"]`)?.parentElement;
+                                                if (roomTypeSelect) {
+                                                    promoDisplayArea = document.createElement('div');
+                                                    promoDisplayArea.className = 'room-promo-display mt-2';
+                                                    roomTypeSelect.after(promoDisplayArea);
+                                                }
+                                            }
+                                            
+                                            if (promoDisplayArea) {
+                                                promoDisplayArea.innerHTML = `
+                                                    <div class="alert alert-info py-2 mb-0">
+                                                        <i class="fas fa-tag me-2"></i>
+                                                        <strong>프로모션:</strong> ${room.promotion_code}
+                                                        ${room.rate_condition_id ? `<br><small class="text-muted">Rate Condition ID: ${room.rate_condition_id}</small>` : ''}
+                                                        <br><small class="text-muted">객실 요금: $${parseFloat(room.total_selling_price).toFixed(2)}</small>
+                                                    </div>
+                                                `;
+                                                console.log(`📌 객실 ${currentRoomNum} 프로모션 표시: ${room.promotion_code}`);
+                                            }
+                                        }
+                                    }, 150);
                                 }
                             }, 100 * i);
                         }
@@ -1808,11 +1837,14 @@
                     const fields = guestCard.querySelectorAll('[data-guest-field]');
                     fields.forEach(field => {
                         const fieldName = field.dataset.guestField;
-                        guestData[fieldName] = field.value || null;
+                        // ⭐ 빈 문자열은 null로 변환 (특히 date_of_birth)
+                        const value = field.value?.trim();
+                        guestData[fieldName] = value && value !== '' ? value : null;
                     });
                     
                     // 최소한 이름이 있어야 추가
                     if (guestData.guest_name_ko || guestData.guest_name_en) {
+                        console.log(`  → 투숙객 저장:`, guestData.guest_name_ko, `생년월일: ${guestData.date_of_birth}`);
                         guests.push(guestData);
                     }
                 });
@@ -1836,13 +1868,19 @@
             
             // 추가 항목 수집
             const extras = [];
-            document.querySelectorAll('.extra-item-card').forEach(extraCard => {
+            document.querySelectorAll('.extra-item-card').forEach((extraCard, cardIndex) => {
                 const extraNum = extraCard.querySelector('[data-extra-field="quantity"]')?.dataset.extra;
-                if (!extraNum) return;
+                if (!extraNum) {
+                    console.warn(`⚠️ 추가항목 카드 ${cardIndex}에 data-extra 속성이 없습니다.`);
+                    return;
+                }
                 
-                const itemName = extraCard.querySelector('[data-extra-field="item_name"]')?.value;
+                const itemName = extraCard.querySelector('[data-extra-field="item_name"]')?.value?.trim();
                 const pricingType = extraCard.querySelector('[data-extra-field="pricing_type"]')?.value || 'flat';
                 const quantity = parseInt(extraCard.querySelector('[data-extra-field="quantity"]')?.value) || 1;
+                
+                console.log(`\n📝 추가항목 ${cardIndex + 1} (extraNum: ${extraNum}) 수집 시작:`);
+                console.log(`  항목명: ${itemName}, 유형: ${pricingType}, 수량: ${quantity}`);
                 
                 let totalPrice = 0;
                 let extraData = {
@@ -1868,10 +1906,20 @@
                     extraData.infant_count = infantCount;
                     extraData.infant_price = infantPrice;
                     extraData.unit_price = null;
+                    
+                    console.log(`  → 인원별 요금 저장: ${itemName} - 성인 ${adultCount}×$${adultPrice}, 소아 ${childCount}×$${childPrice}, 총: $${totalPrice}`);
                 } else {
                     const unitPrice = parseFloat(extraCard.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
                     totalPrice = unitPrice * quantity;
                     extraData.unit_price = unitPrice;
+                    extraData.adult_count = null;
+                    extraData.adult_price = null;
+                    extraData.child_count = null;
+                    extraData.child_price = null;
+                    extraData.infant_count = null;
+                    extraData.infant_price = null;
+                    
+                    console.log(`  → 정액 요금 저장: ${itemName} - 수량 ${quantity}×$${unitPrice}, 총: $${totalPrice}`);
                 }
                 
                 extraData.total_selling_price = totalPrice;
