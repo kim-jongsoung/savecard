@@ -288,7 +288,10 @@
       console.log('💾 저장 시작, 변경사항:', Object.keys(changes).length);
       
       for (const [key, value] of Object.entries(changes)) {
-        const [rtid, date] = key.split('-', 2);
+        // key 형식: "3-2025-11-15" → rtid=3, date=2025-11-15
+        const parts = key.split('-');
+        const rtid = parts[0];
+        const date = parts.slice(1).join('-'); // 나머지를 다시 join
         
         // count 방식: 숫자 그대로, status 방식: O/X/V를 숫자로 변환
         let rooms;
