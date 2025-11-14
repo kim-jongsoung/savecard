@@ -1075,6 +1075,201 @@
             }
             
             document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
+            await calculateAgencyFee();
+            calculateTotal();
+        }
+        
+        // 특정 룸타입의 최적 프로모션 찾기
+        async function findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut) {
+            try {
+                const response = await fetch('/api/hotel-promotions/list?hotel_id=' + hotelId + '&is_active=true');
+                const promotions = await response.json();
+                
+                if (!promotions || promotions.length === 0) {
+                    return null;
+                }
+                
+                let bestPromotion = null;
+                let lowestRate = Infinity;
+                
+                for (const promo of promotions) {
+                    const checkResult = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            promo_code: promo.promo_code,
+                            hotel_id: hotelId,
+                            room_type_id: roomTypeId,
+                            check_in_date: checkIn,
+                            check_out_date: checkOut,
+                            booking_date: new Date().toISOString().split('T')[0]
+                        })
+                    });
+                    
+                    const result = await checkResult.json();
+                    
+                    if (result.valid && result.total_room_rate < lowestRate) {
+                        lowestRate = result.total_room_rate;
+                        bestPromotion = result;
+                    }
+                }
+                
+                return bestPromotion;
+            } catch (error) {
+                console.error('프로모션 조회 오류:', error);
+                return null;
+            }
+        }
+        
+        // 객실별 룸타입 변경 시 프로모션 조회
+        async function onRoomTypeChange(roomNum) {
+            const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"]`);
+            const roomTypeId = roomTypeSelect.value;
+            const hotelId = document.getElementById('hotel_id').value;
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            if (!roomTypeId || !hotelId || !checkIn || !checkOut) {
+                return;
+            }
+            
+            try {
+                // 해당 룸타입 정보 가져오기
+                const roomType = allRoomTypes.find(rt => rt.id == roomTypeId);
+                
+                // 조식 설정에 따라 추가 항목에 자동 추가
+                if (roomType) {
+                    await addBreakfastFromRoomType(roomNum, roomType);
+                }
+                
+                // 해당 룸타입의 최적 프로모션 찾기
+                const bestPromotion = await findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut);
+                
+                if (bestPromotion) {
+                    roomPromotions[roomNum] = bestPromotion;
+                    document.getElementById(`room_${roomNum}_rate`).value = `$${bestPromotion.total_room_rate.toFixed(2)} (프로모션)`;
+                    console.log(`✅ 객실 ${roomNum} 프로모션 적용:`, bestPromotion.promotion.promo_code);
+                } else {
+                    roomPromotions[roomNum] = null;
+                    document.getElementById(`room_${roomNum}_rate`).value = '프로모션 없음';
+                }
+                
+                // 전체 객실 요금 합산
+                await updateRoomCharges();
+            } catch (error) {
+                console.error('룸타입 프로모션 조회 오류:', error);
+            }
+        }
+        
+        // 룸타입의 조식 설정에 따라 추가 항목에 자동 추가
+        async function addBreakfastFromRoomType(roomNum, roomType) {
+            if (!roomType) return;
+            
+            const breakfastIncluded = roomType.breakfast_included || false;
+            const breakfastRateAdult = parseFloat(roomType.breakfast_rate_adult) || 0;
+            const breakfastRateChild = parseFloat(roomType.breakfast_rate_child) || 0;
+            
+            // 해당 객실의 투숙객 수 확인
+            const guestsContainer = document.getElementById(`guests_${roomNum}`);
+            if (!guestsContainer) return;
+            
+            const guestCards = guestsContainer.querySelectorAll('.guest-card');
+            
+            let adultCount = 0;
+            let childCount = 0;
+            
+            guestCards.forEach(card => {
+                const ageCategory = card.querySelector('[data-guest-field="age_category"]')?.value || 'adult';
+                if (ageCategory === 'adult') adultCount++;
+                else if (ageCategory === 'child') childCount++;
+            });
+            
+            // 기존 조식 항목 제거 (중복 방지)
+            const existingBreakfast = document.querySelector(`[data-breakfast-room="${roomNum}"]`);
+            if (existingBreakfast) {
+                existingBreakfast.remove();
+            }
+            
+            // 조식 포함/불포함 항목 추가
+            extraCounter++;
+            const extraId = `extra_${extraCounter}`;
+            
+            let itemName, quantity, unitPrice, notes;
+            
+            if (breakfastIncluded) {
+                // 조식 포함
+                itemName = '조식 (포함)';
+                quantity = adultCount + childCount;
+                unitPrice = 0;
+                notes = `객실 ${roomNum} - 조식 포함`;
+            } else {
+                // 조식 불포함
+                itemName = '조식 (불포함 - 추가 시 별도 요금)';
+                quantity = 0;
+                unitPrice = breakfastRateAdult;
+                notes = `객실 ${roomNum} - 성인: $${breakfastRateAdult}, 소아: $${breakfastRateChild}`;
+            }
+            
+            const extraHtml = `
+                <div class="extra-item-card" id="${extraId}" data-breakfast-room="${roomNum}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong><i class="fas fa-utensils me-2"></i>추가 항목 ${extraCounter}</strong>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeExtra('${extraId}')">
+                            <i class="fas fa-times"></i> 삭제
+                        </button>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">항목명</label>
+                            <input type="text" class="form-control form-control-sm" value="${itemName}" data-extra-field="item_name" data-extra="${extraCounter}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">수량</label>
+                            <input type="number" class="form-control form-control-sm" value="${quantity}" data-extra-field="quantity" data-extra="${extraCounter}" onchange="calculateExtrasTotal()">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">단가 (USD)</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" value="${unitPrice}" data-extra-field="unit_price" data-extra="${extraCounter}" onchange="calculateExtrasTotal()">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">소계 (USD)</label>
+                            <input type="text" class="form-control form-control-sm bg-light" readonly value="${(quantity * unitPrice).toFixed(2)}" id="extra_${extraCounter}_subtotal">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">비고</label>
+                            <input type="text" class="form-control form-control-sm" value="${notes}" data-extra-field="notes" data-extra="${extraCounter}">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
+            calculateExtrasTotal();
+        }
+        
+        // 추가 항목 총액 계산
+        function calculateExtrasTotal() {
+            let total = 0;
+            
+            document.querySelectorAll('.extra-item-card').forEach(card => {
+                const extraNum = card.querySelector('[data-extra-field="quantity"]')?.dataset.extra;
+                if (!extraNum) return;
+                
+                const quantity = parseFloat(card.querySelector('[data-extra-field="quantity"]')?.value) || 0;
+                const unitPrice = parseFloat(card.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
+                const subtotal = quantity * unitPrice;
+                
+                // 소계 업데이트
+                const subtotalField = document.getElementById(`extra_${extraNum}_subtotal`);
+                if (subtotalField) {
+                    subtotalField.value = subtotal.toFixed(2);
+                }
+                
+                total += subtotal;
+            });
+            
+            // 총 추가 항목 요금 업데이트
+            document.getElementById('totalExtrasCharge').value = total.toFixed(2);
             calculateTotal();
         }
         
@@ -1406,19 +1601,103 @@
         
         // 수정사항 저장
         async function saveReservationChanges() {
-            if (!currentEditingId) return;
+            if (!currentEditingId) {
+                alert('저장할 예약을 찾을 수 없습니다.');
+                return;
+            }
             
+            // 기본 정보 수집
+            const hotelId = document.getElementById('hotel_id').value;
+            const bookingAgencyId = document.getElementById('booking_agency_id').value;
+            
+            if (!hotelId) {
+                alert('호텔을 선택해주세요.');
+                return;
+            }
+            
+            // 객실 데이터 수집
+            const rooms = [];
+            document.querySelectorAll('.room-card').forEach(roomCard => {
+                const roomNum = roomCard.dataset.roomId;
+                const roomTypeSelect = roomCard.querySelector(`[data-room="${roomNum}"]`);
+                const roomTypeId = roomTypeSelect?.value;
+                
+                if (!roomTypeId) return;
+                
+                // 투숙객 데이터 수집
+                const guests = [];
+                const guestCards = roomCard.querySelectorAll('.guest-card');
+                guestCards.forEach(guestCard => {
+                    const guestData = {};
+                    const fields = guestCard.querySelectorAll('[data-guest-field]');
+                    fields.forEach(field => {
+                        const fieldName = field.dataset.guestField;
+                        guestData[fieldName] = field.value || null;
+                    });
+                    
+                    // 최소한 이름이 있어야 추가
+                    if (guestData.guest_name_ko || guestData.guest_name_en) {
+                        guests.push(guestData);
+                    }
+                });
+                
+                // 프로모션 정보
+                const roomPromo = roomPromotions[roomNum];
+                
+                rooms.push({
+                    room_type_id: parseInt(roomTypeId),
+                    guests: guests,
+                    promotion_code: roomPromo?.promotion?.promo_code || null,
+                    rate_condition_id: roomPromo?.rate_condition_id || null,
+                    total_selling_price: roomPromo?.total_room_rate || 0
+                });
+            });
+            
+            if (rooms.length === 0) {
+                alert('최소 1개의 객실을 추가해주세요.');
+                return;
+            }
+            
+            // 추가 항목 수집
+            const extras = [];
+            document.querySelectorAll('.extra-item-card').forEach(extraCard => {
+                const extraNum = extraCard.querySelector('[data-extra-field="quantity"]')?.dataset.extra;
+                if (!extraNum) return;
+                
+                const itemName = extraCard.querySelector('[data-extra-field="item_name"]')?.value;
+                const quantity = parseInt(extraCard.querySelector('[data-extra-field="quantity"]')?.value) || 0;
+                const unitPrice = parseFloat(extraCard.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
+                const notes = extraCard.querySelector('[data-extra-field="notes"]')?.value || '';
+                
+                if (itemName && quantity > 0) {
+                    extras.push({
+                        item_name: itemName,
+                        quantity: quantity,
+                        unit_price: unitPrice,
+                        total_selling_price: quantity * unitPrice,
+                        notes: notes
+                    });
+                }
+            });
+            
+            // 전체 데이터 구성
             const updatedData = {
+                hotel_id: parseInt(hotelId),
+                booking_agency_id: bookingAgencyId ? parseInt(bookingAgencyId) : null,
                 reservation_date: document.getElementById('reservation_date').value,
                 status: document.getElementById('status').value,
                 check_in_date: document.getElementById('check_in_date').value,
                 check_out_date: document.getElementById('check_out_date').value,
-                arrival_flight: document.getElementById('arrival_flight').value,
-                departure_flight: document.getElementById('departure_flight').value,
-                special_requests: document.getElementById('special_requests').value,
-                internal_memo: document.getElementById('internal_memo').value,
-                total_selling_price: parseFloat(document.getElementById('totalRoomCharge').value) || 0
+                arrival_flight: document.getElementById('arrival_flight').value || null,
+                departure_flight: document.getElementById('departure_flight').value || null,
+                special_requests: document.getElementById('special_requests').value || null,
+                internal_memo: document.getElementById('internal_memo').value || null,
+                total_selling_price: parseFloat(document.getElementById('totalRoomCharge').value) || 0,
+                rooms: rooms,
+                extras: extras
             };
+            
+            console.log('💾 저장 데이터:', updatedData);
             
             try {
                 const response = await fetch(`/api/hotel-reservations/${currentEditingId}`, {
@@ -1427,16 +1706,19 @@
                     body: JSON.stringify(updatedData)
                 });
                 
+                const result = await response.json();
+                
                 if (response.ok) {
                     alert('✅ 예약이 수정되었습니다.');
                     bootstrap.Modal.getInstance(document.getElementById('editReservationModal')).hide();
                     loadReservations();
                 } else {
-                    alert('❌ 수정 실패');
+                    console.error('저장 실패:', result);
+                    alert('❌ 수정 실패: ' + (result.error || '알 수 없는 오류'));
                 }
             } catch (error) {
-                console.error('수정 오류:', error);
-                alert('❌ 오류가 발생했습니다.');
+                console.error('❌ 수정 오류:', error);
+                alert('❌ 오류가 발생했습니다: ' + error.message);
             }
         }
         
