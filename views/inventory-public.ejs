@@ -247,6 +247,13 @@
           <input type="month" id="startMonth" class="form-control" onchange="loadData()">
         </div>
 
+        <!-- 마지막 업데이트 시간 표시 -->
+        <div id="lastUpdateInfo" class="alert alert-info" style="display: none; padding: 10px; margin-bottom: 15px; border-left: 4px solid #667eea;">
+          <strong>📅 재고 현황 업데이트:</strong> <span id="lastUpdateTime"></span>
+          <br>
+          <small class="text-muted">※ 실시간 예약 상황에 따라 변동될 수 있으니, 예약 전 다시 한번 확인해주세요.</small>
+        </div>
+
         <div id="inventoryContainer"></div>
       </div>
 
@@ -331,6 +338,7 @@
       const start = document.getElementById('startMonth').value.split('-');
       const year = parseInt(start[0]), month = parseInt(start[1]);
       inventory = {};
+      let latestUpdate = null;
       
       for (let m = 0; m < 6; m++) {
         const y = month + m > 12 ? year + 1 : year;
@@ -346,7 +354,29 @@
           } else {
             inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
           }
+          
+          // 가장 최근 업데이트 시간 추적
+          if (inv.updated_at) {
+            const updateTime = new Date(inv.updated_at);
+            if (!latestUpdate || updateTime > latestUpdate) {
+              latestUpdate = updateTime;
+            }
+          }
         });
+      }
+      
+      // 마지막 업데이트 시간 표시
+      if (latestUpdate) {
+        const year = latestUpdate.getFullYear();
+        const month = String(latestUpdate.getMonth() + 1).padStart(2, '0');
+        const day = String(latestUpdate.getDate()).padStart(2, '0');
+        const hour = String(latestUpdate.getHours()).padStart(2, '0');
+        const minute = String(latestUpdate.getMinutes()).padStart(2, '0');
+        
+        document.getElementById('lastUpdateTime').textContent = `${year}/${month}/${day} ${hour}:${minute}`;
+        document.getElementById('lastUpdateInfo').style.display = 'block';
+      } else {
+        document.getElementById('lastUpdateInfo').style.display = 'none';
       }
       
       renderInventory(year, month);
