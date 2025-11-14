@@ -649,13 +649,105 @@
             if (roomCounter === 0) {
                 addRoom();
                 
-                // 투숙객 정보 채우기
+                // 투숙객 정보 채우기 (guests 배열이 있으면 사용, 없으면 인원수로 계산)
                 setTimeout(() => {
-                    if (data.guest_name_ko) document.querySelector('[data-guest-field="guest_name_ko"]').value = data.guest_name_ko;
-                    if (data.guest_name_en) document.querySelector('[data-guest-field="guest_name_en"]').value = data.guest_name_en;
-                    if (data.phone) document.querySelector('[data-guest-field="phone"]').value = data.phone;
-                    if (data.email) document.querySelector('[data-guest-field="email"]').value = data.email;
-                }, 100);
+                    if (data.guests && Array.isArray(data.guests) && data.guests.length > 0) {
+                        // AI가 guests 배열로 파싱한 경우
+                        console.log('👥 투숙객 명단:', data.guests);
+                        
+                        // 첫 번째 투숙객 (대표 투숙객) - 이미 생성됨
+                        const firstGuest = data.guests[0];
+                        if (firstGuest.name_ko) document.querySelector('[data-guest-field="guest_name_ko"][data-room="1"][data-guest="1"]').value = firstGuest.name_ko;
+                        if (firstGuest.name_en) document.querySelector('[data-guest-field="guest_name_en"][data-room="1"][data-guest="1"]').value = firstGuest.name_en;
+                        if (firstGuest.phone) document.querySelector('[data-guest-field="phone"][data-room="1"][data-guest="1"]').value = firstGuest.phone;
+                        if (firstGuest.email) document.querySelector('[data-guest-field="email"][data-room="1"][data-guest="1"]').value = firstGuest.email;
+                        if (firstGuest.age_category) document.querySelector('[data-guest-field="age_category"][data-room="1"][data-guest="1"]').value = firstGuest.age_category;
+                        
+                        // 나머지 투숙객 추가 (2번째부터)
+                        for (let i = 1; i < data.guests.length; i++) {
+                            addGuest(1);
+                            const guestNum = i + 1;
+                            const guest = data.guests[i];
+                            
+                            setTimeout(() => {
+                                if (guest.name_ko) {
+                                    const nameKoInput = document.querySelector(`[data-guest-field="guest_name_ko"][data-room="1"][data-guest="${guestNum}"]`);
+                                    if (nameKoInput) nameKoInput.value = guest.name_ko;
+                                }
+                                if (guest.name_en) {
+                                    const nameEnInput = document.querySelector(`[data-guest-field="guest_name_en"][data-room="1"][data-guest="${guestNum}"]`);
+                                    if (nameEnInput) nameEnInput.value = guest.name_en;
+                                }
+                                if (guest.age_category) {
+                                    const ageSelect = document.querySelector(`[data-guest-field="age_category"][data-room="1"][data-guest="${guestNum}"]`);
+                                    if (ageSelect) ageSelect.value = guest.age_category;
+                                }
+                            }, 50 * i);
+                        }
+                        
+                        console.log('✅ 총 ' + data.guests.length + '명의 투숙객 추가 완료');
+                    } else {
+                        // 인원수만 있는 경우 (기존 방식)
+                        const adults = parseInt(data.adults) || 0;
+                        const children = parseInt(data.children) || 0;
+                        const infants = parseInt(data.infants) || 0;
+                        const totalGuests = adults + children + infants;
+                        
+                        console.log('👥 투숙객 인원:', { adults, children, infants, total: totalGuests });
+                        
+                        // 첫 번째 투숙객 (대표 투숙객) - 이미 생성됨
+                        if (data.guest_name_ko) document.querySelector('[data-guest-field="guest_name_ko"][data-room="1"][data-guest="1"]').value = data.guest_name_ko;
+                        if (data.guest_name_en) document.querySelector('[data-guest-field="guest_name_en"][data-room="1"][data-guest="1"]').value = data.guest_name_en;
+                        if (data.phone) document.querySelector('[data-guest-field="phone"][data-room="1"][data-guest="1"]').value = data.phone;
+                        if (data.email) document.querySelector('[data-guest-field="email"][data-room="1"][data-guest="1"]').value = data.email;
+                        
+                        // 첫 번째 투숙객 연령 카테고리 설정
+                        if (adults > 0) {
+                            document.querySelector('[data-guest-field="age_category"][data-room="1"][data-guest="1"]').value = 'adult';
+                        } else if (children > 0) {
+                            document.querySelector('[data-guest-field="age_category"][data-room="1"][data-guest="1"]').value = 'child';
+                        } else if (infants > 0) {
+                            document.querySelector('[data-guest-field="age_category"][data-room="1"][data-guest="1"]').value = 'infant';
+                        }
+                        
+                        // 나머지 투숙객 추가 (2번째부터)
+                        let guestCount = 1; // 첫 번째는 이미 추가됨
+                        
+                        // 성인 추가 (첫 번째 성인은 이미 추가했으므로 -1)
+                        for (let i = 1; i < adults; i++) {
+                            addGuest(1); // roomNum = 1
+                            guestCount++;
+                            setTimeout(() => {
+                                const ageSelect = document.querySelector(`[data-guest-field="age_category"][data-room="1"][data-guest="${guestCount}"]`);
+                                if (ageSelect) ageSelect.value = 'adult';
+                            }, 50 * i);
+                        }
+                        
+                        // 소아 추가
+                        for (let i = 0; i < children; i++) {
+                            addGuest(1);
+                            guestCount++;
+                            const currentCount = guestCount;
+                            setTimeout(() => {
+                                const ageSelect = document.querySelector(`[data-guest-field="age_category"][data-room="1"][data-guest="${currentCount}"]`);
+                                if (ageSelect) ageSelect.value = 'child';
+                            }, 50 * (adults - 1 + i));
+                        }
+                        
+                        // 유아 추가
+                        for (let i = 0; i < infants; i++) {
+                            addGuest(1);
+                            guestCount++;
+                            const currentCount = guestCount;
+                            setTimeout(() => {
+                                const ageSelect = document.querySelector(`[data-guest-field="age_category"][data-room="1"][data-guest="${currentCount}"]`);
+                                if (ageSelect) ageSelect.value = 'infant';
+                            }, 50 * (adults - 1 + children + i));
+                        }
+                        
+                        console.log('✅ 총 ' + guestCount + '명의 투숙객 추가 완료');
+                    }
+                }, 200);
             }
         }
 

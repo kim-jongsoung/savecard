@@ -340,15 +340,26 @@ ${reservationText}
 - hotel_name: 호텔명 (정확한 이름)
 - check_in_date: 체크인 날짜 (YYYY-MM-DD 형식)
 - check_out_date: 체크아웃 날짜 (YYYY-MM-DD 형식)
-- guest_name_ko: 투숙객 한글명
-- guest_name_en: 투숙객 영문명 (대문자)
-- phone: 전화번호
-- email: 이메일 주소
 - adults: 성인 인원수 (숫자)
 - children: 소아 인원수 (숫자)
 - infants: 유아 인원수 (숫자)
+- guests: 투숙객 명단 배열 (각 투숙객마다 객체로)
+  [
+    {
+      name_ko: "한글이름",
+      name_en: "ENGLISH NAME",
+      age_category: "adult" | "child" | "infant",
+      phone: "전화번호 (첫 번째 대표 투숙객만)",
+      email: "이메일 (첫 번째 대표 투숙객만)"
+    }
+  ]
 - room_type: 객실 타입
-- special_requests: 특별 요청사항`;
+- special_requests: 특별 요청사항
+
+중요: guests 배열은 adults + children + infants 수만큼 생성하세요.
+- 첫 번째는 대표 투숙객 (phone, email 포함)
+- 나머지는 동반 투숙객 (이름만 있으면 됨)
+- age_category는 반드시 "adult", "child", "infant" 중 하나`;
 
         if (customPrompt) {
             prompt += `\n\n추가 지침:\n${customPrompt}`;
