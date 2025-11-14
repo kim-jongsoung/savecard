@@ -879,17 +879,17 @@
             }
         }
         
-        // 전체 금액 계산
+        // 전체 금액 계산 (⭐ 수배피는 저장된 값 사용 - 재계산 안 함)
         async function calculateTotal() {
-            // ⭐ 수배피 먼저 재계산 (객실 요금 + 추가 항목 요금 기반)
-            const agencyId = document.getElementById('booking_agency_id').value;
-            if (agencyId) {
-                await calculateAgencyFee();
-            }
+            // ❓ 거래처가 disabled이므로 수배피 재계산 안 함
+            // const agencyId = document.getElementById('booking_agency_id').value;
+            // if (agencyId) {
+            //     await calculateAgencyFee();
+            // }
             
             const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
             const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
-            const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0;
+            const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0; // ⭐ 저장된 값 그대로 사용
             
             const grandTotal = totalRoomCharge + totalExtrasCharge + agencyFee;
             
@@ -1114,7 +1114,7 @@
             }
             
             document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
-            await calculateAgencyFee();
+            // await calculateAgencyFee(); // ❓ 주석 처리: 거래처 disabled, 저장된 수배피 값 유지
             calculateTotal();
         }
         
