@@ -8,9 +8,33 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* 모달 내부는 인박스와 동일한 폰트 크기 (30% 축소) */
         body {
             font-size: 0.8rem;
             background: #f5f7fa;
+        }
+        
+        /* 모달 전용 스타일 - 인박스와 동일 */
+        .modal-body .form-label {
+            font-size: 0.7rem !important;
+            margin-bottom: 0.25rem;
+        }
+        .modal-body .form-control, .modal-body .form-select {
+            font-size: 0.7rem !important;
+            padding: 0.25rem 0.5rem !important;
+        }
+        .modal-body h2 {
+            font-size: 1.4rem !important;
+        }
+        .modal-body h5 {
+            font-size: 0.875rem !important;
+        }
+        .modal-body h6 {
+            font-size: 0.75rem !important;
+        }
+        .modal-body .btn {
+            font-size: 0.7rem !important;
+            padding: 0.375rem 0.75rem !important;
         }
         
         .stats-card {
@@ -149,6 +173,103 @@
             font-size: 0.7rem;
             font-weight: 600;
         }
+        
+        /* 인박스 스타일 복사 - 모달용 */
+        .modal-body .room-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+        .modal-body .room-card.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        .modal-body .guest-card {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            background: white;
+        }
+        .modal-body .extra-item-card {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            background: #fff;
+        }
+        .modal-body .btn-add-room, 
+        .modal-body .btn-add-guest, 
+        .modal-body .btn-add-extra {
+            border: 2px dashed #667eea;
+            color: #667eea;
+            background: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .modal-body .btn-add-room:hover, 
+        .modal-body .btn-add-guest:hover, 
+        .modal-body .btn-add-extra:hover {
+            background: #667eea;
+            color: white;
+            border-style: solid;
+        }
+        .modal-body .total-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+        .modal-body #status {
+            font-weight: 600;
+        }
+        .modal-body #status option[value="pending"] {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .modal-body #status option[value="processing"] {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .modal-body #status option[value="confirmed"] {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .modal-body #status option[value="cancelled"] {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .modal-body #status option[value="modifying"] {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        .modal-body #status.status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+        .modal-body #status.status-processing {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #17a2b8;
+        }
+        .modal-body #status.status-confirmed {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+        .modal-body #status.status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+        .modal-body #status.status-modifying {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border-color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -267,14 +388,172 @@
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                    <div id="editFormContainer">
-                        <!-- 예약 수정 폼이 동적으로 로드됨 -->
+                <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                    <!-- 기본 예약 정보 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-info-circle me-2"></i>기본 예약 정보
+                            </h6>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">예약번호</label>
+                            <input type="text" class="form-control" id="reservation_number" required>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">거래처 (한국 여행사)</label>
+                            <select class="form-control" id="booking_agency_id" onchange="calculateAgencyFee()">
+                                <option value="">직접 예약</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">예약 상태</label>
+                            <select class="form-control" id="status">
+                                <option value="pending">대기중</option>
+                                <option value="processing">수배중</option>
+                                <option value="confirmed">확정</option>
+                                <option value="cancelled">예약취소</option>
+                                <option value="modifying">수정중(예약변경)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 mb-2">
+                            <label class="form-label">호텔 선택 *</label>
+                            <select class="form-control" id="hotel_id" required onchange="loadRoomTypes(); autoApplyPromotion();">
+                                <option value="">호텔 선택</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">예약일 (인박스 입력일)</label>
+                            <input type="date" class="form-control fw-bold" id="reservation_date" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+
+                    <!-- 날짜 정보 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-calendar me-2"></i>날짜 정보
+                            </h6>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">체크인 날짜 *</label>
+                            <input type="date" class="form-control" id="check_in_date" required onchange="calculateNights(); autoApplyPromotion();">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">체크아웃 날짜 *</label>
+                            <input type="date" class="form-control" id="check_out_date" required onchange="calculateNights(); autoApplyPromotion();">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">박수</label>
+                            <input type="number" class="form-control fw-bold" id="nights" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+
+                    <!-- 항공편 정보 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-plane me-2"></i>항공편 정보
+                            </h6>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">입국 항공편명</label>
+                            <input type="text" class="form-control" id="arrival_flight" placeholder="예: KE123">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">출국 항공편명</label>
+                            <input type="text" class="form-control" id="departure_flight" placeholder="예: KE124">
+                        </div>
+                    </div>
+
+                    <!-- 객실 정보 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-bed me-2"></i>객실 정보
+                            </h6>
+                        </div>
+                        <div class="col-12" id="roomsContainer">
+                            <!-- 객실이 동적으로 추가됨 -->
+                        </div>
+                        <div class="col-12">
+                            <button type="button" class="btn btn-add-room w-100" onclick="addRoom()">
+                                <i class="fas fa-plus-circle me-2"></i>객실 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 추가 항목 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-plus-square me-2"></i>추가 항목 (공항픽업, 꽃바구니 등)
+                            </h6>
+                        </div>
+                        <div class="col-12" id="extrasContainer">
+                            <!-- 추가 항목이 동적으로 추가됨 -->
+                        </div>
+                        <div class="col-12">
+                            <button type="button" class="btn btn-add-extra w-100" onclick="addExtraItem()">
+                                <i class="fas fa-plus-circle me-2"></i>항목 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 총 요금 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="total-summary">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>총 객실 요금:</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="totalRoomCharge" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold;">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>추가 항목 요금:</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="totalExtrasCharge" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold;">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2" id="agencyFeeRow" style="display: none;">
+                                    <span>수배피 (<span id="agencyFeeName"></span>):</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="agencyFee" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold;">
+                                    </div>
+                                </div>
+                                <hr style="border-color: rgba(255,255,255,0.3);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">총 판매가:</h5>
+                                    <h4 class="mb-0" id="grandTotal">$0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 메모 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-sticky-note me-2"></i>메모
+                            </h6>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">특별 요청사항</label>
+                            <textarea class="form-control" id="special_requests" rows="3"></textarea>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">내부 메모</label>
+                            <textarea class="form-control" id="internal_memo" rows="2"></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-primary" onclick="saveReservationChanges()">
+                    <button type="button" class="btn btn-success btn-lg" onclick="saveReservationChanges()">
                         <i class="fas fa-save me-1"></i>저장
                     </button>
                 </div>
@@ -464,6 +743,264 @@
         }
         
         let currentEditingId = null;
+        let allHotels = [];
+        let allRoomTypes = [];
+        let allAgencies = [];
+        let roomCounter = 0;
+        let extraCounter = 0;
+        
+        // 모달 오픈 시 호텔/거래처 로드
+        document.getElementById('editReservationModal').addEventListener('show.bs.modal', async function() {
+            await loadHotels();
+            await loadAgencies();
+        });
+        
+        // 호텔 목록 로드
+        async function loadHotels() {
+            try {
+                const response = await fetch('/api/hotels?is_active=true');
+                const hotels = await response.json();
+                allHotels = hotels;
+                
+                const select = document.getElementById('hotel_id');
+                select.innerHTML = '<option value="">호텔 선택</option>' +
+                    hotels.map(h => `<option value="${h.id}">${h.hotel_name}</option>`).join('');
+            } catch (error) {
+                console.error('호텔 목록 로드 오류:', error);
+            }
+        }
+        
+        // 거래처 목록 로드
+        async function loadAgencies() {
+            try {
+                const response = await fetch('/api/booking-agencies?is_active=true');
+                const agencies = await response.json();
+                allAgencies = agencies;
+                
+                const select = document.getElementById('booking_agency_id');
+                select.innerHTML = '<option value="">직접 예약</option>' +
+                    agencies.map(a => `<option value="${a.id}">${a.agency_name}</option>`).join('');
+            } catch (error) {
+                console.error('거래처 목록 로드 오류:', error);
+            }
+        }
+        
+        // 객실 타입 로드
+        async function loadRoomTypes() {
+            const hotelId = document.getElementById('hotel_id').value;
+            if (!hotelId) return;
+            
+            try {
+                const response = await fetch(`/api/room-types?hotel_id=${hotelId}&is_active=true`);
+                allRoomTypes = await response.json();
+                
+                // 모든 객실의 select를 업데이트
+                document.querySelectorAll('.room-type-select').forEach(select => {
+                    select.innerHTML = '<option value="">객실 타입 선택</option>' +
+                        allRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
+                });
+            } catch (error) {
+                console.error('객실 타입 로드 오류:', error);
+            }
+        }
+        
+        // 박수 계산
+        function calculateNights() {
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            if (checkIn && checkOut) {
+                const date1 = new Date(checkIn);
+                const date2 = new Date(checkOut);
+                const diff = Math.ceil((date2 - date1) / (1000 * 60 * 60 * 24));
+                
+                document.getElementById('nights').value = diff > 0 ? diff : 0;
+            }
+        }
+        
+        // 총 요금 계산
+        function calculateTotal() {
+            const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+            const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
+            const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0;
+            
+            const grandTotal = totalRoomCharge + totalExtrasCharge + agencyFee;
+            
+            document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
+        }
+        
+        // 수배피 계산
+        function calculateAgencyFee() {
+            const agencyId = document.getElementById('booking_agency_id').value;
+            if (agencyId) {
+                const agency = allAgencies.find(a => a.id == agencyId);
+                if (agency) {
+                    document.getElementById('agencyFeeRow').style.display = 'flex';
+                    document.getElementById('agencyFeeName').textContent = agency.agency_name;
+                } else {
+                    document.getElementById('agencyFeeRow').style.display = 'none';
+                }
+            } else {
+                document.getElementById('agencyFeeRow').style.display = 'none';
+            }
+            calculateTotal();
+        }
+        
+        // 프로모션 자동 적용 (더미)
+        function autoApplyPromotion() {
+            // 프로모션 기능은 나중에 구현
+        }
+        
+        // 객실 추가
+        function addRoom() {
+            roomCounter++;
+            const roomId = `room_${roomCounter}`;
+            
+            const roomHtml = `
+                <div class="room-card" id="${roomId}" data-room-id="${roomCounter}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0"><i class="fas fa-bed me-2"></i>객실 ${roomCounter}</h6>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeRoom('${roomId}')">
+                            <i class="fas fa-trash"></i> 삭제
+                        </button>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label">객실 타입 *</label>
+                            <select class="form-control room-type-select" data-room="${roomCounter}">
+                                <option value="">객실 타입 선택</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">총 객실 요금</label>
+                            <input type="text" class="form-control" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="d-block mb-2"><i class="fas fa-users me-2"></i>투숙객 정보</strong>
+                        <div id="guests_${roomCounter}">
+                            ${createGuestHtml(roomCounter, 1, true)}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-add-guest mt-2" onclick="addGuest(${roomCounter})">
+                            <i class="fas fa-user-plus me-1"></i>동반 투숙객 추가
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('roomsContainer').insertAdjacentHTML('beforeend', roomHtml);
+            
+            // 객실 타입 옵션 채우기
+            if (allRoomTypes.length > 0) {
+                const select = document.querySelector(`#${roomId} .room-type-select`);
+                select.innerHTML = '<option value="">객실 타입 선택</option>' +
+                    allRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
+            }
+        }
+        
+        // 투숙객 HTML 생성
+        function createGuestHtml(roomNum, guestNum, isPrimary = false) {
+            return `
+                <div class="guest-card" id="guest_${roomNum}_${guestNum}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>${isPrimary ? '대표 투숙객' : '동반 투숙객 ' + guestNum}</strong>
+                        ${!isPrimary ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGuest(${roomNum}, ${guestNum})"><i class="fas fa-times"></i></button>` : ''}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="한글명" data-guest-field="guest_name_ko" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="영문명" data-guest-field="guest_name_en" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control form-control-sm" data-guest-field="age_category" data-room="${roomNum}" data-guest="${guestNum}">
+                                <option value="adult">성인</option>
+                                <option value="child">소아</option>
+                                <option value="infant">유아</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" class="form-control form-control-sm" placeholder="생년월일" data-guest-field="date_of_birth" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        ${isPrimary ? `
+                        <div class="col-md-2">
+                            <input type="tel" class="form-control form-control-sm" placeholder="전화번호" data-guest-field="phone" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="email" class="form-control form-control-sm" placeholder="이메일" data-guest-field="email" data-room="${roomNum}" data-guest="${guestNum}">
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 투숙객 추가
+        function addGuest(roomNum) {
+            const guestsContainer = document.getElementById(`guests_${roomNum}`);
+            const guestCount = guestsContainer.querySelectorAll('.guest-card').length + 1;
+            
+            guestsContainer.insertAdjacentHTML('beforeend', createGuestHtml(roomNum, guestCount, false));
+        }
+        
+        // 투숙객 제거
+        function removeGuest(roomNum, guestNum) {
+            const guestCard = document.getElementById(`guest_${roomNum}_${guestNum}`);
+            if (guestCard) guestCard.remove();
+        }
+        
+        // 객실 제거
+        function removeRoom(roomId) {
+            if (confirm('이 객실을 삭제하시겠습니까?')) {
+                document.getElementById(roomId).remove();
+                calculateTotal();
+            }
+        }
+        
+        // 추가 항목 추가
+        function addExtraItem() {
+            extraCounter++;
+            const extraId = `extra_${extraCounter}`;
+            
+            const extraHtml = `
+                <div class="extra-item-card" id="${extraId}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>추가 항목 ${extraCounter}</h6>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeExtra('${extraId}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small">항목명 *</label>
+                            <input type="text" class="form-control" placeholder="예: 공항픽업, 꽃바구니" data-extra-field="item_name" data-extra="${extraCounter}" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">수량</label>
+                            <input type="number" class="form-control" value="1" min="1" data-extra-field="quantity" data-extra="${extraCounter}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="unit_price" data-extra="${extraCounter}">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
+        }
+        
+        // 추가 항목 제거
+        function removeExtra(extraId) {
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
+                document.getElementById(extraId).remove();
+                calculateTotal();
+            }
+        }
         
         // 예약 변경 - 모달로 오픈
         async function editReservation(reservationId) {
@@ -474,8 +1011,42 @@
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
                 const data = await response.json();
                 
-                // 모달에 폼 생성
-                renderEditForm(data);
+                // 모달 오픈 전에 초기화
+                roomCounter = 0;
+                extraCounter = 0;
+                document.getElementById('roomsContainer').innerHTML = '';
+                document.getElementById('extrasContainer').innerHTML = '';
+                
+                // 기본 정보 채우기
+                document.getElementById('reservation_number').value = data.reservation_number || '';
+                document.getElementById('booking_agency_id').value = data.booking_agency_id || '';
+                document.getElementById('status').value = data.status || 'pending';
+                document.getElementById('hotel_id').value = data.hotel_id || '';
+                document.getElementById('reservation_date').value = data.reservation_date || '';
+                document.getElementById('check_in_date').value = data.check_in_date || '';
+                document.getElementById('check_out_date').value = data.check_out_date || '';
+                document.getElementById('arrival_flight').value = data.arrival_flight || '';
+                document.getElementById('departure_flight').value = data.departure_flight || '';
+                document.getElementById('special_requests').value = data.special_requests || '';
+                document.getElementById('internal_memo').value = data.internal_memo || '';
+                document.getElementById('totalRoomCharge').value = data.total_selling_price || 0;
+                document.getElementById('totalExtrasCharge').value = 0;
+                
+                // 박수 계산
+                calculateNights();
+                
+                // 객실 타입 로드
+                await loadRoomTypes();
+                
+                // 객실 및 투숙객 정보 추가
+                if (data.rooms && data.rooms.length > 0) {
+                    for (const room of data.rooms) {
+                        addRoom();
+                        // 객실 정보 채우기는 간단하게 표시만
+                    }
+                } else {
+                    addRoom(); // 최소 1개 객실
+                }
                 
                 // 모달 오픈
                 const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
@@ -487,102 +1058,20 @@
             }
         }
         
-        // 수정 폼 렌더링
-        function renderEditForm(data) {
-            const container = document.getElementById('editFormContainer');
-            
-            let roomsHtml = '';
-            data.rooms.forEach((room, idx) => {
-                let guestsHtml = '';
-                room.guests.forEach((guest, guestIdx) => {
-                    guestsHtml += `
-                        <div class="border p-2 mb-2 rounded">
-                            <h6>${guestIdx === 0 ? '대표 투숙객' : '동반자 ' + guestIdx}</h6>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control form-control-sm" 
-                                           value="${guest.guest_name_ko || ''}" 
-                                           placeholder="한글이름"
-                                           data-room="${idx}" data-guest="${guestIdx}" data-field="guest_name_ko">
-                                </div>
-                                <div class="col-md-6">
-                                    <input type="text" class="form-control form-control-sm" 
-                                           value="${guest.guest_name_en || ''}" 
-                                           placeholder="영문이름"
-                                           data-room="${idx}" data-guest="${guestIdx}" data-field="guest_name_en">
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                roomsHtml += `
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <strong>객실 ${idx + 1}</strong> - ${room.room_type_name || '객실'}
-                        </div>
-                        <div class="card-body">
-                            ${guestsHtml}
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = `
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label"><strong>예약번호</strong></label>
-                        <input type="text" class="form-control" id="edit_reservation_number" value="${data.reservation_number}" readonly>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label"><strong>예약일</strong></label>
-                        <input type="date" class="form-control" id="edit_reservation_date" value="${data.reservation_date}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label"><strong>상태</strong></label>
-                        <select class="form-control" id="edit_status">
-                            <option value="pending" ${data.status === 'pending' ? 'selected' : ''}>대기중</option>
-                            <option value="processing" ${data.status === 'processing' ? 'selected' : ''}>수배중</option>
-                            <option value="confirmed" ${data.status === 'confirmed' ? 'selected' : ''}>확정</option>
-                            <option value="cancelled" ${data.status === 'cancelled' ? 'selected' : ''}>예약취소</option>
-                            <option value="modifying" ${data.status === 'modifying' ? 'selected' : ''}>수정중</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><strong>체크인</strong></label>
-                        <input type="date" class="form-control" id="edit_check_in" value="${data.check_in_date}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label"><strong>체크아웃</strong></label>
-                        <input type="date" class="form-control" id="edit_check_out" value="${data.check_out_date}">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label"><strong>특별 요청사항</strong></label>
-                        <textarea class="form-control" id="edit_special_requests" rows="2">${data.special_requests || ''}</textarea>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label"><strong>내부 메모</strong></label>
-                        <textarea class="form-control" id="edit_internal_memo" rows="2">${data.internal_memo || ''}</textarea>
-                    </div>
-                    <div class="col-12">
-                        <h6 class="mt-3 mb-2">투숙객 정보</h6>
-                        ${roomsHtml}
-                    </div>
-                </div>
-            `;
-        }
-        
         // 수정사항 저장
         async function saveReservationChanges() {
             if (!currentEditingId) return;
             
             const updatedData = {
-                reservation_date: document.getElementById('edit_reservation_date').value,
-                status: document.getElementById('edit_status').value,
-                check_in_date: document.getElementById('edit_check_in').value,
-                check_out_date: document.getElementById('edit_check_out').value,
-                special_requests: document.getElementById('edit_special_requests').value,
-                internal_memo: document.getElementById('edit_internal_memo').value
+                reservation_date: document.getElementById('reservation_date').value,
+                status: document.getElementById('status').value,
+                check_in_date: document.getElementById('check_in_date').value,
+                check_out_date: document.getElementById('check_out_date').value,
+                arrival_flight: document.getElementById('arrival_flight').value,
+                departure_flight: document.getElementById('departure_flight').value,
+                special_requests: document.getElementById('special_requests').value,
+                internal_memo: document.getElementById('internal_memo').value,
+                total_selling_price: parseFloat(document.getElementById('totalRoomCharge').value) || 0
             };
             
             try {
