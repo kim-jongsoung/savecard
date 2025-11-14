@@ -115,6 +115,58 @@
             border-radius: 8px;
             font-size: 1.1rem;
         }
+        
+        /* 예약 상태별 색상 */
+        #status {
+            font-weight: 600;
+        }
+        #status option[value="pending"] {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        #status option[value="processing"] {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        #status option[value="confirmed"] {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        #status option[value="cancelled"] {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        #status option[value="modifying"] {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        
+        /* 셀렉트 박스 배경 색상 동적 변경 */
+        #status.status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+        #status.status-processing {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-color: #17a2b8;
+        }
+        #status.status-confirmed {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+        #status.status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+        #status.status-modifying {
+            background-color: #e2e3e5;
+            color: #383d41;
+            border-color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -204,8 +256,10 @@
                                 <label class="form-label">예약 상태</label>
                                 <select class="form-control" id="status">
                                     <option value="pending">대기중</option>
-                                    <option value="processing">처리중</option>
+                                    <option value="processing">수배중</option>
                                     <option value="confirmed">확정</option>
+                                    <option value="cancelled">예약취소</option>
+                                    <option value="modifying">수정중(예약변경)</option>
                                 </select>
                             </div>
                             <div class="col-md-12 mb-2">
@@ -391,7 +445,33 @@
             loadHotels();
             loadAgencies();
             loadAgencyFees();
+            
+            // 예약 상태 변경 시 색상 업데이트
+            const statusSelect = document.getElementById('status');
+            if (statusSelect) {
+                // 초기 색상 설정
+                updateStatusColor();
+                
+                // 변경 이벤트 리스너
+                statusSelect.addEventListener('change', updateStatusColor);
+            }
         });
+        
+        // 예약 상태 색상 업데이트 함수
+        function updateStatusColor() {
+            const statusSelect = document.getElementById('status');
+            if (!statusSelect) return;
+            
+            const value = statusSelect.value;
+            
+            // 기존 클래스 제거
+            statusSelect.classList.remove('status-pending', 'status-processing', 'status-confirmed', 'status-cancelled', 'status-modifying');
+            
+            // 선택된 값에 따라 클래스 추가
+            if (value) {
+                statusSelect.classList.add(`status-${value}`);
+            }
+        }
 
         // 호텔 목록 로드
         async function loadHotels() {
