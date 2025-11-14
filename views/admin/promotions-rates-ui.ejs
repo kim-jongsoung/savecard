@@ -415,8 +415,9 @@
     const currency = document.getElementById('rateCurrency').value;
     const rates = [];
     
-    Object.keys(rateCalendarData).forEach(dateStr => {
-      const data = rateCalendarData[dateStr];
+    Object.keys(rateCalendarData).forEach(key => {
+      const data = rateCalendarData[key];
+      const dateStr = key.split('_')[0];  // 날짜 부분만 추출 (예: "2025-11-01_4" → "2025-11-01")
       data.rates.forEach(r => {
         rates.push({
           room_type_id: data.room_type_id,
