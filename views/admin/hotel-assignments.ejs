@@ -270,6 +270,35 @@
             color: #383d41;
             border-color: #6c757d;
         }
+        
+        /* 프로모션 스타일 */
+        .promo-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            font-size: 0.7rem;
+        }
+        .rate-display {
+            background: #e7f3ff;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid #2196F3;
+            font-size: 0.7rem;
+        }
+        .benefit-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-right: 0.5rem;
+            display: inline-block;
+            margin-bottom: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -768,6 +797,8 @@
         let allAgencies = [];
         let roomCounter = 0;
         let extraCounter = 0;
+        let currentPromotion = null;
+        let roomPromotions = {};
         
         // 모달 오픈 시 호텔/거래처 로드
         document.getElementById('editReservationModal').addEventListener('show.bs.modal', async function() {
@@ -866,9 +897,185 @@
             calculateTotal();
         }
         
-        // 프로모션 자동 적용 (더미)
-        function autoApplyPromotion() {
-            // 프로모션 기능은 나중에 구현
+        // 프로모션 자동 적용
+        async function autoApplyPromotion() {
+            const hotelId = document.getElementById('hotel_id').value;
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            // 필수 조건 확인
+            if (!hotelId || !checkIn || !checkOut) {
+                return;
+            }
+            
+            // 첫 번째 객실의 room_type_id 가져오기
+            const firstRoomType = document.querySelector('.room-type-select');
+            if (!firstRoomType || !firstRoomType.value) {
+                return;
+            }
+            
+            // 로딩 표시
+            document.getElementById('promoLoading').style.display = 'block';
+            document.getElementById('promoResult').style.display = 'none';
+            document.getElementById('noPromo').style.display = 'none';
+            
+            // 프로모션 조회 (자동으로 가장 유리한 프로모션 찾기)
+            await findBestPromotion(hotelId, firstRoomType.value, checkIn, checkOut);
+        }
+        
+        // 최적 프로모션 찾기
+        async function findBestPromotion(hotelId, roomTypeId, checkIn, checkOut) {
+            try {
+                // 모든 활성 프로모션 조회
+                const response = await fetch('/api/hotel-promotions/list?hotel_id=' + hotelId + '&is_active=true');
+                const promotions = await response.json();
+                
+                if (!promotions || promotions.length === 0) {
+                    document.getElementById('promoLoading').style.display = 'none';
+                    document.getElementById('noPromo').style.display = 'block';
+                    return;
+                }
+                
+                // 각 프로모션 요금 확인 및 최저가 찾기
+                let bestPromotion = null;
+                let lowestRate = Infinity;
+                
+                for (const promo of promotions) {
+                    const rateResponse = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            promo_code: promo.promo_code,
+                            hotel_id: parseInt(hotelId),
+                            room_type_id: parseInt(roomTypeId),
+                            check_in_date: checkIn,
+                            check_out_date: checkOut,
+                            booking_date: new Date().toISOString().split('T')[0]
+                        })
+                    });
+                    
+                    const result = await rateResponse.json();
+                    
+                    if (result.valid && result.total_room_rate < lowestRate) {
+                        lowestRate = result.total_room_rate;
+                        bestPromotion = result;
+                    }
+                }
+                
+                document.getElementById('promoLoading').style.display = 'none';
+                
+                if (bestPromotion) {
+                    currentPromotion = bestPromotion;
+                    displayPromotionResult(bestPromotion);
+                    updateRoomCharges();
+                } else {
+                    document.getElementById('noPromo').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('프로모션 조회 오류:', error);
+                document.getElementById('promoLoading').style.display = 'none';
+                document.getElementById('noPromo').style.display = 'block';
+            }
+        }
+        
+        // 프로모션 결과 표시
+        function displayPromotionResult(result) {
+            const promoResult = document.getElementById('promoResult');
+            
+            let benefitsHtml = '';
+            if (result.benefits && result.benefits.length > 0) {
+                benefitsHtml = '<div class="mt-2"><strong>베네핏:</strong><br>' +
+                    result.benefits.map(b => {
+                        let text = '';
+                        if (b.benefit_type === 'drink_coupon') text = `🍹 드링크 쿠폰 ${b.quantity}매`;
+                        else if (b.benefit_type === 'late_checkout') text = `🕐 레이트 체크아웃 (${b.benefit_value || ''})`;
+                        else if (b.benefit_type === 'breakfast') text = `🍳 조식 ${b.quantity}인분`;
+                        else if (b.benefit_type === 'credit') text = `💵 크레딧 $${b.benefit_value}`;
+                        else text = b.description || b.benefit_name || b.benefit_type;
+                        return `<span class="benefit-badge">${text}</span>`;
+                    }).join('') +
+                    '</div>';
+            }
+            
+            promoResult.innerHTML = `
+                <div class="alert alert-success py-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <div class="flex-fill">
+                            <strong>프로모션 적용 완료!</strong>
+                            <span class="promo-badge">${result.promotion.promo_name}</span>
+                            <div class="mt-2">
+                                <strong>프로모션 코드:</strong> 
+                                <code style="font-size: 1.1em; color: #667eea; background: #f0f4ff; padding: 4px 8px; border-radius: 4px;">${result.promotion.promo_code}</code>
+                            </div>
+                            <div class="small mt-2">
+                                예약 기간: ${result.promotion.booking_start_date} ~ ${result.promotion.booking_end_date}<br>
+                                투숙 기간: ${result.promotion.stay_start_date} ~ ${result.promotion.stay_end_date}
+                            </div>
+                            ${benefitsHtml}
+                        </div>
+                    </div>
+                </div>
+                <div class="rate-display mt-2">
+                    <h6 class="mb-2"><i class="fas fa-dollar-sign me-1"></i>날짜별 프로모션 요금</h6>
+                    ${result.daily_rates.map(r => `
+                        <div class="d-flex justify-content-between">
+                            <span>${r.stay_date}:</span>
+                            <strong>$${r.rate_per_night.toFixed(2)}</strong>
+                        </div>
+                    `).join('')}
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>1객실 총액:</strong>
+                        <strong class="text-primary fs-5">$${result.total_room_rate.toFixed(2)}</strong>
+                    </div>
+                </div>
+            `;
+            
+            promoResult.style.display = 'block';
+            document.getElementById('noPromo').style.display = 'none';
+        }
+        
+        // 객실 요금 자동 업데이트 (모든 객실의 프로모션 합산)
+        async function updateRoomCharges() {
+            let totalRoomCharge = 0;
+            const appliedPromoCodes = new Set();
+            
+            // 각 객실의 프로모션 요금 합산
+            document.querySelectorAll('.room-card').forEach(room => {
+                const roomNum = room.dataset.roomId;
+                if (roomPromotions[roomNum] && roomPromotions[roomNum].total_room_rate) {
+                    totalRoomCharge += roomPromotions[roomNum].total_room_rate;
+                    if (roomPromotions[roomNum].promotion && roomPromotions[roomNum].promotion.promo_code) {
+                        appliedPromoCodes.add(roomPromotions[roomNum].promotion.promo_code);
+                    }
+                }
+            });
+            
+            // 프로모션 코드 표시 (여러 객실)
+            const promoResult = document.getElementById('promoResult');
+            if (appliedPromoCodes.size > 0) {
+                const promoCodesHtml = Array.from(appliedPromoCodes).map(code => 
+                    `<code style="font-size: 1.1em; color: #667eea; background: #f0f4ff; padding: 4px 8px; border-radius: 4px; margin-right: 5px;">${code}</code>`
+                ).join('');
+                promoResult.innerHTML = `
+                    <div class="alert alert-success py-2">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>프로모션 적용 완료!</strong>
+                        <div class="mt-2">
+                            <strong>적용된 프로모션 코드:</strong> ${promoCodesHtml}
+                        </div>
+                    </div>
+                `;
+                promoResult.style.display = 'block';
+                document.getElementById('noPromo').style.display = 'none';
+            } else {
+                promoResult.style.display = 'none';
+                document.getElementById('noPromo').style.display = 'block';
+            }
+            
+            document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
+            calculateTotal();
         }
         
         // 객실 추가
