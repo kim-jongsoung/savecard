@@ -356,6 +356,16 @@
       document.getElementById('description').value = promo.description || '';
       document.getElementById('isActive').checked = promo.is_active;
       
+      // 호텔 선택 시 객실 타입 로드 (Step 2를 위해)
+      if (promo.hotel_id) {
+        const roomTypeRes = await fetch(`/api/room-types?hotel_id=${promo.hotel_id}&is_active=true`);
+        currentRoomTypes = await roomTypeRes.json();
+        
+        const select = document.getElementById('rateRoomType');
+        select.innerHTML = '<option value="">객실 타입 선택</option>' + 
+          currentRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
+      }
+      
       // 베네핏 로드
       document.getElementById('benefitsList').innerHTML = '';
       benefitCounter = 0;
