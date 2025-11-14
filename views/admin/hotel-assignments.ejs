@@ -1176,9 +1176,9 @@
                 // 해당 룸타입 정보 가져오기
                 const roomType = allRoomTypes.find(rt => rt.id == roomTypeId);
                 
-                // 조식 설정에 따라 추가 항목에 자동 추가
+                // ⭐ 조식 정보를 객실 카드에 표시 (추가 항목 X)
                 if (roomType) {
-                    await addBreakfastFromRoomType(roomNum, roomType);
+                    displayBreakfastInfo(roomNum, roomType);
                 }
                 
                 // 해당 룸타입의 최적 프로모션 찾기
@@ -1200,8 +1200,47 @@
             }
         }
         
-        // 룸타입의 조식 설정에 따라 추가 항목에 자동 추가
+        // ⭐ 조식 정보를 객실 카드에 표시
+        function displayBreakfastInfo(roomNum, roomType) {
+            if (!roomType) return;
+            
+            const breakfastIncluded = roomType.breakfast_included || false;
+            const breakfastRateAdult = parseFloat(roomType.breakfast_rate_adult) || 0;
+            const breakfastRateChild = parseFloat(roomType.breakfast_rate_child) || 0;
+            
+            const breakfastInfoDiv = document.getElementById(`breakfast_info_${roomNum}`);
+            const breakfastDetailsDiv = document.getElementById(`breakfast_details_${roomNum}`);
+            
+            if (!breakfastInfoDiv || !breakfastDetailsDiv) return;
+            
+            if (breakfastIncluded) {
+                // 조식 포함 시 정보 표시
+                let details = '';
+                if (breakfastRateAdult > 0) {
+                    details += `성인: $${breakfastRateAdult.toFixed(2)}/인`;
+                }
+                if (breakfastRateChild > 0) {
+                    if (details) details += ' | ';
+                    details += `소아: $${breakfastRateChild.toFixed(2)}/인`;
+                }
+                
+                breakfastDetailsDiv.textContent = details || '조식 포함';
+                breakfastInfoDiv.style.display = 'block';
+                
+                console.log(`🍳 객실 ${roomNum} 조식 정보 표시: ${details}`);
+            } else {
+                // 조식 미포함 시 숨김
+                breakfastInfoDiv.style.display = 'none';
+            }
+        }
+        
+        // ⭐ 기존 addBreakfastFromRoomType 함수 (이제 사용 안 함)
         async function addBreakfastFromRoomType(roomNum, roomType) {
+            // 더 이상 추가 항목에 조식을 추가하지 않음
+            console.log(`ℹ️ 조식은 객실 정보에 표시됩니다 (추가 항목 X)`);
+            return;
+            
+            /* 기존 로직 주석 처리
             if (!roomType) return;
             
             const breakfastIncluded = roomType.breakfast_included || false;
@@ -1213,6 +1252,7 @@
                 console.log(`🚫 데이터 로드 중이므로 조식 자동 추가 건너뜀`);
                 return;
             }
+            */
             
             // 해당 객실의 투숙객 수 확인
             const guestsContainer = document.getElementById(`guests_${roomNum}`);
@@ -1334,6 +1374,15 @@
                         <div class="col-md-6">
                             <label class="form-label">총 객실 요금</label>
                             <input type="text" class="form-control" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0;">
+                        </div>
+                    </div>
+                    
+                    <!-- ⭐ 조식 정보 표시 영역 -->
+                    <div id="breakfast_info_${roomCounter}" class="mb-2" style="display: none;">
+                        <div class="alert alert-success py-2 mb-2">
+                            <i class="fas fa-utensils me-2"></i>
+                            <strong>조식 포함</strong>
+                            <div class="small mt-1" id="breakfast_details_${roomCounter}"></div>
                         </div>
                     </div>
                     
@@ -1712,6 +1761,16 @@
                                     });
                                 }
                                 
+                                // ⭐ 조식 정보 표시 (객실 타입 기반)
+                                if (room.room_type_id) {
+                                    const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
+                                    if (roomType) {
+                                        setTimeout(() => {
+                                            displayBreakfastInfo(currentRoomNum, roomType);
+                                        }, 150);
+                                    }
+                                }
+                                
                                 // ⭐ 프로모션 정보 표시 (새로 조회하지 않고 저장된 정보 표시)
                                 if (room.promotion_code) {
                                     // roomPromotions에 저장
@@ -1748,12 +1807,6 @@
                                                 console.log(`📌 객실 ${currentRoomNum} 프로모션 표시: ${room.promotion_code} ($${room.total_selling_price})`);
                                             }
                                         }
-                                        
-                                        // 객실 요금 입력 필드에도 반영
-                                        const rateInput = document.getElementById(`room_${currentRoomNum}_rate`);
-                                        if (rateInput) {
-                                            rateInput.value = `$${parseFloat(room.total_selling_price).toFixed(2)}`;
-                                        }
                                     }, 200);
                                 }
                             }, 100 * i);
@@ -1768,6 +1821,12 @@
                         if (data.extras && data.extras.length > 0) {
                             console.log('🎁 추가 항목 수:', data.extras.length);
                             data.extras.forEach((extra, idx) => {
+                                // ⭐ 조식은 객실 정보에 표시되므로 추가 항목에서 제외
+                                if (extra.item_name && extra.item_name.includes('조식')) {
+                                    console.log(`⏭️ 조식 항목 건너뜀: ${extra.item_name} (객실 정보에 표시됨)`);
+                                    return;
+                                }
+                                
                                 addExtraItem();
                                 
                                 // ⭐ 클로저 버그 수정: extraCounter 현재 값을 즉시 캡처
@@ -1921,6 +1980,13 @@
                 }
                 
                 const itemName = extraCard.querySelector('[data-extra-field="item_name"]')?.value?.trim();
+                
+                // ⭐ 조식은 객실 정보에 포함되므로 저장에서 제외
+                if (itemName && itemName.includes('조식')) {
+                    console.log(`⏭️ 조식 항목 저장 제외: ${itemName} (객실 타입에 포함됨)`);
+                    return;
+                }
+                
                 const pricingType = extraCard.querySelector('[data-extra-field="pricing_type"]')?.value || 'flat';
                 const quantity = parseInt(extraCard.querySelector('[data-extra-field="quantity"]')?.value) || 1;
                 
