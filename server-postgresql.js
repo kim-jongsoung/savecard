@@ -896,6 +896,15 @@ try {
     console.error('⚠️ 프로모션 관리 라우트 연결 실패:', error.message);
 }
 
+// 수배피 관리 라우트 연결 ⭐ 신규 (요금RAG 시스템)
+try {
+    const agencyFeesRouter = require('./routes/agency-procurement-fees');
+    app.use('/', agencyFeesRouter);
+    console.log('✅ 수배피 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 수배피 관리 라우트 연결 실패:', error.message);
+}
+
 // 객실 재고 관리 라우트 연결 ⭐ 신규
 try {
     const roomInventoryRouter = require('./routes/room-inventory');
@@ -988,6 +997,14 @@ app.get('/admin/promotions', requireAuth, (req, res) => {
         title: '프로모션 관리',
         adminUsername: req.session.adminUsername,
         currentPage: 'promotions'
+    });
+});
+
+app.get('/admin/agency-fees', requireAuth, (req, res) => {
+    res.render('admin/agency-fees', {
+        title: '수배피 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'agency-fees'
     });
 });
 
