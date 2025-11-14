@@ -1634,31 +1634,36 @@
                             const room = data.rooms[i];
                             addRoom();
                             
+                            // ⭐ 클로저 버그 수정: roomCounter 현재 값을 즉시 캡처
+                            const currentRoomNum = roomCounter;
+                            
                             // 약간의 지연 후 객실 정보 채우기
                             setTimeout(async () => {
+                                console.log(`🏨 객실 ${currentRoomNum} 데이터 로드 시작 (room_type_id: ${room.room_type_id})`);
+                                
                                 // 객실 타입 선택
-                                const roomSelect = document.querySelector(`[data-room="${roomCounter}"]`);
+                                const roomSelect = document.querySelector(`[data-room="${currentRoomNum}"]`);
                                 if (roomSelect && room.room_type_id) {
                                     roomSelect.value = room.room_type_id;
-                                    console.log(`✅ 객실 ${roomCounter} 타입 선택:`, room.room_type_id);
+                                    console.log(`✅ 객실 ${currentRoomNum} 타입 선택:`, room.room_type_id);
                                 }
                                 
                                 // 객실 요금 표시
-                                const rateInput = document.getElementById(`room_${roomCounter}_rate`);
+                                const rateInput = document.getElementById(`room_${currentRoomNum}_rate`);
                                 if (rateInput && room.total_selling_price) {
                                     rateInput.value = `$${parseFloat(room.total_selling_price).toFixed(2)}`;
                                 }
                                 
                                 // 투숙객 정보 채우기
                                 if (room.guests && room.guests.length > 0) {
-                                    console.log(`  👥 투숙객 수:`, room.guests.length);
+                                    console.log(`  👥 객실 ${currentRoomNum} 투숙객 수:`, room.guests.length);
                                     room.guests.forEach((guest, guestIdx) => {
                                         if (guestIdx > 0) {
-                                            addGuest(roomCounter);
+                                            addGuest(currentRoomNum);
                                         }
                                         
                                         setTimeout(() => {
-                                            const guestCard = document.getElementById(`guest_${roomCounter}_${guestIdx + 1}`);
+                                            const guestCard = document.getElementById(`guest_${currentRoomNum}_${guestIdx + 1}`);
                                             if (guestCard) {
                                                 const fields = guestCard.querySelectorAll('[data-guest-field]');
                                                 fields.forEach(field => {
@@ -1666,7 +1671,7 @@
                                                     // ⭐ 조건 제거: null이나 빈 값도 항상 채우기
                                                     field.value = guest[fieldName] !== undefined && guest[fieldName] !== null ? guest[fieldName] : '';
                                                 });
-                                                console.log(`  ✅ 투숙객 ${guestIdx + 1} 정보 채움 (생년월일: ${guest.date_of_birth})`);
+                                                console.log(`  ✅ 객실 ${currentRoomNum} 투숙객 ${guestIdx + 1} 정보 채움 (이름: ${guest.guest_name_ko})`);
                                             }
                                         }, 100 * guestIdx);
                                     });
@@ -1674,7 +1679,7 @@
                                 
                                 // 프로모션 정보 저장 (onRoomTypeChange 호출을 위해)
                                 if (room.promotion_code) {
-                                    roomPromotions[roomCounter] = {
+                                    roomPromotions[currentRoomNum] = {
                                         promotion: { promo_code: room.promotion_code },
                                         rate_condition_id: room.rate_condition_id,
                                         total_room_rate: room.total_selling_price
@@ -1694,8 +1699,12 @@
                             data.extras.forEach((extra, idx) => {
                                 addExtraItem();
                                 
+                                // ⭐ 클로저 버그 수정: extraCounter 현재 값을 즉시 캡처
+                                const currentExtraNum = extraCounter;
+                                
                                 setTimeout(() => {
-                                    const extraCard = document.getElementById(`extra_${extraCounter}`);
+                                    console.log(`📝 추가항목 ${currentExtraNum} 로드 시작:`, extra.item_name);
+                                    const extraCard = document.getElementById(`extra_${currentExtraNum}`);
                                     if (extraCard) {
                                         const itemNameInput = extraCard.querySelector('[data-extra-field="item_name"]');
                                         const quantityInput = extraCard.querySelector('[data-extra-field="quantity"]');
@@ -1704,6 +1713,8 @@
                                         if (itemNameInput) itemNameInput.value = extra.item_name || '';
                                         if (quantityInput) quantityInput.value = extra.quantity || 1;
                                         if (pricingTypeInput) pricingTypeInput.value = extra.pricing_type || 'flat';
+                                        
+                                        console.log(`  → 항목명: ${extra.item_name}, 수량: ${extra.quantity}, 유형: ${extra.pricing_type}`);
                                         
                                         // pricing_type에 따라 필드 채우기
                                         if (extra.pricing_type === 'per_person') {
@@ -1721,17 +1732,23 @@
                                             if (childPriceInput) childPriceInput.value = extra.child_price || 0;
                                             if (infantCountInput) infantCountInput.value = extra.infant_count || 0;
                                             if (infantPriceInput) infantPriceInput.value = extra.infant_price || 0;
+                                            
+                                            console.log(`  → 인원별: 성인 ${extra.adult_count}명×$${extra.adult_price}, 소아 ${extra.child_count}명×$${extra.child_price}`);
                                         } else {
                                             // 정액 요금
                                             const unitPriceInput = extraCard.querySelector('[data-extra-field="unit_price"]');
                                             if (unitPriceInput) unitPriceInput.value = extra.unit_price || 0;
+                                            
+                                            console.log(`  → 정액: $${extra.unit_price}`);
                                         }
                                         
                                         // UI 전환 및 소계 계산
-                                        toggleExtraPricing(extraCounter);
-                                        calculateExtraTotal(extraCounter);
+                                        toggleExtraPricing(currentExtraNum);
+                                        calculateExtraTotal(currentExtraNum);
                                         
-                                        console.log(`  ✅ 추가항목 ${idx + 1} 채움:`, extra.item_name);
+                                        console.log(`  ✅ 추가항목 ${idx + 1} 완료`);
+                                    } else {
+                                        console.error(`❌ 추가항목 카드 찾을 수 없음: extra_${currentExtraNum}`);
                                     }
                                 }, 100 * idx);
                             });
