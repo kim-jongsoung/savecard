@@ -759,7 +759,21 @@
         
         // 파싱 결과를 폼에 채우기
         async function fillParsedData(data) {
-            if (data.reservation_number) document.getElementById('reservation_number').value = data.reservation_number;
+            // 예약번호 자동 생성 (없는 경우)
+            if (data.reservation_number) {
+                document.getElementById('reservation_number').value = data.reservation_number;
+            } else {
+                // LUX + YYYYMMDD + 랜덤 6자리
+                const now = new Date();
+                const dateStr = now.getFullYear().toString() + 
+                              String(now.getMonth() + 1).padStart(2, '0') + 
+                              String(now.getDate()).padStart(2, '0');
+                const randomNum = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+                const autoNumber = `LUX${dateStr}-${randomNum}`;
+                
+                document.getElementById('reservation_number').value = autoNumber;
+                console.log('📝 자동 예약번호 생성:', autoNumber);
+            }
             
             // 거래처명으로 거래처 ID 찾기 (유연한 매칭)
             if (data.booking_agency && allAgencies.length > 0) {
