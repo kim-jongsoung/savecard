@@ -12,17 +12,19 @@
       <option value="">먼저 Step 1에서 호텔을 선택하세요</option>
     </select>
   </div>
-  <div class="col-md-3">
-    <label class="form-label">시작 월</label>
-    <input type="month" class="form-control" id="rateStartMonth" onchange="renderRateCalendar()">
-  </div>
-  <div class="col-md-3">
+  <div class="col-md-6">
     <label class="form-label">통화</label>
     <select class="form-select" id="rateCurrency">
       <option value="USD">USD</option>
       <option value="KRW">KRW</option>
     </select>
   </div>
+</div>
+
+<div class="alert alert-success" id="rateDateRangeInfo" style="display:none;">
+  <i class="bi bi-calendar-range"></i>
+  투숙 기간: <strong><span id="rateDateRangeText"></span></strong>
+  <span class="text-muted ms-2">(Step 1에서 설정된 기간의 달력이 표시됩니다)</span>
 </div>
 
 <div class="row mb-3">
@@ -136,35 +138,56 @@
   
   function renderRateCalendar() {
     const roomTypeId = document.getElementById('rateRoomType').value;
-    const startMonth = document.getElementById('rateStartMonth').value;
+    const stayStartDate = document.getElementById('stayStartDate').value;
+    const stayEndDate = document.getElementById('stayEndDate').value;
     
-    if (!roomTypeId || !startMonth) {
-      document.getElementById('rateCalendarContainer').innerHTML = '';
+    if (!roomTypeId) {
+      document.getElementById('rateCalendarContainer').innerHTML = '<div class="text-muted">객실 타입을 선택하세요</div>';
       return;
     }
     
-    const [year, month] = startMonth.split('-').map(Number);
+    if (!stayStartDate || !stayEndDate) {
+      document.getElementById('rateCalendarContainer').innerHTML = '<div class="text-muted">Step 1에서 투숙 기간을 먼저 입력하세요</div>';
+      document.getElementById('rateDateRangeInfo').style.display = 'none';
+      return;
+    }
+    
+    // 기간 정보 표시
+    document.getElementById('rateDateRangeInfo').style.display = 'block';
+    document.getElementById('rateDateRangeText').textContent = `${stayStartDate} ~ ${stayEndDate}`;
+    
+    // 시작일과 종료일 파싱
+    const startDate = new Date(stayStartDate);
+    const endDate = new Date(stayEndDate);
+    
+    // 시작 월과 종료 월 계산
+    const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth() + 1;
+    const endYear = endDate.getFullYear();
+    const endMonth = endDate.getMonth() + 1;
+    
     const container = document.getElementById('rateCalendarContainer');
     let html = '';
     
-    // 3개월 달력 표시
-    for (let m = 0; m < 3; m++) {
-      const currentYear = month + m > 12 ? year + 1 : year;
-      const currentMonth = month + m > 12 ? month + m - 12 : month + m;
-      const monthName = new Date(currentYear, currentMonth - 1).toLocaleString('ko', { year: 'numeric', month: 'long' });
-      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    // 투숙 기간의 모든 월 렌더링
+    let currentYear = startDate.getFullYear();
+    let currentMonth = startDate.getMonth() + 1;
+    
+    while (currentYear < endDate.getFullYear() || (currentYear === endDate.getFullYear() && currentMonth <= endDate.getMonth() + 1)) {
       const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
       
       html += `<div class="mb-4">`;
-      html += `<h6 class="mb-2">${monthName}</h6>`;
+      html += `<h6>${currentYear}년 ${currentMonth}월</h6>`;
       html += `<div class="calendar-grid">`;
       
       // 요일 헤더
-      ['일', '월', '화', '수', '목', '금', '토'].forEach(day => {
+      const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+      weekdays.forEach(day => {
         html += `<div class="calendar-header">${day}</div>`;
       });
       
-      // 빈 칸 (첫 주)
+      // 빈 칸
       for (let i = 0; i < firstDay; i++) {
         html += `<div></div>`;
       }
@@ -172,6 +195,10 @@
       // 날짜
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const currentDate = new Date(dateStr);
+        
+        // 투숙 기간 내의 날짜인지 확인
+        const isInRange = currentDate >= startDate && currentDate <= endDate;
         const hasRate = rateCalendarData[dateStr] && rateCalendarData[dateStr].room_type_id == roomTypeId;
         const isSelected = selectedDates.has(dateStr);
         
@@ -191,14 +218,25 @@
           rateDisplay += `</div>`;
         }
         
-        html += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${hasRate ? 'has-rate' : ''}" 
-                      onclick="toggleDate('${dateStr}')">
+        // 기간 외 날짜는 비활성화
+        const disabledClass = !isInRange ? 'disabled' : '';
+        const clickHandler = isInRange ? `onclick="toggleDate('${dateStr}')"` : '';
+        
+        html += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${hasRate ? 'has-rate' : ''} ${disabledClass}" 
+                      ${clickHandler}>
                   <div><strong>${day}</strong></div>
                   ${rateDisplay}
                 </div>`;
       }
       
       html += `</div></div>`;
+      
+      // 다음 월로 이동
+      currentMonth++;
+      if (currentMonth > 12) {
+        currentMonth = 1;
+        currentYear++;
+      }
     }
     
     container.innerHTML = html;
@@ -216,20 +254,21 @@
   }
   
   function selectAllDates() {
-    const startMonth = document.getElementById('rateStartMonth').value;
-    if (!startMonth) return;
+    const stayStartDate = document.getElementById('stayStartDate').value;
+    const stayEndDate = document.getElementById('stayEndDate').value;
     
-    const [year, month] = startMonth.split('-').map(Number);
+    if (!stayStartDate || !stayEndDate) {
+      alert('Step 1에서 투숙 기간을 먼저 입력하세요');
+      return;
+    }
     
-    for (let m = 0; m < 3; m++) {
-      const currentYear = month + m > 12 ? year + 1 : year;
-      const currentMonth = month + m > 12 ? month + m - 12 : month + m;
-      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-      
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        selectedDates.add(dateStr);
-      }
+    const startDate = new Date(stayStartDate);
+    const endDate = new Date(stayEndDate);
+    
+    // 기간 내 모든 날짜 선택
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0];
+      selectedDates.add(dateStr);
     }
     
     renderRateCalendar();
