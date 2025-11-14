@@ -17,8 +17,11 @@ async function runMigration() {
     console.log('🔧 프로모션 시스템 재설계 마이그레이션 시작...');
     
     // SQL 파일 읽기
-    const migrationFile = path.join(__dirname, '../migrations/008_recreate_promotions.sql');
+    const migrationFile = path.join(__dirname, '../migrations/008_recreate_promotions_simple.sql');
     const sql = fs.readFileSync(migrationFile, 'utf8');
+    
+    console.log('📄 SQL 파일 로드 완료');
+    console.log('📊 SQL 길이:', sql.length, 'bytes');
     
     // 실행
     await pool.query(sql);

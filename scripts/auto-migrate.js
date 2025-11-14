@@ -39,9 +39,10 @@ async function autoMigrate(pool) {
         if (!checkPromoTable.rows[0].exists) {
             console.log('🔧 프로모션 테이블을 재설계합니다. 마이그레이션 008을 실행합니다...');
             
-            const migration008 = path.join(__dirname, '../migrations/008_recreate_promotions.sql');
+            const migration008 = path.join(__dirname, '../migrations/008_recreate_promotions_simple.sql');
             const sql008 = fs.readFileSync(migration008, 'utf8');
             
+            console.log('📄 SQL 파일 로드 완료, 실행 중...');
             await pool.query(sql008);
             console.log('✅ 프로모션 시스템 재설계 완료!');
         } else {
