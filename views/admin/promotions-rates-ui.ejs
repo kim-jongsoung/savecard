@@ -91,7 +91,7 @@
 
 <script>
   let selectedDates = new Set();
-  let rateCalendarData = {};  // { 'YYYY-MM-DD': { room_type_id, rates: [{ min_nights, rate }] } }
+  let rateCalendarData = {};  // { 'YYYY-MM-DD_roomTypeId': { room_type_id, rates: [{ min_nights, rate }] } }
   let currentRoomTypes = [];
   
   // 호텔 변경 시 객실 타입 로드
@@ -118,7 +118,8 @@
     rateCalendarData = {};
     
     rates.forEach(r => {
-      const key = r.stay_date.split('T')[0];  // 날짜 포맷팅
+      const dateStr = r.stay_date.split('T')[0];  // 날짜 포맷팅
+      const key = `${dateStr}_${r.room_type_id}`;  // 날짜_룸타입 조합 키
       if (!rateCalendarData[key]) {
         rateCalendarData[key] = {
           room_type_id: r.room_type_id,
@@ -196,16 +197,17 @@
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const currentDate = new Date(dateStr);
+        const key = `${dateStr}_${roomTypeId}`;  // 날짜_룸타입 조합 키
         
         // 투숙 기간 내의 날짜인지 확인
         const isInRange = currentDate >= startDate && currentDate <= endDate;
-        const hasRate = rateCalendarData[dateStr] && rateCalendarData[dateStr].room_type_id == roomTypeId;
+        const hasRate = rateCalendarData[key] && rateCalendarData[key].room_type_id == roomTypeId;
         const isSelected = selectedDates.has(dateStr);
         
         // 요금 표시
         let rateDisplay = '';
         if (hasRate) {
-          const rates = rateCalendarData[dateStr].rates;
+          const rates = rateCalendarData[key].rates;
           const rate1 = rates.find(r => r.min_nights === 1)?.rate_per_night;
           const rate2 = rates.find(r => r.min_nights === 2)?.rate_per_night;
           const rate3 = rates.find(r => r.min_nights === 3)?.rate_per_night;
@@ -313,28 +315,29 @@
     const count = selectedDates.size;
     
     selectedDates.forEach(dateStr => {
-      if (!rateCalendarData[dateStr]) {
-        rateCalendarData[dateStr] = {
+      const key = `${dateStr}_${roomTypeId}`;  // 날짜_룸타입 조합 키
+      if (!rateCalendarData[key]) {
+        rateCalendarData[key] = {
           room_type_id: parseInt(roomTypeId),
           rates: []
         };
       }
       
       // 기존 요금 제거
-      rateCalendarData[dateStr].rates = [];
+      rateCalendarData[key].rates = [];
       
       // 새 요금 추가
       if (rate1) {
-        rateCalendarData[dateStr].rates.push({ min_nights: 1, max_nights: 1, rate_per_night: rate1 });
+        rateCalendarData[key].rates.push({ min_nights: 1, max_nights: 1, rate_per_night: rate1 });
       }
       if (rate2) {
-        rateCalendarData[dateStr].rates.push({ min_nights: 2, max_nights: 2, rate_per_night: rate2 });
+        rateCalendarData[key].rates.push({ min_nights: 2, max_nights: 2, rate_per_night: rate2 });
       }
       if (rate3) {
-        rateCalendarData[dateStr].rates.push({ min_nights: 3, max_nights: 3, rate_per_night: rate3 });
+        rateCalendarData[key].rates.push({ min_nights: 3, max_nights: 3, rate_per_night: rate3 });
       }
       if (rate4) {
-        rateCalendarData[dateStr].rates.push({ min_nights: 4, max_nights: null, rate_per_night: rate4 });
+        rateCalendarData[key].rates.push({ min_nights: 4, max_nights: null, rate_per_night: rate4 });
       }
     });
     
@@ -363,7 +366,8 @@
     
     const roomTypeName = currentRoomTypes.find(rt => rt.id == roomTypeId)?.room_type_name || '';
     const dates = Object.keys(rateCalendarData)
-      .filter(date => rateCalendarData[date].room_type_id == roomTypeId)
+      .filter(key => key.endsWith(`_${roomTypeId}`))
+      .map(key => key.split('_')[0])  // 날짜 부분만 추출
       .sort();
     
     if (dates.length === 0) {
@@ -375,7 +379,8 @@
     html += '<thead><tr><th>날짜</th><th>1박</th><th>2박</th><th>3박</th><th>4박+</th><th></th></tr></thead><tbody>';
     
     dates.forEach(date => {
-      const data = rateCalendarData[date];
+      const key = `${date}_${roomTypeId}`;
+      const data = rateCalendarData[key];
       const rate1 = data.rates.find(r => r.min_nights === 1)?.rate_per_night || '-';
       const rate2 = data.rates.find(r => r.min_nights === 2)?.rate_per_night || '-';
       const rate3 = data.rates.find(r => r.min_nights === 3)?.rate_per_night || '-';
@@ -396,8 +401,10 @@
   }
   
   function deleteRate(dateStr) {
+    const roomTypeId = document.getElementById('rateRoomType').value;
+    const key = `${dateStr}_${roomTypeId}`;
     if (confirm(`${dateStr} 요금을 삭제하시겠습니까?`)) {
-      delete rateCalendarData[dateStr];
+      delete rateCalendarData[key];
       renderRateCalendar();
       renderSavedRates();
     }
