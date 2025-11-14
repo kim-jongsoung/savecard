@@ -8,18 +8,51 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* 전체 폰트 30% 축소 */
+        body {
+            font-size: 0.7rem !important;
+        }
+        .form-label {
+            font-size: 0.7rem !important;
+            margin-bottom: 0.25rem;
+        }
+        .form-control, .form-select {
+            font-size: 0.7rem !important;
+            padding: 0.25rem 0.5rem !important;
+        }
+        h2 {
+            font-size: 1.4rem !important;
+        }
+        h5 {
+            font-size: 0.875rem !important;
+        }
+        h6 {
+            font-size: 0.75rem !important;
+        }
+        .btn {
+            font-size: 0.7rem !important;
+            padding: 0.375rem 0.75rem !important;
+        }
+        
+        /* 페이지 폭 1200px 중간 정렬 */
+        .container-fluid {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
         .section-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 1rem;
+            padding: 0.7rem;
             border-radius: 8px 8px 0 0;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.7rem;
         }
         .room-card {
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
             background: #f8f9fa;
         }
         .room-card.active {
@@ -29,15 +62,15 @@
         .guest-card {
             border: 1px solid #dee2e6;
             border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
             background: white;
         }
         .extra-item-card {
             border: 1px solid #dee2e6;
             border-radius: 6px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
             background: #fff;
         }
         .promo-badge {
@@ -147,28 +180,28 @@
                                     <i class="fas fa-info-circle me-2"></i>기본 예약 정보
                                 </h6>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">예약번호</label>
                                 <input type="text" class="form-control" id="reservation_number" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">거래처 (한국 여행사)</label>
                                 <select class="form-control" id="booking_agency_id">
                                     <option value="">직접 예약</option>
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">호텔 선택 *</label>
-                                <select class="form-control" id="hotel_id" required onchange="loadRoomTypes()">
-                                    <option value="">호텔 선택</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">예약 상태</label>
                                 <select class="form-control" id="status">
                                     <option value="pending">대기중</option>
                                     <option value="processing">처리중</option>
                                     <option value="confirmed">확정</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label">호텔 선택 *</label>
+                                <select class="form-control" id="hotel_id" required onchange="loadRoomTypes(); autoApplyPromotion();">
+                                    <option value="">호텔 선택</option>
                                 </select>
                             </div>
                         </div>
@@ -180,39 +213,50 @@
                                     <i class="fas fa-calendar me-2"></i>날짜 정보
                                 </h6>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">체크인 날짜 *</label>
-                                <input type="date" class="form-control" id="check_in_date" required onchange="calculateNights()">
+                                <input type="date" class="form-control" id="check_in_date" required onchange="calculateNights(); autoApplyPromotion();">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">체크아웃 날짜 *</label>
-                                <input type="date" class="form-control" id="check_out_date" required onchange="calculateNights()">
+                                <input type="date" class="form-control" id="check_out_date" required onchange="calculateNights(); autoApplyPromotion();">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4 mb-2">
                                 <label class="form-label">박수</label>
-                                <input type="number" class="form-control fw-bold" id="nights" readonly style="background: #f0f0f0; font-size: 1.2rem;">
+                                <input type="number" class="form-control fw-bold" id="nights" readonly style="background: #f0f0f0;">
                             </div>
                         </div>
 
-                        <!-- 프로모션 코드 섹션 -->
+                        <!-- 항공편 정보 섹션 -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-2">
-                                    <i class="fas fa-tag me-2"></i>프로모션 코드
+                                    <i class="fas fa-plane me-2"></i>항공편 정보
                                 </h6>
                             </div>
-                            <div class="col-md-8 mb-3">
-                                <label class="form-label">프로모션 코드 입력</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="promo_code" placeholder="예: WINTER2025">
-                                    <button class="btn btn-primary" type="button" onclick="checkPromotion()">
-                                        <i class="fas fa-check me-1"></i>적용
-                                    </button>
-                                </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">입국 항공편명</label>
+                                <input type="text" class="form-control" id="arrival_flight" placeholder="예: KE123">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">출국 항공편명</label>
+                                <input type="text" class="form-control" id="departure_flight" placeholder="예: KE124">
+                            </div>
+                        </div>
+
+                        <!-- 프로모션 코드 섹션 (자동 적용) -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-tag me-2"></i>프로모션 요금 (자동 적용)
+                                </h6>
                             </div>
                             <div class="col-md-12">
                                 <div id="promoResult" style="display: none;">
-                                    <!-- 프로모션 결과가 여기 표시됨 -->
+                                    <!-- 프로모션 결과가 자동으로 표시됨 -->
+                                </div>
+                                <div id="promoLoading" style="display: none;" class="text-center py-2">
+                                    <i class="fas fa-spinner fa-spin"></i> 프로모션 요금 조회 중...
                                 </div>
                             </div>
                         </div>
@@ -468,7 +512,83 @@
             }
         }
 
-        // 프로모션 체크
+        // 자동 프로모션 적용
+        async function autoApplyPromotion() {
+            const hotelId = document.getElementById('hotel_id').value;
+            const checkIn = document.getElementById('check_in_date').value;
+            const checkOut = document.getElementById('check_out_date').value;
+            
+            // 필수 조건 확인
+            if (!hotelId || !checkIn || !checkOut) {
+                return; // 조건 미충족 시 조용히 리턴
+            }
+            
+            // 첫 번째 객실의 room_type_id 가져오기
+            const firstRoomType = document.querySelector('.room-type-select');
+            if (!firstRoomType || !firstRoomType.value) {
+                return; // 객실 타입 미선택 시 조용히 리턴
+            }
+            
+            // 로딩 표시
+            document.getElementById('promoLoading').style.display = 'block';
+            document.getElementById('promoResult').style.display = 'none';
+            
+            // 프로모션 조회 (자동으로 가장 유리한 프로모션 찾기)
+            await findBestPromotion(hotelId, firstRoomType.value, checkIn, checkOut);
+        }
+        
+        // 최적 프로모션 찾기
+        async function findBestPromotion(hotelId, roomTypeId, checkIn, checkOut) {
+            try {
+                // 모든 활성 프로모션 조회
+                const response = await fetch('/api/promotions?hotel_id=' + hotelId + '&is_active=true');
+                const promotions = await response.json();
+                
+                if (!promotions || promotions.length === 0) {
+                    document.getElementById('promoLoading').style.display = 'none';
+                    return;
+                }
+                
+                // 각 프로모션 요금 확인 및 최저가 찾기
+                let bestPromotion = null;
+                let lowestRate = Infinity;
+                
+                for (const promo of promotions) {
+                    const rateResponse = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            promo_code: promo.promo_code,
+                            hotel_id: parseInt(hotelId),
+                            room_type_id: parseInt(roomTypeId),
+                            check_in_date: checkIn,
+                            check_out_date: checkOut,
+                            booking_date: new Date().toISOString().split('T')[0]
+                        })
+                    });
+                    
+                    const result = await rateResponse.json();
+                    
+                    if (result.valid && result.total_room_rate < lowestRate) {
+                        lowestRate = result.total_room_rate;
+                        bestPromotion = result;
+                    }
+                }
+                
+                document.getElementById('promoLoading').style.display = 'none';
+                
+                if (bestPromotion) {
+                    currentPromotion = bestPromotion;
+                    displayPromotionResult(bestPromotion);
+                    calculateRoomRates();
+                }
+            } catch (error) {
+                console.error('프로모션 조회 오류:', error);
+                document.getElementById('promoLoading').style.display = 'none';
+            }
+        }
+        
+        // 수동 프로모션 체크 (기존 함수 유지)
         async function checkPromotion() {
             const promoCode = document.getElementById('promo_code').value.trim();
             const hotelId = document.getElementById('hotel_id').value;
@@ -576,22 +696,22 @@
             
             const roomHtml = `
                 <div class="room-card" id="${roomId}" data-room-id="${roomCounter}">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="mb-0"><i class="fas fa-bed me-2"></i>객실 ${roomCounter}</h6>
                         <button type="button" class="btn btn-sm btn-danger" onclick="removeRoom('${roomId}')">
                             <i class="fas fa-trash"></i> 삭제
                         </button>
                     </div>
                     
-                    <div class="row mb-3">
+                    <div class="row mb-2">
                         <div class="col-md-6">
                             <label class="form-label">객실 타입 *</label>
-                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="calculateRoomRates()">
+                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="autoApplyPromotion()">
                                 <option value="">객실 타입 선택</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">1박당 요금 (자동)</label>
+                            <label class="form-label">총 객실 요금 (자동)</label>
                             <input type="text" class="form-control" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0;">
                         </div>
                     </div>
@@ -889,6 +1009,8 @@
                 status: document.getElementById('status').value,
                 promotion_id: currentPromotion ? currentPromotion.promotion.id : null,
                 promo_code: currentPromotion ? currentPromotion.promotion.promo_code : null,
+                arrival_flight: document.getElementById('arrival_flight').value || null,
+                departure_flight: document.getElementById('departure_flight').value || null,
                 special_requests: document.getElementById('special_requests').value,
                 internal_memo: document.getElementById('internal_memo').value,
                 rooms: [],
