@@ -28,25 +28,43 @@ router.get('/api/season-rates', requireLogin, async (req, res) => {
       return res.status(400).json({ error: '호텔을 선택해주세요.' });
     }
     
+    // 테이블 존재 확인
+    const tableCheck = await pool.query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'season_rates'
+      )`
+    );
+    
+    if (!tableCheck.rows[0].exists) {
+      return res.status(500).json({ 
+        error: '시즌 요금 테이블이 생성되지 않았습니다. 서버 로그를 확인하거나 관리자에게 문의하세요.' 
+      });
+    }
+    
     const result = await pool.query(
       `SELECT 
-        sr.*,
-        st.season_name,
+        sr.id,
+        sr.hotel_id,
+        sr.season_type_id,
+        sr.room_type_id,
+        sr.base_rate,
+        sr.currency,
+        sr.notes,
         st.season_code,
-        st.color_code,
-        rt.room_type_name,
-        rt.room_code
+        st.season_name,
+        rt.room_type_name
       FROM season_rates sr
       JOIN season_types st ON sr.season_type_id = st.id
       JOIN room_types rt ON sr.room_type_id = rt.id
       WHERE sr.hotel_id = $1
-      ORDER BY st.display_order, rt.display_order`,
+      ORDER BY st.display_order, rt.room_type_name`,
       [hotel_id]
     );
     
     res.json(result.rows);
   } catch (error) {
-    console.error('❌ 시즌별 요금 조회 오류:', error);
+    console.error('❌ 시즌 요금 조회 오류:', error);
     res.status(500).json({ error: error.message });
   }
 });

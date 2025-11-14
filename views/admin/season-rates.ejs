@@ -87,22 +87,41 @@
       const hid = document.getElementById('hotelSelect').value;
       if (!hid) return;
       
-      // 객실 타입 로드
-      const rtRes = await fetch(`/api/hotels/${hid}/room-types`);
-      roomTypes = await rtRes.json();
-      
-      // 요금 로드
-      const rateRes = await fetch(`/api/season-rates?hotel_id=${hid}`);
-      const rateData = await rateRes.json();
-      
-      rates = {};
-      rateData.forEach(r => {
-        const key = `${r.season_type_id}-${r.room_type_id}`;
-        rates[key] = r;
-      });
-      
-      changes = {};
-      renderTable();
+      try {
+        // 객실 타입 로드
+        const rtRes = await fetch(`/api/hotels/${hid}/room-types`);
+        if (!rtRes.ok) {
+          const error = await rtRes.json();
+          console.error('객실 타입 로드 오류:', error);
+          alert('객실 타입 로드 실패: ' + (error.error || '알 수 없는 오류'));
+          return;
+        }
+        roomTypes = await rtRes.json();
+        
+        // 요금 로드
+        const rateRes = await fetch(`/api/season-rates?hotel_id=${hid}`);
+        if (!rateRes.ok) {
+          const error = await rateRes.json();
+          console.error('요금 데이터 로드 오류:', error);
+          alert('요금 데이터 로드 실패: ' + (error.error || '알 수 없는 오류'));
+          return;
+        }
+        const rateData = await rateRes.json();
+        
+        rates = {};
+        if (Array.isArray(rateData)) {
+          rateData.forEach(r => {
+            const key = `${r.season_type_id}-${r.room_type_id}`;
+            rates[key] = r;
+          });
+        }
+        
+        changes = {};
+        renderTable();
+      } catch (error) {
+        console.error('데이터 로드 오류:', error);
+        alert('데이터 로드 중 오류가 발생했습니다. 콘솔을 확인하세요.');
+      }
     }
     
     function renderTable() {
