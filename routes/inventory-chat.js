@@ -169,12 +169,17 @@ ${inventoryText}
       dataSource: {
         totalRecords: result.rows.length,
         dateRange: `${params[0]} ~ ${params[1]}`,
-        hotelsIncluded: Object.keys(inventoryByHotel).length
+        hotelsIncluded: Object.keys(hotelGroups).length
       }
     });
 
   } catch (error) {
-    console.error('❌ 챗봇 오류:', error);
+    console.error('❌ 챗봇 오류 상세:', {
+      message: error.message,
+      code: error.code,
+      type: error.type,
+      stack: error.stack
+    });
     
     // OpenAI API 오류 처리
     if (error.code === 'insufficient_quota') {
@@ -184,9 +189,18 @@ ${inventoryText}
       });
     }
     
+    // API 키 오류
+    if (error.code === 'invalid_api_key' || error.message?.includes('API key')) {
+      console.error('🔑 OpenAI API 키 오류 - 환경변수를 확인하세요');
+      return res.json({
+        success: true,
+        reply: '죄송합니다. AI 서비스 설정에 문제가 있습니다. 💬\n\n직접 재고 현황 표를 확인하시거나, 전화로 문의해주세요!'
+      });
+    }
+    
     res.status(500).json({ 
       error: error.message,
-      reply: '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      reply: '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해주세요.\n\n' + (process.env.NODE_ENV === 'development' ? `(개발 모드: ${error.message})` : '')
     });
   }
 });
