@@ -1784,11 +1784,14 @@
                 const extraData = {};
                 
                 extra.querySelectorAll('[data-extra-field]').forEach(field => {
-                    const fieldName = field.dataset.guestField;
+                    const fieldName = field.dataset.extraField;  // ⚠️ 수정: guestField → extraField
                     extraData[fieldName] = field.value;
                 });
                 
-                data.extras.push(extraData);
+                // item_name이 있는 경우만 추가
+                if (extraData.item_name && extraData.item_name.trim() !== '') {
+                    data.extras.push(extraData);
+                }
             });
             
             try {

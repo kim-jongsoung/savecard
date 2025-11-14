@@ -156,6 +156,11 @@ router.post('/', async (req, res) => {
         
         if (extras && extras.length > 0) {
             for (const extra of extras) {
+                // item_name이 없으면 스킵
+                if (!extra.item_name || extra.item_name.trim() === '') {
+                    continue;
+                }
+                
                 const pricingType = extra.pricing_type || 'flat';
                 let totalPrice = 0;
                 
