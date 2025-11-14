@@ -460,12 +460,6 @@
                                 <option value="modifying">수정중(예약변경)</option>
                             </select>
                         </div>
-                        <div class="col-md-8 mb-2">
-                            <label class="form-label">호텔 선택 *</label>
-                            <select class="form-control" id="hotel_id" required onchange="loadRoomTypes(); autoApplyPromotion();">
-                                <option value="">호텔 선택</option>
-                            </select>
-                        </div>
                         <div class="col-md-4 mb-2">
                             <label class="form-label">예약일 (인박스 입력일)</label>
                             <input type="date" class="form-control fw-bold" id="reservation_date" readonly style="background: #f0f0f0;">
@@ -1240,11 +1234,11 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">수량</label>
-                            <input type="number" class="form-control form-control-sm" value="${quantity}" data-extra-field="quantity" data-extra="${extraCounter}" onchange="calculateExtrasTotal()">
+                            <input type="number" class="form-control form-control-sm" value="${quantity}" data-extra-field="quantity" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">단가 (USD)</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm" value="${unitPrice}" data-extra-field="unit_price" data-extra="${extraCounter}" onchange="calculateExtrasTotal()">
+                            <input type="number" step="0.01" class="form-control form-control-sm" value="${unitPrice}" data-extra-field="unit_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">소계 (USD)</label>
@@ -1259,33 +1253,25 @@
             `;
             
             document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
-            calculateExtrasTotal();
-        }
-        
-        // 추가 항목 총액 계산
-        function calculateExtrasTotal() {
-            let total = 0;
             
-            document.querySelectorAll('.extra-item-card').forEach(card => {
-                const extraNum = card.querySelector('[data-extra-field="quantity"]')?.dataset.extra;
-                if (!extraNum) return;
-                
-                const quantity = parseFloat(card.querySelector('[data-extra-field="quantity"]')?.value) || 0;
-                const unitPrice = parseFloat(card.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
-                const subtotal = quantity * unitPrice;
-                
-                // 소계 업데이트
-                const subtotalField = document.getElementById(`extra_${extraNum}_subtotal`);
-                if (subtotalField) {
-                    subtotalField.value = subtotal.toFixed(2);
+            // 자동 추가된 조식의 소계 계산 (정액 요금이므로 flat 타입)
+            setTimeout(() => {
+                const totalField = document.getElementById(`extra_${extraCounter}_subtotal`);
+                if (totalField) {
+                    totalField.value = (quantity * unitPrice).toFixed(2);
                 }
                 
-                total += subtotal;
-            });
-            
-            // 총 추가 항목 요금 업데이트
-            document.getElementById('totalExtrasCharge').value = total.toFixed(2);
-            calculateTotal();
+                // 전체 추가 항목 합계 재계산
+                let totalExtras = 0;
+                document.querySelectorAll('.extra-item-card').forEach(extra => {
+                    const subtotalField = extra.querySelector('[id$="_subtotal"]');
+                    if (subtotalField && subtotalField.value) {
+                        totalExtras += parseFloat(subtotalField.value) || 0;
+                    }
+                });
+                document.getElementById('totalExtrasCharge').value = totalExtras.toFixed(2);
+                calculateTotal();
+            }, 100);
         }
         
         // 객실 추가
@@ -1418,11 +1404,55 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small">수량</label>
-                            <input type="number" class="form-control" value="1" min="1" data-extra-field="quantity" data-extra="${extraCounter}">
+                            <input type="number" class="form-control" value="1" min="1" data-extra-field="quantity" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label small">유형</label>
+                            <select class="form-control" data-extra-field="pricing_type" data-extra="${extraCounter}" onchange="toggleExtraPricing(${extraCounter})">
+                                <option value="per_person">인원별 요금</option>
+                                <option value="flat">정액 요금</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-2" id="perPersonPricing_${extraCounter}">
+                        <div class="col-md-3">
+                            <label class="form-label small">성인 수</label>
+                            <input type="number" class="form-control" value="0" min="0" data-extra-field="adult_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">성인 단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="adult_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">소아 수</label>
+                            <input type="number" class="form-control" value="0" min="0" data-extra-field="child_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">소아 단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="child_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">유아 수</label>
+                            <input type="number" class="form-control" value="0" min="0" data-extra-field="infant_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">유아 단가 ($)</label>
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="infant_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-2" id="flatPricing_${extraCounter}" style="display:none;">
+                        <div class="col-md-6">
                             <label class="form-label small">단가 ($)</label>
-                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="unit_price" data-extra="${extraCounter}">
+                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="unit_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-12">
+                            <label class="form-label small">소계</label>
+                            <input type="text" class="form-control fw-bold" id="extra_${extraCounter}_total" readonly style="background: #e7f3ff; color: #2196F3;">
                         </div>
                     </div>
                 </div>
@@ -1431,10 +1461,74 @@
             document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
         }
         
+        // 추가 항목 가격 유형 전환
+        function toggleExtraPricing(extraNum) {
+            const type = document.querySelector(`[data-extra-field="pricing_type"][data-extra="${extraNum}"]`).value;
+            
+            if (type === 'per_person') {
+                document.getElementById(`perPersonPricing_${extraNum}`).style.display = 'flex';
+                document.getElementById(`flatPricing_${extraNum}`).style.display = 'none';
+            } else {
+                document.getElementById(`perPersonPricing_${extraNum}`).style.display = 'none';
+                document.getElementById(`flatPricing_${extraNum}`).style.display = 'flex';
+            }
+            
+            calculateExtraTotal(extraNum);
+        }
+        
+        // 추가 항목 소계 계산
+        function calculateExtraTotal(extraNum) {
+            const type = document.querySelector(`[data-extra-field="pricing_type"][data-extra="${extraNum}"]`).value;
+            const quantity = parseInt(document.querySelector(`[data-extra-field="quantity"][data-extra="${extraNum}"]`).value) || 1;
+            
+            let total = 0;
+            
+            if (type === 'per_person') {
+                const adultCount = parseInt(document.querySelector(`[data-extra-field="adult_count"][data-extra="${extraNum}"]`).value) || 0;
+                const adultPrice = parseFloat(document.querySelector(`[data-extra-field="adult_price"][data-extra="${extraNum}"]`).value) || 0;
+                const childCount = parseInt(document.querySelector(`[data-extra-field="child_count"][data-extra="${extraNum}"]`).value) || 0;
+                const childPrice = parseFloat(document.querySelector(`[data-extra-field="child_price"][data-extra="${extraNum}"]`).value) || 0;
+                const infantCount = parseInt(document.querySelector(`[data-extra-field="infant_count"][data-extra="${extraNum}"]`).value) || 0;
+                const infantPrice = parseFloat(document.querySelector(`[data-extra-field="infant_price"][data-extra="${extraNum}"]`).value) || 0;
+                
+                total = (adultCount * adultPrice + childCount * childPrice + infantCount * infantPrice) * quantity;
+            } else {
+                const unitPrice = parseFloat(document.querySelector(`[data-extra-field="unit_price"][data-extra="${extraNum}"]`).value) || 0;
+                total = unitPrice * quantity;
+            }
+            
+            document.getElementById(`extra_${extraNum}_total`).value = `$${total.toFixed(2)}`;
+            
+            // 모든 추가 항목 합계 계산
+            let totalExtras = 0;
+            document.querySelectorAll('.extra-item-card').forEach(extra => {
+                const totalInput = extra.querySelector('[id$="_total"]');
+                if (totalInput && totalInput.value) {
+                    const amount = parseFloat(totalInput.value.replace('$', '')) || 0;
+                    totalExtras += amount;
+                }
+            });
+            document.getElementById('totalExtrasCharge').value = totalExtras.toFixed(2);
+            
+            calculateTotal();
+        }
+        
         // 추가 항목 제거
         function removeExtra(extraId) {
             if (confirm('이 항목을 삭제하시겠습니까?')) {
                 document.getElementById(extraId).remove();
+                
+                // 합계 재계산
+                let totalExtras = 0;
+                document.querySelectorAll('.extra-item-card').forEach(extra => {
+                    const totalInput = extra.querySelector('[id$="_total"]');
+                    if (totalInput && totalInput.value) {
+                        const amount = parseFloat(totalInput.value.replace('$', '')) || 0;
+                        totalExtras += amount;
+                    }
+                });
+                document.getElementById('totalExtrasCharge').value = totalExtras.toFixed(2);
+                calculateTotal();
                 calculateTotal();
             }
         }
@@ -1595,20 +1689,44 @@
                                     if (extraCard) {
                                         const itemNameInput = extraCard.querySelector('[data-extra-field="item_name"]');
                                         const quantityInput = extraCard.querySelector('[data-extra-field="quantity"]');
-                                        const unitPriceInput = extraCard.querySelector('[data-extra-field="unit_price"]');
+                                        const pricingTypeInput = extraCard.querySelector('[data-extra-field="pricing_type"]');
                                         
                                         if (itemNameInput) itemNameInput.value = extra.item_name || '';
                                         if (quantityInput) quantityInput.value = extra.quantity || 1;
-                                        if (unitPriceInput) unitPriceInput.value = extra.unit_price || extra.total_selling_price || 0;
+                                        if (pricingTypeInput) pricingTypeInput.value = extra.pricing_type || 'flat';
                                         
-                                        totalExtras += parseFloat(extra.total_selling_price || 0);
+                                        // pricing_type에 따라 필드 채우기
+                                        if (extra.pricing_type === 'per_person') {
+                                            // 인원별 요금
+                                            const adultCountInput = extraCard.querySelector('[data-extra-field="adult_count"]');
+                                            const adultPriceInput = extraCard.querySelector('[data-extra-field="adult_price"]');
+                                            const childCountInput = extraCard.querySelector('[data-extra-field="child_count"]');
+                                            const childPriceInput = extraCard.querySelector('[data-extra-field="child_price"]');
+                                            const infantCountInput = extraCard.querySelector('[data-extra-field="infant_count"]');
+                                            const infantPriceInput = extraCard.querySelector('[data-extra-field="infant_price"]');
+                                            
+                                            if (adultCountInput) adultCountInput.value = extra.adult_count || 0;
+                                            if (adultPriceInput) adultPriceInput.value = extra.adult_price || 0;
+                                            if (childCountInput) childCountInput.value = extra.child_count || 0;
+                                            if (childPriceInput) childPriceInput.value = extra.child_price || 0;
+                                            if (infantCountInput) infantCountInput.value = extra.infant_count || 0;
+                                            if (infantPriceInput) infantPriceInput.value = extra.infant_price || 0;
+                                        } else {
+                                            // 정액 요금
+                                            const unitPriceInput = extraCard.querySelector('[data-extra-field="unit_price"]');
+                                            if (unitPriceInput) unitPriceInput.value = extra.unit_price || 0;
+                                        }
+                                        
+                                        // UI 전환 및 소계 계산
+                                        toggleExtraPricing(extraCounter);
+                                        calculateExtraTotal(extraCounter);
+                                        
                                         console.log(`  ✅ 추가항목 ${idx + 1} 채움:`, extra.item_name);
                                     }
                                 }, 100 * idx);
                             });
                             
                             setTimeout(() => {
-                                document.getElementById('totalExtrasCharge').value = totalExtras.toFixed(2);
                                 calculateTotal();
                             }, 100 * data.extras.length + 100);
                         }
@@ -1688,18 +1806,43 @@
                 if (!extraNum) return;
                 
                 const itemName = extraCard.querySelector('[data-extra-field="item_name"]')?.value;
-                const quantity = parseInt(extraCard.querySelector('[data-extra-field="quantity"]')?.value) || 0;
-                const unitPrice = parseFloat(extraCard.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
-                const notes = extraCard.querySelector('[data-extra-field="notes"]')?.value || '';
+                const pricingType = extraCard.querySelector('[data-extra-field="pricing_type"]')?.value || 'flat';
+                const quantity = parseInt(extraCard.querySelector('[data-extra-field="quantity"]')?.value) || 1;
                 
-                if (itemName && quantity > 0) {
-                    extras.push({
-                        item_name: itemName,
-                        quantity: quantity,
-                        unit_price: unitPrice,
-                        total_selling_price: quantity * unitPrice,
-                        notes: notes
-                    });
+                let totalPrice = 0;
+                let extraData = {
+                    item_name: itemName,
+                    pricing_type: pricingType,
+                    quantity: quantity
+                };
+                
+                if (pricingType === 'per_person') {
+                    const adultCount = parseInt(extraCard.querySelector('[data-extra-field="adult_count"]')?.value) || 0;
+                    const adultPrice = parseFloat(extraCard.querySelector('[data-extra-field="adult_price"]')?.value) || 0;
+                    const childCount = parseInt(extraCard.querySelector('[data-extra-field="child_count"]')?.value) || 0;
+                    const childPrice = parseFloat(extraCard.querySelector('[data-extra-field="child_price"]')?.value) || 0;
+                    const infantCount = parseInt(extraCard.querySelector('[data-extra-field="infant_count"]')?.value) || 0;
+                    const infantPrice = parseFloat(extraCard.querySelector('[data-extra-field="infant_price"]')?.value) || 0;
+                    
+                    totalPrice = (adultCount * adultPrice + childCount * childPrice + infantCount * infantPrice) * quantity;
+                    
+                    extraData.adult_count = adultCount;
+                    extraData.adult_price = adultPrice;
+                    extraData.child_count = childCount;
+                    extraData.child_price = childPrice;
+                    extraData.infant_count = infantCount;
+                    extraData.infant_price = infantPrice;
+                    extraData.unit_price = null;
+                } else {
+                    const unitPrice = parseFloat(extraCard.querySelector('[data-extra-field="unit_price"]')?.value) || 0;
+                    totalPrice = unitPrice * quantity;
+                    extraData.unit_price = unitPrice;
+                }
+                
+                extraData.total_selling_price = totalPrice;
+                
+                if (itemName) {
+                    extras.push(extraData);
                 }
             });
             
