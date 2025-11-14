@@ -669,77 +669,78 @@
                 // AI가 rooms 배열로 파싱한 경우 (신규)
                 console.log('🏨 객실 추가:', data.rooms.length + '개');
                 
-                data.rooms.forEach((room, roomIndex) => {
-                    addRoom();
+                // 순차적으로 객실 처리 (async/await 사용)
+                for (let roomIndex = 0; roomIndex < data.rooms.length; roomIndex++) {
+                    const room = data.rooms[roomIndex];
                     const roomNum = roomIndex + 1;
                     
-                    setTimeout(() => {
-                        // 객실 타입 자동 선택
-                        if (room.room_type && allRoomTypes.length > 0) {
-                            const roomType = allRoomTypes.find(rt => 
-                                rt.room_type_name.toLowerCase().includes(room.room_type.toLowerCase()) ||
-                                room.room_type.toLowerCase().includes(rt.room_type_name.toLowerCase())
-                            );
+                    addRoom();
+                    
+                    // 객실 생성 대기
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    
+                    // 객실 타입 자동 선택
+                    if (room.room_type && allRoomTypes.length > 0) {
+                        const roomType = allRoomTypes.find(rt => 
+                            rt.room_type_name.toLowerCase().includes(room.room_type.toLowerCase()) ||
+                            room.room_type.toLowerCase().includes(rt.room_type_name.toLowerCase())
+                        );
+                        
+                        if (roomType) {
+                            const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
+                            if (roomTypeSelect) {
+                                roomTypeSelect.value = roomType.id;
+                                console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name}`);
+                                
+                                // 프로모션 조회 (await로 완료 대기)
+                                await onRoomTypeChange(roomNum);
+                                console.log(`💰 객실 ${roomNum} 프로모션 조회 완료`);
+                            }
+                        }
+                    }
+                    
+                    // 투숙객 추가
+                    if (room.guests && Array.isArray(room.guests)) {
+                        for (let guestIndex = 0; guestIndex < room.guests.length; guestIndex++) {
+                            const guest = room.guests[guestIndex];
+                            const guestNum = guestIndex + 1;
                             
-                            if (roomType) {
-                                const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
-                                if (roomTypeSelect) {
-                                    roomTypeSelect.value = roomType.id;
-                                    console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name}`);
-                                    
-                                    // 프로모션 조회 (비동기)
-                                    setTimeout(() => {
-                                        onRoomTypeChange(roomNum);
-                                    }, 100);
-                                }
+                            if (guestIndex > 0) {
+                                // 2번째 투숙객부터는 추가
+                                addGuest(roomNum);
+                                await new Promise(resolve => setTimeout(resolve, 100));
+                            }
+                            
+                            // 투숙객 정보 입력
+                            if (guest.name_ko) {
+                                const input = document.querySelector(`[data-guest-field="guest_name_ko"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                if (input) input.value = guest.name_ko;
+                            }
+                            if (guest.name_en) {
+                                const input = document.querySelector(`[data-guest-field="guest_name_en"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                if (input) input.value = guest.name_en;
+                            }
+                            if (guest.age_category) {
+                                const input = document.querySelector(`[data-guest-field="age_category"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                if (input) input.value = guest.age_category;
+                            }
+                            if (guest.phone && roomIndex === 0 && guestIndex === 0) {
+                                const input = document.querySelector(`[data-guest-field="phone"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                if (input) input.value = guest.phone;
+                            }
+                            if (guest.email && roomIndex === 0 && guestIndex === 0) {
+                                const input = document.querySelector(`[data-guest-field="email"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
+                                if (input) input.value = guest.email;
                             }
                         }
                         
-                        // 투숙객 추가
-                        if (room.guests && Array.isArray(room.guests)) {
-                            room.guests.forEach((guest, guestIndex) => {
-                                if (guestIndex > 0) {
-                                    // 2번째 투숙객부터는 추가
-                                    addGuest(roomNum);
-                                }
-                                
-                                const guestNum = guestIndex + 1;
-                                
-                                setTimeout(() => {
-                                    if (guest.name_ko) {
-                                        const input = document.querySelector(`[data-guest-field="guest_name_ko"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
-                                        if (input) input.value = guest.name_ko;
-                                    }
-                                    if (guest.name_en) {
-                                        const input = document.querySelector(`[data-guest-field="guest_name_en"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
-                                        if (input) input.value = guest.name_en;
-                                    }
-                                    if (guest.age_category) {
-                                        const input = document.querySelector(`[data-guest-field="age_category"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
-                                        if (input) input.value = guest.age_category;
-                                    }
-                                    if (guest.phone && roomIndex === 0 && guestIndex === 0) {
-                                        const input = document.querySelector(`[data-guest-field="phone"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
-                                        if (input) input.value = guest.phone;
-                                    }
-                                    if (guest.email && roomIndex === 0 && guestIndex === 0) {
-                                        const input = document.querySelector(`[data-guest-field="email"][data-room="${roomNum}"][data-guest="${guestNum}"]`);
-                                        if (input) input.value = guest.email;
-                                    }
-                                }, 50 * guestIndex);
-                            });
-                            
-                            console.log(`✅ 객실 ${roomNum}: ${room.guests.length}명 투숙객 추가`);
-                        }
-                    }, 200 * (roomIndex + 1));
-                });
+                        console.log(`✅ 객실 ${roomNum}: ${room.guests.length}명 투숙객 추가`);
+                    }
+                }
                 
                 // 모든 객실 처리 완료 후 수배피 계산
-                const totalProcessTime = 200 * data.rooms.length + 500;
-                setTimeout(() => {
-                    console.log('💰 수배피 계산 시작');
-                    calculateAgencyFee();
-                }, totalProcessTime);
+                console.log('💰 수배피 계산 시작');
+                calculateAgencyFee();
             } else {
                 // 기존 방식 (guests 배열만 있거나 인원수만 있는 경우)
                 addRoom();
