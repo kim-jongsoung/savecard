@@ -426,14 +426,14 @@
                             </h6>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label class="form-label">호텔 *</label>
-                            <select class="form-control" id="hotel_id" required onchange="loadRoomTypes(); autoApplyPromotion();">
+                            <label class="form-label">호텔 * <span class="badge bg-secondary">변경 불가</span></label>
+                            <select class="form-control" id="hotel_id" required disabled style="background: #e9ecef; cursor: not-allowed;">
                                 <option value="">호텔 선택</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-2">
-                            <label class="form-label">예약 거래처</label>
-                            <select class="form-control" id="booking_agency_id" onchange="calculateAgencyFee()">
+                            <label class="form-label">예약 거래처 <span class="badge bg-secondary">변경 불가</span></label>
+                            <select class="form-control" id="booking_agency_id" disabled style="background: #e9ecef; cursor: not-allowed;">
                                 <option value="">거래처 선택</option>
                             </select>
                         </div>
@@ -1783,16 +1783,20 @@
                     
                     console.log('✅ 기본 정보 채움 (총 객실: $' + (data.total_room_rate || 0) + ', 총 추가: $' + (data.total_extras_rate || 0) + ', 수배피: $' + (data.agency_fee || 0) + ')');
                     
-                    // 호텔 선택
+                    // 호텔 선택 (⭐ 변경 불가 - disabled 설정)
                     if (data.hotel_id) {
-                        document.getElementById('hotel_id').value = data.hotel_id;
+                        const hotelSelect = document.getElementById('hotel_id');
+                        hotelSelect.value = data.hotel_id;
+                        hotelSelect.disabled = true; // ⭐ 변경 불가
                         await loadRoomTypes();
-                        console.log('✅ 호텔 선택:', data.hotel_id);
+                        console.log('✅ 호텔 선택 (고정):', data.hotel_id);
                     }
                     
-                    // 거래처 선택 (⭐ 수배피는 이미 로드됨 - 재계산 방지)
+                    // 거래처 선택 (⭐ 변경 불가 - disabled 설정, 수배피는 이미 로드됨)
                     if (data.booking_agency_id) {
-                        document.getElementById('booking_agency_id').value = data.booking_agency_id;
+                        const agencySelect = document.getElementById('booking_agency_id');
+                        agencySelect.value = data.booking_agency_id;
+                        agencySelect.disabled = true; // ⭐ 변경 불가
                         // calculateAgencyFee(); // ❓ 주석 처리: 저장된 수배피 값 유지
                         
                         // 거래처 이름 표시만 업데이트
@@ -1801,7 +1805,7 @@
                             document.getElementById('agencyFeeName').textContent = agency.agency_name;
                         }
                         
-                        console.log('✅ 거래처 선택:', data.booking_agency_id, '수배피: $' + (data.agency_fee || 0));
+                        console.log('✅ 거래처 선택 (고정):', data.booking_agency_id, '수배피: $' + (data.agency_fee || 0));
                     }
                     
                     // 박수 계산
