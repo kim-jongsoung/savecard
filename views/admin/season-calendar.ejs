@@ -118,19 +118,34 @@
       const year = parseInt(start[0]), month = parseInt(start[1]);
       seasonCalendar = {};
       
-      for (let m = 0; m < 6; m++) {
-        const y = month + m > 12 ? year + 1 : year;
-        const mo = month + m > 12 ? month + m - 12 : month + m;
-        const res = await fetch(`/api/season-calendar?hotel_id=${hid}&year=${y}&month=${mo}`);
-        const data = await res.json();
+      try {
+        for (let m = 0; m < 6; m++) {
+          const y = month + m > 12 ? year + 1 : year;
+          const mo = month + m > 12 ? month + m - 12 : month + m;
+          const res = await fetch(`/api/season-calendar?hotel_id=${hid}&year=${y}&month=${mo}`);
+          
+          if (!res.ok) {
+            const error = await res.json();
+            console.error('API 오류:', error);
+            alert('데이터 로드 실패: ' + (error.error || '알 수 없는 오류'));
+            return;
+          }
+          
+          const data = await res.json();
+          
+          if (Array.isArray(data)) {
+            data.forEach(item => {
+              const dateOnly = item.calendar_date.split('T')[0];
+              seasonCalendar[dateOnly] = item.season_code;
+            });
+          }
+        }
         
-        data.forEach(item => {
-          const dateOnly = item.calendar_date.split('T')[0];
-          seasonCalendar[dateOnly] = item.season_code;
-        });
+        renderCalendar(year, month);
+      } catch (error) {
+        console.error('데이터 로드 오류:', error);
+        alert('데이터 로드 중 오류가 발생했습니다. 콘솔을 확인하세요.');
       }
-      
-      renderCalendar(year, month);
     }
     
     function renderCalendar(year, month) {

@@ -49,6 +49,20 @@ router.get('/api/season-calendar', requireLogin, async (req, res) => {
       return res.status(400).json({ error: '호텔, 년도, 월을 입력해주세요.' });
     }
     
+    // 테이블 존재 확인
+    const tableCheck = await pool.query(
+      `SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'season_types'
+      )`
+    );
+    
+    if (!tableCheck.rows[0].exists) {
+      return res.status(500).json({ 
+        error: '시즌 테이블이 생성되지 않았습니다. Supabase SQL Editor에서 마이그레이션을 실행해주세요.' 
+      });
+    }
+    
     // 해당 월의 시작일과 종료일
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const lastDay = new Date(year, month, 0).getDate();
