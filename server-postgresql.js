@@ -16213,6 +16213,21 @@ async function startServer() {
             console.warn('⚠️  프로모션 필드 마이그레이션 경고:', migrateErr.message);
         }
         
+        // ⭐ 호텔 예약 객실 테이블에 조식 필드 추가
+        try {
+            console.log('🍳 hotel_reservation_rooms 테이블에 조식 필드 추가 중...');
+            await pool.query(`
+                ALTER TABLE hotel_reservation_rooms
+                ADD COLUMN IF NOT EXISTS breakfast_included BOOLEAN DEFAULT false,
+                ADD COLUMN IF NOT EXISTS breakfast_days INTEGER DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS breakfast_adult_price DECIMAL(10,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS breakfast_child_price DECIMAL(10,2) DEFAULT 0
+            `);
+            console.log('✅ 조식 필드 추가 완료 (breakfast_included, breakfast_days, breakfast_adult_price, breakfast_child_price)');
+        } catch (migrateErr) {
+            console.warn('⚠️  조식 필드 마이그레이션 경고:', migrateErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
