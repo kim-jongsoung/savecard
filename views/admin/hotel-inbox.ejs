@@ -1612,8 +1612,10 @@
             // ⭐ 이제 조식은 객실 정보에 포함되므로 추가 항목에 넣지 않음
             console.log('ℹ️ 조식은 이제 객실 정보에 포함됩니다 (추가 항목 X)');
             return;
+        }
             
-            /* 기존 로직 주석 처리
+        /* ⭐⭐⭐ 기존 로직 주석 처리 (사용 안 함)
+        async function addBreakfastFromRoomType_OLD(roomNum, roomType) {
             if (!roomType) return;
             
             const breakfastIncluded = roomType.breakfast_included || false;
@@ -1695,6 +1697,7 @@
             document.getElementById('extrasContainer').insertAdjacentHTML('beforeend', extraHtml);
             calculateExtrasTotal();
         }
+        */
         
         // 특정 룸타입의 최적 프로모션 찾기
         async function findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut) {
