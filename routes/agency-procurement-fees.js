@@ -277,11 +277,31 @@ router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, r
   const { agency_id, hotel_id, check_in_date, nights } = req.query;
   
   try {
+    console.log('🔍 수배피 계산 API 호출:', { agency_id, hotel_id, check_in_date, nights });
+    
     if (!agency_id || !nights) {
+      console.log('⚠️ 필수 파라미터 누락');
       return res.status(400).json({ error: '거래처, 숙박일수를 입력해주세요.' });
     }
     
     const nightsNum = parseInt(nights);
+    
+    // 테이블 존재 확인
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'agency_procurement_fees'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('⚠️ agency_procurement_fees 테이블이 존재하지 않습니다.');
+      return res.json({ 
+        fee: 0, 
+        message: '수배피 테이블이 설정되지 않았습니다.',
+        details: null 
+      });
+    }
     
     // 해당 거래처의 수배피 조회 (우선순위: 호텔별 > 전체)
     let query = `
@@ -308,7 +328,9 @@ router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, r
     
     query += ` ORDER BY hotel_id DESC NULLS LAST, effective_date DESC NULLS LAST LIMIT 1`;
     
+    console.log('📝 수배피 조회 쿼리:', query, params);
     const result = await pool.query(query, params);
+    console.log('📊 수배피 조회 결과:', result.rows.length, '건');
     
     if (result.rows.length === 0) {
       return res.json({ 
@@ -339,6 +361,7 @@ router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, r
       }
     }
     
+    console.log('✅ 수배피 계산 완료:', { fee: calculatedFee, calculation });
     res.json({
       fee: calculatedFee,
       calculation,
@@ -346,7 +369,8 @@ router.get('/api/agency-procurement-fees/calculate', requireLogin, async (req, r
     });
   } catch (error) {
     console.error('❌ 수배피 계산 오류:', error);
-    res.status(500).json({ error: error.message });
+    console.error('스택:', error.stack);
+    res.status(500).json({ error: error.message, details: error.stack });
   }
 });
 
