@@ -624,32 +624,49 @@
             }
         }
 
+        // 문자열 정규화 (띄어쓰기, 특수문자 제거, 소문자 변환)
+        function normalizeString(str) {
+            if (!str) return '';
+            return str
+                .toLowerCase()
+                .replace(/\s+/g, '')  // 모든 공백 제거
+                .replace(/[^\w가-힣]/g, '')  // 특수문자 제거 (한글, 영문, 숫자만 남김)
+                .trim();
+        }
+        
+        // 유연한 문자열 매칭 (부분 일치)
+        function fuzzyMatch(str1, str2) {
+            const normalized1 = normalizeString(str1);
+            const normalized2 = normalizeString(str2);
+            
+            return normalized1.includes(normalized2) || 
+                   normalized2.includes(normalized1);
+        }
+        
         // 파싱 결과를 폼에 채우기
         async function fillParsedData(data) {
             if (data.reservation_number) document.getElementById('reservation_number').value = data.reservation_number;
             
-            // 거래처명으로 거래처 ID 찾기
+            // 거래처명으로 거래처 ID 찾기 (유연한 매칭)
             if (data.booking_agency && allAgencies.length > 0) {
-                const agency = allAgencies.find(a => 
-                    a.agency_name.toLowerCase().includes(data.booking_agency.toLowerCase()) ||
-                    data.booking_agency.toLowerCase().includes(a.agency_name.toLowerCase())
-                );
+                const agency = allAgencies.find(a => fuzzyMatch(a.agency_name, data.booking_agency));
                 if (agency) {
                     document.getElementById('booking_agency_id').value = agency.id;
-                    console.log('🏢 거래처 선택:', agency.agency_name);
-                    // 거래처 선택 시 수배피 계산은 나중에 (호텔, 날짜 입력 후)
+                    console.log('🏢 거래처 선택:', agency.agency_name, '(파싱:', data.booking_agency + ')');
+                } else {
+                    console.log('⚠️ 거래처 매칭 실패:', data.booking_agency);
                 }
             }
             
-            // 호텔명으로 호텔 ID 찾기
+            // 호텔명으로 호텔 ID 찾기 (유연한 매칭)
             if (data.hotel_name) {
-                const hotel = allHotels.find(h => 
-                    h.hotel_name.toLowerCase().includes(data.hotel_name.toLowerCase()) ||
-                    data.hotel_name.toLowerCase().includes(h.hotel_name.toLowerCase())
-                );
+                const hotel = allHotels.find(h => fuzzyMatch(h.hotel_name, data.hotel_name));
                 if (hotel) {
                     document.getElementById('hotel_id').value = hotel.id;
+                    console.log('🏨 호텔 선택:', hotel.hotel_name, '(파싱:', data.hotel_name + ')');
                     await loadRoomTypes(); // 객실 타입 로드 대기
+                } else {
+                    console.log('⚠️ 호텔 매칭 실패:', data.hotel_name);
                 }
             } else if (data.hotel_id) {
                 document.getElementById('hotel_id').value = data.hotel_id;
@@ -679,23 +696,22 @@
                     // 객실 생성 대기
                     await new Promise(resolve => setTimeout(resolve, 200));
                     
-                    // 객실 타입 자동 선택
+                    // 객실 타입 자동 선택 (유연한 매칭)
                     if (room.room_type && allRoomTypes.length > 0) {
-                        const roomType = allRoomTypes.find(rt => 
-                            rt.room_type_name.toLowerCase().includes(room.room_type.toLowerCase()) ||
-                            room.room_type.toLowerCase().includes(rt.room_type_name.toLowerCase())
-                        );
+                        const roomType = allRoomTypes.find(rt => fuzzyMatch(rt.room_type_name, room.room_type));
                         
                         if (roomType) {
                             const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
                             if (roomTypeSelect) {
                                 roomTypeSelect.value = roomType.id;
-                                console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name}`);
+                                console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name} (파싱: ${room.room_type})`);
                                 
                                 // 프로모션 조회 (await로 완료 대기)
                                 await onRoomTypeChange(roomNum);
                                 console.log(`💰 객실 ${roomNum} 프로모션 조회 완료`);
                             }
+                        } else {
+                            console.log(`⚠️ 객실 ${roomNum} 타입 매칭 실패: ${room.room_type}`);
                         }
                     }
                     
