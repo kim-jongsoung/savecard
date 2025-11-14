@@ -296,12 +296,18 @@
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms})
         });
+        
+        // 저장한 내용을 inventory에 반영 (화면 업데이트용)
+        inventory[key] = value;
         saved++;
       }
       
       alert(`${saved} cells updated`);
       changes = {};
-      loadData();
+      
+      // 화면만 다시 렌더링 (데이터는 이미 inventory에 반영됨)
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderInventory(year, month);
     }
     
     loadHotels();
