@@ -16199,6 +16199,20 @@ async function startServer() {
             console.warn('⚠️  거래처 마이그레이션 경고:', migrateErr.message);
         }
         
+        // ⭐ 호텔 예약 객실 테이블에 프로모션 필드 추가
+        try {
+            console.log('🏨 hotel_reservation_rooms 테이블에 프로모션 필드 추가 중...');
+            await pool.query(`
+                ALTER TABLE hotel_reservation_rooms
+                ADD COLUMN IF NOT EXISTS promotion_code VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS rate_condition_id INTEGER,
+                ADD COLUMN IF NOT EXISTS total_selling_price DECIMAL(10,2) DEFAULT 0
+            `);
+            console.log('✅ 프로모션 필드 추가 완료 (promotion_code, rate_condition_id, total_selling_price)');
+        } catch (migrateErr) {
+            console.warn('⚠️  프로모션 필드 마이그레이션 경고:', migrateErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
