@@ -1575,10 +1575,18 @@
         function toggleBreakfastFields(roomNum) {
             const checkbox = document.getElementById(`breakfast_included_${roomNum}`);
             const fieldsDiv = document.getElementById(`breakfast_fields_${roomNum}`);
+            const label = document.querySelector(`label[for="breakfast_included_${roomNum}"]`);
             
             if (!checkbox || !fieldsDiv) return;
             
             fieldsDiv.style.display = checkbox.checked ? 'block' : 'none';
+            
+            // ⭐ 레이블 텍스트 변경
+            if (label) {
+                label.innerHTML = checkbox.checked 
+                    ? '<i class="fas fa-utensils me-1"></i>조식 포함'
+                    : '<i class="fas fa-utensils me-1"></i>조식 불포함';
+            }
             
             // ⭐ 체크박스를 켰을 때 금액이 0이면 객실타입 설정 금액을 자동으로 불러오기
             if (checkbox.checked) {

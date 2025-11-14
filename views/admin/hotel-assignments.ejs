@@ -1477,12 +1477,18 @@
         function toggleBreakfastFields(roomNum) {
             const checkbox = document.getElementById(`breakfast_included_${roomNum}`);
             const fieldsDiv = document.getElementById(`breakfast_fields_${roomNum}`);
+            const label = document.querySelector(`label[for="breakfast_included_${roomNum}"]`);
             const daysInput = document.getElementById(`breakfast_days_${roomNum}`);
             const adultPriceInput = document.getElementById(`breakfast_adult_price_${roomNum}`);
             const childPriceInput = document.getElementById(`breakfast_child_price_${roomNum}`);
             
             if (checkbox.checked) {
                 fieldsDiv.style.display = 'block';
+                
+                // ⭐ 레이블 텍스트 변경
+                if (label) {
+                    label.innerHTML = '<i class="fas fa-utensils me-1"></i>조식 포함';
+                }
                 
                 // 조식 포함으로 변경 시: 박수와 객실 타입의 조식 요금 자동 로드
                 const nights = parseInt(document.getElementById('nights')?.textContent) || 1;
@@ -1500,6 +1506,11 @@
                 }
             } else {
                 fieldsDiv.style.display = 'none';
+                
+                // ⭐ 레이블 텍스트 변경
+                if (label) {
+                    label.innerHTML = '<i class="fas fa-utensils me-1"></i>조식 불포함';
+                }
             }
         }
         
@@ -1510,6 +1521,7 @@
             const adultPriceInput = document.getElementById(`breakfast_adult_price_${roomNum}`);
             const childPriceInput = document.getElementById(`breakfast_child_price_${roomNum}`);
             const fieldsDiv = document.getElementById(`breakfast_fields_${roomNum}`);
+            const label = document.querySelector(`label[for="breakfast_included_${roomNum}"]`);
             
             if (!roomType) return;
             
@@ -1521,6 +1533,11 @@
                 checkbox.checked = true;
                 fieldsDiv.style.display = 'block';
                 
+                // ⭐ 레이블 텍스트 변경
+                if (label) {
+                    label.innerHTML = '<i class="fas fa-utensils me-1"></i>조식 포함';
+                }
+                
                 const nights = parseInt(document.getElementById('nights')?.textContent) || 1;
                 daysInput.value = nights;
                 adultPriceInput.value = parseFloat(roomType.breakfast_adult_price || 0).toFixed(2);
@@ -1531,6 +1548,11 @@
                 // 조식 불포함 → 체크박스 해제
                 checkbox.checked = false;
                 fieldsDiv.style.display = 'none';
+                
+                // ⭐ 레이블 텍스트 변경
+                if (label) {
+                    label.innerHTML = '<i class="fas fa-utensils me-1"></i>조식 불포함';
+                }
                 
                 // 하지만 요금은 미리 채워두기 (나중에 체크할 때 사용)
                 const nights = parseInt(document.getElementById('nights')?.textContent) || 1;
