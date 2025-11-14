@@ -9,7 +9,7 @@
     "migrate": "node migrate-pickup-columns.js",
     "migrate:pickup": "node run-pickup-migration.js",
     "migrate:updated-at": "node add-updated-at-columns.js",
-    "migrate:promo": "node scripts/run-migration-008.js",
+    "migrate:promo": "node scripts/run-migration-009.js",
     "clean:sample-flights": "node remove-sample-flights.js",
     "clean:all-flights": "node clean-all-flights.js",
     "test": "echo \"Error: no test specified\" && exit 1"

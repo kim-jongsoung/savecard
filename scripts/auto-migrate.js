@@ -28,7 +28,7 @@ async function autoMigrate(pool) {
             console.log('✅ 시즌 테이블이 이미 존재합니다.');
         }
         
-        // 2. promotion_daily_rates 테이블 존재 확인 (008)
+        // 2. promotion_daily_rates 테이블 존재 확인 (009)
         const checkPromoTable = await pool.query(
             `SELECT EXISTS (
                 SELECT FROM information_schema.tables 
@@ -37,13 +37,13 @@ async function autoMigrate(pool) {
         );
         
         if (!checkPromoTable.rows[0].exists) {
-            console.log('🔧 프로모션 테이블을 재설계합니다. 마이그레이션 008을 실행합니다...');
+            console.log('🔧 프로모션 테이블을 재설계합니다. 마이그레이션 009를 실행합니다...');
             
-            const migration008 = path.join(__dirname, '../migrations/008_recreate_promotions_simple.sql');
-            const sql008 = fs.readFileSync(migration008, 'utf8');
+            const migration009 = path.join(__dirname, '../migrations/009_recreate_promotions_simple.sql');
+            const sql009 = fs.readFileSync(migration009, 'utf8');
             
             console.log('📄 SQL 파일 로드 완료, 실행 중...');
-            await pool.query(sql008);
+            await pool.query(sql009);
             console.log('✅ 프로모션 시스템 재설계 완료!');
         } else {
             console.log('✅ 프로모션 테이블이 이미 최신 버전입니다.');

@@ -14,10 +14,10 @@ async function runMigration() {
   });
 
   try {
-    console.log('🔧 프로모션 시스템 재설계 마이그레이션 시작...');
+    console.log('🔧 프로모션 시스템 재설계 마이그레이션 009 시작...');
     
     // SQL 파일 읽기
-    const migrationFile = path.join(__dirname, '../migrations/008_recreate_promotions_simple.sql');
+    const migrationFile = path.join(__dirname, '../migrations/009_recreate_promotions_simple.sql');
     const sql = fs.readFileSync(migrationFile, 'utf8');
     
     console.log('📄 SQL 파일 로드 완료');
