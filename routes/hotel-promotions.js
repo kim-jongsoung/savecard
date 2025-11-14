@@ -62,12 +62,12 @@ router.post('/check-and-get-rates', async (req, res) => {
         const benefitsResult = await pool.query(`
             SELECT 
                 benefit_type,
+                benefit_name,
+                benefit_value,
                 quantity,
-                value,
                 description
             FROM promotion_benefits
             WHERE promotion_id = $1
-              AND is_active = true
         `, [promotion.id]);
         
         // 5. 응답 반환
@@ -86,8 +86,9 @@ router.post('/check-and-get-rates', async (req, res) => {
             total_room_rate: total_room_rate,
             benefits: benefitsResult.rows.map(b => ({
                 benefit_type: b.benefit_type,
+                benefit_name: b.benefit_name,
+                benefit_value: b.benefit_value,
                 quantity: b.quantity,
-                value: b.value,
                 description: b.description
             }))
         });
@@ -179,6 +180,59 @@ router.post('/get-regular-rates', async (req, res) => {
         res.status(500).json({
             success: false,
             message: '요금 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+/**
+ * 프로모션 목록 조회 API
+ * GET /api/hotel-promotions/list?hotel_id=1&is_active=true
+ */
+router.get('/list', async (req, res) => {
+    const { hotel_id, is_active } = req.query;
+    
+    try {
+        const pool = req.app.get('pool');
+        
+        let query = `
+            SELECT 
+                id,
+                hotel_id,
+                promo_code,
+                promo_name,
+                booking_start_date,
+                booking_end_date,
+                stay_start_date,
+                stay_end_date,
+                is_active
+            FROM promotions
+            WHERE 1=1
+        `;
+        
+        const params = [];
+        
+        if (hotel_id) {
+            params.push(hotel_id);
+            query += ` AND hotel_id = $${params.length}`;
+        }
+        
+        if (is_active === 'true') {
+            query += ` AND is_active = true`;
+            // 현재 날짜가 예약 가능 기간 내인지 확인
+            query += ` AND CURRENT_DATE BETWEEN booking_start_date AND booking_end_date`;
+        }
+        
+        query += ` ORDER BY promo_code`;
+        
+        const result = await pool.query(query, params);
+        
+        res.json(result.rows);
+        
+    } catch (error) {
+        console.error('프로모션 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '프로모션 목록 조회 중 오류가 발생했습니다.'
         });
     }
 });

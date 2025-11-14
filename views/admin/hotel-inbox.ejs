@@ -541,7 +541,7 @@
         async function findBestPromotion(hotelId, roomTypeId, checkIn, checkOut) {
             try {
                 // 모든 활성 프로모션 조회
-                const response = await fetch('/api/promotions?hotel_id=' + hotelId + '&is_active=true');
+                const response = await fetch('/api/hotel-promotions/list?hotel_id=' + hotelId + '&is_active=true');
                 const promotions = await response.json();
                 
                 if (!promotions || promotions.length === 0) {
@@ -643,13 +643,14 @@
             
             let benefitsHtml = '';
             if (result.benefits && result.benefits.length > 0) {
-                benefitsHtml = '<div class="mt-2">' +
+                benefitsHtml = '<div class="mt-2"><strong>베네핏:</strong><br>' +
                     result.benefits.map(b => {
                         let text = '';
                         if (b.benefit_type === 'drink_coupon') text = `🍹 드링크 쿠폰 ${b.quantity}매`;
-                        else if (b.benefit_type === 'late_checkout') text = `🕐 레이트 체크아웃 (${b.value})`;
+                        else if (b.benefit_type === 'late_checkout') text = `🕐 레이트 체크아웃 (${b.benefit_value || ''})`;
                         else if (b.benefit_type === 'breakfast') text = `🍳 조식 ${b.quantity}인분`;
-                        else text = b.description || b.benefit_type;
+                        else if (b.benefit_type === 'credit') text = `💵 크레딧 $${b.benefit_value}`;
+                        else text = b.description || b.benefit_name || b.benefit_type;
                         return `<span class="benefit-badge">${text}</span>`;
                     }).join('') +
                     '</div>';
@@ -662,7 +663,11 @@
                         <div class="flex-fill">
                             <strong>프로모션 적용 완료!</strong>
                             <span class="promo-badge">${result.promotion.promo_name}</span>
-                            <div class="small mt-1">
+                            <div class="mt-2">
+                                <strong>프로모션 코드:</strong> 
+                                <code style="font-size: 1.1em; color: #667eea; background: #f0f4ff; padding: 4px 8px; border-radius: 4px;">${result.promotion.promo_code}</code>
+                            </div>
+                            <div class="small mt-2">
                                 예약 기간: ${result.promotion.booking_start_date} ~ ${result.promotion.booking_end_date}<br>
                                 투숙 기간: ${result.promotion.stay_start_date} ~ ${result.promotion.stay_end_date}
                             </div>
