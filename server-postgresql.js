@@ -930,6 +930,42 @@ app.get('/inventory/view', (req, res) => {
     });
 });
 
+// 시즌 달력 관리 API 라우트 연결 ⭐ 신규
+try {
+    const seasonCalendarRouter = require('./routes/season-calendar');
+    app.use('/', seasonCalendarRouter);
+    console.log('✅ 시즌 달력 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 시즌 달력 관리 라우트 연결 실패:', error.message);
+}
+
+// 시즌별 요금 관리 API 라우트 연결 ⭐ 신규
+try {
+    const seasonRatesRouter = require('./routes/season-rates');
+    app.use('/', seasonRatesRouter);
+    console.log('✅ 시즌별 요금 관리 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 시즌별 요금 관리 라우트 연결 실패:', error.message);
+}
+
+// 시즌 달력 관리 페이지 ⭐ 신규
+app.get('/admin/season-calendar', requireAuth, (req, res) => {
+    res.render('admin/season-calendar', {
+        title: '시즌 달력 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'season-calendar'
+    });
+});
+
+// 시즌별 요금 관리 페이지 ⭐ 신규
+app.get('/admin/season-rates', requireAuth, (req, res) => {
+    res.render('admin/season-rates', {
+        title: '시즌별 기본 요금 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'season-rates'
+    });
+});
+
 // 공항 픽업 페이지 라우트 ⭐
 app.get('/pickup', requireAuth, (req, res) => {
     res.render('pickup/admin', {

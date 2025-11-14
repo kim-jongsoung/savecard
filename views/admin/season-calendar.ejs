@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>시즌 달력 관리 - 럭스파인드 ERP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .season-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px; }
+    .season-table th, .season-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    .season-table th { background: #f8f9fa; font-weight: bold; position: sticky; top: 0; z-index: 10; }
+    .season-table td { cursor: pointer; transition: all 0.2s; min-width: 30px; height: 35px; }
+    .season-table td:hover { transform: scale(1.05); }
+    .season-table td.selected { border: 2px solid #000; }
+    .month-section { margin-bottom: 30px; }
+    .month-title { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 5px; font-weight: bold; margin-bottom: 10px; }
+    
+    /* 시즌 색상 */
+    .season-LOW { background-color: #90EE90; color: #155724; }
+    .season-SHOULDER { background-color: #87CEEB; color: #004085; }
+    .season-HIGH { background-color: #FFD700; color: #856404; }
+    .season-PEAK { background-color: #FF6347; color: #721c24; }
+    .season-UNASSIGNED { background-color: #D3D3D3; color: #666; }
+    
+    .legend { display: flex; gap: 15px; flex-wrap: wrap; margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+    .legend-color { width: 30px; height: 20px; border-radius: 3px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+  <div class="container-fluid mt-3">
+    <div class="mb-3">
+      <div class="d-flex align-items-center mb-2">
+        <h4 class="mb-0 me-3">🗓️ 시즌 달력 관리</h4>
+        <label class="me-2">호텔:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto me-3" id="hotelSelect" onchange="loadData()">
+          <option value="">호텔 선택</option>
+        </select>
+        <label class="me-2">시작 월:</label>
+        <input type="month" class="form-control form-control-sm d-inline-block w-auto me-3" id="startMonth" value="2025-11" onchange="loadData()">
+        <span class="text-muted small">by <%= adminUsername %> | <span id="todayDate"></span></span>
+      </div>
+      
+      <!-- 시즌 범례 및 컨트롤 -->
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-color season-LOW"></div>
+          <span>비수기 (LOW)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color season-SHOULDER"></div>
+          <span>평수기 (SHOULDER)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color season-HIGH"></div>
+          <span>성수기 (HIGH)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color season-PEAK"></div>
+          <span>극성수기 (PEAK)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color season-UNASSIGNED"></div>
+          <span>시즌미정</span>
+        </div>
+      </div>
+      
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-primary btn-sm" onclick="selectAllCells()">전체선택</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearSelection()">선택해제</button>
+        <span class="text-muted">|</span>
+        <button class="btn btn-success btn-sm" onclick="setSeasonBulk('LOW')">비수기</button>
+        <button class="btn btn-info btn-sm" onclick="setSeasonBulk('SHOULDER')">평수기</button>
+        <button class="btn btn-warning btn-sm" onclick="setSeasonBulk('HIGH')">성수기</button>
+        <button class="btn btn-danger btn-sm" onclick="setSeasonBulk('PEAK')">극성수기</button>
+        <button class="btn btn-secondary btn-sm" onclick="setSeasonBulk('UNASSIGNED')">미정</button>
+        <span class="text-muted">|</span>
+        <button class="btn btn-dark btn-sm" onclick="saveChanges()">💾 저장</button>
+      </div>
+    </div>
+    
+    <div id="calendarContainer"></div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ko-KR');
+    
+    let hotels = [];
+    let seasonTypes = [];
+    let seasonCalendar = {}; // key: 'YYYY-MM-DD', value: season_code
+    let selected = new Set();
+    let changes = {};
+    
+    async function loadHotels() {
+      const res = await fetch('/api/hotels?is_active=true');
+      hotels = await res.json();
+      const select = document.getElementById('hotelSelect');
+      hotels.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.id;
+        opt.textContent = h.hotel_name;
+        select.appendChild(opt);
+      });
+      
+      // 시즌 타입 로드
+      const stRes = await fetch('/api/season-types');
+      seasonTypes = await stRes.json();
+    }
+    
+    async function loadData() {
+      const hid = document.getElementById('hotelSelect').value;
+      if (!hid) return;
+      
+      const start = document.getElementById('startMonth').value.split('-');
+      const year = parseInt(start[0]), month = parseInt(start[1]);
+      seasonCalendar = {};
+      
+      for (let m = 0; m < 6; m++) {
+        const y = month + m > 12 ? year + 1 : year;
+        const mo = month + m > 12 ? month + m - 12 : month + m;
+        const res = await fetch(`/api/season-calendar?hotel_id=${hid}&year=${y}&month=${mo}`);
+        const data = await res.json();
+        
+        data.forEach(item => {
+          const dateOnly = item.calendar_date.split('T')[0];
+          seasonCalendar[dateOnly] = item.season_code;
+        });
+      }
+      
+      renderCalendar(year, month);
+    }
+    
+    function renderCalendar(year, month) {
+      const container = document.getElementById('calendarContainer');
+      let html = '';
+      
+      for (let m = 0; m < 6; m++) {
+        const y = month + m > 12 ? year + 1 : year;
+        const mo = month + m > 12 ? month + m - 12 : month + m;
+        const monthName = new Date(y, mo - 1).toLocaleString('ko', { year: 'numeric', month: 'long' });
+        const days = new Date(y, mo, 0).getDate();
+        
+        html += `<div class="month-section">
+          <div class="month-title">${monthName}</div>
+          <table class="season-table">
+            <thead>
+              <tr>
+                <th>일</th>`;
+        
+        for (let d = 1; d <= days; d++) html += `<th>${d}</th>`;
+        html += `</tr></thead><tbody><tr><td>시즌</td>`;
+        
+        for (let d = 1; d <= days; d++) {
+          const dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const season = changes[dateStr] || seasonCalendar[dateStr] || 'UNASSIGNED';
+          const isSelected = selected.has(dateStr);
+          
+          html += `<td class="season-${season} ${isSelected ? 'selected' : ''}" 
+                      onclick="toggleCell('${dateStr}')" 
+                      title="${dateStr}">${getSeasonDisplay(season)}</td>`;
+        }
+        
+        html += `</tr></tbody></table></div>`;
+      }
+      
+      container.innerHTML = html;
+    }
+    
+    function getSeasonDisplay(code) {
+      const map = {
+        'LOW': 'L',
+        'SHOULDER': 'S',
+        'HIGH': 'H',
+        'PEAK': 'P',
+        'UNASSIGNED': '-'
+      };
+      return map[code] || '-';
+    }
+    
+    function toggleCell(dateStr) {
+      if (selected.has(dateStr)) {
+        selected.delete(dateStr);
+      } else {
+        selected.add(dateStr);
+      }
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderCalendar(year, month);
+    }
+    
+    function selectAllCells() {
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      for (let m = 0; m < 6; m++) {
+        const y = month + m > 12 ? year + 1 : year;
+        const mo = month + m > 12 ? month + m - 12 : month + m;
+        const days = new Date(y, mo, 0).getDate();
+        for (let d = 1; d <= days; d++) {
+          const dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          selected.add(dateStr);
+        }
+      }
+      renderCalendar(year, month);
+    }
+    
+    function clearSelection() {
+      selected.clear();
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderCalendar(year, month);
+    }
+    
+    function setSeasonBulk(seasonCode) {
+      if (selected.size === 0) {
+        alert('날짜를 선택해주세요.');
+        return;
+      }
+      
+      selected.forEach(dateStr => {
+        changes[dateStr] = seasonCode;
+      });
+      
+      selected.clear();
+      const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
+      renderCalendar(year, month);
+    }
+    
+    async function saveChanges() {
+      if (Object.keys(changes).length === 0) {
+        alert('변경사항이 없습니다.');
+        return;
+      }
+      
+      const hid = document.getElementById('hotelSelect').value;
+      
+      // 시즌 코드를 ID로 변환
+      const seasonCodeToId = {};
+      seasonTypes.forEach(st => {
+        seasonCodeToId[st.season_code] = st.id;
+      });
+      
+      const updates = [];
+      for (const [date, seasonCode] of Object.entries(changes)) {
+        updates.push({
+          date,
+          season_type_id: seasonCodeToId[seasonCode]
+        });
+      }
+      
+      try {
+        const res = await fetch('/api/season-calendar/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hotel_id: hid, updates })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          alert(`저장 완료: ${data.updated}개 업데이트`);
+          changes = {};
+          await loadData();
+        } else {
+          alert('저장 실패: ' + (data.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        alert('저장 중 오류가 발생했습니다: ' + error.message);
+      }
+    }
+    
+    loadHotels();
+  </script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>시즌별 기본 요금 관리 - 럭스파인드 ERP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .rate-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .rate-table th, .rate-table td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+    .rate-table th { background: #f8f9fa; font-weight: bold; }
+    .rate-table input { width: 100%; text-align: right; border: none; background: transparent; }
+    .rate-table input:focus { outline: 2px solid #667eea; background: #fff; }
+    
+    /* 시즌 색상 */
+    .season-LOW { background-color: #90EE90; }
+    .season-SHOULDER { background-color: #87CEEB; }
+    .season-HIGH { background-color: #FFD700; }
+    .season-PEAK { background-color: #FF6347; }
+    .season-UNASSIGNED { background-color: #D3D3D3; }
+    
+    .changed { background-color: #fff3cd !important; }
+  </style>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+  <div class="container-fluid mt-3">
+    <div class="mb-3">
+      <div class="d-flex align-items-center mb-2">
+        <h4 class="mb-0 me-3">💰 시즌별 기본 요금 관리</h4>
+        <label class="me-2">호텔:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto me-3" id="hotelSelect" onchange="loadData()">
+          <option value="">호텔 선택</option>
+        </select>
+        <span class="text-muted small">by <%= adminUsername %> | <span id="todayDate"></span></span>
+      </div>
+      
+      <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i> 
+        <strong>안내:</strong> 여기 입력한 요금은 <strong>기본 참고 요금</strong>입니다. 
+        실제 예약 및 정산에는 <strong>프로모션 요금</strong>이 사용됩니다.
+      </div>
+      
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <button class="btn btn-success btn-sm" onclick="saveChanges()">💾 저장</button>
+        <button class="btn btn-secondary btn-sm" onclick="loadData()">🔄 새로고침</button>
+        <span class="text-muted">|</span>
+        <label class="me-2">통화:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto" id="currencySelect">
+          <option value="USD">USD ($)</option>
+          <option value="KRW">KRW (₩)</option>
+        </select>
+      </div>
+    </div>
+    
+    <div id="rateContainer"></div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('ko-KR');
+    
+    let hotels = [];
+    let seasonTypes = [];
+    let roomTypes = [];
+    let rates = {}; // key: 'seasonId-roomId', value: { id, base_rate }
+    let changes = {};
+    
+    async function loadHotels() {
+      const res = await fetch('/api/hotels?is_active=true');
+      hotels = await res.json();
+      const select = document.getElementById('hotelSelect');
+      hotels.forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h.id;
+        opt.textContent = h.hotel_name;
+        select.appendChild(opt);
+      });
+      
+      // 시즌 타입 로드
+      const stRes = await fetch('/api/season-types');
+      seasonTypes = await stRes.json();
+    }
+    
+    async function loadData() {
+      const hid = document.getElementById('hotelSelect').value;
+      if (!hid) return;
+      
+      // 객실 타입 로드
+      const rtRes = await fetch(`/api/hotels/${hid}/room-types`);
+      roomTypes = await rtRes.json();
+      
+      // 요금 로드
+      const rateRes = await fetch(`/api/season-rates?hotel_id=${hid}`);
+      const rateData = await rateRes.json();
+      
+      rates = {};
+      rateData.forEach(r => {
+        const key = `${r.season_type_id}-${r.room_type_id}`;
+        rates[key] = r;
+      });
+      
+      changes = {};
+      renderTable();
+    }
+    
+    function renderTable() {
+      const container = document.getElementById('rateContainer');
+      
+      if (roomTypes.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">호텔을 선택하거나 객실 타입이 없습니다.</div>';
+        return;
+      }
+      
+      let html = `
+        <table class="rate-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width: 150px;">객실 타입</th>
+              <th colspan="${seasonTypes.length}">시즌별 기본 요금 (USD)</th>
+            </tr>
+            <tr>`;
+      
+      seasonTypes.forEach(st => {
+        html += `<th class="season-${st.season_code}">${st.season_name}</th>`;
+      });
+      
+      html += `</tr></thead><tbody>`;
+      
+      roomTypes.forEach(rt => {
+        html += `<tr><td><strong>${rt.room_type_name}</strong></td>`;
+        
+        seasonTypes.forEach(st => {
+          const key = `${st.id}-${rt.id}`;
+          const rate = changes[key] !== undefined ? changes[key] : (rates[key]?.base_rate || '');
+          const isChanged = changes[key] !== undefined;
+          
+          html += `<td class="season-${st.season_code} ${isChanged ? 'changed' : ''}">
+            <input type="number" 
+                   value="${rate}" 
+                   onchange="markChanged(${st.id}, ${rt.id}, this.value)"
+                   placeholder="입력"
+                   step="0.01"
+                   min="0">
+          </td>`;
+        });
+        
+        html += `</tr>`;
+      });
+      
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+    
+    function markChanged(seasonId, roomId, value) {
+      const key = `${seasonId}-${roomId}`;
+      changes[key] = parseFloat(value) || 0;
+      renderTable();
+    }
+    
+    async function saveChanges() {
+      if (Object.keys(changes).length === 0) {
+        alert('변경사항이 없습니다.');
+        return;
+      }
+      
+      const hid = document.getElementById('hotelSelect').value;
+      const currency = document.getElementById('currencySelect').value;
+      
+      const rateUpdates = [];
+      for (const [key, base_rate] of Object.entries(changes)) {
+        const [season_type_id, room_type_id] = key.split('-').map(Number);
+        rateUpdates.push({ season_type_id, room_type_id, base_rate, currency });
+      }
+      
+      try {
+        const res = await fetch('/api/season-rates/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hotel_id: hid, rates: rateUpdates })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          alert(`저장 완료: ${data.updated}개 업데이트`);
+          changes = {};
+          await loadData();
+        } else {
+          alert('저장 실패: ' + (data.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        alert('저장 중 오류가 발생했습니다: ' + error.message);
+      }
+    }
+    
+    loadHotels();
+  </script>
+</body>
+</html>
