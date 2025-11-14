@@ -90,14 +90,19 @@
         const mo = month + m > 12 ? month + m - 12 : month + m;
         const res = await fetch(`/api/inventory?hotel_id=${hid}&year=${y}&month=${mo}`);
         const data = await res.json();
+        console.log(`📥 ${y}-${mo} 데이터 ${data.length}개 로드`);
         data.forEach(inv => {
-          const key = `${inv.room_type_id}-${inv.availability_date}`;
+          // availability_date를 YYYY-MM-DD 형식으로 변환
+          const dateOnly = inv.availability_date.split('T')[0];
+          const key = `${inv.room_type_id}-${dateOnly}`;
+          
           // count 방식: 숫자 그대로, status 방식: O/X로 변환
           if (currentHotel.inventory_type === 'count') {
             inventory[key] = inv.available_rooms;
           } else {
             inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
           }
+          console.log(`  → inventory["${key}"] = ${inventory[key]}`);
         });
       }
       
