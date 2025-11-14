@@ -879,8 +879,14 @@
             }
         }
         
-        // 총 요금 계산
-        function calculateTotal() {
+        // 전체 금액 계산
+        async function calculateTotal() {
+            // ⭐ 수배피 먼저 재계산 (객실 요금 + 추가 항목 요금 기반)
+            const agencyId = document.getElementById('booking_agency_id').value;
+            if (agencyId) {
+                await calculateAgencyFee();
+            }
+            
             const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
             const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
             const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0;
@@ -891,18 +897,41 @@
         }
         
         // 수배피 계산
-        function calculateAgencyFee() {
+        async function calculateAgencyFee() {
             const agencyId = document.getElementById('booking_agency_id').value;
             if (agencyId) {
                 const agency = allAgencies.find(a => a.id == agencyId);
                 if (agency) {
                     document.getElementById('agencyFeeRow').style.display = 'flex';
                     document.getElementById('agencyFeeName').textContent = agency.agency_name;
+                    
+                    // ⭐ 수배피 금액 계산
+                    const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+                    const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
+                    const totalAmount = totalRoomCharge + totalExtrasCharge;
+                    
+                    let agencyFee = 0;
+                    
+                    // fee_type에 따라 계산
+                    if (agency.fee_type === 'percentage') {
+                        // 퍼센트 방식
+                        const feePercent = parseFloat(agency.fee_amount) || 0;
+                        agencyFee = totalAmount * (feePercent / 100);
+                        console.log(`💰 수배피 계산 (${agency.agency_name}): $${totalAmount} × ${feePercent}% = $${agencyFee.toFixed(2)}`);
+                    } else {
+                        // 정액 방식
+                        agencyFee = parseFloat(agency.fee_amount) || 0;
+                        console.log(`💰 수배피 계산 (${agency.agency_name}): $${agencyFee.toFixed(2)} (정액)`);
+                    }
+                    
+                    document.getElementById('agencyFee').value = agencyFee.toFixed(2);
                 } else {
                     document.getElementById('agencyFeeRow').style.display = 'none';
+                    document.getElementById('agencyFee').value = 0;
                 }
             } else {
                 document.getElementById('agencyFeeRow').style.display = 'none';
+                document.getElementById('agencyFee').value = 0;
             }
             calculateTotal();
         }
@@ -1683,42 +1712,18 @@
                                     });
                                 }
                                 
-                                // 프로모션 정보 저장 및 표시
-                                if (room.promotion_code) {
-                                    roomPromotions[currentRoomNum] = {
-                                        promotion: { promo_code: room.promotion_code },
-                                        rate_condition_id: room.rate_condition_id,
-                                        total_room_rate: room.total_selling_price
-                                    };
-                                    
-                                    // ⭐ 객실별 프로모션 표시 영역에 저장된 프로모션 표시
-                                    setTimeout(() => {
-                                        const roomCard = document.querySelector(`[data-room-id="${currentRoomNum}"]`);
-                                        if (roomCard) {
-                                            let promoDisplayArea = roomCard.querySelector('.room-promo-display');
-                                            if (!promoDisplayArea) {
-                                                // 프로모션 표시 영역 생성
-                                                const roomTypeSelect = roomCard.querySelector(`[data-room="${currentRoomNum}"]`)?.parentElement;
-                                                if (roomTypeSelect) {
-                                                    promoDisplayArea = document.createElement('div');
-                                                    promoDisplayArea.className = 'room-promo-display mt-2';
-                                                    roomTypeSelect.after(promoDisplayArea);
-                                                }
-                                            }
-                                            
-                                            if (promoDisplayArea) {
-                                                promoDisplayArea.innerHTML = `
-                                                    <div class="alert alert-info py-2 mb-0">
-                                                        <i class="fas fa-tag me-2"></i>
-                                                        <strong>프로모션:</strong> ${room.promotion_code}
-                                                        ${room.rate_condition_id ? `<br><small class="text-muted">Rate Condition ID: ${room.rate_condition_id}</small>` : ''}
-                                                        <br><small class="text-muted">객실 요금: $${parseFloat(room.total_selling_price).toFixed(2)}</small>
-                                                    </div>
-                                                `;
-                                                console.log(`📌 객실 ${currentRoomNum} 프로모션 표시: ${room.promotion_code}`);
-                                            }
-                                        }
-                                    }, 150);
+                                // ⭐ 프로모션 정보 자동 조회 - onRoomTypeChange 호출
+                                if (room.room_type_id) {
+                                    // 로드 중 플래그 임시 해제 (조식 중복 방지 위해 객실별로)
+                                    setTimeout(async () => {
+                                        const wasLoading = isLoadingData;
+                                        isLoadingData = false;
+                                        
+                                        await onRoomTypeChange(currentRoomNum);
+                                        console.log(`🔍 객실 ${currentRoomNum} 프로모션 자동 조회 완료`);
+                                        
+                                        isLoadingData = wasLoading;
+                                    }, 300 + (i * 100));
                                 }
                             }, 100 * i);
                         }
@@ -1747,12 +1752,16 @@
                                         
                                         if (itemNameInput) itemNameInput.value = extra.item_name || '';
                                         if (quantityInput) quantityInput.value = extra.quantity || 1;
-                                        if (pricingTypeInput) pricingTypeInput.value = extra.pricing_type || 'flat';
                                         
-                                        console.log(`  → 항목명: ${extra.item_name}, 수량: ${extra.quantity}, 유형: ${extra.pricing_type}`);
+                                        // ⭐ pricing_type 설정 후 즉시 UI 전환
+                                        const actualPricingType = extra.item_type || extra.pricing_type || 'flat';
+                                        if (pricingTypeInput) pricingTypeInput.value = actualPricingType;
+                                        toggleExtraPricing(currentExtraNum);  // ⭐ UI 먼저 전환!
+                                        
+                                        console.log(`  → 항목명: ${extra.item_name}, 수량: ${extra.quantity}, 유형: ${actualPricingType}`);
                                         
                                         // pricing_type에 따라 필드 채우기
-                                        if (extra.pricing_type === 'per_person') {
+                                        if (actualPricingType === 'per_person') {
                                             // 인원별 요금
                                             const adultCountInput = extraCard.querySelector('[data-extra-field="adult_count"]');
                                             const adultPriceInput = extraCard.querySelector('[data-extra-field="adult_price"]');
@@ -1777,8 +1786,7 @@
                                             console.log(`  → 정액: $${extra.unit_price}`);
                                         }
                                         
-                                        // UI 전환 및 소계 계산
-                                        toggleExtraPricing(currentExtraNum);
+                                        // ⭐ 소계 계산 (이미 toggleExtraPricing 호출함)
                                         calculateExtraTotal(currentExtraNum);
                                         
                                         console.log(`  ✅ 추가항목 ${idx + 1} 완료`);
