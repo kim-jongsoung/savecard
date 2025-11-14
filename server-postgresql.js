@@ -16228,6 +16228,21 @@ async function startServer() {
             console.warn('⚠️  조식 필드 마이그레이션 경고:', migrateErr.message);
         }
         
+        // ⭐ 호텔 예약 메인 테이블에 요금 필드 추가
+        try {
+            console.log('💰 hotel_reservations 테이블에 요금 필드 추가 중...');
+            await pool.query(`
+                ALTER TABLE hotel_reservations
+                ADD COLUMN IF NOT EXISTS total_room_rate DECIMAL(10,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS total_extras_rate DECIMAL(10,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS agency_fee DECIMAL(10,2) DEFAULT 0,
+                ADD COLUMN IF NOT EXISTS grand_total DECIMAL(10,2) DEFAULT 0
+            `);
+            console.log('✅ 요금 필드 추가 완료 (total_room_rate, total_extras_rate, agency_fee, grand_total)');
+        } catch (migrateErr) {
+            console.warn('⚠️  요금 필드 마이그레이션 경고:', migrateErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
