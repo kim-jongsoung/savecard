@@ -914,6 +914,22 @@ try {
     console.error('⚠️ 객실 재고 관리 라우트 연결 실패:', error.message);
 }
 
+// 재고 챗봇 API 라우트 연결 ⭐ 신규
+try {
+    const inventoryChatRouter = require('./routes/inventory-chat');
+    app.use('/', inventoryChatRouter);
+    console.log('✅ 재고 챗봇 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 재고 챗봇 라우트 연결 실패:', error.message);
+}
+
+// 공개 재고 현황 페이지 (로그인 불필요) ⭐ 신규
+app.get('/inventory/view', (req, res) => {
+    res.render('inventory-public', {
+        title: '객실 재고 현황 - 괌세이브카드'
+    });
+});
+
 // 공항 픽업 페이지 라우트 ⭐
 app.get('/pickup', requireAuth, (req, res) => {
     res.render('pickup/admin', {
