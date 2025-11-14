@@ -1790,11 +1790,18 @@
                         console.log('✅ 호텔 선택:', data.hotel_id);
                     }
                     
-                    // 거래처 선택
+                    // 거래처 선택 (⭐ 수배피는 이미 로드됨 - 재계산 방지)
                     if (data.booking_agency_id) {
                         document.getElementById('booking_agency_id').value = data.booking_agency_id;
-                        calculateAgencyFee();
-                        console.log('✅ 거래처 선택:', data.booking_agency_id);
+                        // calculateAgencyFee(); // ❓ 주석 처리: 저장된 수배피 값 유지
+                        
+                        // 거래처 이름 표시만 업데이트
+                        const agency = allAgencies.find(a => a.id == data.booking_agency_id);
+                        if (agency && data.agency_fee && data.agency_fee > 0) {
+                            document.getElementById('agencyFeeName').textContent = agency.agency_name;
+                        }
+                        
+                        console.log('✅ 거래처 선택:', data.booking_agency_id, '수배피: $' + (data.agency_fee || 0));
                     }
                     
                     // 박수 계산
@@ -1882,18 +1889,35 @@
                                         const breakfastDays = document.getElementById(`breakfast_days_${currentRoomNum}`);
                                         const breakfastAdultPrice = document.getElementById(`breakfast_adult_price_${currentRoomNum}`);
                                         const breakfastChildPrice = document.getElementById(`breakfast_child_price_${currentRoomNum}`);
+                                        const breakfastFields = document.getElementById(`breakfast_fields_${currentRoomNum}`);
+                                        const breakfastLabel = document.querySelector(`label[for="breakfast_included_${currentRoomNum}"]`);
                                         
+                                        // ⭐ 체크박스 설정
                                         if (breakfastCheckbox) breakfastCheckbox.checked = room.breakfast_included;
+                                        
+                                        // ⭐ 필드 값 설정 (덜어쓰기 방지)
                                         if (breakfastDays) breakfastDays.value = room.breakfast_days || 1;
                                         if (breakfastAdultPrice) breakfastAdultPrice.value = parseFloat(room.breakfast_adult_price || 0).toFixed(2);
                                         if (breakfastChildPrice) breakfastChildPrice.value = parseFloat(room.breakfast_child_price || 0).toFixed(2);
                                         
-                                        toggleBreakfastFields(currentRoomNum);
-                                    } else if (room.room_type_id) {
+                                        // ⭐ 필드 표시 및 레이블 업데이트 (값 변경 없음)
+                                        if (breakfastFields) {
+                                            breakfastFields.style.display = room.breakfast_included ? 'block' : 'none';
+                                        }
+                                        if (breakfastLabel) {
+                                            breakfastLabel.innerHTML = room.breakfast_included 
+                                                ? '<i class="fas fa-utensils me-1"></i>조식 포함'
+                                                : '<i class="fas fa-utensils me-1"></i>조식 불포함';
+                                        }
+                                        
+                                        console.log(`  → 회수: ${room.breakfast_days}일, 성인: $${room.breakfast_adult_price}, 소아: $${room.breakfast_child_price}`);
+                                    } else {
                                         // 저장된 정보가 없으면 객실 타입 기본값 사용
-                                        const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
-                                        if (roomType) {
-                                            displayBreakfastInfo(currentRoomNum, roomType);
+                                        if (room.room_type_id) {
+                                            const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
+                                            if (roomType) {
+                                                displayBreakfastInfo(currentRoomNum, roomType);
+                                            }
                                         }
                                     }
                                 }, 150);
