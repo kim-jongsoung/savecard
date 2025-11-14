@@ -454,7 +454,7 @@ router.put('/:id', async (req, res) => {
             for (const room of rooms) {
                 totalRooms++;
                 
-                // 4-1. 객실 레코드 저장 (조식 정보 포함)
+                // 4-1. 객실 레코드 저장 (프로모션 정보 포함)
                 const roomResult = await client.query(`
                     INSERT INTO hotel_reservation_rooms (
                         reservation_id,
@@ -464,12 +464,11 @@ router.put('/:id', async (req, res) => {
                         children_count,
                         infants_count,
                         total_guests,
-                        breakfast_included,
-                        breakfast_days,
-                        breakfast_adult_price,
-                        breakfast_child_price,
+                        promotion_code,
+                        rate_condition_id,
+                        total_selling_price,
                         created_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
                     RETURNING id
                 `, [
                     id,
@@ -479,10 +478,9 @@ router.put('/:id', async (req, res) => {
                     0,
                     0,
                     0,
-                    room.breakfast_included || false,
-                    room.breakfast_days || 0,
-                    room.breakfast_adult_price || 0,
-                    room.breakfast_child_price || 0
+                    room.promotion_code || null,
+                    room.rate_condition_id || null,
+                    room.total_selling_price || 0
                 ]);
                 
                 const roomId = roomResult.rows[0].id;

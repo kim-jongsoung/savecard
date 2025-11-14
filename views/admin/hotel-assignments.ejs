@@ -1200,94 +1200,30 @@
             }
         }
         
-        // ⭐ 조식 정보를 객실 카드에 설정 (호텔 설정값으로 초기화)
+        // ⭐ 조식 포함/불포함 상태만 표시 (단순화)
         function displayBreakfastInfo(roomNum, roomType) {
             if (!roomType) return;
             
             const breakfastIncluded = roomType.breakfast_included || false;
-            const breakfastRateAdult = parseFloat(roomType.breakfast_rate_adult) || 0;
-            const breakfastRateChild = parseFloat(roomType.breakfast_rate_child) || 0;
+            const breakfastInfoDiv = document.getElementById(`breakfast_info_${roomNum}`);
+            const breakfastAlertDiv = document.getElementById(`breakfast_alert_${roomNum}`);
+            const breakfastStatusSpan = document.getElementById(`breakfast_status_${roomNum}`);
             
-            // 체크박스 설정
-            const breakfastCheckbox = document.getElementById(`breakfast_included_${roomNum}`);
-            if (breakfastCheckbox) {
-                breakfastCheckbox.checked = breakfastIncluded;
+            if (!breakfastInfoDiv || !breakfastAlertDiv || !breakfastStatusSpan) return;
+            
+            if (breakfastIncluded) {
+                // 조식 포함
+                breakfastAlertDiv.className = 'alert alert-success py-2 mb-2';
+                breakfastStatusSpan.textContent = '조식 포함';
+                breakfastInfoDiv.style.display = 'block';
+                console.log(`🍳 객실 ${roomNum}: 조식 포함 ✓`);
+            } else {
+                // 조식 불포함
+                breakfastAlertDiv.className = 'alert alert-secondary py-2 mb-2';
+                breakfastStatusSpan.textContent = '조식 불포함';
+                breakfastInfoDiv.style.display = 'block';
+                console.log(`🍳 객실 ${roomNum}: 조식 불포함`);
             }
-            
-            // 금액 설정
-            const adultPriceInput = document.getElementById(`breakfast_adult_price_${roomNum}`);
-            const childPriceInput = document.getElementById(`breakfast_child_price_${roomNum}`);
-            if (adultPriceInput) adultPriceInput.value = breakfastRateAdult.toFixed(2);
-            if (childPriceInput) childPriceInput.value = breakfastRateChild.toFixed(2);
-            
-            // UI 전환 및 계산
-            toggleBreakfastFields(roomNum);
-            
-            console.log(`🍳 객실 ${roomNum} 조식 설정: 포함=${breakfastIncluded}, 성인=$${breakfastRateAdult}, 소아=$${breakfastRateChild}`);
-        }
-        
-        // ⭐ 조식 포함/불포함 토글
-        function toggleBreakfastFields(roomNum) {
-            const checkbox = document.getElementById(`breakfast_included_${roomNum}`);
-            const fieldsDiv = document.getElementById(`breakfast_fields_${roomNum}`);
-            
-            if (checkbox && fieldsDiv) {
-                if (checkbox.checked) {
-                    fieldsDiv.style.display = 'block';
-                    calculateBreakfastTotal(roomNum);
-                } else {
-                    fieldsDiv.style.display = 'none';
-                    // 소계 초기화
-                    const totalInput = document.getElementById(`breakfast_total_${roomNum}`);
-                    if (totalInput) totalInput.value = '';
-                }
-            }
-        }
-        
-        // ⭐ 조식 소계 계산
-        function calculateBreakfastTotal(roomNum) {
-            const daysInput = document.getElementById(`breakfast_days_${roomNum}`);
-            const adultPriceInput = document.getElementById(`breakfast_adult_price_${roomNum}`);
-            const childPriceInput = document.getElementById(`breakfast_child_price_${roomNum}`);
-            const totalInput = document.getElementById(`breakfast_total_${roomNum}`);
-            const calculationDiv = document.getElementById(`breakfast_calculation_${roomNum}`);
-            
-            if (!daysInput || !adultPriceInput || !childPriceInput || !totalInput) return;
-            
-            const days = parseInt(daysInput.value) || 1;
-            const adultPrice = parseFloat(adultPriceInput.value) || 0;
-            const childPrice = parseFloat(childPriceInput.value) || 0;
-            
-            // 투숙객 수 확인
-            const guestsContainer = document.getElementById(`guests_${roomNum}`);
-            let adultCount = 0;
-            let childCount = 0;
-            
-            if (guestsContainer) {
-                const guestCards = guestsContainer.querySelectorAll('.guest-card');
-                guestCards.forEach(card => {
-                    const ageCategory = card.querySelector('[data-guest-field="age_category"]')?.value || 'adult';
-                    if (ageCategory === 'adult') adultCount++;
-                    else if (ageCategory === 'child') childCount++;
-                });
-            }
-            
-            // 총 조식 비용 계산
-            const adultTotal = adultCount * adultPrice * days;
-            const childTotal = childCount * childPrice * days;
-            const grandTotal = adultTotal + childTotal;
-            
-            totalInput.value = `$${grandTotal.toFixed(2)}`;
-            
-            // 계산 내역 표시
-            if (calculationDiv) {
-                calculationDiv.innerHTML = `
-                    성인 ${adultCount}명 × $${adultPrice.toFixed(2)} × ${days}일 = $${adultTotal.toFixed(2)}<br>
-                    소아 ${childCount}명 × $${childPrice.toFixed(2)} × ${days}일 = $${childTotal.toFixed(2)}
-                `;
-            }
-            
-            console.log(`🍳 객실 ${roomNum} 조식 계산: 성인 ${adultCount}명×$${adultPrice}×${days}일 + 소아 ${childCount}명×$${childPrice}×${days}일 = $${grandTotal.toFixed(2)}`);
         }
         
         // ⭐ 기존 addBreakfastFromRoomType 함수 (이제 사용 안 함)
@@ -1433,34 +1369,11 @@
                         </div>
                     </div>
                     
-                    <!-- ⭐ 조식 정보 수정 가능 영역 -->
-                    <div id="breakfast_section_${roomCounter}" class="mb-3 border rounded p-2" style="background: #f8f9fa;">
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" id="breakfast_included_${roomCounter}" onchange="toggleBreakfastFields(${roomCounter})">
-                            <label class="form-check-label fw-bold" for="breakfast_included_${roomCounter}">
-                                <i class="fas fa-utensils me-1"></i>조식 포함
-                            </label>
-                        </div>
-                        <div id="breakfast_fields_${roomCounter}" style="display: none;">
-                            <div class="row g-2">
-                                <div class="col-md-3">
-                                    <label class="form-label small">횟수(일)</label>
-                                    <input type="number" class="form-control form-control-sm" id="breakfast_days_${roomCounter}" value="1" min="1" onchange="calculateBreakfastTotal(${roomCounter})">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small">성인 단가 ($)</label>
-                                    <input type="number" class="form-control form-control-sm" id="breakfast_adult_price_${roomCounter}" value="0" step="0.01" onchange="calculateBreakfastTotal(${roomCounter})">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small">소아 단가 ($)</label>
-                                    <input type="number" class="form-control form-control-sm" id="breakfast_child_price_${roomCounter}" value="0" step="0.01" onchange="calculateBreakfastTotal(${roomCounter})">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label small">조식 소계</label>
-                                    <input type="text" class="form-control form-control-sm fw-bold" id="breakfast_total_${roomCounter}" readonly style="background: #e7f3ff; color: #2196F3;">
-                                </div>
-                            </div>
-                            <div class="small text-muted mt-1" id="breakfast_calculation_${roomCounter}"></div>
+                    <!-- ⭐ 조식 포함/불포함 표시 (읽기 전용) -->
+                    <div id="breakfast_info_${roomCounter}" class="mb-2" style="display: none;">
+                        <div class="alert py-2 mb-2" id="breakfast_alert_${roomCounter}">
+                            <i class="fas fa-utensils me-2"></i>
+                            <strong id="breakfast_status_${roomCounter}"></strong>
                         </div>
                     </div>
                     
@@ -1530,9 +1443,6 @@
             const guestCount = guestsContainer.querySelectorAll('.guest-card').length + 1;
             
             guestsContainer.insertAdjacentHTML('beforeend', createGuestHtml(roomNum, guestCount, false));
-            
-            // ⭐ 조식 계산 업데이트
-            calculateBreakfastTotal(roomNum);
         }
         
         // 투숙객 제거
@@ -1540,9 +1450,6 @@
             const guestCard = document.getElementById(`guest_${roomNum}_${guestNum}`);
             if (guestCard) {
                 guestCard.remove();
-                
-                // ⭐ 조식 계산 업데이트
-                calculateBreakfastTotal(roomNum);
             }
         }
         
@@ -1847,30 +1754,15 @@
                                     });
                                 }
                                 
-                                // ⭐ 조식 정보 복원 (저장된 정보 우선, 없으면 객실 타입 기본값)
-                                setTimeout(() => {
-                                    if (room.breakfast_included !== undefined) {
-                                        // 저장된 조식 정보가 있으면 복원
-                                        const breakfastCheckbox = document.getElementById(`breakfast_included_${currentRoomNum}`);
-                                        const daysInput = document.getElementById(`breakfast_days_${currentRoomNum}`);
-                                        const adultPriceInput = document.getElementById(`breakfast_adult_price_${currentRoomNum}`);
-                                        const childPriceInput = document.getElementById(`breakfast_child_price_${currentRoomNum}`);
-                                        
-                                        if (breakfastCheckbox) breakfastCheckbox.checked = room.breakfast_included;
-                                        if (daysInput) daysInput.value = room.breakfast_days || 1;
-                                        if (adultPriceInput) adultPriceInput.value = (room.breakfast_adult_price || 0).toFixed(2);
-                                        if (childPriceInput) childPriceInput.value = (room.breakfast_child_price || 0).toFixed(2);
-                                        
-                                        toggleBreakfastFields(currentRoomNum);
-                                        console.log(`🍳 객실 ${currentRoomNum} 조식 복원: 포함=${room.breakfast_included}, 횟수=${room.breakfast_days}일`);
-                                    } else if (room.room_type_id) {
-                                        // 저장된 정보가 없으면 객실 타입 기본값 사용
-                                        const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
-                                        if (roomType) {
+                                // ⭐ 조식 정보 표시 (객실 타입 기본값)
+                                if (room.room_type_id) {
+                                    const roomType = allRoomTypes.find(rt => rt.id == room.room_type_id);
+                                    if (roomType) {
+                                        setTimeout(() => {
                                             displayBreakfastInfo(currentRoomNum, roomType);
-                                        }
+                                        }, 150);
                                     }
-                                }, 150);
+                                }
                                 
                                 // ⭐ 프로모션 정보 표시 (새로 조회하지 않고 저장된 정보 표시)
                                 if (room.promotion_code) {
@@ -2057,26 +1949,15 @@
                 // 프로모션 정보
                 const roomPromo = roomPromotions[roomNum];
                 
-                // ⭐ 조식 정보 수집
-                const breakfastIncluded = document.getElementById(`breakfast_included_${roomNum}`)?.checked || false;
-                const breakfastDays = parseInt(document.getElementById(`breakfast_days_${roomNum}`)?.value) || 0;
-                const breakfastAdultPrice = parseFloat(document.getElementById(`breakfast_adult_price_${roomNum}`)?.value) || 0;
-                const breakfastChildPrice = parseFloat(document.getElementById(`breakfast_child_price_${roomNum}`)?.value) || 0;
-                
                 rooms.push({
                     room_type_id: parseInt(roomTypeId),
                     guests: guests,
                     promotion_code: roomPromo?.promotion?.promo_code || null,
                     rate_condition_id: roomPromo?.rate_condition_id || null,
-                    total_selling_price: roomPromo?.total_room_rate || 0,
-                    // ⭐ 조식 정보 추가
-                    breakfast_included: breakfastIncluded,
-                    breakfast_days: breakfastIncluded ? breakfastDays : 0,
-                    breakfast_adult_price: breakfastIncluded ? breakfastAdultPrice : 0,
-                    breakfast_child_price: breakfastIncluded ? breakfastChildPrice : 0
+                    total_selling_price: roomPromo?.total_room_rate || 0
                 });
                 
-                console.log(`  → 객실 ${roomNum} 조식: 포함=${breakfastIncluded}, 횟수=${breakfastDays}일, 성인=$${breakfastAdultPrice}, 소아=$${breakfastChildPrice}`);
+                console.log(`  → 객실 ${roomNum} 저장: 룸타입=${roomTypeId}, 프로모션=${roomPromo?.promotion?.promo_code}, 요금=$${roomPromo?.total_room_rate || 0}`);
             });
             
             if (rooms.length === 0) {

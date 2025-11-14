@@ -10,24 +10,22 @@ async function addBreakfastFields() {
     const client = await pool.connect();
     
     try {
-        console.log('🍳 hotel_reservation_rooms 테이블에 조식 필드 추가 중...');
+        console.log('🏨 hotel_reservation_rooms 테이블에 프로모션 필드 추가 중...');
         
         await client.query(`
             ALTER TABLE hotel_reservation_rooms
-            ADD COLUMN IF NOT EXISTS breakfast_included BOOLEAN DEFAULT false,
-            ADD COLUMN IF NOT EXISTS breakfast_days INTEGER DEFAULT 0,
-            ADD COLUMN IF NOT EXISTS breakfast_adult_price DECIMAL(10,2) DEFAULT 0,
-            ADD COLUMN IF NOT EXISTS breakfast_child_price DECIMAL(10,2) DEFAULT 0
+            ADD COLUMN IF NOT EXISTS promotion_code VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS rate_condition_id INTEGER,
+            ADD COLUMN IF NOT EXISTS total_selling_price DECIMAL(10,2) DEFAULT 0
         `);
         
-        console.log('✅ 조식 필드 추가 완료!');
-        console.log('   - breakfast_included: BOOLEAN (조식 포함 여부)');
-        console.log('   - breakfast_days: INTEGER (조식 제공 횟수/일수)');
-        console.log('   - breakfast_adult_price: DECIMAL (성인 조식 단가)');
-        console.log('   - breakfast_child_price: DECIMAL (소아 조식 단가)');
+        console.log('✅ 프로모션 필드 추가 완료!');
+        console.log('   - promotion_code: VARCHAR(50) (프로모션 코드)');
+        console.log('   - rate_condition_id: INTEGER (요금 조건 ID)');
+        console.log('   - total_selling_price: DECIMAL (객실 총 판매가)');
         
     } catch (error) {
-        console.error('❌ 조식 필드 추가 실패:', error);
+        console.error('❌ 필드 추가 실패:', error);
         throw error;
     } finally {
         client.release();
