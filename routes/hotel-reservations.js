@@ -316,6 +316,136 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * 호텔 예약 상세 조회 (수정용)
+ * GET /api/hotel-reservations/:id
+ */
+router.get('/:id', async (req, res) => {
+    try {
+        const pool = req.app.get('pool');
+        const { id } = req.params;
+        
+        // 1. 예약 기본 정보
+        const reservation = await pool.query(`
+            SELECT 
+                hr.*,
+                h.hotel_name,
+                ba.agency_name
+            FROM hotel_reservations hr
+            LEFT JOIN hotels h ON hr.hotel_id = h.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            WHERE hr.id = $1
+        `, [id]);
+        
+        if (reservation.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        // 2. 객실 정보
+        const rooms = await pool.query(`
+            SELECT 
+                hrr.*,
+                rt.room_type_code,
+                rt.room_type_name
+            FROM hotel_reservation_rooms hrr
+            LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
+            WHERE hrr.reservation_id = $1
+            ORDER BY hrr.room_number
+        `, [id]);
+        
+        // 3. 투숙객 정보
+        const guests = await pool.query(`
+            SELECT *
+            FROM hotel_reservation_guests
+            WHERE reservation_room_id = ANY($1)
+            ORDER BY reservation_room_id, id
+        `, [rooms.rows.map(r => r.id)]);
+        
+        // 4. 추가 항목
+        const extras = await pool.query(`
+            SELECT *
+            FROM hotel_reservation_extras
+            WHERE reservation_id = $1
+            ORDER BY id
+        `, [id]);
+        
+        // 데이터 조합
+        const data = {
+            ...reservation.rows[0],
+            rooms: rooms.rows.map(room => ({
+                ...room,
+                guests: guests.rows.filter(g => g.reservation_room_id === room.id)
+            })),
+            extras: extras.rows
+        };
+        
+        res.json(data);
+        
+    } catch (error) {
+        console.error('호텔 예약 상세 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 상세 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+/**
+ * 호텔 예약 수정
+ * PUT /api/hotel-reservations/:id
+ */
+router.put('/:id', async (req, res) => {
+    try {
+        const pool = req.app.get('pool');
+        const { id } = req.params;
+        const {
+            reservation_date,
+            status,
+            check_in_date,
+            check_out_date,
+            special_requests,
+            internal_memo
+        } = req.body;
+        
+        const result = await pool.query(`
+            UPDATE hotel_reservations
+            SET 
+                reservation_date = COALESCE($1, reservation_date),
+                status = COALESCE($2, status),
+                check_in_date = COALESCE($3, check_in_date),
+                check_out_date = COALESCE($4, check_out_date),
+                special_requests = $5,
+                internal_memo = $6,
+                updated_at = NOW()
+            WHERE id = $7
+            RETURNING *
+        `, [reservation_date, status, check_in_date, check_out_date, special_requests, internal_memo, id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '예약이 수정되었습니다.',
+            reservation: result.rows[0]
+        });
+        
+    } catch (error) {
+        console.error('호텔 예약 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '예약 수정 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+/**
  * 호텔 예약 데이터 AI 파싱
  * POST /admin/hotel-reservations/parse
  */
