@@ -1071,6 +1071,15 @@ app.get('/admin/hotel-inbox', requireAuth, (req, res) => {
     });
 });
 
+// 호텔 수배관리 페이지 ⭐ 신규
+app.get('/admin/hotel-assignments', requireAuth, (req, res) => {
+    res.render('admin/hotel-assignments', {
+        title: '호텔 수배관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'hotel-assignments'
+    });
+});
+
 // 임시 테스트 API (구체적인 라우트를 먼저 배치)
 app.get('/api/test', (req, res) => {
     res.json({ 

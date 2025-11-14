@@ -289,7 +289,7 @@ router.get('/', async (req, res) => {
     try {
         const pool = req.app.get('pool');
         
-        const result = await client.query(`
+        const result = await pool.query(`
             SELECT 
                 hr.*,
                 h.hotel_name,
@@ -297,7 +297,7 @@ router.get('/', async (req, res) => {
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
-            ORDER BY hr.created_at DESC
+            ORDER BY hr.reservation_date DESC, hr.created_at DESC
         `);
         
         res.json(result.rows);
