@@ -2,121 +2,220 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>프로모션 관리</title>
+  <title>프로모션 관리 v2</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    body { font-size: 0.7rem; }
-    h2 { font-size: 1.4rem; }
-    .btn { font-size: 0.7rem; padding: 0.3rem 0.7rem; }
-    .form-label { font-size: 0.7rem; }
-    .form-control, .form-select { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
-    .badge { font-size: 0.65rem; }
-    .filter-card { background: #f8f9fa; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
-    .promo-card { border: 1px solid #dee2e6; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background: white; }
-    .promo-code { font-size: 1.1rem; font-weight: 600; color: #667eea; }
+    body { font-size: 0.85rem; }
+    .promo-card { 
+      border: 1px solid #dee2e6; 
+      padding: 1rem; 
+      margin-bottom: 1rem; 
+      border-radius: 8px; 
+      background: white; 
+    }
+    .promo-code { 
+      font-size: 1.2rem; 
+      font-weight: 700; 
+      color: #667eea; 
+    }
+    .step-tabs { 
+      border-bottom: 2px solid #e9ecef; 
+      margin-bottom: 1.5rem; 
+    }
+    .step-tab { 
+      padding: 0.75rem 1.5rem; 
+      cursor: pointer; 
+      border-bottom: 3px solid transparent; 
+      display: inline-block; 
+      margin-right: 1rem; 
+    }
+    .step-tab.active { 
+      border-bottom-color: #667eea; 
+      color: #667eea; 
+      font-weight: 600; 
+    }
+    .step-content { 
+      display: none; 
+    }
+    .step-content.active { 
+      display: block; 
+    }
+    .calendar-grid { 
+      display: grid; 
+      grid-template-columns: repeat(7, 1fr); 
+      gap: 5px; 
+      margin-bottom: 2rem; 
+    }
+    .calendar-day { 
+      border: 1px solid #dee2e6; 
+      padding: 0.5rem; 
+      text-align: center; 
+      cursor: pointer; 
+      background: white; 
+      min-height: 80px; 
+    }
+    .calendar-day.selected { 
+      background: #e3f2fd; 
+      border-color: #2196f3; 
+    }
+    .calendar-day.has-rate { 
+      background: #c8e6c9; 
+    }
+    .calendar-day:hover { 
+      background: #f5f5f5; 
+    }
+    .calendar-header { 
+      font-weight: 600; 
+      background: #f8f9fa; 
+      padding: 0.5rem; 
+    }
+    .rate-input-group { 
+      margin-bottom: 1rem; 
+      padding: 1rem; 
+      border: 1px solid #dee2e6; 
+      border-radius: 8px; 
+    }
   </style>
 </head>
 <body>
   <%- include('../partials/navbar') %>
+  
   <div class="container-fluid mt-4">
-    <h2><i class="bi bi-tag"></i> 프로모션 관리 <button class="btn btn-primary btn-sm ms-3" onclick="openAddModal()"><i class="bi bi-plus-circle"></i> 등록</button></h2>
-    <div class="filter-card mt-3">
-      <div class="row g-2">
-        <div class="col-md-4">
-          <label class="form-label">호텔</label>
-          <select class="form-select" id="filterHotel" onchange="loadPromotions()">
-            <option value="">전체</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">코드 검색</label>
-          <input type="text" class="form-control" id="filterPromoCode">
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">상태</label>
-          <select class="form-select" id="filterActive" onchange="loadPromotions()">
-            <option value="">전체</option>
-            <option value="true" selected>활성</option>
-            <option value="false">비활성</option>
-          </select>
-        </div>
-        <div class="col-md-3 d-flex align-items-end">
-          <button class="btn btn-primary w-100" onclick="loadPromotions()"><i class="bi bi-search"></i> 검색</button>
+    <h2><i class="bi bi-tag-fill"></i> 프로모션 관리 v2
+      <button class="btn btn-primary btn-sm ms-3" onclick="openNewPromo()">
+        <i class="bi bi-plus-circle"></i> 신규 프로모션
+      </button>
+    </h2>
+    
+    <!-- 필터 -->
+    <div class="card mt-3 mb-3">
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">호텔</label>
+            <select class="form-select" id="filterHotel" onchange="loadPromos()">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">프로모션 코드</label>
+            <input type="text" class="form-control" id="filterCode" placeholder="검색">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">상태</label>
+            <select class="form-select" id="filterActive" onchange="loadPromos()">
+              <option value="">전체</option>
+              <option value="true" selected>활성</option>
+              <option value="false">비활성</option>
+            </select>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-primary w-100" onclick="loadPromos()">
+              <i class="bi bi-search"></i> 검색
+            </button>
+          </div>
         </div>
       </div>
     </div>
+    
+    <!-- 프로모션 목록 -->
     <div id="promoList"></div>
   </div>
   
-  <div class="modal fade" id="promoModal" tabindex="-1">
+  <!-- 프로모션 등록/수정 모달 -->
+  <div class="modal fade" id="promoModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="modalTitle">프로모션 등록</h5>
+          <h5 class="modal-title" id="modalTitle">신규 프로모션</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <input type="hidden" id="promoId">
-          <div class="row">
-            <div class="col-md-6 mb-2">
-              <label class="form-label">호텔 *</label>
-              <select class="form-select" id="hotelId" onchange="loadRoomTypesForPromo()" required>
-                <option value="">선택</option>
-              </select>
+          <input type="hidden" id="currentPromoId">
+          
+          <!-- 단계별 탭 -->
+          <div class="step-tabs">
+            <div class="step-tab active" data-step="1" onclick="switchStep(1)">
+              <i class="bi bi-1-circle"></i> 기본 정보
             </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">프로모션 코드 *</label>
-              <input type="text" class="form-control" id="promoCode" required>
+            <div class="step-tab" data-step="2" onclick="switchStep(2)">
+              <i class="bi bi-2-circle"></i> 날짜별 요금
             </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">최소박</label>
-              <input type="number" class="form-control" id="minNights" value="1">
+            <div class="step-tab" data-step="3" onclick="switchStep(3)">
+              <i class="bi bi-3-circle"></i> 베네핏
             </div>
-          </div>
-          <div class="mb-2">
-            <label class="form-label">프로모션명 *</label>
-            <input type="text" class="form-control" id="promoName" required>
-          </div>
-          <div class="row">
-            <div class="col-md-3 mb-2">
-              <label class="form-label">예약 시작 *</label>
-              <input type="date" class="form-control" id="bookingStartDate" required>
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">예약 종료 *</label>
-              <input type="date" class="form-control" id="bookingEndDate" required>
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">투숙 시작 *</label>
-              <input type="date" class="form-control" id="stayStartDate" required>
-            </div>
-            <div class="col-md-3 mb-2">
-              <label class="form-label">투숙 종료 *</label>
-              <input type="date" class="form-control" id="stayEndDate" required>
-            </div>
-          </div>
-          <div class="mb-2">
-            <label class="form-label">설명</label>
-            <textarea class="form-control" id="description" rows="2"></textarea>
           </div>
           
-          <hr>
-          <h6><i class="bi bi-percent"></i> 객실별 할인</h6>
-          <div id="discountsList"></div>
+          <!-- Step 1: 기본 정보 -->
+          <div class="step-content active" data-step="1">
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">호텔 *</label>
+                <select class="form-select" id="hotelId" required>
+                  <option value="">선택</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">프로모션 코드 * <small class="text-muted">(예: SUMMER2025)</small></label>
+                <input type="text" class="form-control" id="promoCode" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">프로모션명 *</label>
+              <input type="text" class="form-control" id="promoName" placeholder="예: 여름 특가" required>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">예약 가능 시작일 *</label>
+                <input type="date" class="form-control" id="bookingStartDate" required>
+                <small class="text-muted">이 기간 내에만 신규 예약을 넣을 수 있습니다</small>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">예약 가능 종료일 *</label>
+                <input type="date" class="form-control" id="bookingEndDate" required>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">투숙 가능 시작일 *</label>
+                <input type="date" class="form-control" id="stayStartDate" required>
+                <small class="text-muted">실제 투숙 가능한 기간</small>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">투숙 가능 종료일 *</label>
+                <input type="date" class="form-control" id="stayEndDate" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">설명</label>
+              <textarea class="form-control" id="description" rows="3"></textarea>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="isActive" checked>
+              <label class="form-check-label">활성화</label>
+            </div>
+          </div>
           
-          <hr>
-          <h6><i class="bi bi-gift"></i> 베네핏 <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBenefit()"><i class="bi bi-plus"></i></button></h6>
-          <div id="benefitsList"></div>
+          <!-- Step 2: 날짜별 요금 (별도 파일에서 로드) -->
+          <div class="step-content" data-step="2">
+            <%- include('./promotions-rates-ui') %>
+          </div>
           
-          <div class="form-check mt-2">
-            <input class="form-check-input" type="checkbox" id="isActive" checked>
-            <label class="form-check-label">활성화</label>
+          <!-- Step 3: 베네핏 -->
+          <div class="step-content" data-step="3">
+            <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addBenefit()">
+              <i class="bi bi-plus"></i> 베네핏 추가
+            </button>
+            <div id="benefitsList"></div>
           </div>
         </div>
+        
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-          <button type="button" class="btn btn-primary" onclick="savePromo()">저장</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+          <button type="button" class="btn btn-primary" onclick="savePromotion()">
+            <i class="bi bi-save"></i> 저장
+          </button>
         </div>
       </div>
     </div>
@@ -124,30 +223,38 @@
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let currentPromos = [];
     let hotels = [];
-    let currentRoomTypes = [];
+    let currentPromos = [];
+    let currentStep = 1;
     let benefitCounter = 0;
     
-    document.addEventListener('DOMContentLoaded', () => { loadHotels(); });
+    document.addEventListener('DOMContentLoaded', () => {
+      loadHotels();
+    });
     
     async function loadHotels() {
       const res = await fetch('/api/hotels?is_active=true');
       hotels = await res.json();
-      document.getElementById('filterHotel').innerHTML = '<option value="">전체</option>' + hotels.map(h => '<option value="' + h.id + '">' + h.hotel_name + '</option>').join('');
-      document.getElementById('hotelId').innerHTML = '<option value="">선택</option>' + hotels.map(h => '<option value="' + h.id + '">' + h.hotel_name + '</option>').join('');
-      loadPromotions();
+      
+      const filterSelect = document.getElementById('filterHotel');
+      const modalSelect = document.getElementById('hotelId');
+      
+      const options = hotels.map(h => `<option value="${h.id}">${h.hotel_name}</option>`).join('');
+      filterSelect.innerHTML = '<option value="">전체</option>' + options;
+      modalSelect.innerHTML = '<option value="">선택</option>' + options;
+      
+      loadPromos();
     }
     
-    async function loadPromotions() {
+    async function loadPromos() {
       let url = '/api/promotions?';
       const hotelId = document.getElementById('filterHotel').value;
-      const promoCode = document.getElementById('filterPromoCode').value;
-      const isActive = document.getElementById('filterActive').value;
+      const code = document.getElementById('filterCode').value;
+      const active = document.getElementById('filterActive').value;
       
-      if (hotelId) url += 'hotel_id=' + hotelId + '&';
-      if (promoCode) url += 'promo_code=' + promoCode + '&';
-      if (isActive) url += 'is_active=' + isActive;
+      if (hotelId) url += `hotel_id=${hotelId}&`;
+      if (code) url += `promo_code=${code}&`;
+      if (active) url += `is_active=${active}`;
       
       const res = await fetch(url);
       currentPromos = await res.json();
@@ -156,34 +263,50 @@
     
     function renderPromos() {
       const container = document.getElementById('promoList');
+      
       if (currentPromos.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-muted">등록된 프로모션이 없습니다</div>';
+        container.innerHTML = '<div class="text-center py-5 text-muted">등록된 프로모션이 없습니다</div>';
         return;
       }
       
       let html = '';
       currentPromos.forEach(p => {
-        html += '<div class="promo-card"><div class="d-flex justify-content-between"><div>';
-        html += '<div class="promo-code">' + p.promo_code + '</div>';
-        html += '<div><strong>' + p.promo_name + '</strong> <span class="text-muted ms-2">' + p.hotel_name + '</span></div>';
-        html += '<div class="mt-1">';
-        html += '<span class="badge bg-primary">예약: ' + p.booking_start_date + ' ~ ' + p.booking_end_date + '</span> ';
-        html += '<span class="badge bg-success">투숙: ' + p.stay_start_date + ' ~ ' + p.stay_end_date + '</span> ';
-        html += '<span class="badge bg-info">할인 ' + p.discount_count + '개</span> ';
-        html += '<span class="badge bg-warning">베네핏 ' + p.benefit_count + '개</span> ';
-        html += p.is_active ? '<span class="badge bg-success">활성</span>' : '<span class="badge bg-secondary">비활성</span>';
-        html += '</div></div><div>';
-        html += '<button class="btn btn-sm btn-outline-primary" onclick="editPromo(' + p.id + ')"><i class="bi bi-pencil"></i></button> ';
-        html += '<button class="btn btn-sm btn-outline-danger" onclick="deletePromo(' + p.id + ')"><i class="bi bi-trash"></i></button>';
-        html += '</div></div></div>';
+        html += `
+          <div class="promo-card">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="promo-code">${p.promo_code}</div>
+                <div class="mt-1"><strong>${p.promo_name}</strong></div>
+                <div class="text-muted small">${p.hotel_name}</div>
+                <div class="mt-2">
+                  <span class="badge bg-primary">예약: ${p.booking_start_date} ~ ${p.booking_end_date}</span>
+                  <span class="badge bg-success">투숙: ${p.stay_start_date} ~ ${p.stay_end_date}</span>
+                  <span class="badge bg-info">${p.rate_count}개 요금</span>
+                  <span class="badge bg-warning">${p.benefit_count}개 베네핏</span>
+                  ${p.is_active ? '<span class="badge bg-success">활성</span>' : '<span class="badge bg-secondary">비활성</span>'}
+                </div>
+              </div>
+              <div>
+                <button class="btn btn-sm btn-outline-primary" onclick="editPromo(${p.id})">
+                  <i class="bi bi-pencil"></i> 수정
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deletePromo(${p.id})">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
       });
       
       container.innerHTML = html;
     }
     
-    function openAddModal() {
-      document.getElementById('modalTitle').textContent = '프로모션 등록';
-      document.getElementById('promoId').value = '';
+    function openNewPromo() {
+      document.getElementById('currentPromoId').value = '';
+      document.getElementById('modalTitle').textContent = '신규 프로모션';
+      
+      // 폼 초기화
       document.getElementById('hotelId').value = '';
       document.getElementById('promoCode').value = '';
       document.getElementById('promoName').value = '';
@@ -191,126 +314,110 @@
       document.getElementById('bookingEndDate').value = '';
       document.getElementById('stayStartDate').value = '';
       document.getElementById('stayEndDate').value = '';
-      document.getElementById('minNights').value = 1;
       document.getElementById('description').value = '';
       document.getElementById('isActive').checked = true;
-      document.getElementById('discountsList').innerHTML = '<p class="text-muted">먼저 호텔을 선택하세요</p>';
       document.getElementById('benefitsList').innerHTML = '';
+      
       benefitCounter = 0;
+      currentStep = 1;
+      switchStep(1);
+      
       new bootstrap.Modal(document.getElementById('promoModal')).show();
     }
     
-    async function loadRoomTypesForPromo() {
-      const hotelId = document.getElementById('hotelId').value;
-      if (!hotelId) return;
+    async function editPromo(id) {
+      const res = await fetch(`/api/promotions/${id}`);
+      const promo = await res.json();
       
-      const res = await fetch('/api/room-types?hotel_id=' + hotelId + '&is_active=true');
-      currentRoomTypes = await res.json();
+      document.getElementById('currentPromoId').value = promo.id;
+      document.getElementById('modalTitle').textContent = '프로모션 수정';
+      document.getElementById('hotelId').value = promo.hotel_id;
+      document.getElementById('promoCode').value = promo.promo_code;
+      document.getElementById('promoName').value = promo.promo_name;
+      document.getElementById('bookingStartDate').value = promo.booking_start_date;
+      document.getElementById('bookingEndDate').value = promo.booking_end_date;
+      document.getElementById('stayStartDate').value = promo.stay_start_date;
+      document.getElementById('stayEndDate').value = promo.stay_end_date;
+      document.getElementById('description').value = promo.description || '';
+      document.getElementById('isActive').checked = promo.is_active;
       
-      let html = '';
-      currentRoomTypes.forEach(rt => {
-        html += '<div class="row mb-2">';
-        html += '<div class="col-md-6"><input type="text" class="form-control" value="' + rt.room_type_name + '" readonly>';
-        html += '<input type="hidden" class="discount-room-id" value="' + rt.id + '"></div>';
-        html += '<div class="col-md-3"><input type="number" class="form-control discount-value" placeholder="할인금액" step="0.01"></div>';
-        html += '<div class="col-md-3"><select class="form-select"><option value="USD">USD</option><option value="KRW">KRW</option></select></div>';
-        html += '</div>';
+      // 베네핏 로드
+      document.getElementById('benefitsList').innerHTML = '';
+      benefitCounter = 0;
+      if (promo.benefits && promo.benefits.length > 0) {
+        promo.benefits.forEach(b => {
+          addBenefit();
+          const lastId = benefitCounter - 1;
+          const row = document.getElementById(`benefit-${lastId}`);
+          row.querySelector('.benefit-type').value = b.benefit_type;
+          row.querySelector('.benefit-name').value = b.benefit_name;
+          row.querySelector('.benefit-value').value = b.benefit_value || '';
+        });
+      }
+      
+      currentStep = 1;
+      switchStep(1);
+      
+      new bootstrap.Modal(document.getElementById('promoModal')).show();
+      
+      // 요금 데이터 로드 (Step 2에서 사용)
+      if (typeof loadPromoRates === 'function') {
+        loadPromoRates(id);
+      }
+    }
+    
+    function switchStep(step) {
+      currentStep = step;
+      
+      // 탭 활성화
+      document.querySelectorAll('.step-tab').forEach(tab => {
+        tab.classList.toggle('active', parseInt(tab.dataset.step) === step);
       });
       
-      document.getElementById('discountsList').innerHTML = html;
+      // 콘텐츠 표시
+      document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.toggle('active', parseInt(content.dataset.step) === step);
+      });
     }
     
     function addBenefit() {
       const id = benefitCounter++;
-      const html = '<div class="row mb-2" id="benefit-' + id + '">' +
-        '<div class="col-md-3"><select class="form-select benefit-type">' +
-        '<option value="drink_coupon">음료쿠폰</option>' +
-        '<option value="late_checkout">레이트체크아웃</option>' +
-        '<option value="breakfast">조식</option>' +
-        '<option value="upgrade">업그레이드</option>' +
-        '<option value="credit">크레딧</option>' +
-        '<option value="other">기타</option>' +
-        '</select></div>' +
-        '<div class="col-md-4"><input type="text" class="form-control benefit-name" placeholder="베네핏명"></div>' +
-        '<div class="col-md-3"><input type="text" class="form-control benefit-value" placeholder="값"></div>' +
-        '<div class="col-md-2"><button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById(\'benefit-' + id + '\').remove()"><i class="bi bi-trash"></i></button></div>' +
-        '</div>';
-      
-      document.getElementById('benefitsList').innerHTML += html;
+      const html = `
+        <div class="card mb-2" id="benefit-${id}">
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-md-3">
+                <select class="form-select benefit-type">
+                  <option value="late_checkout">레이트체크아웃</option>
+                  <option value="breakfast">조식</option>
+                  <option value="drink_coupon">음료쿠폰</option>
+                  <option value="upgrade">업그레이드</option>
+                  <option value="credit">크레딧</option>
+                  <option value="other">기타</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <input type="text" class="form-control benefit-name" placeholder="베네핏명 (예: 레이트체크아웃 2시)">
+              </div>
+              <div class="col-md-3">
+                <input type="text" class="form-control benefit-value" placeholder="값 (예: 14:00)">
+              </div>
+              <div class="col-md-2">
+                <button type="button" class="btn btn-danger w-100" onclick="document.getElementById('benefit-${id}').remove()">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('benefitsList').insertAdjacentHTML('beforeend', html);
     }
     
-    async function editPromo(id) {
-      const res = await fetch('/api/promotions/' + id);
-      const p = await res.json();
+    async function savePromotion() {
+      const id = document.getElementById('currentPromoId').value;
       
-      document.getElementById('modalTitle').textContent = '프로모션 수정';
-      document.getElementById('promoId').value = p.id;
-      document.getElementById('hotelId').value = p.hotel_id;
-      await loadRoomTypesForPromo();
-      
-      document.getElementById('promoCode').value = p.promo_code;
-      document.getElementById('promoName').value = p.promo_name;
-      document.getElementById('bookingStartDate').value = p.booking_start_date;
-      document.getElementById('bookingEndDate').value = p.booking_end_date;
-      document.getElementById('stayStartDate').value = p.stay_start_date;
-      document.getElementById('stayEndDate').value = p.stay_end_date;
-      document.getElementById('minNights').value = p.min_nights || 1;
-      document.getElementById('description').value = p.description || '';
-      document.getElementById('isActive').checked = p.is_active;
-      
-      // 할인값 채우기
-      p.discounts.forEach(d => {
-        const inputs = document.querySelectorAll('.discount-room-id');
-        inputs.forEach((input, idx) => {
-          if (parseInt(input.value) === d.room_type_id) {
-            document.querySelectorAll('.discount-value')[idx].value = d.discount_value;
-          }
-        });
-      });
-      
-      // 베네핏 추가
-      document.getElementById('benefitsList').innerHTML = '';
-      benefitCounter = 0;
-      p.benefits.forEach(b => {
-        addBenefit();
-        const lastId = benefitCounter - 1;
-        const row = document.getElementById('benefit-' + lastId);
-        row.querySelector('.benefit-type').value = b.benefit_type;
-        row.querySelector('.benefit-name').value = b.benefit_name;
-        row.querySelector('.benefit-value').value = b.benefit_value || '';
-      });
-      
-      new bootstrap.Modal(document.getElementById('promoModal')).show();
-    }
-    
-    async function savePromo() {
-      const id = document.getElementById('promoId').value;
-      
-      // 할인 수집
-      const discounts = [];
-      document.querySelectorAll('.discount-room-id').forEach((input, idx) => {
-        const value = parseFloat(document.querySelectorAll('.discount-value')[idx].value);
-        if (value > 0) {
-          discounts.push({
-            room_type_id: parseInt(input.value),
-            discount_value: value
-          });
-        }
-      });
-      
-      // 베네핏 수집
-      const benefits = [];
-      document.querySelectorAll('[id^="benefit-"]').forEach(row => {
-        const name = row.querySelector('.benefit-name').value;
-        if (name) {
-          benefits.push({
-            benefit_type: row.querySelector('.benefit-type').value,
-            benefit_name: name,
-            benefit_value: row.querySelector('.benefit-value').value || null
-          });
-        }
-      });
-      
+      // 기본 정보
       const data = {
         hotel_id: document.getElementById('hotelId').value,
         promo_code: document.getElementById('promoCode').value,
@@ -319,40 +426,83 @@
         booking_end_date: document.getElementById('bookingEndDate').value,
         stay_start_date: document.getElementById('stayStartDate').value,
         stay_end_date: document.getElementById('stayEndDate').value,
-        min_nights: parseInt(document.getElementById('minNights').value) || 1,
-        description: document.getElementById('description').value || null,
-        is_active: document.getElementById('isActive').checked,
-        discounts,
-        benefits
+        description: document.getElementById('description').value,
+        is_active: document.getElementById('isActive').checked
       };
       
       if (!data.hotel_id || !data.promo_code || !data.promo_name) {
-        alert('필수 항목을 입력하세요'); return;
+        alert('필수 항목을 입력하세요');
+        return;
       }
       
-      const res = await fetch(id ? '/api/promotions/' + id : '/api/promotions', {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      
-      const result = await res.json();
-      if (result.error) { alert('저장 실패: ' + result.error); return; }
-      
-      alert('저장되었습니다');
-      bootstrap.Modal.getInstance(document.getElementById('promoModal')).hide();
-      loadPromotions();
+      try {
+        // 1. 프로모션 저장
+        const url = id ? `/api/promotions/${id}` : '/api/promotions';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        if (result.error) {
+          alert('저장 실패: ' + result.error);
+          return;
+        }
+        
+        const promoId = result.promotion.id;
+        
+        // 2. 베네핏 저장
+        const benefits = [];
+        document.querySelectorAll('[id^="benefit-"]').forEach(row => {
+          const name = row.querySelector('.benefit-name').value;
+          if (name) {
+            benefits.push({
+              benefit_type: row.querySelector('.benefit-type').value,
+              benefit_name: name,
+              benefit_value: row.querySelector('.benefit-value').value || null
+            });
+          }
+        });
+        
+        if (benefits.length > 0) {
+          await fetch(`/api/promotions/${promoId}/benefits`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ benefits })
+          });
+        }
+        
+        // 3. 요금 저장 (Step 2에서 정의된 함수)
+        if (typeof savePromoRates === 'function') {
+          await savePromoRates(promoId);
+        }
+        
+        alert('저장되었습니다');
+        bootstrap.Modal.getInstance(document.getElementById('promoModal')).hide();
+        loadPromos();
+        
+      } catch (error) {
+        console.error('저장 오류:', error);
+        alert('저장 중 오류가 발생했습니다');
+      }
     }
     
     async function deletePromo(id) {
-      if (!confirm('삭제하시겠습니까?')) return;
+      if (!confirm('프로모션을 삭제하시겠습니까?')) return;
       
-      const res = await fetch('/api/promotions/' + id, { method: 'DELETE' });
+      const res = await fetch(`/api/promotions/${id}`, { method: 'DELETE' });
       const result = await res.json();
-      if (result.error) { alert('삭제 실패: ' + result.error); return; }
+      
+      if (result.error) {
+        alert('삭제 실패: ' + result.error);
+        return;
+      }
       
       alert('삭제되었습니다');
-      loadPromotions();
+      loadPromos();
     }
   </script>
 </body>

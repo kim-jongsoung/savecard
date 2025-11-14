@@ -1,0 +1,375 @@
+<div class="alert alert-info">
+  <i class="bi bi-info-circle"></i>
+  <strong>날짜별 + 연박별 요금 등록</strong><br>
+  각 날짜마다 연박 조건에 따라 다른 요금을 설정할 수 있습니다.<br>
+  예: 7월 15일 - 1박 $200, 2박 $180, 3박 이상 $160
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-6">
+    <label class="form-label">객실 타입 선택</label>
+    <select class="form-select" id="rateRoomType" onchange="renderRateCalendar()">
+      <option value="">먼저 Step 1에서 호텔을 선택하세요</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">시작 월</label>
+    <input type="month" class="form-control" id="rateStartMonth" onchange="renderRateCalendar()">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">통화</label>
+    <select class="form-select" id="rateCurrency">
+      <option value="USD">USD</option>
+      <option value="KRW">KRW</option>
+    </select>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-12">
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllDates()">
+      <i class="bi bi-check-square"></i> 전체 선택
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllDates()">
+      <i class="bi bi-square"></i> 선택 해제
+    </button>
+    <span class="ms-3 text-muted">
+      <i class="bi bi-info-circle"></i> 날짜를 클릭하여 선택 후 아래에서 요금을 입력하세요
+    </span>
+  </div>
+</div>
+
+<!-- 달력 표시 -->
+<div id="rateCalendarContainer"></div>
+
+<!-- 선택된 날짜 요금 입력 -->
+<div id="rateInputSection" style="display: none;">
+  <hr>
+  <h6>
+    <i class="bi bi-calendar-check"></i> 선택된 날짜 요금 입력
+    <span class="badge bg-primary ms-2" id="selectedDateCount">0</span>개 날짜 선택됨
+  </h6>
+  
+  <div class="rate-input-group">
+    <div class="row g-2 mb-2">
+      <div class="col-md-3">
+        <label class="form-label small">1박만 (1박 요금)</label>
+        <input type="number" class="form-control" id="rate1Night" placeholder="200.00" step="0.01">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">2박시 (1박 요금)</label>
+        <input type="number" class="form-control" id="rate2Nights" placeholder="180.00" step="0.01">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">3박 이상 (1박 요금)</label>
+        <input type="number" class="form-control" id="rate3PlusNights" placeholder="160.00" step="0.01">
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button type="button" class="btn btn-primary w-100" onclick="applyRatesToSelected()">
+          <i class="bi bi-check-circle"></i> 선택 날짜에 적용
+        </button>
+      </div>
+    </div>
+    <div class="text-muted small">
+      <i class="bi bi-info-circle"></i> 각 연박 조건별로 1박당 요금을 입력하세요. 
+      예: 3박 예약시 총 요금 = $160 × 3박 = $480
+    </div>
+  </div>
+</div>
+
+<!-- 저장된 요금 목록 -->
+<div class="mt-4">
+  <h6><i class="bi bi-list-check"></i> 등록된 요금 목록</h6>
+  <div id="savedRatesList"></div>
+</div>
+
+<script>
+  let selectedDates = new Set();
+  let rateCalendarData = {};  // { 'YYYY-MM-DD': { room_type_id, rates: [{ min_nights, rate }] } }
+  let currentRoomTypes = [];
+  
+  // 호텔 변경 시 객실 타입 로드
+  document.getElementById('hotelId').addEventListener('change', async function() {
+    const hotelId = this.value;
+    if (!hotelId) {
+      document.getElementById('rateRoomType').innerHTML = '<option value="">먼저 호텔을 선택하세요</option>';
+      return;
+    }
+    
+    const res = await fetch(`/api/room-types?hotel_id=${hotelId}&is_active=true`);
+    currentRoomTypes = await res.json();
+    
+    const select = document.getElementById('rateRoomType');
+    select.innerHTML = '<option value="">객실 타입 선택</option>' + 
+      currentRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
+  });
+  
+  // 프로모션 수정 시 요금 데이터 로드
+  async function loadPromoRates(promoId) {
+    const res = await fetch(`/api/promotions/${promoId}/rates`);
+    const rates = await res.json();
+    
+    rateCalendarData = {};
+    
+    rates.forEach(r => {
+      const key = r.stay_date;
+      if (!rateCalendarData[key]) {
+        rateCalendarData[key] = {
+          room_type_id: r.room_type_id,
+          rates: []
+        };
+      }
+      rateCalendarData[key].rates.push({
+        min_nights: r.min_nights,
+        max_nights: r.max_nights,
+        rate_per_night: parseFloat(r.rate_per_night)
+      });
+    });
+    
+    renderRateCalendar();
+    renderSavedRates();
+  }
+  
+  function renderRateCalendar() {
+    const roomTypeId = document.getElementById('rateRoomType').value;
+    const startMonth = document.getElementById('rateStartMonth').value;
+    
+    if (!roomTypeId || !startMonth) {
+      document.getElementById('rateCalendarContainer').innerHTML = '';
+      return;
+    }
+    
+    const [year, month] = startMonth.split('-').map(Number);
+    const container = document.getElementById('rateCalendarContainer');
+    let html = '';
+    
+    // 3개월 달력 표시
+    for (let m = 0; m < 3; m++) {
+      const currentYear = month + m > 12 ? year + 1 : year;
+      const currentMonth = month + m > 12 ? month + m - 12 : month + m;
+      const monthName = new Date(currentYear, currentMonth - 1).toLocaleString('ko', { year: 'numeric', month: 'long' });
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+      
+      html += `<div class="mb-4">`;
+      html += `<h6 class="mb-2">${monthName}</h6>`;
+      html += `<div class="calendar-grid">`;
+      
+      // 요일 헤더
+      ['일', '월', '화', '수', '목', '금', '토'].forEach(day => {
+        html += `<div class="calendar-header">${day}</div>`;
+      });
+      
+      // 빈 칸 (첫 주)
+      for (let i = 0; i < firstDay; i++) {
+        html += `<div></div>`;
+      }
+      
+      // 날짜
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasRate = rateCalendarData[dateStr] && rateCalendarData[dateStr].room_type_id == roomTypeId;
+        const isSelected = selectedDates.has(dateStr);
+        
+        html += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${hasRate ? 'has-rate' : ''}" 
+                      onclick="toggleDate('${dateStr}')">
+                  <div><strong>${day}</strong></div>
+                  ${hasRate ? '<div class="small text-success">✓</div>' : ''}
+                </div>`;
+      }
+      
+      html += `</div></div>`;
+    }
+    
+    container.innerHTML = html;
+  }
+  
+  function toggleDate(dateStr) {
+    if (selectedDates.has(dateStr)) {
+      selectedDates.delete(dateStr);
+    } else {
+      selectedDates.add(dateStr);
+    }
+    
+    renderRateCalendar();
+    updateRateInputSection();
+  }
+  
+  function selectAllDates() {
+    const startMonth = document.getElementById('rateStartMonth').value;
+    if (!startMonth) return;
+    
+    const [year, month] = startMonth.split('-').map(Number);
+    
+    for (let m = 0; m < 3; m++) {
+      const currentYear = month + m > 12 ? year + 1 : year;
+      const currentMonth = month + m > 12 ? month + m - 12 : month + m;
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        selectedDates.add(dateStr);
+      }
+    }
+    
+    renderRateCalendar();
+    updateRateInputSection();
+  }
+  
+  function deselectAllDates() {
+    selectedDates.clear();
+    renderRateCalendar();
+    updateRateInputSection();
+  }
+  
+  function updateRateInputSection() {
+    const section = document.getElementById('rateInputSection');
+    const count = document.getElementById('selectedDateCount');
+    
+    if (selectedDates.size > 0) {
+      section.style.display = 'block';
+      count.textContent = selectedDates.size;
+    } else {
+      section.style.display = 'none';
+    }
+  }
+  
+  function applyRatesToSelected() {
+    const roomTypeId = document.getElementById('rateRoomType').value;
+    const rate1 = parseFloat(document.getElementById('rate1Night').value);
+    const rate2 = parseFloat(document.getElementById('rate2Nights').value);
+    const rate3 = parseFloat(document.getElementById('rate3PlusNights').value);
+    
+    if (!roomTypeId) {
+      alert('객실 타입을 선택하세요');
+      return;
+    }
+    
+    if (!rate1 && !rate2 && !rate3) {
+      alert('최소 하나의 요금을 입력하세요');
+      return;
+    }
+    
+    selectedDates.forEach(dateStr => {
+      if (!rateCalendarData[dateStr]) {
+        rateCalendarData[dateStr] = {
+          room_type_id: parseInt(roomTypeId),
+          rates: []
+        };
+      }
+      
+      // 기존 요금 제거
+      rateCalendarData[dateStr].rates = [];
+      
+      // 새 요금 추가
+      if (rate1) {
+        rateCalendarData[dateStr].rates.push({ min_nights: 1, max_nights: 1, rate_per_night: rate1 });
+      }
+      if (rate2) {
+        rateCalendarData[dateStr].rates.push({ min_nights: 2, max_nights: 2, rate_per_night: rate2 });
+      }
+      if (rate3) {
+        rateCalendarData[dateStr].rates.push({ min_nights: 3, max_nights: null, rate_per_night: rate3 });
+      }
+    });
+    
+    // 입력 필드 초기화
+    document.getElementById('rate1Night').value = '';
+    document.getElementById('rate2Nights').value = '';
+    document.getElementById('rate3PlusNights').value = '';
+    
+    selectedDates.clear();
+    renderRateCalendar();
+    updateRateInputSection();
+    renderSavedRates();
+    
+    alert(`${selectedDates.size}개 날짜에 요금이 적용되었습니다`);
+  }
+  
+  function renderSavedRates() {
+    const container = document.getElementById('savedRatesList');
+    const roomTypeId = document.getElementById('rateRoomType').value;
+    
+    if (!roomTypeId) {
+      container.innerHTML = '<div class="text-muted">객실 타입을 선택하세요</div>';
+      return;
+    }
+    
+    const roomTypeName = currentRoomTypes.find(rt => rt.id == roomTypeId)?.room_type_name || '';
+    const dates = Object.keys(rateCalendarData)
+      .filter(date => rateCalendarData[date].room_type_id == roomTypeId)
+      .sort();
+    
+    if (dates.length === 0) {
+      container.innerHTML = '<div class="text-muted">등록된 요금이 없습니다</div>';
+      return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-sm table-bordered">';
+    html += '<thead><tr><th>날짜</th><th>1박</th><th>2박</th><th>3박+</th><th></th></tr></thead><tbody>';
+    
+    dates.forEach(date => {
+      const data = rateCalendarData[date];
+      const rate1 = data.rates.find(r => r.min_nights === 1)?.rate_per_night || '-';
+      const rate2 = data.rates.find(r => r.min_nights === 2)?.rate_per_night || '-';
+      const rate3 = data.rates.find(r => r.min_nights === 3)?.rate_per_night || '-';
+      
+      html += `<tr>
+        <td>${date}</td>
+        <td>${rate1}</td>
+        <td>${rate2}</td>
+        <td>${rate3}</td>
+        <td><button class="btn btn-sm btn-danger" onclick="deleteRate('${date}')"><i class="bi bi-trash"></i></button></td>
+      </tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  }
+  
+  function deleteRate(dateStr) {
+    if (confirm(`${dateStr} 요금을 삭제하시겠습니까?`)) {
+      delete rateCalendarData[dateStr];
+      renderRateCalendar();
+      renderSavedRates();
+    }
+  }
+  
+  // 요금 저장 함수 (메인 파일에서 호출)
+  async function savePromoRates(promoId) {
+    const currency = document.getElementById('rateCurrency').value;
+    const rates = [];
+    
+    Object.keys(rateCalendarData).forEach(dateStr => {
+      const data = rateCalendarData[dateStr];
+      data.rates.forEach(r => {
+        rates.push({
+          room_type_id: data.room_type_id,
+          stay_date: dateStr,
+          min_nights: r.min_nights,
+          max_nights: r.max_nights,
+          rate_per_night: r.rate_per_night,
+          currency: currency
+        });
+      });
+    });
+    
+    if (rates.length === 0) {
+      return;  // 요금이 없으면 스킵
+    }
+    
+    const res = await fetch(`/api/promotions/${promoId}/rates`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rates })
+    });
+    
+    const result = await res.json();
+    if (result.error) {
+      alert('요금 저장 실패: ' + result.error);
+      throw new Error(result.error);
+    }
+    
+    console.log(`${result.count}개 요금 저장 완료`);
+  }
+</script>
