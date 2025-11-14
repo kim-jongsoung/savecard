@@ -1045,12 +1045,26 @@
                     document.getElementById('roomsContainer').innerHTML = '';
                     document.getElementById('extrasContainer').innerHTML = '';
                     
+                    // 날짜 포맷 변환 함수 (ISO → YYYY-MM-DD)
+                    function formatDateForInput(dateStr) {
+                        if (!dateStr) return '';
+                        try {
+                            const date = new Date(dateStr);
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            return `${year}-${month}-${day}`;
+                        } catch (e) {
+                            return dateStr;
+                        }
+                    }
+                    
                     // 기본 정보 채우기
                     document.getElementById('reservation_number').value = data.reservation_number || '';
                     document.getElementById('status').value = data.status || 'pending';
-                    document.getElementById('reservation_date').value = data.reservation_date || '';
-                    document.getElementById('check_in_date').value = data.check_in_date || '';
-                    document.getElementById('check_out_date').value = data.check_out_date || '';
+                    document.getElementById('reservation_date').value = formatDateForInput(data.reservation_date);
+                    document.getElementById('check_in_date').value = formatDateForInput(data.check_in_date);
+                    document.getElementById('check_out_date').value = formatDateForInput(data.check_out_date);
                     document.getElementById('arrival_flight').value = data.arrival_flight || '';
                     document.getElementById('departure_flight').value = data.departure_flight || '';
                     document.getElementById('special_requests').value = data.special_requests || '';
