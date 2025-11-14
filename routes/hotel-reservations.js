@@ -393,55 +393,286 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
- * 호텔 예약 수정
+ * 호텔 예약 수정 (완전한 업데이트)
  * PUT /api/hotel-reservations/:id
  */
 router.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        hotel_id,
+        booking_agency_id,
+        reservation_date,
+        status,
+        check_in_date,
+        check_out_date,
+        arrival_flight,
+        departure_flight,
+        special_requests,
+        internal_memo,
+        total_selling_price,
+        rooms,
+        extras
+    } = req.body;
+    
+    const pool = req.app.get('pool');
+    const client = await pool.connect();
+    
     try {
-        const pool = req.app.get('pool');
-        const { id } = req.params;
-        const {
-            reservation_date,
-            status,
-            check_in_date,
-            check_out_date,
-            special_requests,
-            internal_memo
-        } = req.body;
+        await client.query('BEGIN');
         
-        const result = await pool.query(`
-            UPDATE hotel_reservations
-            SET 
-                reservation_date = COALESCE($1, reservation_date),
-                status = COALESCE($2, status),
-                check_in_date = COALESCE($3, check_in_date),
-                check_out_date = COALESCE($4, check_out_date),
-                special_requests = $5,
-                internal_memo = $6,
-                updated_at = NOW()
-            WHERE id = $7
-            RETURNING *
-        `, [reservation_date, status, check_in_date, check_out_date, special_requests, internal_memo, id]);
-        
-        if (result.rows.length === 0) {
+        // 1. 예약 존재 확인
+        const checkResult = await client.query('SELECT id FROM hotel_reservations WHERE id = $1', [id]);
+        if (checkResult.rows.length === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({
                 success: false,
-                message: '예약을 찾을 수 없습니다.'
+                error: '예약을 찾을 수 없습니다.'
             });
         }
         
+        // 2. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
+        await client.query('DELETE FROM hotel_reservation_guests WHERE reservation_room_id IN (SELECT id FROM hotel_reservation_rooms WHERE reservation_id = $1)', [id]);
+        await client.query('DELETE FROM hotel_reservation_rooms WHERE reservation_id = $1', [id]);
+        await client.query('DELETE FROM hotel_reservation_extras WHERE reservation_id = $1', [id]);
+        
+        // 3. 박수 계산
+        let nights = 0;
+        if (check_in_date && check_out_date) {
+            const checkIn = new Date(check_in_date);
+            const checkOut = new Date(check_out_date);
+            nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+        }
+        
+        // 4. 객실 및 투숙객 정보 저장
+        let totalRooms = 0;
+        let totalAdults = 0;
+        let totalChildren = 0;
+        let totalInfants = 0;
+        let totalGuests = 0;
+        
+        if (rooms && rooms.length > 0) {
+            for (const room of rooms) {
+                totalRooms++;
+                
+                // 4-1. 객실 레코드 저장
+                const roomResult = await client.query(`
+                    INSERT INTO hotel_reservation_rooms (
+                        reservation_id,
+                        room_number,
+                        room_type_id,
+                        adults_count,
+                        children_count,
+                        infants_count,
+                        total_guests,
+                        created_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                    RETURNING id
+                `, [
+                    id,
+                    totalRooms,
+                    room.room_type_id,
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+                
+                const roomId = roomResult.rows[0].id;
+                
+                // 4-2. 투숙객 정보 저장
+                let roomAdults = 0;
+                let roomChildren = 0;
+                let roomInfants = 0;
+                
+                if (room.guests && room.guests.length > 0) {
+                    for (let i = 0; i < room.guests.length; i++) {
+                        const guest = room.guests[i];
+                        const isPrimary = i === 0;
+                        
+                        // 연령대 카운트
+                        if (guest.age_category === 'adult') roomAdults++;
+                        else if (guest.age_category === 'child') roomChildren++;
+                        else if (guest.age_category === 'infant') roomInfants++;
+                        
+                        await client.query(`
+                            INSERT INTO hotel_reservation_guests (
+                                reservation_room_id,
+                                guest_type,
+                                guest_name_ko,
+                                guest_name_en,
+                                date_of_birth,
+                                age_category,
+                                phone,
+                                email,
+                                created_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                        `, [
+                            roomId,
+                            isPrimary ? 'primary' : 'companion',
+                            guest.guest_name_ko || null,
+                            guest.guest_name_en || null,
+                            guest.date_of_birth || null,
+                            guest.age_category || 'adult',
+                            isPrimary ? (guest.phone || null) : null,
+                            isPrimary ? (guest.email || null) : null
+                        ]);
+                    }
+                }
+                
+                // 객실별 인원 수 업데이트
+                await client.query(`
+                    UPDATE hotel_reservation_rooms
+                    SET adults_count = $1,
+                        children_count = $2,
+                        infants_count = $3,
+                        total_guests = $4
+                    WHERE id = $5
+                `, [roomAdults, roomChildren, roomInfants, roomAdults + roomChildren + roomInfants, roomId]);
+                
+                totalAdults += roomAdults;
+                totalChildren += roomChildren;
+                totalInfants += roomInfants;
+                totalGuests += (roomAdults + roomChildren + roomInfants);
+            }
+        }
+        
+        // 5. 추가 항목 저장
+        let totalExtrasPrice = 0;
+        
+        if (extras && extras.length > 0) {
+            for (const extra of extras) {
+                if (!extra.item_name || extra.item_name.trim() === '') {
+                    continue;
+                }
+                
+                const pricingType = extra.pricing_type || 'flat';
+                let totalPrice = 0;
+                
+                if (pricingType === 'per_person') {
+                    const adultTotal = (parseInt(extra.adult_count) || 0) * (parseFloat(extra.adult_price) || 0);
+                    const childTotal = (parseInt(extra.child_count) || 0) * (parseFloat(extra.child_price) || 0);
+                    const infantTotal = (parseInt(extra.infant_count) || 0) * (parseFloat(extra.infant_price) || 0);
+                    totalPrice = (adultTotal + childTotal + infantTotal) * (parseInt(extra.quantity) || 1);
+                    
+                    await client.query(`
+                        INSERT INTO hotel_reservation_extras (
+                            reservation_id,
+                            item_name,
+                            item_type,
+                            quantity,
+                            adult_count,
+                            adult_price,
+                            child_count,
+                            child_price,
+                            infant_count,
+                            infant_price,
+                            total_selling_price,
+                            currency,
+                            created_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+                    `, [
+                        id,
+                        extra.item_name,
+                        'per_person',
+                        parseInt(extra.quantity) || 1,
+                        parseInt(extra.adult_count) || 0,
+                        parseFloat(extra.adult_price) || 0,
+                        parseInt(extra.child_count) || 0,
+                        parseFloat(extra.child_price) || 0,
+                        parseInt(extra.infant_count) || 0,
+                        parseFloat(extra.infant_price) || 0,
+                        totalPrice,
+                        'USD'
+                    ]);
+                } else {
+                    totalPrice = (parseFloat(extra.unit_price) || 0) * (parseInt(extra.quantity) || 1);
+                    
+                    await client.query(`
+                        INSERT INTO hotel_reservation_extras (
+                            reservation_id,
+                            item_name,
+                            item_type,
+                            quantity,
+                            unit_price,
+                            total_selling_price,
+                            currency,
+                            created_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                    `, [
+                        id,
+                        extra.item_name,
+                        'flat',
+                        parseInt(extra.quantity) || 1,
+                        parseFloat(extra.unit_price) || 0,
+                        totalPrice,
+                        'USD'
+                    ]);
+                }
+                
+                totalExtrasPrice += totalPrice;
+            }
+        }
+        
+        // 6. 예약 메인 정보 업데이트
+        await client.query(`
+            UPDATE hotel_reservations
+            SET 
+                hotel_id = $1,
+                booking_agency_id = $2,
+                reservation_date = $3,
+                status = $4,
+                check_in_date = $5,
+                check_out_date = $6,
+                nights = $7,
+                arrival_flight = $8,
+                departure_flight = $9,
+                special_requests = $10,
+                internal_memo = $11,
+                total_rooms = $12,
+                total_guests = $13,
+                total_adults = $14,
+                total_children = $15,
+                total_infants = $16,
+                total_selling_price = $17,
+                updated_at = NOW()
+            WHERE id = $18
+        `, [
+            hotel_id,
+            booking_agency_id || null,
+            reservation_date,
+            status || 'pending',
+            check_in_date,
+            check_out_date,
+            nights,
+            arrival_flight || null,
+            departure_flight || null,
+            special_requests || null,
+            internal_memo || null,
+            totalRooms,
+            totalGuests,
+            totalAdults,
+            totalChildren,
+            totalInfants,
+            total_selling_price || 0,
+            id
+        ]);
+        
+        await client.query('COMMIT');
+        
         res.json({
             success: true,
-            message: '예약이 수정되었습니다.',
-            reservation: result.rows[0]
+            message: '예약이 수정되었습니다.'
         });
         
     } catch (error) {
-        console.error('호텔 예약 수정 오류:', error);
+        await client.query('ROLLBACK');
+        console.error('❌ 호텔 예약 수정 오류:', error);
         res.status(500).json({
             success: false,
-            message: '예약 수정 중 오류가 발생했습니다.'
+            error: '예약 수정 중 오류가 발생했습니다: ' + error.message
         });
+    } finally {
+        client.release();
     }
 });
 
