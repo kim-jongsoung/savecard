@@ -116,6 +116,7 @@ router.post('/api/hotels', requireLogin, async (req, res) => {
     check_in_time,
     check_out_time,
     description,
+    inventory_type,
     is_active
   } = req.body;
   
