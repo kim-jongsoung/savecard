@@ -19,6 +19,10 @@ router.post('/', async (req, res) => {
         promo_code,
         special_requests,
         internal_memo,
+        total_room_rate,
+        total_extras_rate,
+        agency_fee,  // ⭐ 수배피
+        grand_total,
         rooms,
         extras
     } = req.body;
@@ -42,8 +46,12 @@ router.post('/', async (req, res) => {
                 status,
                 special_requests,
                 internal_memo,
+                total_room_rate,
+                total_extras_rate,
+                agency_fee,
+                grand_total,
                 created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
             RETURNING id
         `, [
             reservation_number,
@@ -55,7 +63,11 @@ router.post('/', async (req, res) => {
             nights,
             status || 'pending',
             special_requests || null,
-            internal_memo || null
+            internal_memo || null,
+            total_room_rate || 0,
+            total_extras_rate || 0,
+            agency_fee || 0,
+            grand_total || 0
         ]);
         
         const reservationId = reservationResult.rows[0].id;
@@ -423,6 +435,10 @@ router.put('/:id', async (req, res) => {
         departure_flight,
         special_requests,
         internal_memo,
+        total_room_rate,
+        total_extras_rate,
+        agency_fee,  // ⭐ 수배피
+        grand_total,
         total_selling_price,
         rooms,
         extras
@@ -675,9 +691,13 @@ router.put('/:id', async (req, res) => {
                 total_adults = $14,
                 total_children = $15,
                 total_infants = $16,
-                total_selling_price = $17,
+                total_room_rate = $17,
+                total_extras_rate = $18,
+                agency_fee = $19,
+                grand_total = $20,
+                total_selling_price = $21,
                 updated_at = NOW()
-            WHERE id = $18
+            WHERE id = $22
         `, [
             hotel_id,
             booking_agency_id || null,
@@ -695,6 +715,10 @@ router.put('/:id', async (req, res) => {
             totalAdults,
             totalChildren,
             totalInfants,
+            total_room_rate || 0,
+            total_extras_rate || 0,
+            agency_fee || 0,
+            grand_total || 0,
             total_selling_price || 0,
             id
         ]);
