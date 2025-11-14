@@ -12,8 +12,16 @@ function requireLogin(req, res, next) {
 // ==========================================
 // 객실 타입 목록 조회 (호텔별)
 // GET /api/room-types?hotel_id=&search=&is_active=
+// 공개 접근: is_active=true인 경우만 로그인 불필요
 // ==========================================
-router.get('/api/room-types', requireLogin, async (req, res) => {
+router.get('/api/room-types', (req, res, next) => {
+  // is_active=true 요청은 공개 허용
+  if (req.query.is_active === 'true') {
+    return next();
+  }
+  // 그 외에는 로그인 필요
+  return requireLogin(req, res, next);
+}, async (req, res) => {
   const pool = req.app.locals.pool;
   const { hotel_id, search, is_active } = req.query;
   

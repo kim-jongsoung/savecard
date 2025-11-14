@@ -335,7 +335,7 @@
       for (let m = 0; m < 6; m++) {
         const y = month + m > 12 ? year + 1 : year;
         const mo = month + m > 12 ? month + m - 12 : month + m;
-        const res = await fetch(`/api/inventory?hotel_id=${hid}&year=${y}&month=${mo}`);
+        const res = await fetch(`/api/inventory/public?hotel_id=${hid}&year=${y}&month=${mo}`);
         const data = await res.json();
         data.forEach(inv => {
           const dateOnly = inv.availability_date.split('T')[0];

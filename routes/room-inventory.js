@@ -12,7 +12,66 @@ function requireLogin(req, res, next) {
 }
 
 // ==========================================
-// 월별 재고 조회
+// 월별 재고 조회 (공개 - 로그인 불필요)
+// GET /api/inventory/public?hotel_id=&room_type_id=&year=&month=
+// ==========================================
+router.get('/api/inventory/public', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { hotel_id, room_type_id, year, month } = req.query;
+  
+  console.log('📥 공개 재고 조회 요청:', { hotel_id, room_type_id, year, month });
+  
+  try {
+    // 기본값: 현재 년월
+    const targetYear = year || new Date().getFullYear();
+    const targetMonth = month || (new Date().getMonth() + 1);
+    
+    // 해당 월의 시작일과 종료일
+    const startDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+    const endDate = new Date(targetYear, targetMonth, 0); // 마지막 날
+    const endDateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    
+    let query = `
+      SELECT 
+        ra.*,
+        h.hotel_name,
+        h.hotel_code,
+        rt.room_type_code,
+        rt.room_type_name
+      FROM room_availability ra
+      LEFT JOIN room_types rt ON ra.room_type_id = rt.id
+      LEFT JOIN hotels h ON rt.hotel_id = h.id
+      WHERE ra.availability_date >= $1 AND ra.availability_date <= $2
+    `;
+    
+    const params = [startDate, endDateStr];
+    let paramIndex = 3;
+    
+    if (hotel_id) {
+      query += ` AND rt.hotel_id = $${paramIndex}`;
+      params.push(hotel_id);
+      paramIndex++;
+    }
+    
+    if (room_type_id) {
+      query += ` AND ra.room_type_id = $${paramIndex}`;
+      params.push(room_type_id);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY ra.availability_date, h.hotel_name, rt.room_type_code`;
+    
+    const result = await pool.query(query, params);
+    console.log(`✅ 공개 재고 조회 결과: ${result.rows.length}개`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ 공개 재고 조회 오류:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// 월별 재고 조회 (관리자 전용)
 // GET /api/inventory?hotel_id=&room_type_id=&year=&month=
 // ==========================================
 router.get('/api/inventory', requireLogin, async (req, res) => {
