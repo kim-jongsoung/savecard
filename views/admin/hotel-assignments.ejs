@@ -418,6 +418,27 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                    <!-- 호텔 정보 섹션 -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">
+                                <i class="fas fa-hotel me-2"></i>호텔 정보
+                            </h6>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">호텔 *</label>
+                            <select class="form-control" id="hotel_id" required onchange="loadRoomTypes(); autoApplyPromotion();">
+                                <option value="">호텔 선택</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label">예약 거래처</label>
+                            <select class="form-control" id="booking_agency_id" onchange="calculateAgencyFee()">
+                                <option value="">거래처 선택</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- 기본 예약 정보 섹션 -->
                     <div class="row mb-4">
                         <div class="col-12">
@@ -428,12 +449,6 @@
                         <div class="col-md-4 mb-2">
                             <label class="form-label">예약번호</label>
                             <input type="text" class="form-control" id="reservation_number" required>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <label class="form-label">거래처 (한국 여행사)</label>
-                            <select class="form-control" id="booking_agency_id" onchange="calculateAgencyFee()">
-                                <option value="">직접 예약</option>
-                            </select>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label class="form-label">예약 상태</label>
@@ -1290,7 +1305,7 @@
                     <div class="row mb-2">
                         <div class="col-md-6">
                             <label class="form-label">객실 타입 *</label>
-                            <select class="form-control room-type-select" data-room="${roomCounter}">
+                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="onRoomTypeChange(${roomCounter})">
                                 <option value="">객실 타입 선택</option>
                             </select>
                         </div>
@@ -1516,7 +1531,7 @@
                             addRoom();
                             
                             // 약간의 지연 후 객실 정보 채우기
-                            setTimeout(() => {
+                            setTimeout(async () => {
                                 // 객실 타입 선택
                                 const roomSelect = document.querySelector(`[data-room="${roomCounter}"]`);
                                 if (roomSelect && room.room_type_id) {
@@ -1552,6 +1567,14 @@
                                             }
                                         }, 100);
                                     });
+                                }
+                                
+                                // 프로모션 자동 조회 (저장된 프로모션이 있으면 조회)
+                                if (room.promotion_code || room.room_type_id) {
+                                    setTimeout(async () => {
+                                        await onRoomTypeChange(roomCounter);
+                                        console.log(`🔍 객실 ${roomCounter} 프로모션 조회 완료`);
+                                    }, 200);
                                 }
                             }, 100 * i);
                         }
