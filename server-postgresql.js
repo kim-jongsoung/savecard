@@ -815,11 +815,7 @@ app.use('/admin', adminRoutes);
 // app.locals에 pool 설정 (API 라우트에서 사용)
 app.locals.pool = pool;
 
-// 시즌 관리 자동 마이그레이션 (서버 시작 시)
-const { autoMigrate } = require('./scripts/auto-migrate');
-if (pool) {
-    autoMigrate(pool).catch(err => console.error('자동 마이그레이션 오류:', err));
-}
+// 자동 마이그레이션은 startServer() 함수 내에서 실행됨
 
 // 수배업체 API 라우트 연결
 try {
@@ -19387,6 +19383,11 @@ async function startServer() {
                 // 마이그레이션 008 실행 (commission_rate 컬럼 추가)
                 await runMigration008();
                 console.log('✅ commission_rate 컬럼 추가 완료');
+                
+                // 마이그레이션 009 실행 (프로모션 테이블 재설계)
+                const { autoMigrate } = require('./scripts/auto-migrate');
+                await autoMigrate(pool);
+                console.log('✅ 자동 마이그레이션 완료');
             } catch (error) {
                 console.error('⚠️ 마이그레이션 실패 (서버는 계속 실행):', error.message);
             }
