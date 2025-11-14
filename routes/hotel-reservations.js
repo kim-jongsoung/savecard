@@ -337,6 +337,7 @@ ${reservationText}
 
 다음 필드를 추출해주세요:
 - reservation_number: 예약번호
+- booking_agency: 거래처명/예약처/여행사명 (예: 투어비스, 하나투어, 모두투어 등)
 - hotel_name: 호텔명 (정확한 이름)
 - check_in_date: 체크인 날짜 (YYYY-MM-DD 형식)
 - check_out_date: 체크아웃 날짜 (YYYY-MM-DD 형식)

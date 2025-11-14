@@ -625,6 +625,19 @@
         async function fillParsedData(data) {
             if (data.reservation_number) document.getElementById('reservation_number').value = data.reservation_number;
             
+            // 거래처명으로 거래처 ID 찾기
+            if (data.booking_agency && allAgencies.length > 0) {
+                const agency = allAgencies.find(a => 
+                    a.agency_name.toLowerCase().includes(data.booking_agency.toLowerCase()) ||
+                    data.booking_agency.toLowerCase().includes(a.agency_name.toLowerCase())
+                );
+                if (agency) {
+                    document.getElementById('booking_agency_id').value = agency.id;
+                    console.log('🏢 거래처 선택:', agency.agency_name);
+                    // 거래처 선택 시 수배피 계산은 나중에 (호텔, 날짜 입력 후)
+                }
+            }
+            
             // 호텔명으로 호텔 ID 찾기
             if (data.hotel_name) {
                 const hotel = allHotels.find(h => 
@@ -717,6 +730,13 @@
                         }
                     }, 200 * (roomIndex + 1));
                 });
+                
+                // 모든 객실 처리 완료 후 수배피 계산
+                const totalProcessTime = 200 * data.rooms.length + 500;
+                setTimeout(() => {
+                    console.log('💰 수배피 계산 시작');
+                    calculateAgencyFee();
+                }, totalProcessTime);
             } else {
                 // 기존 방식 (guests 배열만 있거나 인원수만 있는 경우)
                 addRoom();
@@ -757,6 +777,12 @@
                         }
                         
                         console.log('✅ 총 ' + data.guests.length + '명의 투숙객 추가 완료');
+                        
+                        // 투숙객 추가 완료 후 수배피 계산
+                        setTimeout(() => {
+                            console.log('💰 수배피 계산 시작');
+                            calculateAgencyFee();
+                        }, 500);
                     } else {
                         // 인원수만 있는 경우 (기존 방식)
                         const adults = parseInt(data.adults) || 0;
@@ -817,6 +843,12 @@
                         }
                         
                         console.log('✅ 총 ' + guestCount + '명의 투숙객 추가 완료');
+                        
+                        // 투숙객 추가 완료 후 수배피 계산
+                        setTimeout(() => {
+                            console.log('💰 수배피 계산 시작');
+                            calculateAgencyFee();
+                        }, 500);
                     }
                 }, 200);
             }
