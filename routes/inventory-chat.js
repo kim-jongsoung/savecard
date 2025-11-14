@@ -68,28 +68,56 @@ router.post('/api/inventory/chat', async (req, res) => {
     `);
     const hotels = hotelsResult.rows;
     
-    // 3. 재고 데이터를 구조화
-    const inventoryByHotel = {};
+    // 3. 재고 데이터를 GPT가 읽기 쉬운 형식으로 변환
+    const inventorySummary = [];
+    const inventoryMap = {};
+    
     result.rows.forEach(row => {
-      const hotelKey = row.hotel_name;
-      if (!inventoryByHotel[hotelKey]) {
-        inventoryByHotel[hotelKey] = {
-          hotel_id: row.hotel_id,
-          hotel_code: row.hotel_code,
-          rooms: {}
-        };
-      }
+      const dateStr = row.availability_date.toISOString().split('T')[0];
+      const key = `${row.hotel_name}|${row.room_type_name}|${dateStr}`;
+      inventoryMap[key] = row.available_rooms;
       
-      const roomKey = row.room_type_name;
-      if (!inventoryByHotel[hotelKey].rooms[roomKey]) {
-        inventoryByHotel[hotelKey].rooms[roomKey] = [];
+      inventorySummary.push({
+        호텔: row.hotel_name,
+        객실타입: row.room_type_name,
+        날짜: dateStr,
+        가능객실수: row.available_rooms,
+        상태: row.available_rooms >= 5 ? '충분' : row.available_rooms > 0 ? '잔여적음' : '마감'
+      });
+    });
+    
+    // 호텔별로 그룹화하여 간결한 텍스트 생성
+    const hotelGroups = {};
+    result.rows.forEach(row => {
+      const hotelName = row.hotel_name;
+      if (!hotelGroups[hotelName]) {
+        hotelGroups[hotelName] = [];
       }
+      hotelGroups[hotelName].push({
+        객실: row.room_type_name,
+        날짜: row.availability_date.toISOString().split('T')[0],
+        수량: row.available_rooms
+      });
+    });
+    
+    // 간결한 텍스트 형식으로 변환 (날짜별로 그룹화)
+    let inventoryText = '';
+    Object.keys(hotelGroups).forEach(hotelName => {
+      inventoryText += `\n### ${hotelName}\n`;
       
-      inventoryByHotel[hotelKey].rooms[roomKey].push({
-        date: row.availability_date.toISOString().split('T')[0],
-        status: row.status,
-        available: row.available_rooms,
-        memo: row.memo
+      // 날짜별로 그룹화
+      const dateGroups = {};
+      hotelGroups[hotelName].forEach(item => {
+        if (!dateGroups[item.날짜]) {
+          dateGroups[item.날짜] = [];
+        }
+        dateGroups[item.날짜].push(`${item.객실} ${item.수량}개`);
+      });
+      
+      // 날짜 순으로 정렬
+      const sortedDates = Object.keys(dateGroups).sort();
+      sortedDates.forEach(date => {
+        inventoryText += `- **${date}**: ${dateGroups[date].join(', ')}\n`;
       });
     });
     
@@ -97,27 +125,30 @@ router.post('/api/inventory/chat', async (req, res) => {
     const systemPrompt = `당신은 호텔 객실 예약 전문 상담사입니다.
 
 **현재 호텔 목록:**
-${hotels.map(h => `- ${h.hotel_name} (${h.hotel_code}): ${h.inventory_type === 'count' ? '숫자 카운팅' : '상태 표시'} 방식`).join('\n')}
+${hotels.map(h => `- ${h.hotel_name}`).join('\n')}
 
 **재고 데이터:**
-${JSON.stringify(inventoryByHotel, null, 2)}
+${inventoryText}
 
-**역할 및 규칙:**
-1. 제공된 재고 데이터만을 기반으로 답변하세요.
-2. 데이터에 없는 날짜나 호텔에 대해서는 "확인이 필요합니다"라고 답하세요.
-3. 한국어로 친절하게 답변하세요.
-4. 날짜는 YYYY-MM-DD 형식으로 확인하세요.
-5. "가능해요", "어려워요", "마감입니다" 등 명확한 표현을 사용하세요.
-6. available_rooms가 0이면 마감, 1-4이면 잔여 적음, 5 이상이면 충분함으로 판단하세요.
-7. 연박 문의 시 해당 기간의 모든 날짜를 체크하세요.
-8. 답변은 3-4문장 이내로 간결하게 작성하세요.
+**중요 규칙:**
+1. 위 재고 데이터에서 호텔명과 날짜를 찾아서 답변하세요.
+2. 숫자가 5개 이상이면 "충분히 가능합니다", 1-4개면 "잔여 적음", 0개면 "마감"으로 답변하세요.
+3. 연박 문의는 각 날짜의 재고를 모두 확인하세요.
+4. 재고 데이터에 해당 날짜가 있으면 적극적으로 답변하세요.
+5. 정말 데이터가 없는 경우에만 "확인이 필요합니다"라고 하세요.
+6. 한국어로 친절하고 간결하게 (3-4문장) 답변하세요.
 
-**예시:**
-질문: "두짓타니 12월 3일부터 3박 가능해?"
-답변: "두짓타니 12월 3일부터 3박(12/3-12/5)은 모든 객실 타입에서 예약 가능합니다! 🎉 디럭스룸 8개, 스위트룸 3개 남아있어요. 어떤 객실 타입을 원하시나요?"
+**올바른 답변 예시:**
+질문: "두짓타니 12월 3일 가능해?"
+(데이터에 2025-12-03: 8개 있음)
+답변: "네, 두짓타니 12월 3일은 예약 가능합니다! 😊 디럭스룸 8개 남아있어서 충분히 여유롭습니다."
 
-질문: "다음주 하얏트 가능해?"
-답변: "다음주 정확한 날짜(예: 11월 20일부터 2박)를 알려주시면 더 정확하게 확인해드릴게요! 😊"`;
+질문: "하얏트 11월 20일부터 2박 가능해?"
+(데이터에 2025-11-20: 3개, 2025-11-21: 5개 있음)
+답변: "하얏트 11월 20일부터 2박은 가능합니다! 20일은 잔여 3개로 적지만, 21일은 5개로 여유있습니다. 빠른 예약을 추천드려요!"`;
+
+    console.log('📝 GPT 프롬프트 길이:', systemPrompt.length, '글자');
+    console.log('📊 전송하는 재고 데이터 샘플:', inventoryText.substring(0, 500));
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
