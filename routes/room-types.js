@@ -106,7 +106,6 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
     max_children,
     max_infants,
     max_total_occupancy,
-    base_room_rate,
     breakfast_included,
     breakfast_rate_adult,
     breakfast_rate_child,
@@ -134,16 +133,16 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
       `INSERT INTO room_types (
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
         max_adults, max_children, max_infants, max_total_occupancy,
-        base_room_rate, breakfast_included, 
+        breakfast_included, 
         breakfast_rate_adult, breakfast_rate_child, breakfast_rate_infant,
         extra_adult_rate, extra_child_rate, extra_infant_rate,
         extra_bed_rate, baby_cot_rate, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *`,
       [
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
         max_adults || 2, max_children || 1, max_infants || 1, max_total_occupancy || 3,
-        base_room_rate, breakfast_included || false,
+        breakfast_included || false,
         breakfast_rate_adult || 0, breakfast_rate_child || 0, breakfast_rate_infant || 0,
         extra_adult_rate || 0, extra_child_rate || 0, extra_infant_rate || 0,
         extra_bed_rate || 0, baby_cot_rate || 0, is_active !== false
@@ -174,7 +173,6 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
     max_children,
     max_infants,
     max_total_occupancy,
-    base_room_rate,
     breakfast_included,
     breakfast_rate_adult,
     breakfast_rate_child,
@@ -215,24 +213,23 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
         max_children = $7,
         max_infants = $8,
         max_total_occupancy = $9,
-        base_room_rate = $10,
-        breakfast_included = $11,
-        breakfast_rate_adult = $12,
-        breakfast_rate_child = $13,
-        breakfast_rate_infant = $14,
-        extra_adult_rate = $15,
-        extra_child_rate = $16,
-        extra_infant_rate = $17,
-        extra_bed_rate = $18,
-        baby_cot_rate = $19,
-        is_active = $20,
+        breakfast_included = $10,
+        breakfast_rate_adult = $11,
+        breakfast_rate_child = $12,
+        breakfast_rate_infant = $13,
+        extra_adult_rate = $14,
+        extra_child_rate = $15,
+        extra_infant_rate = $16,
+        extra_bed_rate = $17,
+        baby_cot_rate = $18,
+        is_active = $19,
         updated_at = NOW()
-      WHERE id = $21
+      WHERE id = $20
       RETURNING *`,
       [
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
         max_adults, max_children, max_infants, max_total_occupancy,
-        base_room_rate, breakfast_included,
+        breakfast_included,
         breakfast_rate_adult, breakfast_rate_child, breakfast_rate_infant,
         extra_adult_rate, extra_child_rate, extra_infant_rate,
         extra_bed_rate, baby_cot_rate, is_active,

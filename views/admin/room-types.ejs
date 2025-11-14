@@ -202,23 +202,22 @@
               </div>
             </div>
             
-            <!-- 요금 정보 -->
-            <h6 class="mb-3"><i class="bi bi-cash"></i> 기본 요금 정보 (참고용)</h6>
+            <!-- 인원 추가 요금 (시즌 무관 고정요금) -->
+            <h6 class="mb-3"><i class="bi bi-person-plus"></i> 인원 추가 요금 (시즌 무관)</h6>
+            <div class="alert alert-info" style="font-size: 0.65rem; padding: 0.5rem;">
+              💡 <strong>안내:</strong> 기본 객실 요금은 요금RAG에서 관리됩니다 (시즌별/프로모션별). 여기는 시즌과 무관한 부가 요금만 등록하세요.
+            </div>
             <div class="row g-3 mb-4">
-              <div class="col-md-3">
-                <label class="form-label">기본 객실 요금 (USD)</label>
-                <input type="number" class="form-control" id="baseRoomRate" step="0.01" placeholder="150.00">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">추가 성인 요금 (USD)</label>
+              <div class="col-md-4">
+                <label class="form-label">추가 성인 요금 (USD/박)</label>
                 <input type="number" class="form-control" id="extraAdultRate" step="0.01" value="0" placeholder="30.00">
               </div>
-              <div class="col-md-3">
-                <label class="form-label">추가 소아 요금 (USD)</label>
+              <div class="col-md-4">
+                <label class="form-label">추가 소아 요금 (USD/박)</label>
                 <input type="number" class="form-control" id="extraChildRate" step="0.01" value="0" placeholder="15.00">
               </div>
-              <div class="col-md-3">
-                <label class="form-label">추가 유아 요금 (USD)</label>
+              <div class="col-md-4">
+                <label class="form-label">추가 유아 요금 (USD/박)</label>
                 <input type="number" class="form-control" id="extraInfantRate" step="0.01" value="0" placeholder="10.00">
               </div>
             </div>
@@ -447,7 +446,6 @@
         document.getElementById('maxChildren').value = rt.max_children || 1;
         document.getElementById('maxInfants').value = rt.max_infants || 1;
         document.getElementById('maxTotalOccupancy').value = rt.max_total_occupancy || 3;
-        document.getElementById('baseRoomRate').value = rt.base_room_rate || '';
         document.getElementById('extraAdultRate').value = rt.extra_adult_rate || 0;
         document.getElementById('extraChildRate').value = rt.extra_child_rate || 0;
         document.getElementById('extraInfantRate').value = rt.extra_infant_rate || 0;
@@ -479,7 +477,6 @@
         max_children: parseInt(document.getElementById('maxChildren').value),
         max_infants: parseInt(document.getElementById('maxInfants').value),
         max_total_occupancy: parseInt(document.getElementById('maxTotalOccupancy').value),
-        base_room_rate: parseFloat(document.getElementById('baseRoomRate').value) || null,
         extra_adult_rate: parseFloat(document.getElementById('extraAdultRate').value) || 0,
         extra_child_rate: parseFloat(document.getElementById('extraChildRate').value) || 0,
         extra_infant_rate: parseFloat(document.getElementById('extraInfantRate').value) || 0,
