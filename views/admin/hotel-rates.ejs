@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> - 괌 세이브카드</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* 전체 폰트 크기 30% 축소 */
+    body { font-size: 0.7rem; }
+    h2 { font-size: 1.4rem; }
+    h5 { font-size: 1rem; }
+    h6 { font-size: 0.85rem; }
+    .btn { font-size: 0.7rem; padding: 0.3rem 0.7rem; }
+    .form-label { font-size: 0.7rem; margin-bottom: 0.3rem; }
+    .form-control, .form-select { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
+    .modal-title { font-size: 1.1rem; }
+    .table { font-size: 0.7rem; }
+    .table th { font-size: 0.75rem; font-weight: 600; padding: 0.5rem; }
+    .table td { padding: 0.5rem; }
+    .badge { font-size: 0.65rem; padding: 0.25rem 0.5rem; }
+    
+    .filter-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    /* 시즌 카드 스타일 */
+    .season-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: #fff;
+      transition: all 0.2s;
+    }
+    
+    .season-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .season-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e9ecef;
+    }
+    
+    .season-dates {
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
+    
+    .season-priority {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 0.75rem;
+    }
+    
+    .priority-high { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; }
+    .priority-medium { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important; }
+    .priority-low { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important; }
+    
+    /* 중첩 시즌 표시 */
+    .season-nested {
+      margin-left: 2rem;
+      position: relative;
+    }
+    
+    .season-nested::before {
+      content: "";
+      position: absolute;
+      left: -1rem;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, #667eea, #764ba2);
+      border-radius: 2px;
+    }
+    
+    /* 타임라인 뷰 */
+    .timeline-container {
+      position: relative;
+      padding: 2rem 0;
+      margin: 1rem 0;
+    }
+    
+    .timeline-item {
+      position: relative;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-left: 3px solid #667eea;
+      background: linear-gradient(to right, rgba(102, 126, 234, 0.05), transparent);
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .timeline-date {
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+  
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <div class="col-12">
+        <!-- 헤더 -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2><i class="bi bi-cash-stack"></i> 요금 관리</h2>
+          <button class="btn btn-primary" onclick="openAddModal()">
+            <i class="bi bi-plus-circle"></i> 요금 등록
+          </button>
+        </div>
+        
+        <!-- 필터 -->
+        <div class="filter-card">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">호텔 선택</label>
+              <select class="form-select" id="filterHotel" onchange="loadSeasons();">
+                <option value="">전체 호텔</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">연도</label>
+              <select class="form-select" id="filterYear" onchange="loadSeasons();">
+                <option value="">전체</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">상태</label>
+              <select class="form-select" id="filterActive" onchange="loadSeasons();">
+                <option value="">전체</option>
+                <option value="true" selected>활성</option>
+                <option value="false">비활성</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">보기 방식</label>
+              <select class="form-select" id="viewMode" onchange="renderSeasons();">
+                <option value="card">카드 뷰</option>
+                <option value="timeline">타임라인 뷰</option>
+              </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+              <button class="btn btn-outline-secondary w-100" onclick="resetFilters();">
+                <i class="bi bi-arrow-clockwise"></i> 초기화
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 시즌 목록 -->
+        <div id="seasonList"></div>
+        
+        <div id="emptyState" class="text-center py-5" style="display: none;">
+          <i class="bi bi-inbox" style="font-size: 3rem; color: #dee2e6;"></i>
+          <p class="text-muted mt-3">호텔을 선택하면 요금 목록이 표시됩니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 시즌 등록/수정 모달 -->
+  <div class="modal fade" id="seasonModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">요금 등록</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="seasonForm">
+            <input type="hidden" id="seasonId">
+            
+            <!-- 기본 정보 -->
+            <h6 class="mb-3"><i class="bi bi-info-circle"></i> 기본 정보</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-12">
+                <label class="form-label">호텔 <span class="text-danger">*</span></label>
+                <select class="form-select" id="hotelId" required>
+                  <option value="">호텔을 선택하세요</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label">시즌명 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="seasonName" placeholder="예: 2025 겨울 시즌" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">시즌 코드</label>
+                <input type="text" class="form-control" id="seasonCode" placeholder="예: WINTER2025">
+                <small class="text-muted">선택사항 (호텔 내 중복 불가)</small>
+              </div>
+            </div>
+            
+            <!-- 기간 설정 -->
+            <h6 class="mb-3"><i class="bi bi-calendar-check"></i> 기간 설정</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">시작일 <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="startDate" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">종료일 <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="endDate" required>
+              </div>
+            </div>
+            
+            <!-- 우선순위 -->
+            <h6 class="mb-3"><i class="bi bi-arrow-up-circle"></i> 우선순위 설정</h6>
+            <div class="alert alert-info" style="font-size: 0.65rem; padding: 0.5rem;">
+              💡 <strong>중첩 시즌 우선순위:</strong> 날짜가 겹치는 시즌이 여러 개일 경우, 우선순위가 높은 시즌의 요금이 적용됩니다. (높을수록 우선)
+            </div>
+            <div class="row g-3 mb-4">
+              <div class="col-md-12">
+                <label class="form-label">우선순위 (0~100)</label>
+                <input type="number" class="form-control" id="priority" value="0" min="0" max="100">
+                <small class="text-muted">기본값: 0, 더 구체적인 (짧은) 시즌일수록 높은 값 권장</small>
+              </div>
+            </div>
+            
+            <!-- 설명 -->
+            <h6 class="mb-3"><i class="bi bi-pencil"></i> 설명</h6>
+            <div class="row g-3 mb-4">
+              <div class="col-md-12">
+                <label class="form-label">시즌 설명</label>
+                <textarea class="form-control" id="description" rows="3" placeholder="시즌에 대한 추가 설명을 입력하세요"></textarea>
+              </div>
+            </div>
+            
+            <!-- 상태 -->
+            <div class="row g-3">
+              <div class="col-md-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="isActive" checked>
+                  <label class="form-check-label" for="isActive">
+                    활성화 (활성화된 시즌만 요금 계산에 적용됩니다)
+                  </label>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" onclick="saveSeason()">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let currentSeasons = [];
+    let hotels = [];
+    
+    // 페이지 로드 시
+    document.addEventListener('DOMContentLoaded', () => {
+      loadHotels();
+      loadSeasons();
+      initYearFilter();
+    });
+    
+    // 연도 필터 초기화
+    function initYearFilter() {
+      const yearSelect = document.getElementById('filterYear');
+      const currentYear = new Date().getFullYear();
+      for (let i = -1; i <= 2; i++) {
+        const year = currentYear + i;
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year + '년';
+        if (i === 0) option.selected = true;
+        yearSelect.appendChild(option);
+      }
+    }
+    
+    // 호텔 목록 로드
+    async function loadHotels() {
+      try {
+        const res = await fetch('/api/hotels?is_active=true');
+        hotels = await res.json();
+        
+        const filterSelect = document.getElementById('filterHotel');
+        const modalSelect = document.getElementById('hotelId');
+        
+        hotels.forEach(h => {
+          filterSelect.innerHTML += `<option value="${h.id}">${h.hotel_name}</option>`;
+          modalSelect.innerHTML += `<option value="${h.id}">${h.hotel_name}</option>`;
+        });
+      } catch (error) {
+        console.error('호텔 로드 실패:', error);
+      }
+    }
+    
+    // 시즌 목록 로드
+    async function loadSeasons() {
+      try {
+        const hotelId = document.getElementById('filterHotel').value;
+        const year = document.getElementById('filterYear').value;
+        const isActive = document.getElementById('filterActive').value;
+        
+        let url = '/api/seasons?';
+        if (hotelId) url += `hotel_id=${hotelId}&`;
+        if (isActive) url += `is_active=${isActive}&`;
+        
+        const res = await fetch(url);
+        currentSeasons = await res.json();
+        
+        // 연도 필터링 (클라이언트)
+        if (year) {
+          currentSeasons = currentSeasons.filter(s => {
+            const startYear = new Date(s.start_date).getFullYear();
+            const endYear = new Date(s.end_date).getFullYear();
+            return startYear == year || endYear == year;
+          });
+        }
+        
+        renderSeasons();
+      } catch (error) {
+        console.error('시즌 로드 실패:', error);
+        alert('시즌 목록 조회 실패: ' + error.message);
+      }
+    }
+    
+    // 시즌 렌더링
+    function renderSeasons() {
+      const container = document.getElementById('seasonList');
+      const emptyState = document.getElementById('emptyState');
+      const viewMode = document.getElementById('viewMode').value;
+      
+      if (currentSeasons.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
+      
+      if (viewMode === 'card') {
+        renderCardView(container);
+      } else {
+        renderTimelineView(container);
+      }
+    }
+    
+    // 카드 뷰 렌더링
+    function renderCardView(container) {
+      // 호텔별로 그룹화
+      const byHotel = {};
+      currentSeasons.forEach(s => {
+        if (!byHotel[s.hotel_id]) byHotel[s.hotel_id] = [];
+        byHotel[s.hotel_id].push(s);
+      });
+      
+      let html = '';
+      for (const hotelId in byHotel) {
+        const seasons = byHotel[hotelId];
+        const hotelName = seasons[0].hotel_name;
+        
+        html += `<div class="mb-4">
+          <h5 class="mb-3"><i class="bi bi-building"></i> ${hotelName}</h5>`;
+        
+        // 우선순위 순으로 정렬
+        seasons.sort((a, b) => b.priority - a.priority);
+        
+        seasons.forEach(s => {
+          const priorityClass = s.priority >= 7 ? 'priority-high' : (s.priority >= 4 ? 'priority-medium' : 'priority-low');
+          const statusBadge = s.is_active 
+            ? '<span class="badge bg-success">활성</span>' 
+            : '<span class="badge bg-secondary">비활성</span>';
+          
+          html += `<div class="season-card">
+            <div class="season-header">
+              <div class="d-flex align-items-center gap-2">
+                <span class="season-priority ${priorityClass}">${s.priority}</span>
+                <strong>${s.season_name}</strong>
+                ${s.season_code ? `<span class="badge bg-primary">${s.season_code}</span>` : ''}
+                ${statusBadge}
+              </div>
+              <div>
+                <button class="btn btn-sm btn-outline-primary" onclick="editSeason(${s.id})">
+                  <i class="bi bi-pencil"></i> 수정
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteSeason(${s.id})">
+                  <i class="bi bi-trash"></i> 삭제
+                </button>
+              </div>
+            </div>
+            <div class="season-dates">
+              <i class="bi bi-calendar-event"></i> ${formatDate(s.start_date)} ~ ${formatDate(s.end_date)}
+              <span class="text-muted ms-2">(${getDaysDiff(s.start_date, s.end_date)}일)</span>
+            </div>
+            ${s.description ? `<div class="text-muted" style="font-size: 0.7rem;">${s.description}</div>` : ''}
+          </div>`;
+        });
+        
+        html += `</div>`;
+      }
+      
+      container.innerHTML = html;
+    }
+    
+    // 타임라인 뷰 렌더링
+    function renderTimelineView(container) {
+      // 시작일 순으로 정렬
+      const sorted = [...currentSeasons].sort((a, b) => 
+        new Date(a.start_date) - new Date(b.start_date)
+      );
+      
+      let html = '<div class="timeline-container">';
+      sorted.forEach(s => {
+        const statusBadge = s.is_active 
+          ? '<span class="badge bg-success">활성</span>' 
+          : '<span class="badge bg-secondary">비활성</span>';
+        
+        html += `<div class="timeline-item">
+          <div class="timeline-date">
+            ${formatDate(s.start_date)} ~ ${formatDate(s.end_date)}
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>${s.season_name}</strong>
+              <span class="ms-2">${s.hotel_name}</span>
+              ${s.season_code ? `<span class="badge bg-primary ms-2">${s.season_code}</span>` : ''}
+              <span class="ms-2">${statusBadge}</span>
+              <span class="ms-2 badge bg-dark">우선순위: ${s.priority}</span>
+            </div>
+            <div>
+              <button class="btn btn-sm btn-outline-primary" onclick="editSeason(${s.id})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteSeason(${s.id})">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+          ${s.description ? `<div class="text-muted mt-2" style="font-size: 0.7rem;">${s.description}</div>` : ''}
+        </div>`;
+      });
+      html += '</div>';
+      
+      container.innerHTML = html;
+    }
+    
+    // 날짜 포맷
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+    }
+    
+    // 날짜 차이 계산
+    function getDaysDiff(start, end) {
+      const d1 = new Date(start);
+      const d2 = new Date(end);
+      return Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+    }
+    
+    // 시즌 등록 모달 열기
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = '시즌 등록';
+      document.getElementById('seasonForm').reset();
+      document.getElementById('seasonId').value = '';
+      document.getElementById('isActive').checked = true;
+      document.getElementById('priority').value = 0;
+      new bootstrap.Modal(document.getElementById('seasonModal')).show();
+    }
+    
+    // 시즌 수정
+    async function editSeason(id) {
+      try {
+        const res = await fetch(`/api/seasons/${id}`);
+        const s = await res.json();
+        
+        document.getElementById('modalTitle').textContent = '시즌 수정';
+        document.getElementById('seasonId').value = s.id;
+        document.getElementById('hotelId').value = s.hotel_id;
+        document.getElementById('seasonName').value = s.season_name;
+        document.getElementById('seasonCode').value = s.season_code || '';
+        document.getElementById('startDate').value = s.start_date;
+        document.getElementById('endDate').value = s.end_date;
+        document.getElementById('priority').value = s.priority;
+        document.getElementById('description').value = s.description || '';
+        document.getElementById('isActive').checked = s.is_active;
+        
+        new bootstrap.Modal(document.getElementById('seasonModal')).show();
+      } catch (error) {
+        console.error('시즌 정보 로드 실패:', error);
+        alert('시즌 정보 로드 실패: ' + error.message);
+      }
+    }
+    
+    // 시즌 저장
+    async function saveSeason() {
+      const id = document.getElementById('seasonId').value;
+      const data = {
+        hotel_id: document.getElementById('hotelId').value,
+        season_name: document.getElementById('seasonName').value,
+        season_code: document.getElementById('seasonCode').value || null,
+        start_date: document.getElementById('startDate').value,
+        end_date: document.getElementById('endDate').value,
+        priority: parseInt(document.getElementById('priority').value),
+        description: document.getElementById('description').value || null,
+        is_active: document.getElementById('isActive').checked
+      };
+      
+      if (!data.hotel_id || !data.season_name || !data.start_date || !data.end_date) {
+        alert('필수 항목을 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const url = id ? `/api/seasons/${id}` : '/api/seasons';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        
+        if (result.error) {
+          alert('저장 실패: ' + result.error);
+          return;
+        }
+        
+        alert('저장되었습니다.');
+        bootstrap.Modal.getInstance(document.getElementById('seasonModal')).hide();
+        loadSeasons();
+      } catch (error) {
+        console.error('저장 실패:', error);
+        alert('저장 실패: ' + error.message);
+      }
+    }
+    
+    // 시즌 삭제
+    async function deleteSeason(id) {
+      if (!confirm('정말 삭제하시겠습니까?\n이 시즌을 사용하는 요금이 있다면 삭제할 수 없습니다.')) return;
+      
+      try {
+        const res = await fetch(`/api/seasons/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+        
+        if (result.error) {
+          alert('삭제 실패: ' + result.error);
+          return;
+        }
+        
+        alert('삭제되었습니다.');
+        loadSeasons();
+      } catch (error) {
+        console.error('삭제 실패:', error);
+        alert('삭제 실패: ' + error.message);
+      }
+    }
+    
+    // 필터 초기화
+    function resetFilters() {
+      document.getElementById('filterHotel').value = '';
+      document.getElementById('filterYear').value = new Date().getFullYear();
+      document.getElementById('filterActive').value = 'true';
+      document.getElementById('viewMode').value = 'card';
+      loadSeasons();
+    }
+  </script>
+</body>
+</html>
