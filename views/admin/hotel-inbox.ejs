@@ -827,6 +827,12 @@
             if (data.check_in_date) document.getElementById('check_in_date').value = data.check_in_date;
             if (data.check_out_date) document.getElementById('check_out_date').value = data.check_out_date;
             
+            // ⭐ 특별 요청사항 추가
+            if (data.special_requests) {
+                document.getElementById('special_requests').value = data.special_requests;
+                console.log('📝 특별 요청사항:', data.special_requests);
+            }
+            
             calculateNights();
             
             // 객실 타입 로드 후 약간의 지연
