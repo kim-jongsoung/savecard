@@ -2081,25 +2081,37 @@
             try {
                 customPrompt = document.getElementById('customPromptText').value.trim();
                 
+                const payload = {
+                    type: 'hotel',
+                    preprocessing_rules: preprocessingRules,
+                    custom_prompt: customPrompt
+                };
+                
+                console.log('💾 파싱 설정 저장 시도:', {
+                    규칙수: preprocessingRules.length,
+                    프롬프트길이: customPrompt.length,
+                    전송데이터: payload
+                });
+                
                 const response = await fetch('/api/parsing-settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        type: 'hotel',
-                        preprocessing_rules: preprocessingRules,
-                        custom_prompt: customPrompt
-                    })
+                    body: JSON.stringify(payload)
                 });
+                
+                const result = await response.json();
+                console.log('📥 서버 응답:', result);
                 
                 if (response.ok) {
                     alert('✅ 설정이 저장되었습니다.');
                     bootstrap.Modal.getInstance(document.getElementById('parsingSettingsModal')).hide();
                 } else {
-                    alert('❌ 설정 저장 실패');
+                    console.error('❌ 저장 실패:', result);
+                    alert('❌ 설정 저장 실패: ' + (result.message || '알 수 없는 오류'));
                 }
             } catch (error) {
-                console.error('설정 저장 오류:', error);
-                alert('설정 저장 중 오류가 발생했습니다.');
+                console.error('❌ 설정 저장 오류:', error);
+                alert('❌ 설정 저장 중 오류가 발생했습니다: ' + error.message);
             }
         }
         
