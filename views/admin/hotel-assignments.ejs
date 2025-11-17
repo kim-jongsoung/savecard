@@ -450,28 +450,32 @@
                                 <i class="fas fa-info-circle me-2"></i>기본 예약 정보
                             </h6>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label mb-0" style="width: 40%;">예약번호 *</label>
-                                <input type="text" class="form-control" id="reservation_number" required style="width: 60%;">
+                        <div class="col-12 mb-2">
+                            <div class="d-flex align-items-center gap-1">
+                                <label class="form-label mb-0" style="min-width: 65px;">예약번호*</label>
+                                <input type="text" class="form-control form-control-sm" id="reservation_number" required style="flex: 1;">
+                                <label class="form-label mb-0 ms-1" style="min-width: 55px;">호텔명*</label>
+                                <select class="form-control form-control-sm" id="hotel_id" required disabled style="background: #e9ecef; cursor: not-allowed; flex: 1;">
+                                    <option value="">호텔 선택</option>
+                                </select>
+                                <label class="form-label mb-0 ms-1" style="min-width: 50px;">예약일</label>
+                                <input type="date" class="form-control form-control-sm fw-bold" id="reservation_date" readonly style="background: #f0f0f0; flex: 1;">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label mb-0" style="width: 40%;">상태</label>
-                                <select class="form-control" id="status" style="width: 60%;">
+                        <div class="col-12 mb-2">
+                            <div class="d-flex align-items-center gap-1">
+                                <label class="form-label mb-0" style="min-width: 40px;">상태</label>
+                                <select class="form-control form-control-sm" id="status" style="flex: 1;">
                                     <option value="pending">대기중</option>
                                     <option value="processing">수배중</option>
                                     <option value="confirmed">확정</option>
                                     <option value="cancelled">예약취소</option>
                                     <option value="modifying">수정중(예약변경)</option>
                                 </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label mb-0" style="width: 40%;">예약일</label>
-                                <input type="date" class="form-control fw-bold" id="reservation_date" readonly style="background: #f0f0f0; width: 60%;">
+                                <label class="form-label mb-0 ms-1" style="min-width: 90px;">예약거래처</label>
+                                <select class="form-control form-control-sm" id="booking_agency_id" disabled style="background: #e9ecef; cursor: not-allowed; flex: 2;">
+                                    <option value="">거래처 선택</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -587,6 +591,13 @@
                                     <div class="input-group input-group-sm" style="width: 150px;">
                                         <span class="input-group-text">$</span>
                                         <input type="number" class="form-control" id="totalRoomCharge" value="0" step="0.01" min="0" onchange="calculateTotal()" style="text-align: right; font-weight: bold; max-width: 60%;">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>조식 요금 (포함/불포함):</span>
+                                    <div class="input-group input-group-sm" style="width: 150px;">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="totalBreakfastCharge" value="0" step="0.01" min="0" readonly style="text-align: right; font-weight: bold; max-width: 60%; background: #e7f3ff;">
                                     </div>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1380,17 +1391,13 @@
                         </button>
                     </div>
                     
-                    <div class="row mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label">객실 타입 *</label>
-                            <select class="form-control room-type-select" data-room="${roomCounter}" onchange="onRoomTypeChange(${roomCounter})">
-                                <option value="">객실 타입 선택</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">총 객실 요금</label>
-                            <input type="text" class="form-control" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0;">
-                        </div>
+                    <div class="d-flex align-items-center gap-1 mb-2">
+                        <label class="form-label mb-0" style="min-width: 70px;">객실타입*</label>
+                        <select class="form-control form-control-sm room-type-select" data-room="${roomCounter}" onchange="onRoomTypeChange(${roomCounter})" style="flex: 1;">
+                            <option value="">객실 타입 선택</option>
+                        </select>
+                        <label class="form-label mb-0 ms-1" style="min-width: 95px;">총 객실요금(자동)</label>
+                        <input type="text" class="form-control form-control-sm" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0; flex: 1;">
                     </div>
                     
                     <!-- ⭐ 조식 정보 섹션 (수정 가능) -->
@@ -1441,39 +1448,30 @@
             }
         }
         
-        // 투숙객 HTML 생성
+        // 투숙객 HTML 생성 (한 줄로 변경)
         function createGuestHtml(roomNum, guestNum, isPrimary = false) {
             return `
-                <div class="guest-card" id="guest_${roomNum}_${guestNum}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>${isPrimary ? '대표 투숙객' : '동반 투숙객 ' + guestNum}</strong>
-                        ${!isPrimary ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGuest(${roomNum}, ${guestNum})"><i class="fas fa-times"></i></button>` : ''}
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" placeholder="한글명" data-guest-field="guest_name_ko" data-room="${roomNum}" data-guest="${guestNum}">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" placeholder="영문명" data-guest-field="guest_name_en" data-room="${roomNum}" data-guest="${guestNum}">
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-control form-control-sm" data-guest-field="age_category" data-room="${roomNum}" data-guest="${guestNum}">
-                                <option value="adult">성인</option>
-                                <option value="child">소아</option>
-                                <option value="infant">유아</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <input type="date" class="form-control form-control-sm" placeholder="생년월일" data-guest-field="date_of_birth" data-room="${roomNum}" data-guest="${guestNum}">
-                        </div>
+                <div class="guest-card" id="guest_${roomNum}_${guestNum}" style="padding: 0.5rem; margin-bottom: 0.5rem;">
+                    <div class="d-flex align-items-center gap-1">
+                        <strong style="min-width: 90px; font-size: 0.7rem;">${isPrimary ? '대표 투숙객' : '동반투숙객' + guestNum}</strong>
+                        <input type="text" class="form-control form-control-sm" placeholder="한글명" data-guest-field="guest_name_ko" data-room="${roomNum}" data-guest="${guestNum}" style="flex: 1;">
+                        <span style="font-size: 0.7rem;">|</span>
+                        <input type="text" class="form-control form-control-sm" placeholder="영문명" data-guest-field="guest_name_en" data-room="${roomNum}" data-guest="${guestNum}" style="flex: 1;">
+                        <span style="font-size: 0.7rem;">|</span>
+                        <select class="form-control form-control-sm" data-guest-field="age_category" data-room="${roomNum}" data-guest="${guestNum}" style="width: 70px;">
+                            <option value="adult">성인</option>
+                            <option value="child">소아</option>
+                            <option value="infant">유아</option>
+                        </select>
+                        <span style="font-size: 0.7rem;">|</span>
+                        <input type="date" class="form-control form-control-sm" placeholder="생년월일" data-guest-field="date_of_birth" data-room="${roomNum}" data-guest="${guestNum}" style="width: 130px;">
                         ${isPrimary ? `
-                        <div class="col-md-2">
-                            <input type="tel" class="form-control form-control-sm" placeholder="전화번호" data-guest-field="phone" data-room="${roomNum}" data-guest="${guestNum}">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="email" class="form-control form-control-sm" placeholder="이메일" data-guest-field="email" data-room="${roomNum}" data-guest="${guestNum}">
-                        </div>
+                        <span style="font-size: 0.7rem;">|</span>
+                        <input type="tel" class="form-control form-control-sm" placeholder="전화번호" data-guest-field="phone" data-room="${roomNum}" data-guest="${guestNum}" style="width: 120px;">
+                        <span style="font-size: 0.7rem;">|</span>
+                        <input type="email" class="form-control form-control-sm" placeholder="이메일" data-guest-field="email" data-room="${roomNum}" data-guest="${guestNum}" style="flex: 1;">
                         ` : ''}
+                        ${!isPrimary ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeGuest(${roomNum}, ${guestNum})" style="padding: 0.2rem 0.5rem;"><i class="fas fa-times"></i></button>` : ''}
                     </div>
                 </div>
             `;
