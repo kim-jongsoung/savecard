@@ -361,7 +361,8 @@ router.get('/', async (req, res) => {
                 (
                     SELECT COUNT(*)
                     FROM hotel_reservation_guests hrg
-                    WHERE hrg.reservation_id = hr.id
+                    INNER JOIN hotel_reservation_rooms hrr ON hrg.reservation_room_id = hrr.id
+                    WHERE hrr.reservation_id = hr.id
                 ) as total_guests,
                 (
                     SELECT STRING_AGG(DISTINCT rt.room_type_name, ', ' ORDER BY rt.room_type_name)
