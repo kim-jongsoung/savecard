@@ -782,8 +782,17 @@ router.post('/parse', async (req, res) => {
             apiKey: process.env.OPENAI_API_KEY
         });
         
+        // 현재 날짜 정보
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const currentDate = now.getDate();
+        const todayStr = `${currentYear}년 ${currentMonth}월 ${currentDate}일`;
+        
         // 호텔 예약 파싱 프롬프트
         let prompt = `다음은 호텔 예약 정보입니다. 이를 JSON 형식으로 파싱해주세요.
+
+오늘 날짜: ${todayStr}
 
 예약 정보:
 """
@@ -818,7 +827,14 @@ ${reservationText}
 2. 각 객실마다 guests 배열을 포함하세요
 3. 각 객실의 guests 배열은 해당 객실의 투숙객만 포함
 4. 첫 번째 객실의 첫 번째 투숙객이 대표 투숙객 (phone, email 포함)
-5. age_category는 반드시 "adult", "child", "infant" 중 하나`;
+5. age_category는 반드시 "adult", "child", "infant" 중 하나
+6. ⭐ 날짜 파싱 시 년도 처리:
+   - 년도가 명시되어 있으면 그대로 사용
+   - 년도가 없고 월/일만 있는 경우:
+     * 해당 월/일이 오늘보다 미래면 → 올해(${currentYear}년) 사용
+     * 해당 월/일이 오늘보다 과거면 → 내년(${currentYear + 1}년) 사용
+   - 예약 날짜는 절대 과거가 되어서는 안됨
+   - 체크인 날짜는 반드시 오늘 이후여야 함`;
 
         if (customPrompt) {
             prompt += `\n\n추가 지침:\n${customPrompt}`;
@@ -831,7 +847,9 @@ ${reservationText}
             messages: [
                 {
                     role: 'system',
-                    content: '당신은 호텔 예약 정보를 정확하게 파싱하는 전문가입니다.'
+                    content: `당신은 호텔 예약 정보를 정확하게 파싱하는 전문가입니다. 
+특히 날짜 파싱 시 년도를 주의깊게 처리하여 과거 날짜가 되지 않도록 합니다.
+현재 날짜를 기준으로 합리적인 년도를 추론하세요.`
                 },
                 {
                     role: 'user',
