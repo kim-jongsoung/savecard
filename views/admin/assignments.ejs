@@ -25,28 +25,55 @@
         }
         .page-header { position: sticky; top: 0; z-index: 10; background:#fff; border-bottom:1px solid #eee; }
         .status-badge { font-weight:600; }
-        .row-card { 
-            background:#fff; 
-            border:2px solid #d1d5db; 
-            border-radius:10px; 
-            padding:18px 20px; 
-            margin-bottom:16px; 
-            display:flex; 
-            align-items:center; 
-            gap:16px; 
-            cursor:pointer; 
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+        /* 테이블형 스타일 */
+        .assignments-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        .row-card:hover { 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            border-color: #9ca3af;
-            transform: translateY(-1px);
+        .assignments-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
-        .row-card-selected {
-            border: 3px solid #0d6efd !important;
-            background: #f0f7ff !important;
-            box-shadow: 0 4px 16px rgba(13, 110, 253, 0.25) !important;
+        .assignments-table th {
+            padding: 12px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        .assignments-table th:last-child {
+            border-right: none;
+        }
+        .assignments-table tbody tr {
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+        .assignments-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        .assignments-table tbody tr.bg-light-gray {
+            background-color: #f8f9fa !important;
+        }
+        .assignments-table tbody tr.border-warning {
+            background-color: #fffbf0 !important;
+            border-left: 4px solid #ffc107 !important;
+        }
+        .assignments-table tbody tr.border-danger {
+            border-left: 4px solid #dc3545 !important;
+        }
+        .assignments-table td {
+            padding: 10px 8px;
+            font-size: 0.75rem;
+            vertical-align: middle;
+            text-align: center;
+            border-right: 1px solid #e9ecef;
+        }
+        .assignments-table td:last-child {
+            border-right: none;
         }
         .row-main { display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1; }
         .row-main > .chip { background:#e8f4f8; border-radius:6px; padding:5px 12px; font-size:0.95rem; font-weight:500; color:#1a73e8; }
@@ -1304,7 +1331,31 @@
 
             console.log('🔄 렌더링 시작 - 총 예약 수:', assignments.length);
             
-            const html = assignments.map(reservation => {
+            // 테이블 헤더
+            let html = `
+                <table class="assignments-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 80px;">예약일</th>
+                            <th style="width: 100px;">시스템번호</th>
+                            <th style="width: 130px;">업체예약번호</th>
+                            <th style="width: 80px;">출발일</th>
+                            <th style="width: 80px;">고객명</th>
+                            <th style="width: 70px;">담당자</th>
+                            <th style="width: 80px;">플랫폼</th>
+                            <th style="min-width: 150px;">상품명</th>
+                            <th style="width: 100px;">패키지타입</th>
+                            <th style="width: 100px;">수배업체</th>
+                            <th style="width: 100px;">PAX</th>
+                            <th style="width: 150px;">상태</th>
+                            <th style="width: 320px;">액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            html += assignments.map((reservation, index) => {
                 // 전역 저장소에 예약 데이터 저장
                 window.reservationsData[reservation.id] = reservation;
                 
@@ -1380,47 +1431,33 @@
                 const customerDisplay = `고객:${truncate(reservation.korean_name || '-', 3)}`;
                 
                 return `
-                    <article class="row-card table-like ${revisionClass} ${passedClass}" data-reservation-id="${reservation.id}" ${revisionBg}>
-                        <div class="d-flex align-items-center mb-3">
-                            <span class="badge bg-${getBootstrapStatusClass(reservation.payment_status)} status-badge" style="font-size: 0.85rem; padding: 6px 12px;">${statusText}</span>
+                    <tr class="${revisionClass} ${passedClass}" data-reservation-id="${reservation.id}">
+                        <td>${index + 1}</td>
+                        <td style="font-size: 0.7rem;">${formatDateShort(reservation.created_at)}</td>
+                        <td style="font-weight: 600; color: #2c3e50;">${reservation.id}</td>
+                        <td style="font-size: 0.7rem;">${truncate(reservation.reservation_number || '-', 12)}</td>
+                        <td style="font-size: 0.7rem;">${formatDateShort(reservation.usage_date)}</td>
+                        <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.korean_name || '-', 8)}</td>
+                        <td>
+                            <span class="badge bg-info" style="font-size: 0.65rem;">${truncate(reservation.assigned_to || '미지정', 5)}</span>
+                        </td>
+                        <td style="font-size: 0.7rem;">${truncate(reservation.platform_name || '-', 8)}</td>
+                        <td style="text-align: left; font-size: 0.65rem;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 15)}</td>
+                        <td style="font-size: 0.7rem;">${truncate(reservation.package_type || '-', 10)}</td>
+                        <td style="font-size: 0.7rem;">${truncate(reservation.vendor_name || '미지정', 10)}</td>
+                        <td style="font-size: 0.65rem;">
+                            <span class="badge bg-primary" style="font-size: 0.6rem;">성${reservation.people_adult || 0}</span>
+                            <span class="badge bg-success" style="font-size: 0.6rem;">아${reservation.people_child || 0}</span>
+                            <span class="badge bg-secondary" style="font-size: 0.6rem;">유${reservation.people_infant || 0}</span>
+                        </td>
+                        <td style="padding: 5px;">
+                            <span class="badge bg-${bootstrapClass}" style="font-size: 0.65rem;">${statusText}</span>
                             ${statusBadges}
-                            ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<span class="badge bg-info ms-2" style="font-size: 0.8rem; padding: 5px 10px;">📋 정산대기</span>' : ''}
-                            ${reservation.payment_status === 'settlement_completed' ? '<span class="badge bg-dark ms-2" style="font-size: 0.8rem; padding: 5px 10px;">💰 정산이관완료</span>' : ''}
-                        </div>
-                        <div class="row-main" style="flex-direction: column; gap: 10px;">
-                            <!-- 윗줄: 시스템번호(업체번호) / 예약일 / 출발일 / 고객명(담당자) -->
-                            <div style="display: flex; gap: 20px; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <i class="bi bi-hash" style="color: #1a73e8;"></i>
-                                    <span style="font-size: 1rem; color: #212529; font-weight: 700;">${reservation.id}</span>
-                                    <span style="font-size: 0.8rem; color: #6c757d;">(${truncate(reservation.reservation_number || '-', 12)})</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <i class="bi bi-calendar-check" style="color: #6c757d;"></i>
-                                    <span style="font-size: 0.9rem; color: #6c757d;">${createdAt}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <i class="bi bi-calendar-event" style="color: #1a73e8;"></i>
-                                    <span style="font-size: 0.95rem; color: #212529; font-weight: 600;">${formatDate(reservation.usage_date) || '-'}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
-                                    <span style="font-size: 1rem; color: #212529; font-weight: 600;">${reservation.korean_name || '-'}</span>
-                                    <span style="font-size: 0.85rem; color: #6c757d;">(${reservation.assigned_to || '미지정'})</span>
-                                </div>
-                            </div>
-                            <!-- 아랫줄: 업체명 / 상품명(10자) / 패키지타입(6자) / 수배업체 / PAX -->
-                            <div style="display: flex; gap: 12px; align-items: center; font-size: 0.9rem;">
-                                <div style="color: #495057; font-weight: 500; min-width: 70px;">${truncate(reservation.platform_name || '-', 8)}</div>
-                                <div style="color: #d1d5db;">|</div>
-                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #6c757d; max-width: 180px;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 10)}</div>
-                                <div style="color: #d1d5db;">|</div>
-                                <div style="color: #6c757d; min-width: 70px;" title="${reservation.package_type || '-'}">${truncate(reservation.package_type || '-', 6)}</div>
-                                <div style="color: #d1d5db;">|</div>
-                                <div style="color: #6c757d;">${truncate(reservation.vendor_name || '미지정', 10)}</div>
-                                <div style="margin-left: auto; color: #495057; font-weight: 500;">${pax}</div>
-                            </div>
-                        </div>
-                        <div class="btn-group btn-group-sm ms-auto" role="group">
+                            ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<br><span class="badge bg-info mt-1" style="font-size: 0.6rem;">정산대기</span>' : ''}
+                            ${reservation.payment_status === 'settlement_completed' ? '<br><span class="badge bg-dark mt-1" style="font-size: 0.6rem;">정산완료</span>' : ''}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
                             <button class="btn btn-outline-primary btn-sm" 
                                     onclick="openReservationEditModal(${reservation.id})" 
                                     data-reservation-id="${reservation.id}"
@@ -1459,10 +1496,17 @@
                                     title="업무히스토리">
                                 <i class="bi bi-clock-history"></i>
                             </button>
-                        </div>
-                    </article>
+                            </div>
+                        </td>
+                    </tr>
                 `;
             }).join('');
+            
+            // 테이블 닫기
+            html += `
+                    </tbody>
+                </table>
+            `;
             
             console.log('✅ HTML 생성 완료 - 길이:', html.length);
             assignmentsList.innerHTML = html;
@@ -2404,6 +2448,15 @@
             if (isNaN(date.getTime())) return '-';
             return date.toLocaleDateString('ko-KR');
         }
+        
+        function formatDateShort(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${month}-${day}`;
+        }
 
         function formatCurrency(amount) {
             if (!amount) return '-';
@@ -2415,15 +2468,17 @@
 
         // 선택된 예약 강조 표시 함수
         function highlightSelectedReservation(reservationId) {
-            // 모든 예약 카드의 선택 클래스 제거
-            document.querySelectorAll('.row-card').forEach(card => {
-                card.classList.remove('row-card-selected');
+            // 모든 예약 행의 선택 클래스 제거
+            document.querySelectorAll('.assignments-table tbody tr').forEach(row => {
+                row.style.backgroundColor = '';
+                row.style.boxShadow = '';
             });
             
-            // 현재 선택된 예약 카드에 클래스 추가
-            const selectedCard = document.querySelector(`.row-card[data-reservation-id="${reservationId}"]`);
-            if (selectedCard) {
-                selectedCard.classList.add('row-card-selected');
+            // 현재 선택된 예약 행에 강조 표시
+            const selectedRow = document.querySelector(`.assignments-table tbody tr[data-reservation-id="${reservationId}"]`);
+            if (selectedRow) {
+                selectedRow.style.backgroundColor = '#f0f7ff';
+                selectedRow.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
                 console.log('✅ 예약 강조 표시:', reservationId);
                 
                 // ✅ localStorage에 저장 (새로고침 후에도 유지)
