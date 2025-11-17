@@ -344,7 +344,35 @@ router.get('/', async (req, res) => {
             SELECT 
                 hr.*,
                 h.hotel_name,
-                ba.agency_name
+                ba.agency_name,
+                (
+                    SELECT hrg.name_ko
+                    FROM hotel_reservation_guests hrg
+                    WHERE hrg.reservation_id = hr.id
+                    AND hrg.is_primary = true
+                    LIMIT 1
+                ) as representative_name,
+                (
+                    SELECT COUNT(DISTINCT hrr.id)
+                    FROM hotel_reservation_rooms hrr
+                    WHERE hrr.reservation_id = hr.id
+                ) as total_rooms,
+                (
+                    SELECT COUNT(*)
+                    FROM hotel_reservation_guests hrg
+                    WHERE hrg.reservation_id = hr.id
+                ) as total_guests,
+                (
+                    SELECT STRING_AGG(DISTINCT rt.room_type_name, ', ')
+                    FROM hotel_reservation_rooms hrr
+                    LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
+                    WHERE hrr.reservation_id = hr.id
+                ) as room_types,
+                (
+                    SELECT COUNT(*) > 0
+                    FROM hotel_reservation_memos
+                    WHERE reservation_id = hr.id
+                ) as has_memo
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
