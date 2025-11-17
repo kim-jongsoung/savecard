@@ -2064,15 +2064,22 @@
             try {
                 const response = await fetch('/api/parsing-settings?type=hotel');
                 if (response.ok) {
-                    const settings = await response.json();
+                    const result = await response.json();
+                    console.log('📥 파싱 설정 로드:', result);
+                    
+                    // ⭐ 백엔드는 { success: true, settings: {...} } 형태로 반환
+                    const settings = result.settings || result;
                     preprocessingRules = settings.preprocessing_rules || [];
                     customPrompt = settings.custom_prompt || '';
+                    
+                    console.log('✅ 로드된 규칙 수:', preprocessingRules.length);
+                    console.log('✅ 로드된 프롬프트 길이:', customPrompt.length);
                     
                     document.getElementById('customPromptText').value = customPrompt;
                     renderPreprocessingRules();
                 }
             } catch (error) {
-                console.error('설정 로드 오류:', error);
+                console.error('❌ 설정 로드 오류:', error);
             }
         }
         
