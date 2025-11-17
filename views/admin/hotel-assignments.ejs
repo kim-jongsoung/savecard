@@ -2026,6 +2026,8 @@
                     // 추가 항목 로드
                     setTimeout(() => {
                         let totalExtras = 0;
+                        let displayedExtras = 0;  // ⭐ 실제 표시된 항목 수
+                        
                         if (data.extras && data.extras.length > 0) {
                             console.log('🎁 추가 항목 수:', data.extras.length);
                             data.extras.forEach((extra, idx) => {
@@ -2035,6 +2037,7 @@
                                     return;
                                 }
                                 
+                                displayedExtras++;
                                 addExtraItem();
                                 
                                 // ⭐ 클로저 버그 수정: extraCounter 현재 값을 즉시 캡처
@@ -2094,17 +2097,30 @@
                                 }, 100 * idx);
                             });
                             
+                            // ⭐ displayedExtras 기반으로 타이밍 조정
+                            const delayTime = displayedExtras > 0 ? (100 * displayedExtras + 100) : 200;
+                            
                             setTimeout(() => {
-                                calculateTotal();
+                                if (displayedExtras === 0) {
+                                    console.log('ℹ️ 표시할 추가 항목 없음 (조식 항목은 객실 정보에 포함)');
+                                } else {
+                                    console.log(`✅ 추가 항목 ${displayedExtras}개 로드 완료`);
+                                }
+                                
+                                // ⭐ 조식 요금 재계산 (객실별 조식 정보 로드 완료 후)
+                                updateRoomCharges();
                                 
                                 // ⭐ 데이터 로드 완료 - 이제 프로모션 조회 가능
                                 isLoadingData = false;
                                 console.log('✅ 데이터 로드 완료 - 프로모션 조회 활성화');
-                            }, 100 * data.extras.length + 100);
+                            }, delayTime);
                         } else {
-                            // 추가 항목이 없는 경우도 로드 완료 처리
-                            isLoadingData = false;
-                            console.log('✅ 데이터 로드 완료 (추가 항목 없음)');
+                            // 추가 항목이 없는 경우도 조식 요금 계산
+                            setTimeout(() => {
+                                updateRoomCharges();
+                                isLoadingData = false;
+                                console.log('✅ 데이터 로드 완료 (추가 항목 없음)');
+                            }, 200);
                         }
                     }, 500);
                     
