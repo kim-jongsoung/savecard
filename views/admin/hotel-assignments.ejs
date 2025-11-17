@@ -48,18 +48,44 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.12);
         }
         
-        .reservation-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
+        .reservation-table {
+            width: 100%;
             background: white;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-            transition: all 0.3s;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        .reservation-card:hover {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            border-color: #667eea;
+        .reservation-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .reservation-table th {
+            padding: 12px 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+        .reservation-table th:last-child {
+            border-right: none;
+        }
+        .reservation-table tbody tr {
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+        .reservation-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        .reservation-table td {
+            padding: 10px 8px;
+            font-size: 0.75rem;
+            vertical-align: middle;
+            text-align: center;
+            border-right: 1px solid #e9ecef;
+        }
+        .reservation-table td:last-child {
+            border-right: none;
         }
         
         .status-badge {
@@ -744,98 +770,72 @@
             
             document.getElementById('emptyState').style.display = 'none';
             
-            container.innerHTML = reservations.map(res => `
-                <div class="reservation-card" data-status="${res.status}" data-reservation-id="${res.id}">
-                    <!-- 상태 진행도 바 -->
-                    <div class="mb-3">
-                        ${getProgressBar(res)}
-                    </div>
-                    
-                    <div class="row">
-                        <!-- 좌측: 기본 정보 -->
-                        <div class="col-md-9">
-                            <div class="d-flex align-items-center mb-2" style="gap: 8px;">
-                                <h5 class="mb-0" style="color: #2c3e50; font-weight: 600;">${res.reservation_number}</h5>
-                                <span class="badge" style="background: ${getStatusColor(res.status)}; font-size: 0.7rem;">
-                                    ${getStatusText(res.status)}
-                                </span>
-                                <span class="badge bg-light text-dark" style="font-size: 0.65rem;">
-                                    <i class="fas fa-calendar-plus me-1"></i>${formatDate(res.reservation_date)}
-                                </span>
-                                <span class="badge bg-info text-dark" style="font-size: 0.65rem;">
-                                    <i class="fas fa-user me-1"></i>${res.assigned_to || '미배정'}
-                                </span>
-                                ${res.has_memo ? '<span class="badge bg-warning text-dark" style="font-size: 0.65rem;"><i class="fas fa-sticky-note me-1"></i>메모</span>' : ''}
-                            </div>
-                            
-                            <div class="row g-2 mb-2" style="font-size: 0.8rem;">
-                                <div class="col-md-6">
-                                    <i class="fas fa-plane-departure me-1 text-primary"></i>
-                                    <strong>출발일:</strong> ${formatDate(res.check_in_date)}
-                                </div>
-                                <div class="col-md-6">
-                                    <i class="fas fa-building me-1 text-success"></i>
-                                    <strong>거래처:</strong> ${res.agency_name || '-'}
-                                </div>
-                                <div class="col-md-6">
-                                    <i class="fas fa-user-circle me-1 text-info"></i>
-                                    <strong>대표예약자:</strong> ${res.representative_name || '-'}
-                                </div>
-                                <div class="col-md-6">
-                                    <i class="fas fa-map-marker-alt me-1 text-danger"></i>
-                                    <strong>지역:</strong> ${res.region || '괌'}
-                                </div>
-                                <div class="col-md-12">
-                                    <i class="fas fa-hotel me-1 text-primary"></i>
-                                    <strong>호텔:</strong> ${res.hotel_name || '호텔 정보 없음'}
-                                </div>
-                                <div class="col-md-12">
-                                    <i class="fas fa-bed me-1 text-secondary"></i>
-                                    <strong>룸타입:</strong> ${res.room_types || '-'}
-                                </div>
-                                <div class="col-md-6">
-                                    <i class="fas fa-door-open me-1 text-warning"></i>
-                                    <strong>객실:</strong> ${res.total_rooms || 0}개
-                                </div>
-                                <div class="col-md-6">
-                                    <i class="fas fa-users me-1 text-success"></i>
-                                    <strong>인원:</strong> ${res.total_guests || 0}명
-                                </div>
-                            </div>
-                            
-                            <div class="date-info" style="font-size: 0.7rem; color: #6c757d;">
-                                <i class="fas fa-calendar-check me-1"></i>
-                                ${formatDate(res.check_in_date)} ~ ${formatDate(res.check_out_date)} (${res.nights}박)
-                            </div>
-                        </div>
-                        
-                        <!-- 우측: 액션 버튼 -->
-                        <div class="col-md-3 text-end">
-                            <div class="price-tag mb-2" style="font-size: 1.3rem; color: #667eea; font-weight: bold;">
-                                $${parseFloat(res.total_selling_price || 0).toFixed(2)}
-                            </div>
-                            
-                            <div class="d-grid gap-2" style="font-size: 0.75rem;">
-                                <button class="btn btn-sm btn-outline-primary" onclick="editReservation(${res.id})">
-                                    <i class="fas fa-edit me-1"></i>예약변경
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary" onclick="createAssignment(${res.id})">
-                                    <i class="fas fa-file-alt me-1"></i>수배서
-                                </button>
-                                <button class="btn btn-sm btn-outline-success" onclick="confirmReservation(${res.id})">
-                                    <i class="fas fa-check me-1"></i>확정
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" onclick="createVoucher(${res.id})">
-                                    <i class="fas fa-ticket-alt me-1"></i>바우처
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning" onclick="createSettlement(${res.id})">
-                                    <i class="fas fa-dollar-sign me-1"></i>정산
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = `
+                <table class="reservation-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 80px;">예약일</th>
+                            <th style="width: 120px;">예약번호</th>
+                            <th style="width: 80px;">출발일</th>
+                            <th style="width: 90px;">거래처</th>
+                            <th style="width: 70px;">담당자</th>
+                            <th style="width: 350px;">진행상태</th>
+                            <th style="width: 80px;">대표예약자</th>
+                            <th style="width: 50px;">지역</th>
+                            <th style="min-width: 150px;">호텔명</th>
+                            <th style="min-width: 150px;">룸타입</th>
+                            <th style="width: 90px;">방개수/인원</th>
+                            <th style="width: 280px;">액션</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${reservations.map((res, index) => `
+                            <tr data-reservation-id="${res.id}" data-status="${res.status}">
+                                <td>${index + 1}</td>
+                                <td>${formatDateShort(res.reservation_date)}</td>
+                                <td style="font-weight: 600; color: #2c3e50;">${res.reservation_number}</td>
+                                <td>${formatDateShort(res.check_in_date)}</td>
+                                <td style="font-size: 0.7rem;">${res.agency_name || '-'}</td>
+                                <td>
+                                    <span class="badge bg-info" style="font-size: 0.65rem;">${res.assigned_to || '미배정'}</span>
+                                    ${res.has_memo ? '<br><span class="badge bg-warning mt-1" style="font-size: 0.6rem;"><i class="fas fa-sticky-note"></i></span>' : ''}
+                                </td>
+                                <td style="padding: 5px;">
+                                    ${getProgressBarCompact(res)}
+                                </td>
+                                <td style="font-size: 0.7rem;">${res.representative_name || '-'}</td>
+                                <td><span class="badge bg-secondary" style="font-size: 0.65rem;">${res.region || '괌'}</span></td>
+                                <td style="text-align: left; font-size: 0.7rem;">${res.hotel_name || '-'}</td>
+                                <td style="text-align: left; font-size: 0.65rem;">${res.room_types || '-'}</td>
+                                <td>
+                                    <span class="badge bg-primary" style="font-size: 0.65rem;">${res.total_rooms || 0}개</span>
+                                    <span class="badge bg-success" style="font-size: 0.65rem;">${res.total_guests || 0}명</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="editReservation(${res.id})" title="예약변경">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="createAssignment(${res.id})" title="수배서">
+                                            <i class="fas fa-file-alt"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success btn-sm" onclick="confirmReservation(${res.id})" title="확정">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm" onclick="createVoucher(${res.id})" title="바우처">
+                                            <i class="fas fa-ticket-alt"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning btn-sm" onclick="createSettlement(${res.id})" title="정산">
+                                            <i class="fas fa-dollar-sign"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
         }
         
         // 통계 업데이트
@@ -978,7 +978,29 @@
             return colorMap[status] || '#6c757d';
         }
         
-        // 진행도 바 생성
+        // 진행도 바 생성 (컴팩트)
+        function getProgressBarCompact(res) {
+            const steps = [
+                { key: 'pending', label: '접수', color: '#17a2b8' },
+                { key: 'processing', label: '호텔수배중', color: '#17a2b8' },
+                { key: 'confirmed', label: '호텔회신', color: '#28a745' },
+                { key: 'voucher', label: '바우처발행', color: '#6f42c1' },
+                { key: 'settlement', label: '정산완료', color: '#ffc107' }
+            ];
+            
+            const statusOrder = ['pending', 'processing', 'confirmed', 'voucher', 'settlement'];
+            const currentIndex = statusOrder.indexOf(res.status);
+            
+            return steps.map((step, index) => {
+                const isCompleted = index <= currentIndex;
+                const bgColor = isCompleted ? step.color : '#e9ecef';
+                const textColor = isCompleted ? 'white' : '#6c757d';
+                
+                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 3px 6px;">${step.label}</span>`;
+            }).join('');
+        }
+        
+        // 진행도 바 생성 (전체)
         function getProgressBar(res) {
             const steps = [
                 { key: 'pending', label: '대기', icon: 'clock' },
@@ -1020,7 +1042,7 @@
             `;
         }
         
-        // 날짜 포맷
+        // 날짜 포맷 (전체)
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             const date = new Date(dateStr);
@@ -1028,6 +1050,15 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+        
+        // 날짜 포맷 (짧게)
+        function formatDateShort(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${month}-${day}`;
         }
         
         // 상태 텍스트
