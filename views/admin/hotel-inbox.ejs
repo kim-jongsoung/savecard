@@ -1950,6 +1950,7 @@
                 total_extras_rate: parseFloat(document.getElementById('totalExtrasCharge').value) || 0,
                 agency_fee: parseFloat(document.getElementById('agencyFee').value) || 0,
                 grand_total: parseFloat(document.getElementById('grandTotal').textContent.replace('$', '')) || 0,
+                assigned_to: '<%= adminUsername %>',  // ⭐ 담당자 (현재 로그인한 사용자)
                 rooms: [],
                 extras: []
             };

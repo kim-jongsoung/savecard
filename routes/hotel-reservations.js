@@ -23,6 +23,7 @@ router.post('/', async (req, res) => {
         total_extras_rate,
         agency_fee,  // ⭐ 수배피
         grand_total,
+        assigned_to,  // ⭐ 담당자
         rooms,
         extras
     } = req.body;
@@ -67,8 +68,9 @@ router.post('/', async (req, res) => {
                 total_extras_rate,
                 agency_fee,
                 grand_total,
+                assigned_to,
                 created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
             RETURNING id
         `, [
             reservation_number,
@@ -84,7 +86,8 @@ router.post('/', async (req, res) => {
             total_room_rate || 0,
             total_extras_rate || 0,
             agency_fee || 0,
-            grand_total || 0
+            grand_total || 0,
+            assigned_to || null
         ]);
         
         const reservationId = reservationResult.rows[0].id;
