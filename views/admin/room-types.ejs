@@ -111,14 +111,15 @@
               <table class="table table-hover table-sm">
                 <thead class="table-light">
                   <tr>
-                    <th style="width: 15%;">호텔명</th>
-                    <th style="width: 10%;">코드</th>
-                    <th style="width: 15%;">객실 타입명</th>
-                    <th style="width: 15%;">호텔 객실명</th>
-                    <th style="width: 8%;">최대인원</th>
-                    <th style="width: 8%;">기본요금</th>
-                    <th style="width: 8%;">조식</th>
-                    <th style="width: 8%;">상태</th>
+                    <th style="width: 5%;">순위</th>
+                    <th style="width: 13%;">호텔명</th>
+                    <th style="width: 9%;">코드</th>
+                    <th style="width: 13%;">객실 타입명</th>
+                    <th style="width: 13%;">호텔 객실명</th>
+                    <th style="width: 7%;">최대인원</th>
+                    <th style="width: 7%;">기본요금</th>
+                    <th style="width: 7%;">조식</th>
+                    <th style="width: 7%;">상태</th>
                     <th style="width: 13%;">관리</th>
                   </tr>
                 </thead>
@@ -161,14 +162,19 @@
                   <option value="">호텔을 선택하세요</option>
                 </select>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label">객실 타입 코드 * (B2B 코드)</label>
                 <input type="text" class="form-control" id="roomTypeCode" required placeholder="예: DELUXE">
                 <small class="text-muted">B2B 시스템에서 사용하는 표준 코드</small>
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label">객실 타입명 *</label>
                 <input type="text" class="form-control" id="roomTypeName" required placeholder="디럭스 룸">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">리스트 순위 *</label>
+                <input type="number" class="form-control" id="displayOrder" required value="10" min="1" step="10">
+                <small class="text-muted">작을수록 먼저 표시 (예: 10, 20, 30...)</small>
               </div>
               <div class="col-md-12">
                 <label class="form-label">호텔 객실명</label>
@@ -362,6 +368,9 @@
       
       tbody.innerHTML = roomTypes.map(rt => `
         <tr>
+          <td class="text-center">
+            <span class="badge bg-info">${rt.display_order || 999}</span>
+          </td>
           <td>
             <strong>${rt.hotel_name || '-'}</strong>
             ${rt.country ? `<br><small class="text-muted">${rt.country}</small>` : ''}
@@ -425,6 +434,7 @@
       document.getElementById('breakfastRateInfant').value = 0;
       document.getElementById('extraBedRate').value = 0;
       document.getElementById('babyCotRate').value = 0;
+      document.getElementById('displayOrder').value = 10;
       
       new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
     }
@@ -455,6 +465,7 @@
         document.getElementById('breakfastRateInfant').value = rt.breakfast_rate_infant || 0;
         document.getElementById('extraBedRate').value = rt.extra_bed_rate || 0;
         document.getElementById('babyCotRate').value = rt.baby_cot_rate || 0;
+        document.getElementById('displayOrder').value = rt.display_order || 10;
         document.getElementById('isActive').checked = rt.is_active;
         
         new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
@@ -486,6 +497,7 @@
         breakfast_rate_infant: parseFloat(document.getElementById('breakfastRateInfant').value) || 0,
         extra_bed_rate: parseFloat(document.getElementById('extraBedRate').value) || 0,
         baby_cot_rate: parseFloat(document.getElementById('babyCotRate').value) || 0,
+        display_order: parseInt(document.getElementById('displayOrder').value) || 10,
         is_active: document.getElementById('isActive').checked
       };
       

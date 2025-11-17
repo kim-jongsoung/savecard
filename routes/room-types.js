@@ -60,7 +60,7 @@ router.get('/api/room-types', (req, res, next) => {
       paramIndex++;
     }
     
-    query += ` ORDER BY h.hotel_name, rt.room_type_code`;
+    query += ` ORDER BY h.hotel_name, rt.display_order, rt.room_type_code`;
     
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -123,6 +123,7 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
     extra_infant_rate,
     extra_bed_rate,
     baby_cot_rate,
+    display_order,
     is_active
   } = req.body;
   
@@ -144,8 +145,8 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
         breakfast_included, 
         breakfast_rate_adult, breakfast_rate_child, breakfast_rate_infant,
         extra_adult_rate, extra_child_rate, extra_infant_rate,
-        extra_bed_rate, baby_cot_rate, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        extra_bed_rate, baby_cot_rate, display_order, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
@@ -153,7 +154,7 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
         breakfast_included || false,
         breakfast_rate_adult || 0, breakfast_rate_child || 0, breakfast_rate_infant || 0,
         extra_adult_rate || 0, extra_child_rate || 0, extra_infant_rate || 0,
-        extra_bed_rate || 0, baby_cot_rate || 0, is_active !== false
+        extra_bed_rate || 0, baby_cot_rate || 0, display_order || 999, is_active !== false
       ]
     );
     
@@ -190,6 +191,7 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
     extra_infant_rate,
     extra_bed_rate,
     baby_cot_rate,
+    display_order,
     is_active
   } = req.body;
   
@@ -230,9 +232,10 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
         extra_infant_rate = $16,
         extra_bed_rate = $17,
         baby_cot_rate = $18,
-        is_active = $19,
+        display_order = $19,
+        is_active = $20,
         updated_at = NOW()
-      WHERE id = $20
+      WHERE id = $21
       RETURNING *`,
       [
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
@@ -240,7 +243,8 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
         breakfast_included,
         breakfast_rate_adult, breakfast_rate_child, breakfast_rate_infant,
         extra_adult_rate, extra_child_rate, extra_infant_rate,
-        extra_bed_rate, baby_cot_rate, is_active,
+        extra_bed_rate, baby_cot_rate, display_order,
+        is_active,
         id
       ]
     );
@@ -305,10 +309,10 @@ router.get('/api/hotels/:hotel_id/room-types', requireLogin, async (req, res) =>
   
   try {
     const result = await pool.query(
-      `SELECT id, room_type_code, room_type_name, hotel_room_name, is_active
+      `SELECT id, room_type_code, room_type_name, hotel_room_name, display_order, is_active
        FROM room_types
        WHERE hotel_id = $1 AND is_active = true
-       ORDER BY room_type_code`,
+       ORDER BY display_order, room_type_code`,
       [hotel_id]
     );
     
