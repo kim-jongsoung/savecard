@@ -346,10 +346,11 @@ router.get('/', async (req, res) => {
                 h.hotel_name,
                 ba.agency_name,
                 (
-                    SELECT hrg.name_ko
+                    SELECT hrg.guest_name_ko
                     FROM hotel_reservation_guests hrg
-                    WHERE hrg.reservation_id = hr.id
-                    AND hrg.is_primary = true
+                    INNER JOIN hotel_reservation_rooms hrr ON hrg.reservation_room_id = hrr.id
+                    WHERE hrr.reservation_id = hr.id
+                    AND hrg.guest_type = 'primary'
                     LIMIT 1
                 ) as representative_name,
                 (
@@ -363,10 +364,11 @@ router.get('/', async (req, res) => {
                     WHERE hrg.reservation_id = hr.id
                 ) as total_guests,
                 (
-                    SELECT STRING_AGG(DISTINCT rt.room_type_name, ', ')
+                    SELECT STRING_AGG(DISTINCT rt.room_type_name, ', ' ORDER BY rt.room_type_name)
                     FROM hotel_reservation_rooms hrr
                     LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
                     WHERE hrr.reservation_id = hr.id
+                    GROUP BY hrr.reservation_id
                 ) as room_types,
                 (
                     SELECT COUNT(*) > 0
