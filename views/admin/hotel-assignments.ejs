@@ -418,63 +418,34 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
-                    <!-- 호텔 정보 섹션 -->
+                    <!-- 호텔정보 및 기본정보 섹션 -->
                     <div class="row mb-4">
                         <div class="col-12">
                             <h6 class="text-primary border-bottom pb-2">
-                                <i class="fas fa-hotel me-2"></i>호텔 정보
+                                <i class="fas fa-hotel me-2"></i>호텔정보 및 기본정보
                             </h6>
                         </div>
-                        <div class="col-md-6 mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label mb-0" style="width: 40%;">호텔 * <span class="badge bg-secondary">변경 불가</span></label>
-                                <select class="form-control" id="hotel_id" required disabled style="background: #e9ecef; cursor: not-allowed; width: 60%;">
+                        <div class="col-12 mb-2">
+                            <div class="d-flex align-items-center gap-1">
+                                <label class="form-label mb-0" style="min-width: 55px;">호텔명*</label>
+                                <select class="form-control form-control-sm" id="hotel_id" required disabled style="background: #e9ecef; cursor: not-allowed; flex: 1.5;">
                                     <option value="">호텔 선택</option>
                                 </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-2">
-                            <div class="d-flex align-items-center gap-2">
-                                <label class="form-label mb-0" style="width: 40%;">예약 거래처 <span class="badge bg-secondary">변경 불가</span></label>
-                                <select class="form-control" id="booking_agency_id" disabled style="background: #e9ecef; cursor: not-allowed; width: 60%;">
+                                <label class="form-label mb-0 ms-1" style="min-width: 75px;">예약거래처</label>
+                                <select class="form-control form-control-sm" id="booking_agency_id" disabled style="background: #e9ecef; cursor: not-allowed; flex: 1.5;">
                                     <option value="">거래처 선택</option>
                                 </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 기본 예약 정보 섹션 -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <h6 class="text-primary border-bottom pb-2">
-                                <i class="fas fa-info-circle me-2"></i>기본 예약 정보
-                            </h6>
-                        </div>
-                        <div class="col-12 mb-2">
-                            <div class="d-flex align-items-center gap-1">
-                                <label class="form-label mb-0" style="min-width: 65px;">예약번호*</label>
+                                <label class="form-label mb-0 ms-1" style="min-width: 65px;">예약번호*</label>
                                 <input type="text" class="form-control form-control-sm" id="reservation_number" required style="flex: 1;">
-                                <label class="form-label mb-0 ms-1" style="min-width: 55px;">호텔명*</label>
-                                <select class="form-control form-control-sm" id="hotel_id" required disabled style="background: #e9ecef; cursor: not-allowed; flex: 1;">
-                                    <option value="">호텔 선택</option>
-                                </select>
                                 <label class="form-label mb-0 ms-1" style="min-width: 50px;">예약일</label>
                                 <input type="date" class="form-control form-control-sm fw-bold" id="reservation_date" readonly style="background: #f0f0f0; flex: 1;">
-                            </div>
-                        </div>
-                        <div class="col-12 mb-2">
-                            <div class="d-flex align-items-center gap-1">
-                                <label class="form-label mb-0" style="min-width: 40px;">상태</label>
-                                <select class="form-control form-control-sm" id="status" style="flex: 1;">
+                                <label class="form-label mb-0 ms-1" style="min-width: 40px;">상태</label>
+                                <select class="form-control form-control-sm" id="status" style="flex: 0.8;">
                                     <option value="pending">대기중</option>
                                     <option value="processing">수배중</option>
                                     <option value="confirmed">확정</option>
                                     <option value="cancelled">예약취소</option>
                                     <option value="modifying">수정중(예약변경)</option>
-                                </select>
-                                <label class="form-label mb-0 ms-1" style="min-width: 90px;">예약거래처</label>
-                                <select class="form-control form-control-sm" id="booking_agency_id" disabled style="background: #e9ecef; cursor: not-allowed; flex: 2;">
-                                    <option value="">거래처 선택</option>
                                 </select>
                             </div>
                         </div>
@@ -943,10 +914,12 @@
             // }
             
             const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+            const totalBreakfastCharge = parseFloat(document.getElementById('totalBreakfastCharge').value) || 0;
             const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
             const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0; // ⭐ 저장된 값 그대로 사용
             
-            const grandTotal = totalRoomCharge + totalExtrasCharge + agencyFee;
+            // ⭐ 총 판매가 계산 (조식요금 포함)
+            const grandTotal = totalRoomCharge + totalBreakfastCharge + totalExtrasCharge + agencyFee;
             
             document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
             
@@ -1136,6 +1109,7 @@
         // 객실 요금 자동 업데이트 (모든 객실의 프로모션 합산)
         async function updateRoomCharges() {
             let totalRoomCharge = 0;
+            let totalBreakfastCharge = 0;
             const appliedPromoCodes = new Set();
             
             // 각 객실의 프로모션 요금 합산
@@ -1146,6 +1120,28 @@
                     if (roomPromotions[roomNum].promotion && roomPromotions[roomNum].promotion.promo_code) {
                         appliedPromoCodes.add(roomPromotions[roomNum].promotion.promo_code);
                     }
+                }
+                
+                // ⭐ 조식 요금 계산
+                const breakfastCheckbox = document.getElementById(`breakfast_included_${roomNum}`);
+                if (breakfastCheckbox && breakfastCheckbox.checked) {
+                    const days = parseInt(document.getElementById(`breakfast_days_${roomNum}`)?.value) || 1;
+                    const adultPrice = parseFloat(document.getElementById(`breakfast_adult_price_${roomNum}`)?.value) || 0;
+                    const childPrice = parseFloat(document.getElementById(`breakfast_child_price_${roomNum}`)?.value) || 0;
+                    
+                    // 투숙객 수 계산
+                    let adultCount = 0;
+                    let childCount = 0;
+                    room.querySelectorAll('.guest-card').forEach(guest => {
+                        const ageCategory = guest.querySelector('[data-guest-field="age_category"]')?.value;
+                        if (ageCategory === 'adult') adultCount++;
+                        else if (ageCategory === 'child') childCount++;
+                    });
+                    
+                    const breakfastCharge = (adultCount * adultPrice * days) + (childCount * childPrice * days);
+                    totalBreakfastCharge += breakfastCharge;
+                    
+                    console.log(`🍳 객실 ${roomNum} 조식요금: 성인${adultCount}명×$${adultPrice}×${days}일 + 소아${childCount}명×$${childPrice}×${days}일 = $${breakfastCharge.toFixed(2)}`);
                 }
             });
             
@@ -1172,6 +1168,9 @@
             }
             
             document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
+            document.getElementById('totalBreakfastCharge').value = totalBreakfastCharge.toFixed(2);
+            console.log(`💰 총 객실요금: $${totalRoomCharge.toFixed(2)}, 총 조식요금: $${totalBreakfastCharge.toFixed(2)}`);
+            
             // await calculateAgencyFee(); // ❓ 주석 처리: 거래처 disabled, 저장된 수배피 값 유지
             calculateTotal();
         }
@@ -1563,6 +1562,9 @@
                 // ⭐ 총 요금 섹션의 조식 라벨도 업데이트
                 updateBreakfastLabel();
             }
+            
+            // ⭐ 조식 요금 재계산
+            updateRoomCharges();
         }
         
         // 객실 타입 변경 시 조식 정보 표시

@@ -1375,30 +1375,30 @@
                         </div>
                     </div>
                     
-                    <div class="row g-2 mt-2" id="perPersonPricing_${extraCounter}">
-                        <div class="col-md-3">
-                            <label class="form-label small">성인 수</label>
-                            <input type="number" class="form-control" value="0" min="0" data-extra-field="adult_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                    <div class="row g-1 mt-2" id="perPersonPricing_${extraCounter}">
+                        <div class="col-md-2">
+                            <label class="form-label small">성인수</label>
+                            <input type="number" class="form-control form-control-sm" value="0" min="0" data-extra-field="adult_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">성인 단가 ($)</label>
-                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="adult_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        <div class="col-md-2">
+                            <label class="form-label small">성인단가($)</label>
+                            <input type="number" class="form-control form-control-sm" value="0" step="0.01" data-extra-field="adult_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">소아 수</label>
-                            <input type="number" class="form-control" value="0" min="0" data-extra-field="child_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        <div class="col-md-2">
+                            <label class="form-label small">소아수</label>
+                            <input type="number" class="form-control form-control-sm" value="0" min="0" data-extra-field="child_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">소아 단가 ($)</label>
-                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="child_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        <div class="col-md-2">
+                            <label class="form-label small">소아단가($)</label>
+                            <input type="number" class="form-control form-control-sm" value="0" step="0.01" data-extra-field="child_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">유아 수</label>
-                            <input type="number" class="form-control" value="0" min="0" data-extra-field="infant_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        <div class="col-md-2">
+                            <label class="form-label small">유아수</label>
+                            <input type="number" class="form-control form-control-sm" value="0" min="0" data-extra-field="infant_count" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label small">유아 단가 ($)</label>
-                            <input type="number" class="form-control" value="0" step="0.01" data-extra-field="infant_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
+                        <div class="col-md-2">
+                            <label class="form-label small">유아단가($)</label>
+                            <input type="number" class="form-control form-control-sm" value="0" step="0.01" data-extra-field="infant_price" data-extra="${extraCounter}" onchange="calculateExtraTotal(${extraCounter})">
                         </div>
                     </div>
                     
@@ -1548,11 +1548,12 @@
         function calculateTotal() {
             // input 필드에서 값 읽기 (수동 수정 가능)
             const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+            const totalBreakfastCharge = parseFloat(document.getElementById('totalBreakfastCharge').value) || 0;
             const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
             const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0;
             
-            // 총 판매가 계산
-            const grandTotal = totalRoomCharge + totalExtrasCharge + agencyFee;
+            // ⭐ 총 판매가 계산 (조식요금 포함)
+            const grandTotal = totalRoomCharge + totalBreakfastCharge + totalExtrasCharge + agencyFee;
             
             document.getElementById('grandTotal').textContent = `$${grandTotal.toFixed(2)}`;
             
@@ -1654,6 +1655,9 @@
                     console.log(`🍳 객실 ${roomNum} 조식 횟수 자동 설정: ${nights}일`);
                 }
             }
+            
+            // ⭐ 조식 요금 재계산
+            updateRoomCharges();
         }
         
         // ⭐ 객실 타입 변경 시 조식 정보 자동 채우기
@@ -1831,6 +1835,7 @@
         // 객실 요금 자동 업데이트 (모든 객실의 프로모션 합산)
         async function updateRoomCharges() {
             let totalRoomCharge = 0;
+            let totalBreakfastCharge = 0;
             const appliedPromoCodes = new Set();
             
             // 각 객실의 프로모션 요금 합산
@@ -1841,6 +1846,28 @@
                     if (roomPromotions[roomNum].promotion && roomPromotions[roomNum].promotion.promo_code) {
                         appliedPromoCodes.add(roomPromotions[roomNum].promotion.promo_code);
                     }
+                }
+                
+                // ⭐ 조식 요금 계산
+                const breakfastCheckbox = document.getElementById(`breakfast_included_${roomNum}`);
+                if (breakfastCheckbox && breakfastCheckbox.checked) {
+                    const days = parseInt(document.getElementById(`breakfast_days_${roomNum}`)?.value) || 1;
+                    const adultPrice = parseFloat(document.getElementById(`breakfast_adult_price_${roomNum}`)?.value) || 0;
+                    const childPrice = parseFloat(document.getElementById(`breakfast_child_price_${roomNum}`)?.value) || 0;
+                    
+                    // 투숙객 수 계산
+                    let adultCount = 0;
+                    let childCount = 0;
+                    room.querySelectorAll('.guest-card').forEach(guest => {
+                        const ageCategory = guest.querySelector('[data-guest-field="age_category"]')?.value;
+                        if (ageCategory === 'adult') adultCount++;
+                        else if (ageCategory === 'child') childCount++;
+                    });
+                    
+                    const breakfastCharge = (adultCount * adultPrice * days) + (childCount * childPrice * days);
+                    totalBreakfastCharge += breakfastCharge;
+                    
+                    console.log(`🍳 객실 ${roomNum} 조식요금: 성인${adultCount}명×$${adultPrice}×${days}일 + 소아${childCount}명×$${childPrice}×${days}일 = $${breakfastCharge.toFixed(2)}`);
                 }
             });
             
@@ -1865,6 +1892,9 @@
             }
             
             document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
+            document.getElementById('totalBreakfastCharge').value = totalBreakfastCharge.toFixed(2);
+            console.log(`💰 총 객실요금: $${totalRoomCharge.toFixed(2)}, 총 조식요금: $${totalBreakfastCharge.toFixed(2)}`);
+            
             await calculateAgencyFee(); // 객실 요금 변경 시 수배피 재계산 (await 추가)
             calculateTotal();
         }
