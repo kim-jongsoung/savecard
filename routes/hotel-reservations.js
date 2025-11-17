@@ -33,7 +33,24 @@ router.post('/', async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // 1. 호텔 예약 메인 레코드 저장
+        // ⭐ 1. 예약번호 중복 체크
+        const existingReservation = await client.query(
+            'SELECT id, reservation_number FROM hotel_reservations WHERE reservation_number = $1',
+            [reservation_number]
+        );
+        
+        if (existingReservation.rows.length > 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+                success: false,
+                error: '이미 존재하는 예약번호입니다.',
+                message: `예약번호 "${reservation_number}"는 이미 등록되어 있습니다. 다른 예약번호를 사용해주세요.`,
+                duplicate: true,
+                reservation_number: reservation_number
+            });
+        }
+        
+        // 2. 호텔 예약 메인 레코드 저장
         const reservationResult = await client.query(`
             INSERT INTO hotel_reservations (
                 reservation_number,
