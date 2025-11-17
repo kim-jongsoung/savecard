@@ -371,11 +371,7 @@ router.get('/', async (req, res) => {
                     WHERE hrr.reservation_id = hr.id
                     GROUP BY hrr.reservation_id
                 ) as room_types,
-                (
-                    SELECT COUNT(*) > 0
-                    FROM hotel_reservation_memos
-                    WHERE reservation_id = hr.id
-                ) as has_memo
+                (hr.internal_memo IS NOT NULL AND hr.internal_memo != '') as has_memo
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
