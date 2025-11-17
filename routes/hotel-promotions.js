@@ -11,6 +11,30 @@ router.post('/check-and-get-rates', async (req, res) => {
     try {
         const pool = req.app.get('pool');
         
+        console.log('🔍 프로모션 체크 요청:', { promo_code, hotel_id, room_type_id, check_in_date, check_out_date, booking_date });
+        
+        // 1-1. 먼저 프로모션 존재 여부 확인 (디버깅용)
+        const debugPromo = await pool.query(`
+            SELECT promo_code, promo_name, is_active, 
+                   booking_start_date, booking_end_date,
+                   stay_start_date, stay_end_date
+            FROM promotions
+            WHERE promo_code = $1 AND hotel_id = $2
+        `, [promo_code, hotel_id]);
+        
+        if (debugPromo.rows.length > 0) {
+            const p = debugPromo.rows[0];
+            console.log('📋 프로모션 정보:', {
+                code: p.promo_code,
+                name: p.promo_name,
+                is_active: p.is_active,
+                booking_period: `${p.booking_start_date} ~ ${p.booking_end_date}`,
+                stay_period: `${p.stay_start_date} ~ ${p.stay_end_date}`
+            });
+        } else {
+            console.log('❌ 프로모션 없음:', promo_code);
+        }
+        
         // 1. 프로모션 코드 유효성 확인
         const promoResult = await pool.query(`
             SELECT * FROM promotions
@@ -23,11 +47,19 @@ router.post('/check-and-get-rates', async (req, res) => {
         `, [promo_code, hotel_id, booking_date || new Date(), check_in_date, check_out_date]);
         
         if (promoResult.rows.length === 0) {
+            console.log('❌ 프로모션 유효성 검증 실패:', {
+                promo_code,
+                booking_date: booking_date || new Date().toISOString().split('T')[0],
+                check_in_date,
+                check_out_date
+            });
             return res.json({
                 valid: false,
                 message: '유효하지 않은 프로모션 코드이거나 적용 기간이 아닙니다.'
             });
         }
+        
+        console.log('✅ 프로모션 유효성 검증 통과:', promo_code);
         
         const promotion = promoResult.rows[0];
         
@@ -35,6 +67,8 @@ router.post('/check-and-get-rates', async (req, res) => {
         const checkInDate = new Date(check_in_date);
         const checkOutDate = new Date(check_out_date);
         const totalNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+        
+        console.log(`💰 총 박수: ${totalNights}박, 체크인: ${check_in_date}, 체크아웃: ${check_out_date}`);
         
         // 3. 날짜별 요금 조회 (연박 조건에 맞는 최저가만 선택)
         const ratesResult = await pool.query(`
@@ -65,6 +99,11 @@ router.post('/check-and-get-rates', async (req, res) => {
             ORDER BY stay_date ASC
         `, [promotion.id, room_type_id, check_in_date, check_out_date, totalNights]);
         
+        console.log(`📊 조회된 날짜별 요금: ${ratesResult.rows.length}일분`);
+        if (ratesResult.rows.length === 0) {
+            console.log('❌ 날짜별 요금 없음 - promotion_daily_rates 테이블 확인 필요');
+        }
+        
         // 4. 총 요금 계산 (날짜별 요금 합산)
         let total_room_rate = 0;
         const daily_rates = [];
@@ -77,6 +116,8 @@ router.post('/check-and-get-rates', async (req, res) => {
                 rate_per_night: parseFloat(rate.rate_per_night)
             });
         }
+        
+        console.log(`💵 총 객실요금: $${total_room_rate} (${daily_rates.length}일간)`);
         
         // 4. 베네핏 조회
         const benefitsResult = await pool.query(`
