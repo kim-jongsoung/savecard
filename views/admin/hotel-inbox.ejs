@@ -864,16 +864,21 @@
                             const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
                             if (roomTypeSelect) {
                                 roomTypeSelect.value = roomType.id;
-                                console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name} (파싱: ${room.room_type})`);
+                                console.log(`🛏️ 객실 ${roomNum} 타입 선택: ${roomType.room_type_name} (ID: ${roomType.id}, 파싱: ${room.room_type})`);
                                 
                                 // 프로모션 조회 (await로 완료 대기)
+                                console.log(`🔄 객실 ${roomNum} 프로모션 조회 시작...`);
                                 await onRoomTypeChange(roomNum);
-                                console.log(`💰 객실 ${roomNum} 프로모션 조회 완료`);
+                                console.log(`✅ 객실 ${roomNum} 프로모션 조회 완료`);
+                            } else {
+                                console.log(`❌ 객실 ${roomNum}: room-type-select 요소를 찾을 수 없음`);
                             }
                         } else {
                             console.log(`⚠️ 객실 ${roomNum} 타입 매칭 실패: ${room.room_type}`);
                             console.log(`💡 가능한 타입:`, allRoomTypes.map(rt => rt.room_type_name).join(', '));
                         }
+                    } else {
+                        console.log(`⚠️ 객실 ${roomNum}: 룸타입 정보 없음 (room.room_type=${room.room_type}, allRoomTypes.length=${allRoomTypes.length})`);
                     }
                     
                     // 투숙객 추가
@@ -1576,7 +1581,10 @@
             const checkOut = document.getElementById('check_out_date').value;
             const bookingDate = new Date().toISOString().split('T')[0];
             
+            console.log(`🛏️ 객실 ${roomNum} 타입 변경:`, { roomTypeId, hotelId, checkIn, checkOut });
+            
             if (!roomTypeId || !hotelId || !checkIn || !checkOut) {
+                console.log(`⚠️ 객실 ${roomNum}: 필수 정보 누락 (룸타입=${roomTypeId}, 호텔=${hotelId}, 체크인=${checkIn}, 체크아웃=${checkOut})`);
                 return;
             }
             
@@ -1584,26 +1592,32 @@
                 // 해당 룸타입 정보 가져오기
                 const roomType = allRoomTypes.find(rt => rt.id == roomTypeId);
                 
-                // ⭐ 조식 정보를 객실 카드에 표시
                 if (roomType) {
+                    console.log(`✅ 객실 ${roomNum} 타입 정보:`, roomType.room_type_name);
+                    // ⭐ 조식 정보를 객실 카드에 표시
                     displayBreakfastInfo(roomNum, roomType);
+                } else {
+                    console.log(`❌ 객실 ${roomNum}: 룸타입 정보를 찾을 수 없음 (ID: ${roomTypeId})`);
                 }
                 
                 // 해당 룸타입의 최적 프로모션 찾기
+                console.log(`💰 객실 ${roomNum} 프로모션 조회 시작...`);
                 const bestPromotion = await findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut);
                 
                 if (bestPromotion) {
                     roomPromotions[roomNum] = bestPromotion;
                     document.getElementById(`room_${roomNum}_rate`).value = `$${bestPromotion.total_room_rate.toFixed(2)} (프로모션)`;
+                    console.log(`✅ 객실 ${roomNum} 프로모션 적용: ${bestPromotion.promotion.promo_code} ($${bestPromotion.total_room_rate})`);
                 } else {
                     roomPromotions[roomNum] = null;
                     document.getElementById(`room_${roomNum}_rate`).value = '프로모션 없음';
+                    console.log(`⚠️ 객실 ${roomNum}: 프로모션 없음`);
                 }
                 
                 // 전체 객실 요금 합산
                 await updateRoomCharges();
             } catch (error) {
-                console.error('룸타입 프로모션 조회 오류:', error);
+                console.error(`❌ 객실 ${roomNum} 룸타입 프로모션 조회 오류:`, error);
             }
         }
         
@@ -1799,10 +1813,15 @@
         // 특정 룸타입의 최적 프로모션 찾기
         async function findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut) {
             try {
+                console.log('🔍 프로모션 조회 시작:', { hotelId, roomTypeId, checkIn, checkOut });
+                
                 const response = await fetch('/api/hotel-promotions/list?hotel_id=' + hotelId + '&is_active=true');
                 const promotions = await response.json();
                 
+                console.log('📋 활성 프로모션 목록:', promotions.length + '개', promotions.map(p => p.promo_code));
+                
                 if (!promotions || promotions.length === 0) {
+                    console.log('❌ 활성 프로모션 없음');
                     return null;
                 }
                 
@@ -1810,6 +1829,8 @@
                 let lowestRate = Infinity;
                 
                 for (const promo of promotions) {
+                    console.log(`🔎 프로모션 체크: ${promo.promo_code}`);
+                    
                     const checkResult = await fetch('/api/hotel-promotions/check-and-get-rates', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1825,15 +1846,27 @@
                     
                     const result = await checkResult.json();
                     
+                    console.log(`  → 결과: valid=${result.valid}, rate=$${result.total_room_rate || 0}`);
+                    if (!result.valid && result.message) {
+                        console.log(`  → 실패 이유: ${result.message}`);
+                    }
+                    
                     if (result.valid && result.total_room_rate < lowestRate) {
                         lowestRate = result.total_room_rate;
                         bestPromotion = result;
+                        console.log(`  ✅ 최적 프로모션 업데이트: ${promo.promo_code} ($${lowestRate})`);
                     }
+                }
+                
+                if (bestPromotion) {
+                    console.log(`🎉 최종 선택된 프로모션: ${bestPromotion.promotion.promo_code} ($${bestPromotion.total_room_rate})`);
+                } else {
+                    console.log('❌ 적용 가능한 프로모션 없음 (조건 불일치)');
                 }
                 
                 return bestPromotion;
             } catch (error) {
-                console.error('프로모션 조회 오류:', error);
+                console.error('❌ 프로모션 조회 오류:', error);
                 return null;
             }
         }
