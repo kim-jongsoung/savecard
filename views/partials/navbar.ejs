@@ -1,6 +1,6 @@
 <!-- 네비게이션 - 모든 메뉴 직접 표시 -->
 <nav class="navbar navbar-expand-lg navbar-light border-bottom" style="background-color: #ffffff !important;">
-    <div class="container" style="width: 1200px; margin: 0 auto;">
+    <div class="nav-container-fixed">
         <div class="d-flex flex-column w-100">
             <!-- 상단: 로고 + SaveCard 메뉴 + 사용자 -->
             <div class="d-flex align-items-center" style="border-bottom: 3px solid #03a9f4;">
@@ -103,12 +103,13 @@ small, .small {
     width: 100%;
 }
 
-/* 네비게이션 컨테이너 고정 */
-.navbar .container {
+/* 네비게이션 컨테이너 1200px 고정 및 중앙 정렬 */
+.nav-container-fixed {
     width: 1200px !important;
-    max-width: 1200px !important;
-    margin: 0 auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     padding: 0 !important;
+    display: block !important;
 }
 
 .navbar-brand {
