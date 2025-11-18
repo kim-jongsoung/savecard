@@ -58,8 +58,11 @@
                                         <i class="fas fa-eraser me-1"></i>초기화
                                     </button>
                                 </div>
-                                <button type="button" class="btn btn-outline-primary" onclick="openParsingSettings()">
-                                    <i class="fas fa-cog me-1"></i>파싱 설정
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="openParsingSettings()">
+                                    <i class="fas fa-cog me-1"></i>AI 파싱 설정
+                                </button>
+                                <button type="button" class="btn btn-outline-warning btn-sm ms-2" onclick="restoreActivityParsingSettings()">
+                                    <i class="fas fa-undo me-1"></i>즐길거리 파싱 설정 복구
                                 </button>
                             </div>
                         </form>
@@ -483,6 +486,33 @@
             renderPreprocessingRules();
             const modal = new bootstrap.Modal(document.getElementById('parsingSettingsModal'));
             modal.show();
+        }
+
+        // 즐길거리 파싱 설정 복구 (임시 버튼용)
+        async function restoreActivityParsingSettings() {
+            if (!confirm('예전에 사용하던 즐길거리 전처리/프롬프트 설정을 복구하시겠습니까?')) {
+                return;
+            }
+            try {
+                const response = await fetch('/api/restore-activity-parsing', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log('🔄 즐길거리 파싱 설정 복구 응답:', data);
+                if (data.success) {
+                    alert(data.message || '즐길거리 파싱 설정을 복구했습니다.\nAI 파싱 설정 창을 다시 열어 확인해주세요.');
+                    // 복구된 설정 다시 로드
+                    await loadParsingSettings();
+                } else {
+                    alert('❌ 복구 실패: ' + (data.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('❌ 파싱 설정 복구 오류:', error);
+                alert('❌ 파싱 설정 복구 중 오류가 발생했습니다: ' + error.message);
+            }
         }
 
         // 설정 불러오기 (DB에서 - 즐길거리 전용)
