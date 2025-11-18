@@ -156,8 +156,8 @@
 
       currentHotel = hotels.find(h => h.id == hid);
       
-      // 객실 타입 로드
-      const rtRes = await fetch(`/api/room-types?hotel_id=${hid}&is_active=true`);
+      // 객실 타입 로드 (공개 인벤토리 노출 설정된 것만)
+      const rtRes = await fetch(`/api/room-types?hotel_id=${hid}&is_active=true&visible_in_inventory=true`);
       roomTypes = await rtRes.json();
 
       // 재고 로드 (6개월)

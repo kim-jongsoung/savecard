@@ -276,6 +276,14 @@
                   </label>
                 </div>
               </div>
+              <div class="col-md-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="isVisibleInInventory" checked>
+                  <label class="form-check-label" for="isVisibleInInventory">
+                    공개 재고 페이지 노출 (inventory/view)
+                  </label>
+                </div>
+              </div>
             </div>
           </form>
         </div>
@@ -422,6 +430,7 @@
       document.getElementById('roomTypeForm').reset();
       document.getElementById('roomTypeId').value = '';
       document.getElementById('isActive').checked = true;
+      document.getElementById('isVisibleInInventory').checked = true;
       document.getElementById('maxAdults').value = 2;
       document.getElementById('maxChildren').value = 1;
       document.getElementById('maxInfants').value = 1;
@@ -467,6 +476,7 @@
         document.getElementById('babyCotRate').value = rt.baby_cot_rate || 0;
         document.getElementById('displayOrder').value = rt.display_order || 10;
         document.getElementById('isActive').checked = rt.is_active;
+        document.getElementById('isVisibleInInventory').checked = rt.is_visible_in_inventory !== false;
         
         new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
       } catch (error) {
@@ -498,7 +508,8 @@
         extra_bed_rate: parseFloat(document.getElementById('extraBedRate').value) || 0,
         baby_cot_rate: parseFloat(document.getElementById('babyCotRate').value) || 0,
         display_order: parseInt(document.getElementById('displayOrder').value) || 10,
-        is_active: document.getElementById('isActive').checked
+        is_active: document.getElementById('isActive').checked,
+        is_visible_in_inventory: document.getElementById('isVisibleInInventory').checked
       };
       
       // 필수값 체크

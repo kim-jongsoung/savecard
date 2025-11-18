@@ -42,6 +42,7 @@ router.get('/api/inventory/public', async (req, res) => {
       LEFT JOIN room_types rt ON ra.room_type_id = rt.id
       LEFT JOIN hotels h ON rt.hotel_id = h.id
       WHERE ra.availability_date >= $1 AND ra.availability_date <= $2
+        AND rt.is_visible_in_inventory = TRUE
     `;
     
     const params = [startDate, endDateStr];

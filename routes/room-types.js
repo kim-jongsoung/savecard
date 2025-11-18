@@ -23,7 +23,7 @@ router.get('/api/room-types', (req, res, next) => {
   return requireLogin(req, res, next);
 }, async (req, res) => {
   const pool = req.app.locals.pool;
-  const { hotel_id, search, is_active } = req.query;
+  const { hotel_id, search, is_active, visible_in_inventory } = req.query;
   
   try {
     let query = `
@@ -57,6 +57,13 @@ router.get('/api/room-types', (req, res, next) => {
     if (is_active !== undefined && is_active !== '') {
       query += ` AND rt.is_active = $${paramIndex}`;
       params.push(is_active === 'true');
+      paramIndex++;
+    }
+
+    // 인벤토리 공개 노출 필터 (선택적)
+    if (visible_in_inventory !== undefined && visible_in_inventory !== '') {
+      query += ` AND rt.is_visible_in_inventory = $${paramIndex}`;
+      params.push(visible_in_inventory === 'true');
       paramIndex++;
     }
     
@@ -124,7 +131,8 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
     extra_bed_rate,
     baby_cot_rate,
     display_order,
-    is_active
+    is_active,
+    is_visible_in_inventory
   } = req.body;
   
   try {
@@ -145,8 +153,8 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
         breakfast_included, 
         breakfast_rate_adult, breakfast_rate_child, breakfast_rate_infant,
         extra_adult_rate, extra_child_rate, extra_infant_rate,
-        extra_bed_rate, baby_cot_rate, display_order, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        extra_bed_rate, baby_cot_rate, display_order, is_active, is_visible_in_inventory
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
       RETURNING *`,
       [
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
@@ -154,7 +162,9 @@ router.post('/api/room-types', requireLogin, async (req, res) => {
         breakfast_included || false,
         breakfast_rate_adult || 0, breakfast_rate_child || 0, breakfast_rate_infant || 0,
         extra_adult_rate || 0, extra_child_rate || 0, extra_infant_rate || 0,
-        extra_bed_rate || 0, baby_cot_rate || 0, display_order || 999, is_active !== false
+        extra_bed_rate || 0, baby_cot_rate || 0, display_order || 999,
+        is_active !== false,
+        is_visible_in_inventory !== false
       ]
     );
     
@@ -234,8 +244,9 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
         baby_cot_rate = $18,
         display_order = $19,
         is_active = $20,
+        is_visible_in_inventory = $21,
         updated_at = NOW()
-      WHERE id = $21
+      WHERE id = $22
       RETURNING *`,
       [
         hotel_id, room_type_code, room_type_name, hotel_room_name, description,
@@ -245,6 +256,7 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
         extra_adult_rate, extra_child_rate, extra_infant_rate,
         extra_bed_rate, baby_cot_rate, display_order,
         is_active,
+        is_visible_in_inventory,
         id
       ]
     );
