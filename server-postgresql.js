@@ -10781,6 +10781,90 @@ app.post('/api/parsing-settings', requireAuth, async (req, res) => {
     }
 });
 
+// 즐길거리 파싱 설정 복구 API
+app.post('/api/restore-activity-parsing', requireAuth, async (req, res) => {
+    try {
+        console.log('🔄 즐길거리 파싱 설정 복구 시작...');
+        
+        // 1. shared 설정 확인
+        const sharedResult = await pool.query(
+            'SELECT * FROM parsing_settings WHERE admin_username = $1',
+            ['shared']
+        );
+        
+        if (sharedResult.rows.length > 0) {
+            const shared = sharedResult.rows[0];
+            
+            // shared 설정을 activity로 복사
+            await pool.query(`
+                INSERT INTO parsing_settings 
+                    (admin_username, preprocessing_rules, custom_prompt, custom_parsing_rules)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (admin_username) 
+                DO UPDATE SET 
+                    preprocessing_rules = $2,
+                    custom_prompt = $3,
+                    custom_parsing_rules = $4,
+                    updated_at = CURRENT_TIMESTAMP
+            `, [
+                'activity',
+                shared.preprocessing_rules,
+                shared.custom_prompt,
+                shared.custom_parsing_rules
+            ]);
+            
+            console.log('✅ shared 설정을 activity로 복구 완료');
+            
+            return res.json({
+                success: true,
+                message: '기존 즐길거리 파싱 설정을 복구했습니다.',
+                restored: {
+                    rules_count: JSON.parse(shared.preprocessing_rules).length,
+                    has_prompt: !!shared.custom_prompt,
+                    parsing_rules_count: JSON.parse(shared.custom_parsing_rules || '[]').length
+                }
+            });
+        } else {
+            // shared가 없으면 기본값 생성
+            const defaultRules = [
+                { pattern: 'logo_', replacement: '', type: 'remove', enabled: true },
+                { pattern: 'image_', replacement: '', type: 'remove', enabled: true },
+                { pattern: 'icon_', replacement: '', type: 'remove', enabled: true },
+                { pattern: 'img_', replacement: '', type: 'remove', enabled: true },
+                { pattern: 'photo_', replacement: '', type: 'remove', enabled: true }
+            ];
+            
+            await pool.query(`
+                INSERT INTO parsing_settings 
+                    (admin_username, preprocessing_rules, custom_parsing_rules)
+                VALUES ($1, $2, '[]'::jsonb)
+                ON CONFLICT (admin_username) 
+                DO UPDATE SET 
+                    preprocessing_rules = $2,
+                    updated_at = CURRENT_TIMESTAMP
+            `, ['activity', JSON.stringify(defaultRules)]);
+            
+            console.log('✅ 기본 즐길거리 파싱 규칙 생성 완료');
+            
+            return res.json({
+                success: true,
+                message: '기본 즐길거리 파싱 규칙을 생성했습니다.',
+                restored: {
+                    rules_count: defaultRules.length,
+                    has_prompt: false,
+                    parsing_rules_count: 0
+                }
+            });
+        }
+    } catch (error) {
+        console.error('❌ 파싱 설정 복구 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '파싱 설정 복구 실패: ' + error.message
+        });
+    }
+});
+
 // ============================================
 // 수배업체 관리 API
 // ============================================
