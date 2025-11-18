@@ -485,11 +485,11 @@
             modal.show();
         }
 
-        // 설정 불러오기 (DB에서 - 모든 관리자 공유)
+        // 설정 불러오기 (DB에서 - 즐길거리 전용)
         async function loadParsingSettings() {
             try {
-                // 모든 관리자가 동일한 파싱 설정을 공유합니다
-                const response = await fetch('/api/parsing-settings');
+                // 즐길거리 인박스 전용 설정
+                const response = await fetch('/api/parsing-settings?type=activity');
                 const data = await response.json();
                 
                 if (data.success && data.settings) {
@@ -550,6 +550,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        type: 'activity',
                         preprocessing_rules: preprocessingRules,
                         custom_prompt: customPrompt,
                         custom_parsing_rules: customParsingRules
@@ -1211,6 +1212,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        type: 'activity',
                         preprocessing_rules: preprocessingRules,
                         custom_prompt: customPrompt,
                         custom_parsing_rules: customParsingRules
