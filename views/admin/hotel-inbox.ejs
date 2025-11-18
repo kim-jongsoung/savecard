@@ -653,8 +653,12 @@
                 try {
                     const escapedPattern = escapeRegex(rule.pattern);
                     const regex = new RegExp(escapedPattern, 'gi');
+
+                    // \n을 실제 줄바꿈으로 변환해서 사용
+                    const replacement = (rule.replacement || '').replace(/\\n/g, '\n');
+
                     const beforeLength = processedText.length;
-                    processedText = processedText.replace(regex, rule.replacement);
+                    processedText = processedText.replace(regex, replacement);
                     const afterLength = processedText.length;
                     
                     if (beforeLength !== afterLength) {
@@ -2163,6 +2167,18 @@
         }
         
         // 전처리 규칙 렌더링
+
+        // HTML 이스케이프 헬퍼 (기호/부호 안전 처리)
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function renderPreprocessingRules() {
             const container = document.getElementById('preprocessingRulesList');
             if (preprocessingRules.length === 0) {
@@ -2182,13 +2198,13 @@
                             </div>
                             <div class="col-3">
                                 <input type="text" class="form-control form-control-sm" 
-                                       placeholder="찾을 텍스트" value="${rule.pattern}"
+                                       placeholder="찾을 텍스트" value="${escapeHtml(rule.pattern)}"
                                        onchange="updateRulePattern(${index}, this.value)">
                             </div>
                             <div class="col-auto">→</div>
                             <div class="col-3">
                                 <input type="text" class="form-control form-control-sm" 
-                                       placeholder="변경할 텍스트" value="${rule.replacement}"
+                                       placeholder="변경할 텍스트" value="${escapeHtml(rule.replacement)}"
                                        onchange="updateRuleReplacement(${index}, this.value)">
                             </div>
                             <div class="col-2">
