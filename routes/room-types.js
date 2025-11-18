@@ -202,7 +202,8 @@ router.put('/api/room-types/:id', requireLogin, async (req, res) => {
     extra_bed_rate,
     baby_cot_rate,
     display_order,
-    is_active
+    is_active,
+    is_visible_in_inventory
   } = req.body;
   
   try {
