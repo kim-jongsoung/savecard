@@ -146,6 +146,16 @@ router.post('/', async (req, res) => {
             changes_description
         ]);
         
+        // 10. CANCEL 전송 시 예약 상태를 자동으로 'cancelled'로 변경
+        if (assignment_type === 'CANCEL') {
+            await client.query(`
+                UPDATE hotel_reservations
+                SET status = 'cancelled', updated_at = NOW()
+                WHERE id = $1
+            `, [reservation_id]);
+            console.log(`✅ 예약 ID ${reservation_id} 상태가 'cancelled'로 변경되었습니다.`);
+        }
+        
         await client.query('COMMIT');
         
         res.json({
