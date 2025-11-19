@@ -2620,13 +2620,11 @@
             try {
                 // 예약 정보 조회
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
-                const data = await response.json();
+                const reservation = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(data.error || '예약 정보를 불러올 수 없습니다.');
+                    throw new Error(reservation.message || '예약 정보를 불러올 수 없습니다.');
                 }
-                
-                const reservation = data.reservation;
                 
                 // 수배서 이력 조회
                 const historyResponse = await fetch(`/api/hotel-assignments/${reservationId}/history`);
@@ -2698,8 +2696,8 @@
                             <div class="col-6"><strong>Agency:</strong> ${reservation.booking_agency_name || '-'}</div>
                         </div>
                         <div class="row mb-2">
-                            <div class="col-6"><strong>Check-in:</strong> ${reservation.check_in || '-'}</div>
-                            <div class="col-6"><strong>Check-out:</strong> ${reservation.check_out || '-'}</div>
+                            <div class="col-6"><strong>Check-in:</strong> ${reservation.check_in_date || '-'}</div>
+                            <div class="col-6"><strong>Check-out:</strong> ${reservation.check_out_date || '-'}</div>
                         </div>
                         <div class="alert alert-warning">
                             <strong>⚠️ 안내:</strong> 실제 수배서는 이메일로 전송되며, 호텔에서 출력 가능한 A4 양식으로 제공됩니다.

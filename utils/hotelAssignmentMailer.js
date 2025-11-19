@@ -28,8 +28,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     }
     
     // 체크인/아웃 날짜 포맷
-    const checkIn = new Date(reservation.check_in);
-    const checkOut = new Date(reservation.check_out);
+    const checkIn = new Date(reservation.check_in_date || reservation.check_in);
+    const checkOut = new Date(reservation.check_out_date || reservation.check_out);
     const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
     
     const formatDate = (date) => {
@@ -325,11 +325,11 @@ async function sendHotelAssignment(reservation, hotelEmail, assignmentType = 'NE
         // 이메일 제목
         let subject = '';
         if (assignmentType === 'NEW') {
-            subject = `[NEW BOOKING] ${reservation.hotel_name} - ${reservation.check_in}`;
+            subject = `[NEW BOOKING] ${reservation.hotel_name} - ${reservation.check_in_date || reservation.check_in}`;
         } else if (assignmentType === 'REVISE') {
-            subject = `[REVISE #${revisionNumber}] ${reservation.hotel_name} - ${reservation.check_in}`;
+            subject = `[REVISE #${revisionNumber}] ${reservation.hotel_name} - ${reservation.check_in_date || reservation.check_in}`;
         } else if (assignmentType === 'CANCEL') {
-            subject = `[CANCELLATION] ${reservation.hotel_name} - ${reservation.check_in}`;
+            subject = `[CANCELLATION] ${reservation.hotel_name} - ${reservation.check_in_date || reservation.check_in}`;
         }
         
         // 이메일 본문
@@ -391,8 +391,8 @@ async function sendHotelAssignment(reservation, hotelEmail, assignmentType = 'NE
             (assignmentType === 'REVISE' ? `This is a revision (${revisionNumber}) to the existing booking:` : 
             'We would like to cancel the following booking:')}</p>
         
-        <p><strong>Check-in:</strong> ${reservation.check_in}<br>
-        <strong>Check-out:</strong> ${reservation.check_out}<br>
+        <p><strong>Check-in:</strong> ${reservation.check_in_date || reservation.check_in}<br>
+        <strong>Check-out:</strong> ${reservation.check_out_date || reservation.check_out}<br>
         <strong>Guest Name:</strong> ${reservation.rooms && reservation.rooms[0] && reservation.rooms[0].guests && reservation.rooms[0].guests[0] ? 
             reservation.rooms[0].guests[0].english_last_name + ' ' + reservation.rooms[0].guests[0].english_first_name : ''}</p>
         
