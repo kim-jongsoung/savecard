@@ -123,13 +123,13 @@
     const colorMap = {};
     const uniqueRates = new Set();
     
-    // 현재 룸타입의 모든 고유 요금 수집 (1박 기준)
+    // 현재 룸타입의 모든 고유 요금 수집 (2박 연박 기준)
     Object.keys(rateCalendarData).forEach(key => {
       if (key.endsWith(`_${roomTypeId}`)) {
         const data = rateCalendarData[key];
-        const rate1 = data.rates.find(r => r.min_nights === 1)?.rate_per_night;
-        if (rate1) {
-          uniqueRates.add(rate1);
+        const rate2 = data.rates.find(r => r.min_nights === 2)?.rate_per_night;
+        if (rate2) {
+          uniqueRates.add(rate2);
         }
       }
     });
@@ -268,10 +268,10 @@
           const rate3 = rates.find(r => r.min_nights === 3)?.rate_per_night;
           const rate4 = rates.find(r => r.min_nights === 4)?.rate_per_night;
           
-          // 1박 요금 기준으로 색상 결정
-          if (rate1) {
+          // 2박 연박 요금 기준으로 색상 결정
+          if (rate2) {
             const colorMap = getRateColorMap(roomTypeId);
-            bgColor = getColorForRate(rate1, colorMap);
+            bgColor = getColorForRate(rate2, colorMap);
           }
           
           rateDisplay = `<div class="small" style="font-size:0.65rem;line-height:1.1;">`;
