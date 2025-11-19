@@ -16353,6 +16353,52 @@ async function startServer() {
             console.warn('⚠️  담당자 필드 마이그레이션 경고:', migrateErr.message);
         }
         
+        // ⭐ 호텔 수배서 시스템 테이블 생성
+        try {
+            console.log('📧 호텔 수배서 시스템 테이블 생성 중...');
+            
+            // 1. assignment_token 컬럼 추가
+            await pool.query(`
+                ALTER TABLE hotel_reservations
+                ADD COLUMN IF NOT EXISTS assignment_token VARCHAR(100) UNIQUE
+            `);
+            await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_hotel_reservations_assignment_token
+                ON hotel_reservations(assignment_token)
+            `);
+            
+            // 2. hotel_assignment_history 테이블 생성
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS hotel_assignment_history (
+                    id SERIAL PRIMARY KEY,
+                    reservation_id INTEGER NOT NULL REFERENCES hotel_reservations(id) ON DELETE CASCADE,
+                    assignment_type VARCHAR(20) NOT NULL CHECK (assignment_type IN ('NEW', 'REVISE', 'CANCEL')),
+                    revision_number INTEGER DEFAULT 0,
+                    sent_to_email VARCHAR(255) NOT NULL,
+                    sent_by VARCHAR(100) NOT NULL,
+                    sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    email_message_id VARCHAR(255),
+                    assignment_link TEXT,
+                    changes_description TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            `);
+            
+            // 3. 인덱스 생성
+            await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_hotel_assignment_history_reservation_id
+                ON hotel_assignment_history(reservation_id)
+            `);
+            await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_hotel_assignment_history_sent_at
+                ON hotel_assignment_history(sent_at DESC)
+            `);
+            
+            console.log('✅ 호텔 수배서 시스템 테이블 생성 완료 (assignment_token, hotel_assignment_history)');
+        } catch (migrateErr) {
+            console.warn('⚠️  호텔 수배서 테이블 마이그레이션 경고:', migrateErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
