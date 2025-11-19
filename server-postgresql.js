@@ -80,8 +80,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parser 설정 (프로모션 대량 요금 등록을 위해 limit 증가)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static('public'));
 app.use('/pa', express.static('pa'));
 app.use('/uploads', express.static('uploads')); // 업로드된 파일 정적 서빙
