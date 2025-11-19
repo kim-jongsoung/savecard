@@ -38,6 +38,9 @@ if (!nodemailer.createTransport) {
     console.log('✅ nodemailer.createTransport 함수 정상 로드');
 }
 
+// 호텔 수배서 이메일 발송 유틸
+const { sendHotelAssignment, generateAssignmentHTML } = require('./utils/hotelAssignmentMailer');
+
 // 간단하고 확실한 환경변수 처리
 // 로컬에서는 railsql.env 파일 사용, 배포환경에서는 기본 .env 사용
 const fs = require('fs');
@@ -1190,15 +1193,18 @@ try {
 try {
     const hotelPromotionsRoutes = require('./routes/hotel-promotions');
     const hotelReservationsRoutes = require('./routes/hotel-reservations');
+    const hotelAssignmentsRoutes = require('./routes/hotel-assignments');
     
     app.set('pool', pool); // 라우트에서 pool 사용 가능하도록 설정
     
     app.use('/api/hotel-promotions', hotelPromotionsRoutes);
     app.use('/api/hotel-reservations', hotelReservationsRoutes);
+    app.use('/api/hotel-assignments', hotelAssignmentsRoutes);
+    app.use('/hotel-assignment', hotelAssignmentsRoutes); // 공개 링크용
     
-    console.log('✅ 호텔 API 라우트 연결 완료');
+    console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments)');
 } catch (error) {
-    console.error('❌ 호텔 API 라우트 연결 오류:', error.message);
+    console.error('❌ 호텔 API 라우트 연결 실패:', error);
     console.log('⚠️ 호텔 API를 사용할 수 없습니다.');
 }
 

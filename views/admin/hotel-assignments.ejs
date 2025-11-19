@@ -727,6 +727,35 @@
         </div>
     </div>
 
+    <!-- 수배서 생성/보기 모달 -->
+    <div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-alt me-2"></i>Hotel Booking Confirmation
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="assignmentContent" style="background: white;">
+                    <!-- 수배서 내용이 여기에 동적으로 생성됩니다 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="sendAssignmentEmail()">
+                        <i class="fas fa-envelope me-1"></i>Send to Hotel
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="copyAssignmentLink()">
+                        <i class="fas fa-link me-1"></i>Copy Link
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="printAssignment()">
+                        <i class="fas fa-print me-1"></i>Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let allReservations = [];
@@ -2586,11 +2615,186 @@
             }
         }
         
-        // 수배서 생성
-        function createAssignment(reservationId) {
-            if (confirm('수배서를 생성하시겠습니까?')) {
-                alert('수배서 생성 기능은 곧 추가됩니다.');
+        // 수배서 생성/보기
+        async function createAssignment(reservationId) {
+            try {
+                // 예약 정보 조회
+                const response = await fetch(`/api/hotel-reservations/${reservationId}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '예약 정보를 불러올 수 없습니다.');
+                }
+                
+                const reservation = data.reservation;
+                
+                // 수배서 이력 조회
+                const historyResponse = await fetch(`/api/hotel-assignments/${reservationId}/history`);
+                const historyData = await historyResponse.json();
+                const history = historyData.success ? historyData.history : [];
+                
+                // 수배서 모달 열기
+                openAssignmentModal(reservation, history);
+                
+            } catch (error) {
+                console.error('❌ 수배서 조회 오류:', error);
+                alert('❌ 오류가 발생했습니다: ' + error.message);
             }
+        }
+        
+        // 수배서 모달 열기
+        function openAssignmentModal(reservation, history) {
+            const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+            
+            // 수배서 HTML 생성
+            const assignmentHTML = generateAssignmentPreview(reservation, history);
+            document.getElementById('assignmentContent').innerHTML = assignmentHTML;
+            
+            // 현재 예약 ID 저장
+            window.currentAssignmentReservationId = reservation.id;
+            window.currentAssignmentHistory = history;
+            
+            modal.show();
+        }
+        
+        // 수배서 미리보기 HTML 생성
+        function generateAssignmentPreview(reservation, history) {
+            const latestHistory = history[history.length - 1];
+            const assignmentType = latestHistory ? latestHistory.assignment_type : 'NEW';
+            const revisionNumber = latestHistory ? latestHistory.revision_number : 0;
+            
+            let title = 'NEW BOOKING REQUEST';
+            if (assignmentType === 'REVISE') {
+                title = `REVISE #${revisionNumber} REQUEST`;
+            } else if (assignmentType === 'CANCEL') {
+                title = 'CANCELLATION REQUEST';
+            }
+            
+            let historyHTML = '';
+            if (history.length > 0) {
+                history.forEach(h => {
+                    const date = new Date(h.sent_at);
+                    const dateStr = date.toLocaleDateString('ko-KR');
+                    const typeLabel = h.assignment_type === 'NEW' ? 'NEW' : (h.assignment_type === 'REVISE' ? `REV#${h.revision_number}` : 'CANCEL');
+                    historyHTML += `
+                        <div class="alert alert-info alert-sm py-1 px-2 mb-1" style="font-size: 0.75rem;">
+                            <strong>[${typeLabel}]</strong> ${dateStr} → ${h.sent_to_email} (${h.sent_by})
+                            ${h.changes_description ? `<br>변경: ${h.changes_description}` : ''}
+                        </div>
+                    `;
+                });
+            } else {
+                historyHTML = '<p class="text-muted">아직 전송 이력이 없습니다.</p>';
+            }
+            
+            return `
+                <div class="card mb-3">
+                    <div class="card-header bg-dark text-white text-center">
+                        <h5 class="mb-0">🏨 ${title}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Hotel:</strong> ${reservation.hotel_name || '-'}</div>
+                            <div class="col-6"><strong>Agency:</strong> ${reservation.booking_agency_name || '-'}</div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col-6"><strong>Check-in:</strong> ${reservation.check_in || '-'}</div>
+                            <div class="col-6"><strong>Check-out:</strong> ${reservation.check_out || '-'}</div>
+                        </div>
+                        <div class="alert alert-warning">
+                            <strong>⚠️ 안내:</strong> 실제 수배서는 이메일로 전송되며, 호텔에서 출력 가능한 A4 양식으로 제공됩니다.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0">📜 전송 이력</h6>
+                    </div>
+                    <div class="card-body">
+                        ${historyHTML}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 수배서 이메일 전송
+        async function sendAssignmentEmail() {
+            const reservationId = window.currentAssignmentReservationId;
+            if (!reservationId) {
+                alert('예약 정보가 없습니다.');
+                return;
+            }
+            
+            // 전송 타입 선택
+            const history = window.currentAssignmentHistory || [];
+            let assignmentType = 'NEW';
+            let message = '신규 수배서를 전송하시겠습니까?';
+            
+            if (history.length > 0) {
+                const choice = confirm('기존 수배서가 있습니다.\n\n확인: 수정(REVISE) 전송\n취소: 신규(NEW) 전송');
+                assignmentType = choice ? 'REVISE' : 'NEW';
+                message = choice ? '수정된 수배서를 전송하시겠습니까?' : '신규 수배서로 다시 전송하시겠습니까?';
+            }
+            
+            if (!confirm(message)) return;
+            
+            // 변경 사항 입력 (REVISE인 경우)
+            let changesDescription = '';
+            if (assignmentType === 'REVISE') {
+                changesDescription = prompt('변경 내용을 입력하세요 (예: 체크인 날짜 변경, 객실 추가 등):');
+                if (changesDescription === null) return; // 취소
+            }
+            
+            try {
+                const response = await fetch('/api/hotel-assignments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reservation_id: reservationId,
+                        assignment_type: assignmentType,
+                        changes_description: changesDescription,
+                        sent_by: 'Admin' // TODO: 로그인 사용자명으로 변경
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 수배서가 성공적으로 전송되었습니다!\n\n링크: ${result.assignment_link}`);
+                    bootstrap.Modal.getInstance(document.getElementById('assignmentModal')).hide();
+                    loadReservations();
+                } else {
+                    alert('❌ 전송 실패: ' + (result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('❌ 전송 오류:', error);
+                alert('❌ 오류가 발생했습니다: ' + error.message);
+            }
+        }
+        
+        // 수배서 링크 복사
+        function copyAssignmentLink() {
+            const reservationId = window.currentAssignmentReservationId;
+            if (!reservationId) {
+                alert('예약 정보가 없습니다.');
+                return;
+            }
+            
+            // TODO: assignment_token 기반 링크 생성
+            alert('링크 복사 기능은 수배서 전송 후 사용 가능합니다.');
+        }
+        
+        // 수배서 출력
+        function printAssignment() {
+            const reservationId = window.currentAssignmentReservationId;
+            if (!reservationId) {
+                alert('예약 정보가 없습니다.');
+                return;
+            }
+            
+            // TODO: 공개 링크로 이동하여 출력
+            alert('출력 기능은 수배서 전송 후 사용 가능합니다.');
         }
         
         // 확정
