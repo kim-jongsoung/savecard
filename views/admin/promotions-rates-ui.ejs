@@ -41,6 +41,14 @@
   </div>
 </div>
 
+<!-- 요금별 색상 범례 -->
+<div id="rateLegend" class="mb-3" style="display:none;">
+  <div class="d-flex align-items-center flex-wrap gap-2">
+    <strong class="me-2">요금별 색상:</strong>
+    <div id="rateLegendContent"></div>
+  </div>
+</div>
+
 <!-- 달력 표시 -->
 <div id="rateCalendarContainer"></div>
 
@@ -93,6 +101,52 @@
   let selectedDates = new Set();
   let rateCalendarData = {};  // { 'YYYY-MM-DD_roomTypeId': { room_type_id, rates: [{ min_nights, rate }] } }
   let currentRoomTypes = [];
+  
+  // 요금별 색상 팔레트 (밝은 파스텔 톤)
+  const colorPalette = [
+    '#FFE5E5', // 연한 빨강
+    '#E5F3FF', // 연한 파랑
+    '#E5FFE5', // 연한 초록
+    '#FFF5E5', // 연한 주황
+    '#F5E5FF', // 연한 보라
+    '#FFFFE5', // 연한 노랑
+    '#FFE5F5', // 연한 분홍
+    '#E5FFFF', // 연한 하늘
+    '#FFE5D9', // 연한 살구
+    '#E5E5FF', // 연한 남색
+    '#F0E5FF', // 연한 라벤더
+    '#E5FFF0', // 연한 민트
+  ];
+  
+  // 요금별 색상 매핑 생성
+  function getRateColorMap(roomTypeId) {
+    const colorMap = {};
+    const uniqueRates = new Set();
+    
+    // 현재 룸타입의 모든 고유 요금 수집 (1박 기준)
+    Object.keys(rateCalendarData).forEach(key => {
+      if (key.endsWith(`_${roomTypeId}`)) {
+        const data = rateCalendarData[key];
+        const rate1 = data.rates.find(r => r.min_nights === 1)?.rate_per_night;
+        if (rate1) {
+          uniqueRates.add(rate1);
+        }
+      }
+    });
+    
+    // 요금을 정렬하여 색상 할당
+    const sortedRates = Array.from(uniqueRates).sort((a, b) => a - b);
+    sortedRates.forEach((rate, index) => {
+      colorMap[rate] = colorPalette[index % colorPalette.length];
+    });
+    
+    return colorMap;
+  }
+  
+  // 특정 요금에 대한 색상 반환
+  function getColorForRate(rate, colorMap) {
+    return colorMap[rate] || '#c8e6c9'; // 기본 색상
+  }
   
   // 호텔 변경 시 객실 타입 로드
   document.getElementById('hotelId').addEventListener('change', async function() {
@@ -204,14 +258,22 @@
         const hasRate = rateCalendarData[key] && rateCalendarData[key].room_type_id == roomTypeId;
         const isSelected = selectedDates.has(dateStr);
         
-        // 요금 표시
+        // 요금 표시 및 색상 결정
         let rateDisplay = '';
+        let bgColor = '';
         if (hasRate) {
           const rates = rateCalendarData[key].rates;
           const rate1 = rates.find(r => r.min_nights === 1)?.rate_per_night;
           const rate2 = rates.find(r => r.min_nights === 2)?.rate_per_night;
           const rate3 = rates.find(r => r.min_nights === 3)?.rate_per_night;
           const rate4 = rates.find(r => r.min_nights === 4)?.rate_per_night;
+          
+          // 1박 요금 기준으로 색상 결정
+          if (rate1) {
+            const colorMap = getRateColorMap(roomTypeId);
+            bgColor = getColorForRate(rate1, colorMap);
+          }
+          
           rateDisplay = `<div class="small" style="font-size:0.65rem;line-height:1.1;">`;
           if (rate1) rateDisplay += `1박:$${rate1}<br>`;
           if (rate2) rateDisplay += `2박:$${rate2}<br>`;
@@ -224,8 +286,12 @@
         const disabledClass = !isInRange ? 'disabled' : '';
         const clickHandler = isInRange ? `onclick="toggleDate('${dateStr}')"` : '';
         
-        html += `<div class="calendar-day ${isSelected ? 'selected' : ''} ${hasRate ? 'has-rate' : ''} ${disabledClass}" 
-                      ${clickHandler}>
+        // 선택된 경우 파란색, 요금이 있는 경우 요금별 색상, 둘 다 아니면 흰색
+        const finalBgColor = isSelected ? '#e3f2fd' : (hasRate ? bgColor : 'white');
+        
+        html += `<div class="calendar-day ${hasRate ? 'has-rate' : ''} ${disabledClass}" 
+                      ${clickHandler}
+                      style="background-color: ${finalBgColor}; ${isSelected ? 'border-color: #2196f3; border-width: 2px;' : ''}">
                   <div><strong>${day}</strong></div>
                   ${rateDisplay}
                 </div>`;
@@ -242,6 +308,41 @@
     }
     
     container.innerHTML = html;
+    
+    // 색상 범례 업데이트
+    updateRateLegend(roomTypeId);
+  }
+  
+  // 색상 범례 업데이트
+  function updateRateLegend(roomTypeId) {
+    const legendContainer = document.getElementById('rateLegend');
+    const legendContent = document.getElementById('rateLegendContent');
+    
+    if (!roomTypeId) {
+      legendContainer.style.display = 'none';
+      return;
+    }
+    
+    const colorMap = getRateColorMap(roomTypeId);
+    const rates = Object.keys(colorMap).sort((a, b) => parseFloat(a) - parseFloat(b));
+    
+    if (rates.length === 0) {
+      legendContainer.style.display = 'none';
+      return;
+    }
+    
+    let html = '';
+    rates.forEach(rate => {
+      const color = colorMap[rate];
+      html += `
+        <span class="badge" style="background-color: ${color}; color: #333; border: 1px solid #ddd;">
+          $${rate}
+        </span>
+      `;
+    });
+    
+    legendContent.innerHTML = html;
+    legendContainer.style.display = 'block';
   }
   
   function toggleDate(dateStr) {
