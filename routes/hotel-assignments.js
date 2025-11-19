@@ -30,7 +30,7 @@ router.post('/', async (req, res) => {
                 h.email as hotel_email_default,
                 ba.agency_name as booking_agency_name,
                 ba.contact_person as agency_contact_person,
-                ba.email as agency_email
+                ba.contact_email as agency_email
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
@@ -214,7 +214,7 @@ router.get('/:token', async (req, res) => {
                 h.hotel_name,
                 ba.agency_name as booking_agency_name,
                 ba.contact_person as agency_contact_person,
-                ba.email as agency_email
+                ba.contact_email as agency_email
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
