@@ -691,26 +691,41 @@ router.get('/api/promotions/room-type/:roomTypeId/rates', async (req, res) => {
     const promotionsWithRates = [];
     
     for (const promo of promosResult.rows) {
+      // ⭐ 각 날짜별로 현재 박수에 맞는 min_nights 조건의 요금만 선택
       const ratesQuery = `
-        SELECT 
-          stay_date,
-          rate_per_night,
-          min_nights,
-          currency
-        FROM promotion_daily_rates
-        WHERE promotion_id = $1
-          AND room_type_id = $2
-          AND stay_date = ANY($3::date[])
+        WITH RankedRates AS (
+          SELECT 
+            stay_date,
+            rate_per_night,
+            min_nights,
+            currency,
+            ROW_NUMBER() OVER (
+              PARTITION BY stay_date 
+              ORDER BY 
+                CASE WHEN min_nights <= $4 THEN min_nights ELSE 0 END DESC,
+                rate_per_night ASC
+            ) as rn
+          FROM promotion_daily_rates
+          WHERE promotion_id = $1
+            AND room_type_id = $2
+            AND stay_date = ANY($3::date[])
+            AND min_nights <= $4
+        )
+        SELECT stay_date, rate_per_night, min_nights, currency
+        FROM RankedRates
+        WHERE rn = 1
         ORDER BY stay_date
       `;
       
-      const ratesResult = await pool.query(ratesQuery, [promo.promotion_id, roomTypeId, dates]);
+      const ratesResult = await pool.query(ratesQuery, [promo.promotion_id, roomTypeId, dates, nights]);
       
       // 모든 날짜에 대한 요금이 있는지 확인
       if (ratesResult.rows.length !== nights) {
         console.log(`  ⚠️ ${promo.promo_code}: 일부 날짜 요금 없음 (${ratesResult.rows.length}/${nights})`);
         continue; // 요금이 없는 날짜가 있으면 제외
       }
+      
+      console.log(`  ✅ ${promo.promo_code}: 모든 날짜 요금 확인 (${ratesResult.rows.length}/${nights})`);
       
       // 총액 계산
       const totalAmount = ratesResult.rows.reduce((sum, r) => sum + parseFloat(r.rate_per_night), 0);
