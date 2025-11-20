@@ -1463,7 +1463,8 @@
             document.querySelectorAll('.room-card').forEach(room => {
                 const roomNum = room.dataset.roomId;
                 if (roomPromotions[roomNum] && roomPromotions[roomNum].total_room_rate) {
-                    totalRoomCharge += roomPromotions[roomNum].total_room_rate;
+                    // ⭐ 명시적으로 숫자로 변환
+                    totalRoomCharge += parseFloat(roomPromotions[roomNum].total_room_rate) || 0;
                     if (roomPromotions[roomNum].promotion && roomPromotions[roomNum].promotion.promo_code) {
                         appliedPromoCodes.add(roomPromotions[roomNum].promotion.promo_code);
                     }
