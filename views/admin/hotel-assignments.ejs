@@ -759,64 +759,46 @@
                         
                         <!-- 오른쪽: 전송 관리 패널 -->
                         <div class="col-md-4 p-4" style="background: #f8f9fa; overflow-y: auto; max-height: 85vh;">
-                            <h5 class="mb-3">📨 전송 관리</h5>
+                            <h5 class="mb-3">📨 수배서 관리</h5>
                             
-                            <!-- 전송 이력 -->
-                            <div class="card mb-3">
-                                <div class="card-header bg-secondary text-white">
-                                    <h6 class="mb-0"><i class="fas fa-history me-2"></i>전송 이력</h6>
-                                </div>
-                                <div class="card-body" id="assignmentHistory" style="max-height: 200px; overflow-y: auto;">
-                                    <!-- 전송 이력이 여기에 표시됩니다 -->
-                                </div>
-                            </div>
-                            
-                            <!-- 새 수배서 전송 -->
+                            <!-- 새 수배서 생성 -->
                             <div class="card mb-3">
                                 <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>새 수배서 전송</h6>
+                                    <h6 class="mb-0"><i class="fas fa-plus-circle me-2"></i>수배서 생성</h6>
                                 </div>
                                 <div class="card-body">
                                     <div class="mb-3">
                                         <label class="form-label"><strong>전송 타입</strong></label>
-                                        <select class="form-select" id="assignmentTypeSelect">
+                                        <select class="form-select" id="newAssignmentTypeSelect">
                                             <option value="NEW">NEW - 신규 수배서</option>
                                             <option value="REVISE">REVISE - 수정 수배서</option>
                                             <option value="CANCEL">CANCEL - 취소 수배서</option>
                                         </select>
                                     </div>
                                     
-                                    <div class="mb-3" id="changesDescriptionGroup" style="display: none;">
+                                    <div class="mb-3" id="newChangesDescriptionGroup" style="display: none;">
                                         <label class="form-label"><strong>변경/취소 사유</strong></label>
-                                        <textarea class="form-control" id="changesDescriptionInput" rows="3" 
+                                        <textarea class="form-control" id="newChangesDescriptionInput" rows="2" 
                                                   placeholder="변경 또는 취소 사유를 입력하세요"></textarea>
                                     </div>
                                     
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>수신 이메일</strong></label>
-                                        <input type="email" class="form-control" id="recipientEmail" 
-                                               placeholder="hotel@example.com">
-                                    </div>
-                                    
-                                    <div class="d-grid gap-2">
-                                        <button class="btn btn-primary btn-lg" onclick="sendAssignmentEmailNew()">
-                                            <i class="fas fa-paper-plane me-2"></i>이메일 전송
-                                        </button>
-                                        <button class="btn btn-outline-info" onclick="copyAssignmentLink()">
-                                            <i class="fas fa-link me-2"></i>공개 링크 복사
-                                        </button>
-                                    </div>
+                                    <button class="btn btn-success btn-lg w-100" onclick="createNewAssignment()">
+                                        <i class="fas fa-file-alt me-2"></i>수배서 생성
+                                    </button>
                                 </div>
                             </div>
                             
-                            <!-- 안내 -->
-                            <div class="alert alert-info small">
-                                <strong>💡 사용 안내:</strong>
-                                <ol class="mb-0 ps-3">
-                                    <li>왼쪽에서 수배서를 확인하세요</li>
-                                    <li>PDF로 저장하거나 인쇄하세요</li>
-                                    <li>전송 타입을 선택하고 이메일을 전송하세요</li>
-                                </ol>
+                            <!-- 생성된 수배서 목록 -->
+                            <div class="card">
+                                <div class="card-header bg-dark text-white">
+                                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>생성된 수배서 목록</h6>
+                                </div>
+                                <div class="card-body p-0" id="assignmentsList" style="max-height: 500px; overflow-y: auto;">
+                                    <div class="text-center text-muted p-4">
+                                        <i class="fas fa-inbox fa-3x mb-2"></i>
+                                        <p class="mb-0 small">아직 생성된 수배서가 없습니다</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2730,35 +2712,237 @@
             const assignmentHTML = generateA4AssignmentPreview(reservation, history);
             document.getElementById('assignmentPreview').innerHTML = assignmentHTML;
             
-            // 전송 이력 생성
-            const historyHTML = generateHistoryHTML(history);
-            document.getElementById('assignmentHistory').innerHTML = historyHTML;
-            
-            // 수신 이메일 자동 입력 (호텔 이메일 또는 agency 이메일)
-            const recipientEmail = reservation.hotel_email || reservation.agency_email || '';
-            document.getElementById('recipientEmail').value = recipientEmail;
-            
-            // 전송 타입 선택 이벤트
-            const typeSelect = document.getElementById('assignmentTypeSelect');
-            // 기존 이벤트 리스너 제거 후 재등록
-            typeSelect.removeEventListener('change', handleTypeChange);
-            typeSelect.addEventListener('change', handleTypeChange);
-            
             // 현재 예약 정보 저장
             window.currentAssignmentReservationId = reservation.id;
             window.currentAssignmentReservation = reservation;
             window.currentAssignmentHistory = history;
             
+            // 생성된 수배서 목록 로드
+            loadAssignmentsList(reservation.id);
+            
             modal.show();
         }
         
-        // 전송 타입 변경 핸들러
-        function handleTypeChange(e) {
-            const descGroup = document.getElementById('changesDescriptionGroup');
+        // 전송 타입 변경 핸들러 (새 수배서 생성용)
+        document.getElementById('newAssignmentTypeSelect').addEventListener('change', function(e) {
+            const descGroup = document.getElementById('newChangesDescriptionGroup');
             if (e.target.value === 'REVISE' || e.target.value === 'CANCEL') {
                 descGroup.style.display = 'block';
             } else {
                 descGroup.style.display = 'none';
+            }
+        });
+        
+        // 수배서 생성 함수
+        async function createNewAssignment() {
+            const reservationId = window.currentAssignmentReservationId;
+            if (!reservationId) {
+                alert('예약 정보가 없습니다.');
+                return;
+            }
+            
+            const assignmentType = document.getElementById('newAssignmentTypeSelect').value;
+            const changesDescription = document.getElementById('newChangesDescriptionInput').value;
+            
+            // 검증
+            if ((assignmentType === 'REVISE' || assignmentType === 'CANCEL') && !changesDescription.trim()) {
+                alert('변경/취소 사유를 입력하세요.');
+                return;
+            }
+            
+            // 확인
+            let typeLabel = assignmentType === 'NEW' ? '신규' : (assignmentType === 'REVISE' ? '수정' : '취소');
+            if (!confirm(`${typeLabel} 수배서를 생성하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/hotel-assignment-management/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reservation_id: reservationId,
+                        assignment_type: assignmentType,
+                        changes_description: changesDescription || null,
+                        sent_by: '<%= adminUsername %>' // 현재 로그인 사용자
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 수배서가 생성되었습니다!\n\n타입: ${result.assignment_type}${result.revision_number > 0 ? ' #' + result.revision_number : ''}\n링크: ${window.location.origin}/hotel-assignment/view/${result.assignment_token}`);
+                    
+                    // 입력 필드 초기화
+                    document.getElementById('newAssignmentTypeSelect').value = 'NEW';
+                    document.getElementById('newChangesDescriptionInput').value = '';
+                    document.getElementById('newChangesDescriptionGroup').style.display = 'none';
+                    
+                    // 목록 새로고침
+                    loadAssignmentsList(reservationId);
+                    
+                } else {
+                    alert('❌ 생성 실패: ' + (result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('❌ 수배서 생성 오류:', error);
+                alert('❌ 오류가 발생했습니다: ' + error.message);
+            }
+        }
+        
+        // 생성된 수배서 목록 로드
+        async function loadAssignmentsList(reservationId) {
+            try {
+                const response = await fetch(`/api/hotel-assignment-management/list/${reservationId}`);
+                const result = await response.json();
+                
+                const listContainer = document.getElementById('assignmentsList');
+                
+                if (result.success && result.assignments && result.assignments.length > 0) {
+                    let html = '<div class="list-group list-group-flush">';
+                    
+                    result.assignments.forEach(assignment => {
+                        html += renderAssignmentItem(assignment);
+                    });
+                    
+                    html += '</div>';
+                    listContainer.innerHTML = html;
+                } else {
+                    listContainer.innerHTML = `
+                        <div class="text-center text-muted p-4">
+                            <i class="fas fa-inbox fa-3x mb-2"></i>
+                            <p class="mb-0 small">아직 생성된 수배서가 없습니다</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ 목록 로드 오류:', error);
+            }
+        }
+        
+        // 수배서 항목 렌더링
+        function renderAssignmentItem(assignment) {
+            const typeLabel = assignment.assignment_type === 'NEW' ? 'NEW' : 
+                            (assignment.assignment_type === 'REVISE' ? `REV#${assignment.revision_number}` : 'CANCEL');
+            const typeBadgeClass = assignment.assignment_type === 'NEW' ? 'bg-primary' : 
+                                   (assignment.assignment_type === 'REVISE' ? 'bg-warning' : 'bg-danger');
+            
+            const createdDate = new Date(assignment.created_at).toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const assignmentLink = `${window.location.origin}/hotel-assignment/view/${assignment.assignment_token}`;
+            
+            // 메일 전송 여부
+            const emailSent = assignment.sent_to_email && assignment.sent_at;
+            const emailViewed = assignment.email_viewed;
+            
+            let emailStatusHTML = '';
+            if (emailSent) {
+                const sentDate = new Date(assignment.sent_at).toLocaleString('ko-KR', {
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                emailStatusHTML = `
+                    <div class="mt-2 p-2 bg-light rounded" style="font-size: 11px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-envelope me-1"></i>${assignment.sent_to_email}</span>
+                            ${emailViewed ? '<span class="badge bg-success">열람됨</span>' : '<span class="badge bg-secondary">미열람</span>'}
+                        </div>
+                        <small class="text-muted">전송: ${sentDate}</small>
+                        ${emailViewed && assignment.viewed_at ? `<br><small class="text-success">열람: ${new Date(assignment.viewed_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })} (${assignment.view_count || 1}회)</small>` : ''}
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge ${typeBadgeClass} me-2">${typeLabel}</span>
+                            <small class="text-muted">${createdDate}</small>
+                        </div>
+                        <small class="text-muted">by ${assignment.sent_by || 'Admin'}</small>
+                    </div>
+                    
+                    ${assignment.changes_description ? `
+                        <div class="alert alert-warning py-1 px-2 mb-2" style="font-size: 11px;">
+                            <strong>사유:</strong> ${assignment.changes_description}
+                        </div>
+                    ` : ''}
+                    
+                    <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                        <button class="btn btn-outline-primary" onclick="sendAssignmentEmailById('${assignment.id}', '${assignment.assignment_token}')">
+                            <i class="fas fa-envelope me-1"></i>메일 보내기
+                        </button>
+                        <button class="btn btn-outline-info" onclick="copyAssignmentLinkById('${assignmentLink}')">
+                            <i class="fas fa-link me-1"></i>링크 복사
+                        </button>
+                    </div>
+                    
+                    ${emailStatusHTML}
+                </div>
+            `;
+        }
+        
+        // 특정 수배서 이메일 전송
+        async function sendAssignmentEmailById(assignmentId, assignmentToken) {
+            const hotelEmail = prompt('호텔 이메일 주소를 입력하세요:', window.currentAssignmentReservation?.hotel_email || '');
+            if (!hotelEmail) return;
+            
+            // 이메일 형식 검증
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(hotelEmail)) {
+                alert('올바른 이메일 주소를 입력하세요.');
+                return;
+            }
+            
+            if (!confirm(`${hotelEmail}로 수배서를 전송하시겠습니까?`)) return;
+            
+            try {
+                const response = await fetch(`/api/hotel-assignment-management/${assignmentId}/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hotel_email: hotelEmail })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 이메일이 전송되었습니다!\n\n수신: ${result.sent_to}\n링크: ${result.assignment_link}`);
+                    
+                    // 목록 새로고침
+                    loadAssignmentsList(window.currentAssignmentReservationId);
+                } else {
+                    alert('❌ 전송 실패: ' + (result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('❌ 이메일 전송 오류:', error);
+                alert('❌ 오류가 발생했습니다: ' + error.message);
+            }
+        }
+        
+        // 특정 수배서 링크 복사
+        async function copyAssignmentLinkById(link) {
+            try {
+                await navigator.clipboard.writeText(link);
+                alert(`✅ 수배서 링크가 복사되었습니다!\n\n${link}\n\n이 링크를 호텔에 직접 전달할 수 있습니다.`);
+            } catch (error) {
+                console.error('❌ 링크 복사 오류:', error);
+                // fallback: 텍스트 선택
+                const tempInput = document.createElement('input');
+                tempInput.value = link;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                alert(`✅ 링크가 복사되었습니다!\n\n${link}`);
             }
         }
         

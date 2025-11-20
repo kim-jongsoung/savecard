@@ -57,13 +57,14 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         const guests = room.guests || [];
         guests.forEach((guest, guestIdx) => {
             const guestType = guest.is_adult ? 'Adult' : (guest.is_child ? 'Child' : 'Infant');
+            const guestNameEn = guest.english_name || guest.guest_name_en || '';
             guestsHTML += `
                 <tr style="font-size: 9px;">
                     <td style="padding: 2px 4px; border: 1px solid #ddd;">Guest${guestIdx + 1}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.korean_name || ''}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.english_last_name}/${guest.english_first_name}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.korean_name || guest.guest_name_ko || ''}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guestNameEn}</td>
                     <td style="padding: 2px 4px; border: 1px solid #ddd;">${guestType}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.birth_date || ''}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.birth_date || guest.date_of_birth || ''}</td>
                 </tr>
             `;
         });
@@ -320,7 +321,7 @@ async function sendHotelAssignment(reservation, hotelEmail, assignmentType = 'NE
         const assignmentHTML = generateAssignmentHTML(reservation, assignmentType, revisionNumber);
         
         // 수배서 공개 링크 생성
-        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/${reservation.assignment_token}`;
+        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/view/${reservation.assignment_token}`;
         
         // 이메일 제목
         let subject = '';
@@ -394,7 +395,7 @@ async function sendHotelAssignment(reservation, hotelEmail, assignmentType = 'NE
         <p><strong>Check-in:</strong> ${reservation.check_in_date || reservation.check_in}<br>
         <strong>Check-out:</strong> ${reservation.check_out_date || reservation.check_out}<br>
         <strong>Guest Name:</strong> ${reservation.rooms && reservation.rooms[0] && reservation.rooms[0].guests && reservation.rooms[0].guests[0] ? 
-            reservation.rooms[0].guests[0].english_last_name + ' ' + reservation.rooms[0].guests[0].english_first_name : ''}</p>
+            (reservation.rooms[0].guests[0].english_name || reservation.rooms[0].guests[0].guest_name_en || '') : ''}</p>
         
         <p>Please review the detailed assignment document by clicking the button below:</p>
         

@@ -52,7 +52,7 @@ router.post('/create', async (req, res) => {
             const guestsQuery = await client.query(`
                 SELECT *
                 FROM hotel_reservation_guests
-                WHERE room_id = $1
+                WHERE reservation_room_id = $1
                 ORDER BY id
             `, [room.id]);
             room.guests = guestsQuery.rows;
@@ -145,16 +145,21 @@ router.post('/create', async (req, res) => {
             // 11. hotel_assignment_guests 테이블에 INSERT
             for (let j = 0; j < room.guests.length; j++) {
                 const guest = room.guests[j];
+                // age_category를 is_adult, is_child, is_infant으로 변환
+                const isAdult = guest.age_category === 'adult';
+                const isChild = guest.age_category === 'child';
+                const isInfant = guest.age_category === 'infant';
+                
                 await client.query(`
                     INSERT INTO hotel_assignment_guests (
                         assignment_room_id, guest_number,
-                        korean_name, english_first_name, english_last_name, birth_date,
+                        korean_name, english_name, birth_date,
                         is_adult, is_child, is_infant
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 `, [
                     assignmentRoomId, j + 1,
-                    guest.korean_name, guest.english_first_name, guest.english_last_name,
-                    guest.birth_date, guest.is_adult, guest.is_child, guest.is_infant
+                    guest.guest_name_ko, guest.guest_name_en,
+                    guest.date_of_birth, isAdult, isChild, isInfant
                 ]);
             }
         }
@@ -385,7 +390,7 @@ router.post('/:assignmentId/send', async (req, res) => {
         }
         
         // 9. 공개 링크
-        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/${assignment.assignment_token}`;
+        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/view/${assignment.assignment_token}`;
         
         // 10. 이메일 전송
         const info = await transporter.sendMail({
@@ -430,9 +435,9 @@ router.post('/:assignmentId/send', async (req, res) => {
 
 /**
  * 공개 링크 조회 (호텔용)
- * GET /hotel-assignment/:token
+ * GET /hotel-assignment/view/:token
  */
-router.get('/public/:token', async (req, res) => {
+router.get('/view/:token', async (req, res) => {
     const { token } = req.params;
     const pool = req.app.get('pool');
     
