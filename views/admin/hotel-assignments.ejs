@@ -2743,16 +2743,21 @@
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
                 const reservation = await response.json();
                 
-                console.log('📋 예약 정보 조회:', reservation);
-                console.log('🏨 호텔명:', reservation.hotel_name);
-                console.log('🏢 예약업체:', reservation.booking_agency_name);
-                console.log('🛏️ 객실 수:', reservation.rooms ? reservation.rooms.length : 0);
-                console.log('👥 전체 투숙객 수:', reservation.rooms ? reservation.rooms.reduce((sum, r) => sum + (r.guests ? r.guests.length : 0), 0) : 0);
-                console.log('➕ 추가 항목:', reservation.extras ? reservation.extras.length : 0);
+                console.log('📋 예약 정보 조회 결과:', reservation);
                 
                 if (!response.ok) {
                     throw new Error(reservation.message || '예약 정보를 불러올 수 없습니다.');
                 }
+                
+                // ⭐ 데이터 유효성 검사 및 기본값 설정
+                if (!reservation.rooms) reservation.rooms = [];
+                if (!reservation.extras) reservation.extras = [];
+                
+                reservation.rooms.forEach((room, idx) => {
+                    console.log(`  📦 Room ${idx+1} 데이터 확인:`, room);
+                    // 조식 필드 확인
+                    console.log(`    🍳 조식: included=${room.breakfast_included}, days=${room.breakfast_days}, adult=${room.breakfast_adult_count}`);
+                });
                 
                 // 수배서 이력 조회
                 const historyResponse = await fetch(`/api/hotel-assignments/${reservationId}/history`);
@@ -3088,19 +3093,35 @@
                     
                     // 조식 정보 (횟수만)
                     let breakfastInfo = '';
-                    if (room.breakfast_included) {
-                        const adultCount = room.breakfast_adult_count || 0;
-                        const childCount = room.breakfast_child_count || 0;
+                    
+                    // ⭐ 조식 포함 여부 확인 (문자열 'true' 등 다양한 케이스 대응)
+                    const isBreakfastIncluded = room.breakfast_included === true || room.breakfast_included === 'true' || room.breakfast_included === 1;
+                    
+                    if (isBreakfastIncluded) {
+                        // 인원 수 없으면 guests 배열에서 계산 시도
+                        let adultCount = parseInt(room.breakfast_adult_count || 0);
+                        let childCount = parseInt(room.breakfast_child_count || 0);
+                        
+                        if (adultCount === 0 && childCount === 0 && room.guests && room.guests.length > 0) {
+                            room.guests.forEach(g => {
+                                if (g.age_category === 'adult') adultCount++;
+                                else if (g.age_category === 'child') childCount++;
+                            });
+                        }
+                        
                         const adultPrice = parseFloat(room.breakfast_adult_price || 0);
                         const childPrice = parseFloat(room.breakfast_child_price || 0);
                         
-                        const adultTotal = adultCount * nights;
-                        const childTotal = childCount * nights;
+                        // 횟수(days)가 없으면 박수(nights) 사용
+                        const breakfastDays = parseInt(room.breakfast_days || nights);
+                        
+                        const adultTotal = adultCount * breakfastDays;
+                        const childTotal = childCount * breakfastDays;
                         
                         const breakfastCharge = (adultTotal * adultPrice) + (childTotal * childPrice);
-                        breakfastCharges.push({ roomNum, adultCount, childCount, nights, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
+                        breakfastCharges.push({ roomNum, adultCount, childCount, nights: breakfastDays, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
                         
-                        breakfastInfo = `<strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${nights}=${adultTotal} │ Child: ${childCount}×${nights}=${childTotal}`;
+                        breakfastInfo = `<strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${breakfastDays}=${adultTotal} │ Child: ${childCount}×${breakfastDays}=${childTotal}`;
                     } else {
                         breakfastInfo = '<strong>Breakfast: ☐ Not Included</strong>';
                     }
