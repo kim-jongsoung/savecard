@@ -1255,7 +1255,17 @@
                         <select class="form-control form-control-sm room-type-select" data-room="${roomCounter}" onchange="onRoomTypeChange(${roomCounter})" style="flex: 1;">
                             <option value="">객실 타입 선택</option>
                         </select>
-                        <label class="form-label mb-0 ms-1" style="min-width: 95px;">총 객실요금(자동)</label>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-1 mb-2" id="promotion_select_group_${roomCounter}" style="display: none;">
+                        <label class="form-label mb-0" style="min-width: 70px;">프로모션</label>
+                        <select class="form-control form-control-sm promotion-select" data-room="${roomCounter}" onchange="onPromotionChange(${roomCounter})" style="flex: 1;">
+                            <option value="">프로모션 없음 (기본 요금)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-1 mb-2">
+                        <label class="form-label mb-0" style="min-width: 70px;">총 객실요금</label>
                         <input type="text" class="form-control form-control-sm" id="room_${roomCounter}_rate" readonly style="background: #f0f0f0; flex: 1;">
                     </div>
                     
@@ -1576,19 +1586,23 @@
             updateBreakfastLabel();
         }
 
-        // 객실별 룸타입 변경 시 프로모션 조회
+        // 객실별 룸타입 변경 시 프로모션 조회 및 드롭다운 표시
         async function onRoomTypeChange(roomNum) {
-            const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"]`);
+            const roomTypeSelect = document.querySelector(`[data-room="${roomNum}"].room-type-select`);
             const roomTypeId = roomTypeSelect.value;
             const hotelId = document.getElementById('hotel_id').value;
             const checkIn = document.getElementById('check_in_date').value;
             const checkOut = document.getElementById('check_out_date').value;
-            const bookingDate = new Date().toISOString().split('T')[0];
             
             console.log(`🛏️ 객실 ${roomNum} 타입 변경:`, { roomTypeId, hotelId, checkIn, checkOut });
             
+            // 프로모션 선택 그룹 숨기기
+            const promotionGroup = document.getElementById(`promotion_select_group_${roomNum}`);
+            const promotionSelect = document.querySelector(`.promotion-select[data-room="${roomNum}"]`);
+            
             if (!roomTypeId || !hotelId || !checkIn || !checkOut) {
-                console.log(`⚠️ 객실 ${roomNum}: 필수 정보 누락 (룸타입=${roomTypeId}, 호텔=${hotelId}, 체크인=${checkIn}, 체크아웃=${checkOut})`);
+                console.log(`⚠️ 객실 ${roomNum}: 필수 정보 누락`);
+                if (promotionGroup) promotionGroup.style.display = 'none';
                 return;
             }
             
@@ -1600,29 +1614,91 @@
                     console.log(`✅ 객실 ${roomNum} 타입 정보:`, roomType.room_type_name);
                     // ⭐ 조식 정보를 객실 카드에 표시
                     displayBreakfastInfo(roomNum, roomType);
-                } else {
-                    console.log(`❌ 객실 ${roomNum}: 룸타입 정보를 찾을 수 없음 (ID: ${roomTypeId})`);
                 }
                 
-                // 해당 룸타입의 최적 프로모션 찾기
-                console.log(`💰 객실 ${roomNum} 프로모션 조회 시작...`);
-                const bestPromotion = await findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut);
+                // 적용 가능한 프로모션 목록 조회
+                console.log(`💰 객실 ${roomNum} 프로모션 목록 조회 시작...`);
+                const response = await fetch(
+                    `/api/promotions/room-type/${roomTypeId}/rates?` +
+                    `checkIn=${checkIn}&checkOut=${checkOut}`
+                );
+                const data = await response.json();
                 
-                if (bestPromotion) {
-                    roomPromotions[roomNum] = bestPromotion;
-                    document.getElementById(`room_${roomNum}_rate`).value = `$${bestPromotion.total_room_rate.toFixed(2)} (프로모션)`;
-                    console.log(`✅ 객실 ${roomNum} 프로모션 적용: ${bestPromotion.promotion.promo_code} ($${bestPromotion.total_room_rate})`);
+                if (data.success && data.promotions && data.promotions.length > 0) {
+                    console.log(`✅ 적용 가능한 프로모션: ${data.promotions.length}개`);
+                    
+                    // 프로모션 드롭다운 채우기
+                    promotionSelect.innerHTML = '<option value="">프로모션 없음 (기본 요금)</option>';
+                    data.promotions.forEach(promo => {
+                        const option = document.createElement('option');
+                        option.value = promo.promotion_id;
+                        option.dataset.totalAmount = promo.total_amount;
+                        option.dataset.avgRate = promo.avg_rate;
+                        option.dataset.promoCode = promo.promo_code;
+                        option.dataset.promoData = JSON.stringify(promo);
+                        option.textContent = `${promo.promo_code} - ${promo.promo_name} ($${promo.total_amount} / ${promo.nights}박, 평균 $${promo.avg_rate}/박)`;
+                        promotionSelect.appendChild(option);
+                        
+                        console.log(`  💰 ${promo.promo_code}: $${promo.total_amount}`);
+                    });
+                    
+                    // 프로모션 선택 그룹 표시
+                    promotionGroup.style.display = 'flex';
+                    
+                    // 프로모션 없음으로 초기화
+                    roomPromotions[roomNum] = null;
+                    document.getElementById(`room_${roomNum}_rate`).value = '프로모션을 선택하세요';
+                    
                 } else {
+                    console.log(`❌ 객실 ${roomNum}: 적용 가능한 프로모션 없음`);
+                    promotionGroup.style.display = 'none';
                     roomPromotions[roomNum] = null;
                     document.getElementById(`room_${roomNum}_rate`).value = '프로모션 없음';
-                    console.log(`⚠️ 객실 ${roomNum}: 프로모션 없음`);
                 }
                 
                 // 전체 객실 요금 합산
                 await updateRoomCharges();
+                
             } catch (error) {
-                console.error(`❌ 객실 ${roomNum} 룸타입 프로모션 조회 오류:`, error);
+                console.error(`❌ 객실 ${roomNum} 프로모션 조회 오류:`, error);
+                if (promotionGroup) promotionGroup.style.display = 'none';
             }
+        }
+        
+        // 프로모션 선택 변경 시
+        async function onPromotionChange(roomNum) {
+            const promotionSelect = document.querySelector(`.promotion-select[data-room="${roomNum}"]`);
+            const selectedOption = promotionSelect.options[promotionSelect.selectedIndex];
+            
+            console.log(`🎯 객실 ${roomNum} 프로모션 선택:`, selectedOption.text);
+            
+            if (selectedOption.value && selectedOption.dataset.promoData) {
+                // 프로모션 선택됨
+                const promoData = JSON.parse(selectedOption.dataset.promoData);
+                
+                roomPromotions[roomNum] = {
+                    valid: true,
+                    promotion: {
+                        promo_code: promoData.promo_code,
+                        promo_name: promoData.promo_name
+                    },
+                    total_room_rate: promoData.total_amount,
+                    avg_rate: promoData.avg_rate,
+                    daily_rates: promoData.dates,
+                    benefits: promoData.benefits || []
+                };
+                
+                document.getElementById(`room_${roomNum}_rate`).value = `$${promoData.total_amount} (${promoData.promo_code})`;
+                console.log(`✅ 프로모션 적용: ${promoData.promo_code} ($${promoData.total_amount})`);
+            } else {
+                // 프로모션 없음 선택
+                console.log(`❌ 프로모션 없음 선택`);
+                roomPromotions[roomNum] = null;
+                document.getElementById(`room_${roomNum}_rate`).value = '프로모션 없음 (기본 요금)';
+            }
+            
+            // 전체 객실 요금 업데이트
+            await updateRoomCharges();
         }
         
         // ⭐ 조식 필드 토글 (포함/불포함) - 체크 시 객실타입 금액 자동 로드
