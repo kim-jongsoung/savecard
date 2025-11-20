@@ -1469,24 +1469,37 @@
                     }
                 }
                 
-                // ⭐ 조식 요금 계산
+                // ⭐ 조식 요금 계산 (유아 제외)
                 const breakfastCheckbox = document.getElementById(`breakfast_included_${roomNum}`);
                 if (breakfastCheckbox && breakfastCheckbox.checked) {
                     const days = parseInt(document.getElementById(`breakfast_days_${roomNum}`)?.value) || 1;
                     const adultPrice = parseFloat(document.getElementById(`breakfast_adult_price_${roomNum}`)?.value) || 0;
                     const childPrice = parseFloat(document.getElementById(`breakfast_child_price_${roomNum}`)?.value) || 0;
                     
-                    // 투숙객 수 계산
+                    // 투숙객 수 계산 (유아는 조식 제외)
                     let adultCount = 0;
                     let childCount = 0;
                     room.querySelectorAll('.guest-card').forEach(guest => {
                         const ageCategory = guest.querySelector('[data-guest-field="age_category"]')?.value;
                         if (ageCategory === 'adult') adultCount++;
                         else if (ageCategory === 'child') childCount++;
+                        // 유아(infant)는 조식 요금 계산에서 제외
                     });
                     
                     const breakfastCharge = (adultCount * adultPrice * days) + (childCount * childPrice * days);
                     totalBreakfastCharge += breakfastCharge;
+                    
+                    // ⭐ 조식 요금 미리보기 업데이트
+                    const previewDiv = document.getElementById(`breakfast_charge_preview_${roomNum}`);
+                    if (previewDiv) {
+                        previewDiv.innerHTML = `
+                            <strong>💰 조식 요금:</strong> 
+                            <span style="font-size: 1rem;">
+                                성인${adultCount}명×$${adultPrice}×${days}일 + 소아${childCount}명×$${childPrice}×${days}일 
+                                = <strong style="color: #28a745;">$${breakfastCharge.toFixed(2)}</strong>
+                            </span>
+                        `;
+                    }
                     
                     console.log(`🍳 객실 ${roomNum} 조식요금: 성인${adultCount}명×$${adultPrice}×${days}일 + 소아${childCount}명×$${childPrice}×${days}일 = $${breakfastCharge.toFixed(2)}`);
                 }
@@ -1778,19 +1791,34 @@
                             </label>
                         </div>
                         <div id="breakfast_fields_${roomCounter}" style="display: none;">
+                            <!-- ⭐ 투숙 인원 표시 -->
+                            <div id="breakfast_guest_count_${roomCounter}" class="alert alert-info py-2 px-3 mb-2" style="font-size: 0.85rem;">
+                                <i class="fas fa-users me-1"></i>
+                                <strong>투숙 인원:</strong>
+                                <span class="ms-2">
+                                    성인 <strong id="breakfast_adult_count_${roomCounter}">0</strong>명 / 
+                                    소아 <strong id="breakfast_child_count_${roomCounter}">0</strong>명 / 
+                                    유아 <strong id="breakfast_infant_count_${roomCounter}">0</strong>명
+                                </span>
+                            </div>
+                            
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <label class="form-label small">횟수(일)</label>
-                                    <input type="number" class="form-control form-control-sm" id="breakfast_days_${roomCounter}" value="1" min="1">
+                                    <input type="number" class="form-control form-control-sm" id="breakfast_days_${roomCounter}" value="1" min="1" onchange="updateRoomCharges()">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small">성인 단가 ($)</label>
-                                    <input type="number" class="form-control form-control-sm" id="breakfast_adult_price_${roomCounter}" value="0" step="0.01" min="0">
+                                    <input type="number" class="form-control form-control-sm" id="breakfast_adult_price_${roomCounter}" value="0" step="0.01" min="0" onchange="updateRoomCharges()">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small">소아 단가 ($)</label>
-                                    <input type="number" class="form-control form-control-sm" id="breakfast_child_price_${roomCounter}" value="0" step="0.01" min="0">
+                                    <input type="number" class="form-control form-control-sm" id="breakfast_child_price_${roomCounter}" value="0" step="0.01" min="0" onchange="updateRoomCharges()">
                                 </div>
+                            </div>
+                            
+                            <!-- ⭐ 조식 요금 미리보기 -->
+                            <div id="breakfast_charge_preview_${roomCounter}" class="mt-2 text-end" style="font-size: 0.85rem; color: #28a745;">
                             </div>
                         </div>
                     </div>
@@ -1817,6 +1845,35 @@
             }
         }
         
+        // ⭐ 객실별 투숙 인원 수 업데이트
+        function updateGuestCount(roomNum) {
+            const roomCard = document.querySelector(`[data-room-id="${roomNum}"]`);
+            if (!roomCard) return;
+            
+            let adultCount = 0;
+            let childCount = 0;
+            let infantCount = 0;
+            
+            roomCard.querySelectorAll('.guest-card').forEach(guest => {
+                const ageCategory = guest.querySelector('[data-guest-field="age_category"]')?.value;
+                if (ageCategory === 'adult') adultCount++;
+                else if (ageCategory === 'child') childCount++;
+                else if (ageCategory === 'infant') infantCount++;
+            });
+            
+            // 조식 필드의 인원 수 표시 업데이트
+            const adultCountEl = document.getElementById(`breakfast_adult_count_${roomNum}`);
+            const childCountEl = document.getElementById(`breakfast_child_count_${roomNum}`);
+            const infantCountEl = document.getElementById(`breakfast_infant_count_${roomNum}`);
+            
+            if (adultCountEl) adultCountEl.textContent = adultCount;
+            if (childCountEl) childCountEl.textContent = childCount;
+            if (infantCountEl) infantCountEl.textContent = infantCount;
+            
+            // 조식 요금 재계산
+            updateRoomCharges();
+        }
+
         // 투숙객 HTML 생성 (한 줄로 변경)
         function createGuestHtml(roomNum, guestNum, isPrimary = false) {
             return `
@@ -1827,7 +1884,7 @@
                         <span style="font-size: 0.7rem;">|</span>
                         <input type="text" class="form-control form-control-sm" placeholder="영문명" data-guest-field="guest_name_en" data-room="${roomNum}" data-guest="${guestNum}" style="flex: 1;">
                         <span style="font-size: 0.7rem;">|</span>
-                        <select class="form-control form-control-sm" data-guest-field="age_category" data-room="${roomNum}" data-guest="${guestNum}" style="width: 70px;">
+                        <select class="form-control form-control-sm" data-guest-field="age_category" data-room="${roomNum}" data-guest="${guestNum}" style="width: 70px;" onchange="updateGuestCount(${roomNum})">
                             <option value="adult">성인</option>
                             <option value="child">소아</option>
                             <option value="infant">유아</option>
@@ -1852,6 +1909,9 @@
             const guestCount = guestsContainer.querySelectorAll('.guest-card').length + 1;
             
             guestsContainer.insertAdjacentHTML('beforeend', createGuestHtml(roomNum, guestCount, false));
+            
+            // ⭐ 인원 수 업데이트
+            updateGuestCount(roomNum);
         }
         
         // 투숙객 제거
@@ -1859,6 +1919,8 @@
             const guestCard = document.getElementById(`guest_${roomNum}_${guestNum}`);
             if (guestCard) {
                 guestCard.remove();
+                // ⭐ 인원 수 업데이트
+                updateGuestCount(roomNum);
             }
         }
         
@@ -1962,6 +2024,9 @@
                 
                 console.log(`ℹ️  객실 ${roomNum} 조식: 불포함 (요금은 미리 설정됨)`);
             }
+            
+            // ⭐ 투숙 인원 수 업데이트
+            updateGuestCount(roomNum);
         }
         
         // 객실 제거
