@@ -359,6 +359,9 @@ router.post('/api/promotions/:id/rates', requireLogin, async (req, res) => {
       return res.status(400).json({ error: '요금 데이터가 필요합니다.' });
     }
     
+    // ⭐ 기존 요금 모두 삭제 (UI에서 삭제된 요금도 DB에서 제거)
+    await client.query('DELETE FROM promotion_daily_rates WHERE promotion_id = $1', [id]);
+    
     const results = [];
     
     for (const rate of rates) {
@@ -369,19 +372,12 @@ router.post('/api/promotions/:id/rates', requireLogin, async (req, res) => {
         continue;  // 필수값 없으면 스킵
       }
       
-      // UPSERT (있으면 업데이트, 없으면 삽입)
+      // INSERT (기존 데이터는 이미 삭제했으므로 충돌 없음)
       const result = await client.query(
         `INSERT INTO promotion_daily_rates (
           promotion_id, room_type_id, stay_date, 
           min_nights, max_nights, rate_per_night, currency, notes
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (promotion_id, room_type_id, stay_date, min_nights)
-        DO UPDATE SET
-          max_nights = EXCLUDED.max_nights,
-          rate_per_night = EXCLUDED.rate_per_night,
-          currency = EXCLUDED.currency,
-          notes = EXCLUDED.notes,
-          updated_at = NOW()
         RETURNING *`,
         [id, room_type_id, stay_date, min_nights, max_nights || null, rate_per_night, currency || 'USD', notes || null]
       );
