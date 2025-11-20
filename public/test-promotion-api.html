@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>프로모션 API 테스트</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; font-family: monospace; }
+        .result { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-top: 10px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        pre { margin: 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔍 프로모션 API 테스트</h2>
+        
+        <div class="card mb-4">
+            <div class="card-header"><strong>1. 프로모션 목록 조회</strong></div>
+            <div class="card-body">
+                <button class="btn btn-primary" onclick="testPromoList()">프로모션 목록 조회</button>
+                <div id="result1" class="result" style="display:none;"></div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header"><strong>2. 룸타입별 프로모션 조회 (새 API)</strong></div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <label>Room Type ID</label>
+                        <input type="number" class="form-control" id="roomTypeId" placeholder="예: 8">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Check In</label>
+                        <input type="date" class="form-control" id="checkIn">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Check Out</label>
+                        <input type="date" class="form-control" id="checkOut">
+                    </div>
+                    <div class="col-md-3">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary w-100" onclick="testRoomTypePromos()">조회</button>
+                    </div>
+                </div>
+                <div id="result2" class="result" style="display:none;"></div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header"><strong>3. 프로모션 요금 데이터 확인</strong></div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label>Promotion ID</label>
+                        <input type="number" class="form-control" id="promoId" placeholder="예: 1">
+                    </div>
+                    <div class="col-md-6">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary w-100" onclick="testPromoRates()">요금 조회</button>
+                    </div>
+                </div>
+                <div id="result3" class="result" style="display:none;"></div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header"><strong>4. 활성 룸타입 목록</strong></div>
+            <div class="card-body">
+                <button class="btn btn-primary" onclick="testRoomTypes()">룸타입 목록 조회</button>
+                <div id="result4" class="result" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 오늘 날짜로 초기화
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        document.getElementById('checkIn').value = today;
+        document.getElementById('checkOut').value = tomorrow;
+        
+        async function testPromoList() {
+            const result = document.getElementById('result1');
+            result.style.display = 'block';
+            result.className = 'result';
+            result.innerHTML = '🔄 로딩 중...';
+            
+            try {
+                const res = await fetch('/api/promotions');
+                const data = await res.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ 성공!</strong><br>
+                    총 ${data.promotions?.length || 0}개의 프로모션<br><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `<strong>❌ 오류</strong><br><pre>${error.message}</pre>`;
+            }
+        }
+        
+        async function testRoomTypePromos() {
+            const roomTypeId = document.getElementById('roomTypeId').value;
+            const checkIn = document.getElementById('checkIn').value;
+            const checkOut = document.getElementById('checkOut').value;
+            const result = document.getElementById('result2');
+            
+            if (!roomTypeId || !checkIn || !checkOut) {
+                alert('모든 필드를 입력하세요');
+                return;
+            }
+            
+            result.style.display = 'block';
+            result.className = 'result';
+            result.innerHTML = '🔄 로딩 중...';
+            
+            try {
+                const url = `/api/promotions/room-type/${roomTypeId}/rates?checkIn=${checkIn}&checkOut=${checkOut}`;
+                console.log('🔗 API URL:', url);
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (data.success) {
+                    result.className = 'result success';
+                    result.innerHTML = `
+                        <strong>✅ 성공!</strong><br>
+                        적용 가능한 프로모션: ${data.promotions?.length || 0}개<br>
+                        체크인: ${data.check_in}<br>
+                        체크아웃: ${data.check_out}<br>
+                        숙박일수: ${data.nights}박<br><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.className = 'result error';
+                    result.innerHTML = `
+                        <strong>❌ 실패</strong><br>
+                        ${data.message || data.error || '알 수 없는 오류'}<br><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `<strong>❌ 오류</strong><br><pre>${error.message}</pre>`;
+            }
+        }
+        
+        async function testPromoRates() {
+            const promoId = document.getElementById('promoId').value;
+            const result = document.getElementById('result3');
+            
+            if (!promoId) {
+                alert('Promotion ID를 입력하세요');
+                return;
+            }
+            
+            result.style.display = 'block';
+            result.className = 'result';
+            result.innerHTML = '🔄 로딩 중...';
+            
+            try {
+                const res = await fetch(`/api/promotions/${promoId}/rates`);
+                const data = await res.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ 성공!</strong><br>
+                    총 ${data.length || 0}개의 요금 데이터<br><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `<strong>❌ 오류</strong><br><pre>${error.message}</pre>`;
+            }
+        }
+        
+        async function testRoomTypes() {
+            const result = document.getElementById('result4');
+            result.style.display = 'block';
+            result.className = 'result';
+            result.innerHTML = '🔄 로딩 중...';
+            
+            try {
+                const res = await fetch('/api/room-types?is_active=true');
+                const data = await res.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ 성공!</strong><br>
+                    총 ${data.length || 0}개의 활성 룸타입<br><br>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `<strong>❌ 오류</strong><br><pre>${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>
