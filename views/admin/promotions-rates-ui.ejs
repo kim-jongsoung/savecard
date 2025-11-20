@@ -164,6 +164,11 @@
       currentRoomTypes.map(rt => `<option value="${rt.id}">${rt.room_type_name}</option>`).join('');
   });
   
+  // 룸타입 변경 시 저장된 요금 목록도 업데이트
+  document.getElementById('rateRoomType').addEventListener('change', function() {
+    renderSavedRates();
+  });
+  
   // 프로모션 수정 시 요금 데이터 로드
   async function loadPromoRates(promoId) {
     const res = await fetch(`/api/promotions/${promoId}/rates`);

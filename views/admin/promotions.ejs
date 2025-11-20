@@ -256,18 +256,43 @@
     }
     
     async function loadPromos() {
-      let url = '/api/promotions?';
-      const hotelId = document.getElementById('filterHotel').value;
-      const code = document.getElementById('filterCode').value;
-      const active = document.getElementById('filterActive').value;
-      
-      if (hotelId) url += `hotel_id=${hotelId}&`;
-      if (code) url += `promo_code=${code}&`;
-      if (active) url += `is_active=${active}`;
-      
-      const res = await fetch(url);
-      currentPromos = await res.json();
-      renderPromos();
+      try {
+        let url = '/api/promotions?';
+        const hotelId = document.getElementById('filterHotel').value;
+        const code = document.getElementById('filterCode').value;
+        const active = document.getElementById('filterActive').value;
+        
+        if (hotelId) url += `hotel_id=${hotelId}&`;
+        if (code) url += `promo_code=${code}&`;
+        if (active) url += `is_active=${active}`;
+        
+        console.log('🔍 프로모션 API 호출:', url);
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
+        currentPromos = await res.json();
+        console.log('✅ 프로모션 데이터:', currentPromos);
+        
+        // 배열이 아닌 경우 처리
+        if (!Array.isArray(currentPromos)) {
+          console.error('❌ API 응답이 배열이 아닙니다:', currentPromos);
+          if (currentPromos.promotions) {
+            currentPromos = currentPromos.promotions;
+          } else {
+            currentPromos = [];
+          }
+        }
+        
+        renderPromos();
+      } catch (error) {
+        console.error('❌ 프로모션 로딩 오류:', error);
+        alert('프로모션 로딩 실패: ' + error.message);
+        currentPromos = [];
+        renderPromos();
+      }
     }
     
     // 날짜 포맷팅 함수
