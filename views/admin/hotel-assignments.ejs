@@ -2691,6 +2691,13 @@
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
                 const reservation = await response.json();
                 
+                console.log('📋 예약 정보 조회:', reservation);
+                console.log('🏨 호텔명:', reservation.hotel_name);
+                console.log('🏢 예약업체:', reservation.booking_agency_name);
+                console.log('🛏️ 객실 수:', reservation.rooms ? reservation.rooms.length : 0);
+                console.log('👥 전체 투숙객 수:', reservation.rooms ? reservation.rooms.reduce((sum, r) => sum + (r.guests ? r.guests.length : 0), 0) : 0);
+                console.log('➕ 추가 항목:', reservation.extras ? reservation.extras.length : 0);
+                
                 if (!response.ok) {
                     throw new Error(reservation.message || '예약 정보를 불러올 수 없습니다.');
                 }
@@ -2699,6 +2706,8 @@
                 const historyResponse = await fetch(`/api/hotel-assignments/${reservationId}/history`);
                 const historyData = await historyResponse.json();
                 const history = historyData.success ? historyData.history : [];
+                
+                console.log('📜 수배서 이력:', history);
                 
                 // 수배서 모달 열기
                 openAssignmentModal(reservation, history);
@@ -2711,6 +2720,10 @@
         
         // 수배서 모달 열기
         function openAssignmentModal(reservation, history) {
+            console.log('🔧 모달 열기 - 예약 데이터:', reservation);
+            console.log('🔧 rooms 배열:', reservation.rooms);
+            console.log('🔧 extras 배열:', reservation.extras);
+            
             const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
             
             // A4 수배서 미리보기 생성
@@ -2721,19 +2734,15 @@
             const historyHTML = generateHistoryHTML(history);
             document.getElementById('assignmentHistory').innerHTML = historyHTML;
             
-            // 수신 이메일 자동 입력 (호텔 이메일)
-            const recipientEmail = reservation.hotel_email || '';
+            // 수신 이메일 자동 입력 (호텔 이메일 또는 agency 이메일)
+            const recipientEmail = reservation.hotel_email || reservation.agency_email || '';
             document.getElementById('recipientEmail').value = recipientEmail;
             
             // 전송 타입 선택 이벤트
-            document.getElementById('assignmentTypeSelect').addEventListener('change', function() {
-                const descGroup = document.getElementById('changesDescriptionGroup');
-                if (this.value === 'REVISE' || this.value === 'CANCEL') {
-                    descGroup.style.display = 'block';
-                } else {
-                    descGroup.style.display = 'none';
-                }
-            });
+            const typeSelect = document.getElementById('assignmentTypeSelect');
+            // 기존 이벤트 리스너 제거 후 재등록
+            typeSelect.removeEventListener('change', handleTypeChange);
+            typeSelect.addEventListener('change', handleTypeChange);
             
             // 현재 예약 정보 저장
             window.currentAssignmentReservationId = reservation.id;
@@ -2741,6 +2750,16 @@
             window.currentAssignmentHistory = history;
             
             modal.show();
+        }
+        
+        // 전송 타입 변경 핸들러
+        function handleTypeChange(e) {
+            const descGroup = document.getElementById('changesDescriptionGroup');
+            if (e.target.value === 'REVISE' || e.target.value === 'CANCEL') {
+                descGroup.style.display = 'block';
+            } else {
+                descGroup.style.display = 'none';
+            }
         }
         
         // 날짜 포맷팅 함수
@@ -2755,47 +2774,66 @@
         
         // A4 수배서 미리보기 HTML 생성 (실제 전송되는 양식)
         function generateA4AssignmentPreview(reservation, history) {
+            console.log('📄 A4 미리보기 생성 시작');
+            console.log('- reservation:', reservation);
+            console.log('- reservation.rooms:', reservation.rooms);
+            console.log('- reservation.extras:', reservation.extras);
+            
             const rooms = reservation.rooms || [];
             const extras = reservation.extras || [];
             
+            console.log('- rooms 배열 길이:', rooms.length);
+            console.log('- extras 배열 길이:', extras.length);
+            
             // 객실별 테이블 생성
             let roomsTableHTML = '';
-            rooms.forEach((room, idx) => {
-                const guests = room.guests || [];
-                let guestsHTML = '';
-                guests.forEach((g, gIdx) => {
-                    guestsHTML += `
-                        <tr>
-                            <td style="padding: 4px; border: 1px solid #ddd;">${gIdx + 1}</td>
-                            <td style="padding: 4px; border: 1px solid #ddd;">${g.korean_name || '-'}</td>
-                            <td style="padding: 4px; border: 1px solid #ddd;">${g.english_last_name || '-'}</td>
-                            <td style="padding: 4px; border: 1px solid #ddd;">${g.english_first_name || '-'}</td>
-                            <td style="padding: 4px; border: 1px solid #ddd;">${g.birth_date ? formatDate(g.birth_date) : '-'}</td>
-                        </tr>
+            if (rooms.length > 0) {
+                rooms.forEach((room, idx) => {
+                    console.log(`  📦 Room ${idx + 1}:`, room);
+                    const guests = room.guests || [];
+                    console.log(`    👥 Guests (${guests.length}):`, guests);
+                    
+                    let guestsHTML = '';
+                    if (guests.length > 0) {
+                        guests.forEach((g, gIdx) => {
+                            guestsHTML += `
+                                <tr>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${gIdx + 1}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.korean_name || '-'}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.english_last_name || '-'}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.english_first_name || '-'}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.birth_date ? formatDate(g.birth_date) : '-'}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        guestsHTML = '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #999;">투숙객 정보 없음</td></tr>';
+                    }
+                    
+                    roomsTableHTML += `
+                        <div style="margin-bottom: 15px; page-break-inside: avoid;">
+                            <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">Room ${idx + 1}: ${room.room_type_name || '객실타입 미지정'}</h6>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                <tr style="background: #ecf0f1;">
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 40px;"><strong>No</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>한글명</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 성</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 이름</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>생년월일</strong></td>
+                                </tr>
+                                ${guestsHTML}
+                            </table>
+                            <div style="margin-top: 5px; font-size: 11px;">
+                                <strong>요금:</strong> $${room.room_rate || 0} | 
+                                <strong>조식:</strong> ${room.breakfast_included ? '포함' : '불포함'}
+                                ${room.breakfast_included ? ` (성인 ${room.breakfast_adult_count || 0}명 × $${room.breakfast_adult_price || 0}, 아동 ${room.breakfast_child_count || 0}명 × $${room.breakfast_child_price || 0})` : ''}
+                            </div>
+                        </div>
                     `;
                 });
-                
-                roomsTableHTML += `
-                    <div style="margin-bottom: 15px; page-break-inside: avoid;">
-                        <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">Room ${idx + 1}: ${room.room_type_name || '-'}</h6>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <tr style="background: #ecf0f1;">
-                                <td style="padding: 4px; border: 1px solid #ddd; width: 40px;"><strong>No</strong></td>
-                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>한글명</strong></td>
-                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 성</strong></td>
-                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 이름</strong></td>
-                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>생년월일</strong></td>
-                            </tr>
-                            ${guestsHTML}
-                        </table>
-                        <div style="margin-top: 5px; font-size: 11px;">
-                            <strong>요금:</strong> $${room.room_rate || 0} | 
-                            <strong>조식:</strong> ${room.breakfast_included ? '포함' : '불포함'}
-                            ${room.breakfast_included ? ` (성인 ${room.breakfast_adult_count || 0}명 × $${room.breakfast_adult_price || 0}, 아동 ${room.breakfast_child_count || 0}명 × $${room.breakfast_child_price || 0})` : ''}
-                        </div>
-                    </div>
-                `;
-            });
+            } else {
+                roomsTableHTML = '<div style="padding: 20px; text-align: center; color: #999; background: #f8f9fa; border: 1px dashed #ddd;"><strong>⚠️ 객실 정보가 등록되지 않았습니다.</strong><br><small>예약 수정 페이지에서 객실 정보를 추가하세요.</small></div>';
+            }
             
             // 추가 항목
             let extrasHTML = '';
