@@ -2238,6 +2238,7 @@
                     document.getElementById('special_requests').value = data.special_requests || '';
                     document.getElementById('internal_memo').value = data.internal_memo || '';
                     document.getElementById('totalRoomCharge').value = data.total_room_rate || 0;
+                    document.getElementById('totalBreakfastCharge').value = data.total_breakfast_charge || 0;
                     document.getElementById('totalExtrasCharge').value = data.total_extras_rate || 0;
                     document.getElementById('agencyFee').value = data.agency_fee || 0;
                     
@@ -2246,7 +2247,10 @@
                         document.getElementById('agencyFeeRow').style.display = 'flex';
                     }
                     
-                    console.log('✅ 기본 정보 채움 (총 객실: $' + (data.total_room_rate || 0) + ', 총 추가: $' + (data.total_extras_rate || 0) + ', 수배피: $' + (data.agency_fee || 0) + ')');
+                    console.log('✅ 기본 정보 채움 (총 객실: $' + (data.total_room_rate || 0) + ', 총 조식: $' + (data.total_breakfast_charge || 0) + ', 총 추가: $' + (data.total_extras_rate || 0) + ', 수배피: $' + (data.agency_fee || 0) + ')');
+                    
+                    // ⭐ 초기 총액 계산
+                    calculateTotal();
                     
                     // 호텔 선택 (⭐ 변경 불가 - disabled 설정)
                     if (data.hotel_id) {
