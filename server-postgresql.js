@@ -1200,9 +1200,14 @@ try {
     app.use('/api/hotel-promotions', hotelPromotionsRoutes);
     app.use('/api/hotel-reservations', hotelReservationsRoutes);
     app.use('/api/hotel-assignments', hotelAssignmentsRoutes);
-    app.use('/hotel-assignment', hotelAssignmentsRoutes); // 공개 링크용
+    app.use('/hotel-assignment', hotelAssignmentsRoutes); // 공개 링크용 (기존)
     
-    console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments)');
+    // 새로운 수배서 관리 시스템
+    const hotelAssignmentManagementRoutes = require('./routes/hotel-assignment-management');
+    app.use('/api/hotel-assignment-management', hotelAssignmentManagementRoutes);
+    app.use('/hotel-assignment', hotelAssignmentManagementRoutes); // 공개 링크용 (신규)
+    
+    console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments, Management)');
 } catch (error) {
     console.error('❌ 호텔 API 라우트 연결 실패:', error);
     console.log('⚠️ 호텔 API를 사용할 수 없습니다.');
@@ -16259,6 +16264,46 @@ async function startServer() {
             console.log('✅ 픽업 테이블 마이그레이션 완료');
         } catch (migrateErr) {
             console.warn('⚠️  마이그레이션 경고:', migrateErr.message);
+        }
+        
+        // 호텔 수배서 이력 테이블 생성
+        try {
+            console.log('📋 호텔 수배서 이력 테이블 생성 중...');
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS hotel_assignment_history (
+                    id SERIAL PRIMARY KEY,
+                    reservation_id INTEGER NOT NULL REFERENCES hotel_reservations(id) ON DELETE CASCADE,
+                    assignment_type VARCHAR(20) NOT NULL CHECK (assignment_type IN ('NEW', 'REVISE', 'CANCEL')),
+                    revision_number INTEGER DEFAULT 0,
+                    sent_to_email VARCHAR(255) NOT NULL,
+                    sent_by VARCHAR(100) NOT NULL,
+                    sent_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                    email_message_id VARCHAR(255),
+                    assignment_link TEXT,
+                    changes_description TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            `);
+            await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_hotel_assignment_history_reservation_id
+                ON hotel_assignment_history(reservation_id)
+            `);
+            await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_hotel_assignment_history_sent_at
+                ON hotel_assignment_history(sent_at DESC)
+            `);
+            console.log('✅ 호텔 수배서 이력 테이블 생성 완료');
+        } catch (migrateErr) {
+            console.warn('⚠️  호텔 수배서 테이블 마이그레이션 경고:', migrateErr.message);
+        }
+        
+        // 새로운 호텔 수배서 시스템 (예약 데이터 복사 방식)
+        try {
+            console.log('📋 호텔 수배서 시스템 (데이터 복사 방식) 테이블 생성 중...');
+            const createAssignmentsTables = require('./migrations/create-hotel-assignments-tables');
+            await createAssignmentsTables(pool);
+        } catch (migrateErr) {
+            console.warn('⚠️  호텔 수배서 시스템 마이그레이션 경고:', migrateErr.message);
         }
         
         // 거래처 테이블 마이그레이션

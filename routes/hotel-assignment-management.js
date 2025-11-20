@@ -1,0 +1,502 @@
+const express = require('express');
+const router = express.Router();
+const crypto = require('crypto');
+
+/**
+ * 수배서 생성 API
+ * POST /api/hotel-assignment-management/create
+ */
+router.post('/create', async (req, res) => {
+    const { reservation_id, assignment_type, changes_description, sent_by } = req.body;
+    const pool = req.app.get('pool');
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 1. 예약 정보 조회 (rooms, guests, extras 포함)
+        const reservationQuery = await client.query(`
+            SELECT 
+                hr.*,
+                h.hotel_name,
+                ba.agency_name as booking_agency_name,
+                ba.contact_person as agency_contact_person,
+                ba.contact_email as agency_contact_email
+            FROM hotel_reservations hr
+            LEFT JOIN hotels h ON hr.hotel_id = h.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            WHERE hr.id = $1
+        `, [reservation_id]);
+        
+        if (reservationQuery.rows.length === 0) {
+            throw new Error('예약을 찾을 수 없습니다.');
+        }
+        
+        const reservation = reservationQuery.rows[0];
+        
+        // 2. 객실 정보 조회
+        const roomsQuery = await client.query(`
+            SELECT 
+                hrr.*,
+                rt.name as room_type_name
+            FROM hotel_reservation_rooms hrr
+            LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
+            WHERE hrr.reservation_id = $1
+            ORDER BY hrr.id
+        `, [reservation_id]);
+        
+        const rooms = roomsQuery.rows;
+        
+        // 3. 투숙객 정보 조회
+        for (let room of rooms) {
+            const guestsQuery = await client.query(`
+                SELECT *
+                FROM hotel_reservation_guests
+                WHERE room_id = $1
+                ORDER BY id
+            `, [room.id]);
+            room.guests = guestsQuery.rows;
+        }
+        
+        // 4. 추가 항목 조회
+        const extrasQuery = await client.query(`
+            SELECT *
+            FROM hotel_reservation_extras
+            WHERE reservation_id = $1
+            ORDER BY id
+        `, [reservation_id]);
+        
+        const extras = extrasQuery.rows;
+        
+        // 5. revision_number 계산
+        let revisionNumber = 0;
+        if (assignment_type === 'REVISE') {
+            const countQuery = await client.query(`
+                SELECT COUNT(*) as count
+                FROM hotel_assignments
+                WHERE reservation_id = $1 AND assignment_type = 'REVISE'
+            `, [reservation_id]);
+            revisionNumber = parseInt(countQuery.rows[0].count) + 1;
+        }
+        
+        // 6. assignment_token 생성
+        const assignmentToken = crypto.randomBytes(32).toString('hex');
+        
+        // 7. 박수 계산
+        const checkIn = new Date(reservation.check_in_date);
+        const checkOut = new Date(reservation.check_out_date);
+        const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+        
+        // 8. 호텔 지불액 계산 (total_amount - agency_fee)
+        const totalAmount = parseFloat(reservation.total_amount || 0);
+        const agencyFee = parseFloat(reservation.agency_fee || 0);
+        const hotelPayment = totalAmount - agencyFee;
+        
+        // 9. hotel_assignments 테이블에 INSERT
+        const assignmentQuery = await client.query(`
+            INSERT INTO hotel_assignments (
+                reservation_id, assignment_type, revision_number, assignment_token,
+                hotel_id, hotel_name, booking_agency_id, booking_agency_name,
+                agency_contact_person, agency_contact_email,
+                check_in_date, check_out_date, nights,
+                arrival_flight, departure_flight,
+                total_amount, agency_fee, hotel_payment,
+                internal_memo, changes_description,
+                sent_by, created_at, updated_at
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18,
+                $19, $20, $21, NOW(), NOW()
+            ) RETURNING id
+        `, [
+            reservation_id, assignment_type, revisionNumber, assignmentToken,
+            reservation.hotel_id, reservation.hotel_name,
+            reservation.booking_agency_id, reservation.booking_agency_name,
+            reservation.agency_contact_person, reservation.agency_contact_email,
+            reservation.check_in_date, reservation.check_out_date, nights,
+            reservation.arrival_flight, reservation.departure_flight,
+            totalAmount, agencyFee, hotelPayment,
+            reservation.internal_memo, changes_description,
+            sent_by
+        ]);
+        
+        const assignmentId = assignmentQuery.rows[0].id;
+        
+        // 10. hotel_assignment_rooms 테이블에 INSERT
+        for (let i = 0; i < rooms.length; i++) {
+            const room = rooms[i];
+            const roomQuery = await client.query(`
+                INSERT INTO hotel_assignment_rooms (
+                    assignment_id, room_number, room_type_id, room_type_name,
+                    room_rate, promotion_code,
+                    breakfast_included, breakfast_adult_count, breakfast_adult_price,
+                    breakfast_child_count, breakfast_child_price
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                RETURNING id
+            `, [
+                assignmentId, i + 1, room.room_type_id, room.room_type_name,
+                room.room_rate, room.promotion_code,
+                room.breakfast_included, room.breakfast_adult_count, room.breakfast_adult_price,
+                room.breakfast_child_count, room.breakfast_child_price
+            ]);
+            
+            const assignmentRoomId = roomQuery.rows[0].id;
+            
+            // 11. hotel_assignment_guests 테이블에 INSERT
+            for (let j = 0; j < room.guests.length; j++) {
+                const guest = room.guests[j];
+                await client.query(`
+                    INSERT INTO hotel_assignment_guests (
+                        assignment_room_id, guest_number,
+                        korean_name, english_first_name, english_last_name, birth_date,
+                        is_adult, is_child, is_infant
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                `, [
+                    assignmentRoomId, j + 1,
+                    guest.korean_name, guest.english_first_name, guest.english_last_name,
+                    guest.birth_date, guest.is_adult, guest.is_child, guest.is_infant
+                ]);
+            }
+        }
+        
+        // 12. hotel_assignment_extras 테이블에 INSERT
+        for (let i = 0; i < extras.length; i++) {
+            const extra = extras[i];
+            await client.query(`
+                INSERT INTO hotel_assignment_extras (
+                    assignment_id, item_number, item_name, charge
+                ) VALUES ($1, $2, $3, $4)
+            `, [assignmentId, i + 1, extra.item_name, extra.charge]);
+        }
+        
+        // 13. CANCEL인 경우 예약 상태 변경
+        if (assignment_type === 'CANCEL') {
+            await client.query(`
+                UPDATE hotel_reservations
+                SET status = 'cancelled', updated_at = NOW()
+                WHERE id = $1
+            `, [reservation_id]);
+        }
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            message: '수배서가 생성되었습니다.',
+            assignment_id: assignmentId,
+            assignment_token: assignmentToken,
+            assignment_type,
+            revision_number: revisionNumber
+        });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ 수배서 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+/**
+ * 수배서 목록 조회 API
+ * GET /api/hotel-assignment-management/list/:reservationId
+ */
+router.get('/list/:reservationId', async (req, res) => {
+    const { reservationId } = req.params;
+    const pool = req.app.get('pool');
+    
+    try {
+        const query = await pool.query(`
+            SELECT 
+                id, assignment_type, revision_number, assignment_token,
+                sent_to_email, sent_at, sent_by,
+                email_viewed, viewed_at, view_count,
+                changes_description, created_at
+            FROM hotel_assignments
+            WHERE reservation_id = $1
+            ORDER BY created_at DESC
+        `, [reservationId]);
+        
+        res.json({
+            success: true,
+            assignments: query.rows
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * 수배서 상세 조회 API
+ * GET /api/hotel-assignment-management/:assignmentId
+ */
+router.get('/:assignmentId', async (req, res) => {
+    const { assignmentId } = req.params;
+    const pool = req.app.get('pool');
+    
+    try {
+        // 1. 수배서 기본 정보
+        const assignmentQuery = await pool.query(`
+            SELECT * FROM hotel_assignments WHERE id = $1
+        `, [assignmentId]);
+        
+        if (assignmentQuery.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: '수배서를 찾을 수 없습니다.'
+            });
+        }
+        
+        const assignment = assignmentQuery.rows[0];
+        
+        // 2. 객실 정보
+        const roomsQuery = await pool.query(`
+            SELECT * FROM hotel_assignment_rooms
+            WHERE assignment_id = $1
+            ORDER BY room_number
+        `, [assignmentId]);
+        
+        const rooms = roomsQuery.rows;
+        
+        // 3. 투숙객 정보
+        for (let room of rooms) {
+            const guestsQuery = await pool.query(`
+                SELECT * FROM hotel_assignment_guests
+                WHERE assignment_room_id = $1
+                ORDER BY guest_number
+            `, [room.id]);
+            room.guests = guestsQuery.rows;
+        }
+        
+        // 4. 추가 항목
+        const extrasQuery = await pool.query(`
+            SELECT * FROM hotel_assignment_extras
+            WHERE assignment_id = $1
+            ORDER BY item_number
+        `, [assignmentId]);
+        
+        assignment.rooms = rooms;
+        assignment.extras = extrasQuery.rows;
+        
+        res.json({
+            success: true,
+            assignment
+        });
+        
+    } catch (error) {
+        console.error('❌ 수배서 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * 이메일 전송 API
+ * POST /api/hotel-assignment-management/:assignmentId/send
+ */
+router.post('/:assignmentId/send', async (req, res) => {
+    const { assignmentId } = req.params;
+    const { hotel_email } = req.body;
+    const pool = req.app.get('pool');
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 1. 수배서 정보 조회 (rooms, guests, extras 포함)
+        const assignmentQuery = await client.query(`
+            SELECT * FROM hotel_assignments WHERE id = $1
+        `, [assignmentId]);
+        
+        if (assignmentQuery.rows.length === 0) {
+            throw new Error('수배서를 찾을 수 없습니다.');
+        }
+        
+        const assignment = assignmentQuery.rows[0];
+        
+        // 2. 객실 정보
+        const roomsQuery = await client.query(`
+            SELECT * FROM hotel_assignment_rooms
+            WHERE assignment_id = $1
+            ORDER BY room_number
+        `, [assignmentId]);
+        
+        const rooms = roomsQuery.rows;
+        
+        // 3. 투숙객 정보
+        for (let room of rooms) {
+            const guestsQuery = await client.query(`
+                SELECT * FROM hotel_assignment_guests
+                WHERE assignment_room_id = $1
+                ORDER BY guest_number
+            `, [room.id]);
+            room.guests = guestsQuery.rows;
+        }
+        
+        // 4. 추가 항목
+        const extrasQuery = await client.query(`
+            SELECT * FROM hotel_assignment_extras
+            WHERE assignment_id = $1
+            ORDER BY item_number
+        `, [assignmentId]);
+        
+        assignment.rooms = rooms;
+        assignment.extras = extrasQuery.rows;
+        
+        // 5. 이메일 발송
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT || 587,
+            secure: false,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            }
+        });
+        
+        // 6. HTML 생성
+        const { generateAssignmentHTML } = require('../utils/hotelAssignmentMailer');
+        const htmlContent = generateAssignmentHTML(assignment);
+        
+        // 7. 전송할 이메일 주소 결정
+        const toEmail = hotel_email || assignment.agency_contact_email;
+        if (!toEmail) {
+            throw new Error('전송할 이메일 주소가 없습니다.');
+        }
+        
+        // 8. 이메일 제목
+        let subject = 'New Hotel Booking Request';
+        if (assignment.assignment_type === 'REVISE') {
+            subject = `Revised Booking Request #${assignment.revision_number}`;
+        } else if (assignment.assignment_type === 'CANCEL') {
+            subject = 'Booking Cancellation Request';
+        }
+        
+        // 9. 공개 링크
+        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/${assignment.assignment_token}`;
+        
+        // 10. 이메일 전송
+        const info = await transporter.sendMail({
+            from: process.env.SMTP_USER,
+            to: toEmail,
+            subject: `[Guam Save Card] ${subject} - ${assignment.hotel_name}`,
+            html: htmlContent,
+            text: `Please view this hotel assignment at: ${assignmentLink}`
+        });
+        
+        // 11. 전송 정보 업데이트
+        await client.query(`
+            UPDATE hotel_assignments
+            SET 
+                sent_to_email = $1,
+                sent_at = NOW(),
+                email_message_id = $2
+            WHERE id = $3
+        `, [toEmail, info.messageId, assignmentId]);
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            message: '이메일이 전송되었습니다.',
+            sent_to: toEmail,
+            assignment_link: assignmentLink,
+            message_id: info.messageId
+        });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ 이메일 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
+/**
+ * 공개 링크 조회 (호텔용)
+ * GET /hotel-assignment/:token
+ */
+router.get('/public/:token', async (req, res) => {
+    const { token } = req.params;
+    const pool = req.app.get('pool');
+    
+    try {
+        // 1. 수배서 조회
+        const assignmentQuery = await pool.query(`
+            SELECT * FROM hotel_assignments WHERE assignment_token = $1
+        `, [token]);
+        
+        if (assignmentQuery.rows.length === 0) {
+            return res.status(404).send('수배서를 찾을 수 없습니다.');
+        }
+        
+        const assignment = assignmentQuery.rows[0];
+        
+        // 2. 객실 정보
+        const roomsQuery = await pool.query(`
+            SELECT * FROM hotel_assignment_rooms
+            WHERE assignment_id = $1
+            ORDER BY room_number
+        `, [assignment.id]);
+        
+        const rooms = roomsQuery.rows;
+        
+        // 3. 투숙객 정보
+        for (let room of rooms) {
+            const guestsQuery = await pool.query(`
+                SELECT * FROM hotel_assignment_guests
+                WHERE assignment_room_id = $1
+                ORDER BY guest_number
+            `, [room.id]);
+            room.guests = guestsQuery.rows;
+        }
+        
+        // 4. 추가 항목
+        const extrasQuery = await pool.query(`
+            SELECT * FROM hotel_assignment_extras
+            WHERE assignment_id = $1
+            ORDER BY item_number
+        `, [assignment.id]);
+        
+        assignment.rooms = rooms;
+        assignment.extras = extrasQuery.rows;
+        
+        // 5. 열람 정보 업데이트
+        await pool.query(`
+            UPDATE hotel_assignments
+            SET 
+                email_viewed = true,
+                viewed_at = CASE WHEN viewed_at IS NULL THEN NOW() ELSE viewed_at END,
+                view_count = view_count + 1
+            WHERE id = $1
+        `, [assignment.id]);
+        
+        // 6. HTML 렌더링
+        const { generateAssignmentHTML } = require('../utils/hotelAssignmentMailer');
+        const htmlContent = generateAssignmentHTML(assignment);
+        
+        res.send(htmlContent);
+        
+    } catch (error) {
+        console.error('❌ 공개 링크 조회 오류:', error);
+        res.status(500).send('오류가 발생했습니다.');
+    }
+});
+
+module.exports = router;
