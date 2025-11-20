@@ -1814,61 +1814,49 @@
         }
         */
         
-        // 특정 룸타입의 최적 프로모션 찾기
+        // 룸타입별 적용 가능한 프로모션 목록 조회 및 표시
         async function findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut) {
             try {
-                console.log('🔍 프로모션 조회 시작:', { hotelId, roomTypeId, checkIn, checkOut });
+                console.log('📋 룸타입별 프로모션 목록 조회:', { hotelId, roomTypeId, checkIn, checkOut });
                 
-                const response = await fetch('/api/hotel-promotions/list?hotel_id=' + hotelId + '&is_active=true');
-                const promotions = await response.json();
+                // 새로운 API 호출: /api/promotions/room-type/:roomTypeId/rates
+                const response = await fetch(
+                    `/api/promotions/room-type/${roomTypeId}/rates?` +
+                    `checkIn=${checkIn}&checkOut=${checkOut}`
+                );
+                const data = await response.json();
                 
-                console.log('📋 활성 프로모션 목록:', promotions.length + '개', promotions.map(p => p.promo_code));
-                
-                if (!promotions || promotions.length === 0) {
-                    console.log('❌ 활성 프로모션 없음');
+                if (!data.success || !data.promotions || data.promotions.length === 0) {
+                    console.log('❌ 적용 가능한 프로모션 없음:', data.message || '없음');
                     return null;
                 }
                 
-                let bestPromotion = null;
-                let lowestRate = Infinity;
+                console.log(`✅ 적용 가능한 프로모션: ${data.promotions.length}개`);
+                data.promotions.forEach(p => {
+                    console.log(`  💰 ${p.promo_code}: $${p.total_amount} (${p.nights}박, 평균 $${p.avg_rate}/박)`);
+                });
                 
-                for (const promo of promotions) {
-                    console.log(`🔎 프로모션 체크: ${promo.promo_code}`);
-                    
-                    const checkResult = await fetch('/api/hotel-promotions/check-and-get-rates', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            promo_code: promo.promo_code,
-                            hotel_id: hotelId,
-                            room_type_id: roomTypeId,
-                            check_in_date: checkIn,
-                            check_out_date: checkOut,
-                            booking_date: new Date().toISOString().split('T')[0]
-                        })
-                    });
-                    
-                    const result = await checkResult.json();
-                    
-                    console.log(`  → 결과: valid=${result.valid}, rate=$${result.total_room_rate || 0}`);
-                    if (!result.valid && result.message) {
-                        console.log(`  → 실패 이유: ${result.message}`);
-                    }
-                    
-                    if (result.valid && result.total_room_rate < lowestRate) {
-                        lowestRate = result.total_room_rate;
-                        bestPromotion = result;
-                        console.log(`  ✅ 최적 프로모션 업데이트: ${promo.promo_code} ($${lowestRate})`);
-                    }
-                }
+                // 가장 저렴한 프로모션 자동 선택 (기존 로직 유지)
+                const cheapest = data.promotions.reduce((min, p) => 
+                    p.total_amount < min.total_amount ? p : min
+                );
                 
-                if (bestPromotion) {
-                    console.log(`🎉 최종 선택된 프로모션: ${bestPromotion.promotion.promo_code} ($${bestPromotion.total_room_rate})`);
-                } else {
-                    console.log('❌ 적용 가능한 프로모션 없음 (조건 불일치)');
-                }
+                console.log(`🎉 최저가 프로모션 자동 선택: ${cheapest.promo_code} ($${cheapest.total_amount})`);
                 
-                return bestPromotion;
+                // 기존 형식으로 변환
+                return {
+                    valid: true,
+                    promotion: {
+                        promo_code: cheapest.promo_code,
+                        promo_name: cheapest.promo_name
+                    },
+                    total_room_rate: cheapest.total_amount,
+                    avg_rate: cheapest.avg_rate,
+                    daily_rates: cheapest.dates,
+                    benefits: cheapest.benefits || [],
+                    available_promotions: data.promotions // 📌 전체 프로모션 목록 포함
+                };
+                
             } catch (error) {
                 console.error('❌ 프로모션 조회 오류:', error);
                 return null;

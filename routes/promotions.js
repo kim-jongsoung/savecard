@@ -607,4 +607,152 @@ router.get('/api/promotions/validate', requireLogin, async (req, res) => {
   }
 });
 
+// ==========================================
+// 룸타입별 프로모션 목록 조회 (인박스용)
+// GET /api/promotions/room-type/:roomTypeId/rates
+// ==========================================
+router.get('/api/promotions/room-type/:roomTypeId/rates', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { roomTypeId } = req.params;
+  const { checkIn, checkOut } = req.query;
+  
+  console.log('📋 룸타입별 프로모션 조회:', { roomTypeId, checkIn, checkOut });
+  
+  if (!roomTypeId || !checkIn || !checkOut) {
+    return res.status(400).json({ 
+      success: false, 
+      error: '필수 파라미터 누락 (roomTypeId, checkIn, checkOut)' 
+    });
+  }
+  
+  try {
+    // 1. 날짜 배열 생성
+    const dates = [];
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    
+    const nights = dates.length;
+    console.log('  📅 투숙일:', dates, `(${nights}박)`);
+    
+    // 2. 적용 가능한 프로모션 조회
+    const promosQuery = `
+      SELECT DISTINCT
+        p.id as promotion_id,
+        p.promo_code,
+        p.promo_name,
+        p.description,
+        p.booking_start_date,
+        p.booking_end_date,
+        p.stay_start_date,
+        p.stay_end_date
+      FROM promotions p
+      WHERE p.is_active = true
+        AND p.booking_start_date <= CURRENT_DATE
+        AND p.booking_end_date >= CURRENT_DATE
+        AND p.stay_start_date <= $1::date
+        AND p.stay_end_date >= $2::date
+        AND EXISTS (
+          SELECT 1 FROM promotion_daily_rates pdr
+          WHERE pdr.promotion_id = p.id
+            AND pdr.room_type_id = $3
+            AND pdr.stay_date = ANY($4::date[])
+        )
+      ORDER BY p.promo_code
+    `;
+    
+    const promosResult = await pool.query(promosQuery, [checkIn, checkOut, roomTypeId, dates]);
+    console.log(`  ✅ 적용 가능한 프로모션: ${promosResult.rows.length}개`);
+    
+    if (promosResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        promotions: [],
+        message: '선택한 날짜에 적용 가능한 프로모션이 없습니다.'
+      });
+    }
+    
+    // 3. 각 프로모션별 날짜별 요금 조회 및 총액 계산
+    const promotionsWithRates = [];
+    
+    for (const promo of promosResult.rows) {
+      const ratesQuery = `
+        SELECT 
+          stay_date,
+          rate_per_night,
+          min_nights,
+          currency
+        FROM promotion_daily_rates
+        WHERE promotion_id = $1
+          AND room_type_id = $2
+          AND stay_date = ANY($3::date[])
+        ORDER BY stay_date
+      `;
+      
+      const ratesResult = await pool.query(ratesQuery, [promo.promotion_id, roomTypeId, dates]);
+      
+      // 모든 날짜에 대한 요금이 있는지 확인
+      if (ratesResult.rows.length !== nights) {
+        console.log(`  ⚠️ ${promo.promo_code}: 일부 날짜 요금 없음 (${ratesResult.rows.length}/${nights})`);
+        continue; // 요금이 없는 날짜가 있으면 제외
+      }
+      
+      // 총액 계산
+      const totalAmount = ratesResult.rows.reduce((sum, r) => sum + parseFloat(r.rate_per_night), 0);
+      const avgRate = Math.round(totalAmount / nights);
+      
+      // 특전 조회
+      const benefitsQuery = `
+        SELECT 
+          benefit_type,
+          benefit_name,
+          benefit_value,
+          quantity,
+          description
+        FROM promotion_benefits
+        WHERE promotion_id = $1
+        ORDER BY id
+      `;
+      const benefitsResult = await pool.query(benefitsQuery, [promo.promotion_id]);
+      
+      promotionsWithRates.push({
+        promotion_id: promo.promotion_id,
+        promo_code: promo.promo_code,
+        promo_name: promo.promo_name,
+        description: promo.description,
+        total_amount: Math.round(totalAmount),
+        avg_rate: avgRate,
+        nights: nights,
+        dates: ratesResult.rows.map(r => ({
+          date: r.stay_date,
+          rate: parseFloat(r.rate_per_night)
+        })),
+        benefits: benefitsResult.rows,
+        currency: ratesResult.rows[0]?.currency || 'USD'
+      });
+      
+      console.log(`  💰 ${promo.promo_code}: $${Math.round(totalAmount)} (평균 $${avgRate}/박)`);
+    }
+    
+    res.json({
+      success: true,
+      promotions: promotionsWithRates,
+      room_type_id: parseInt(roomTypeId),
+      check_in: checkIn,
+      check_out: checkOut,
+      nights: nights
+    });
+    
+  } catch (error) {
+    console.error('❌ 룸타입별 프로모션 조회 오류:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;
