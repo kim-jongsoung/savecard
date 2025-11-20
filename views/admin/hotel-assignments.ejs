@@ -729,33 +729,97 @@
 
     <!-- 수배서 생성/보기 모달 -->
     <div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title">
-                        <i class="fas fa-file-alt me-2"></i>호텔 수배서 관리
+                        <i class="fas fa-file-contract me-2"></i>호텔 수배서 작성 및 전송
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="assignmentContent" style="background: white;">
-                    <!-- 수배서 내용이 여기에 동적으로 생성됩니다 -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>닫기
-                    </button>
-                    <button type="button" class="btn btn-success" onclick="printAssignment()" 
-                            title="수배서 미리보기 및 출력">
-                        <i class="fas fa-eye me-1"></i>미리보기
-                    </button>
-                    <button type="button" class="btn btn-info" onclick="copyAssignmentLink()"
-                            title="수배서 링크 복사하여 호텔에 직접 전달">
-                        <i class="fas fa-link me-1"></i>링크 복사
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="sendAssignmentEmail()"
-                            title="NEW/REVISE/CANCEL 수배서를 이메일로 전송">
-                        <i class="fas fa-paper-plane me-1"></i>이메일 전송
-                    </button>
+                <div class="modal-body p-0" style="background: #f5f5f5;">
+                    <div class="row g-0 h-100">
+                        <!-- 왼쪽: 수배서 미리보기 (A4 양식) -->
+                        <div class="col-md-8 p-4" style="background: white; overflow-y: auto; max-height: 85vh;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">📄 수배서 미리보기</h5>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="printAssignment()" title="인쇄">
+                                        <i class="fas fa-print me-1"></i>인쇄
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadAssignmentPDF()" title="PDF 저장">
+                                        <i class="fas fa-download me-1"></i>PDF 저장
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="assignmentPreview" style="background: white; padding: 30px; border: 1px solid #ddd; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                                <!-- A4 수배서 내용이 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 오른쪽: 전송 관리 패널 -->
+                        <div class="col-md-4 p-4" style="background: #f8f9fa; overflow-y: auto; max-height: 85vh;">
+                            <h5 class="mb-3">📨 전송 관리</h5>
+                            
+                            <!-- 전송 이력 -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-history me-2"></i>전송 이력</h6>
+                                </div>
+                                <div class="card-body" id="assignmentHistory" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- 전송 이력이 여기에 표시됩니다 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 새 수배서 전송 -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>새 수배서 전송</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label"><strong>전송 타입</strong></label>
+                                        <select class="form-select" id="assignmentTypeSelect">
+                                            <option value="NEW">NEW - 신규 수배서</option>
+                                            <option value="REVISE">REVISE - 수정 수배서</option>
+                                            <option value="CANCEL">CANCEL - 취소 수배서</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3" id="changesDescriptionGroup" style="display: none;">
+                                        <label class="form-label"><strong>변경/취소 사유</strong></label>
+                                        <textarea class="form-control" id="changesDescriptionInput" rows="3" 
+                                                  placeholder="변경 또는 취소 사유를 입력하세요"></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label"><strong>수신 이메일</strong></label>
+                                        <input type="email" class="form-control" id="recipientEmail" 
+                                               placeholder="hotel@example.com">
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-primary btn-lg" onclick="sendAssignmentEmailNew()">
+                                            <i class="fas fa-paper-plane me-2"></i>이메일 전송
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="copyAssignmentLink()">
+                                            <i class="fas fa-link me-2"></i>공개 링크 복사
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 안내 -->
+                            <div class="alert alert-info small">
+                                <strong>💡 사용 안내:</strong>
+                                <ol class="mb-0 ps-3">
+                                    <li>왼쪽에서 수배서를 확인하세요</li>
+                                    <li>PDF로 저장하거나 인쇄하세요</li>
+                                    <li>전송 타입을 선택하고 이메일을 전송하세요</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2649,12 +2713,31 @@
         function openAssignmentModal(reservation, history) {
             const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
             
-            // 수배서 HTML 생성
-            const assignmentHTML = generateAssignmentPreview(reservation, history);
-            document.getElementById('assignmentContent').innerHTML = assignmentHTML;
+            // A4 수배서 미리보기 생성
+            const assignmentHTML = generateA4AssignmentPreview(reservation, history);
+            document.getElementById('assignmentPreview').innerHTML = assignmentHTML;
             
-            // 현재 예약 ID 저장
+            // 전송 이력 생성
+            const historyHTML = generateHistoryHTML(history);
+            document.getElementById('assignmentHistory').innerHTML = historyHTML;
+            
+            // 수신 이메일 자동 입력 (호텔 이메일)
+            const recipientEmail = reservation.hotel_email || '';
+            document.getElementById('recipientEmail').value = recipientEmail;
+            
+            // 전송 타입 선택 이벤트
+            document.getElementById('assignmentTypeSelect').addEventListener('change', function() {
+                const descGroup = document.getElementById('changesDescriptionGroup');
+                if (this.value === 'REVISE' || this.value === 'CANCEL') {
+                    descGroup.style.display = 'block';
+                } else {
+                    descGroup.style.display = 'none';
+                }
+            });
+            
+            // 현재 예약 정보 저장
             window.currentAssignmentReservationId = reservation.id;
+            window.currentAssignmentReservation = reservation;
             window.currentAssignmentHistory = history;
             
             modal.show();
@@ -2670,106 +2753,175 @@
             return `${year}-${month}-${day}`;
         }
         
-        // 수배서 미리보기 HTML 생성
-        function generateAssignmentPreview(reservation, history) {
-            const latestHistory = history[history.length - 1];
-            const assignmentType = latestHistory ? latestHistory.assignment_type : 'NEW';
-            const revisionNumber = latestHistory ? latestHistory.revision_number : 0;
-            
-            let title = 'NEW BOOKING REQUEST';
-            if (assignmentType === 'REVISE') {
-                title = `REVISE #${revisionNumber} REQUEST`;
-            } else if (assignmentType === 'CANCEL') {
-                title = 'CANCELLATION REQUEST';
-            }
-            
-            // 객실 정보
+        // A4 수배서 미리보기 HTML 생성 (실제 전송되는 양식)
+        function generateA4AssignmentPreview(reservation, history) {
             const rooms = reservation.rooms || [];
-            let roomsHTML = '';
-            if (rooms.length > 0) {
-                rooms.forEach((room, idx) => {
-                    const guests = room.guests || [];
-                    let guestsHTML = '';
-                    guests.forEach(g => {
-                        guestsHTML += `<li>${g.korean_name || ''} (${g.english_last_name}/${g.english_first_name})</li>`;
-                    });
-                    
-                    roomsHTML += `
-                        <div class="card mb-2">
-                            <div class="card-body p-2">
-                                <h6 class="mb-1">객실 ${idx + 1}: ${room.room_type_name || '-'}</h6>
-                                <small>
-                                    투숙객: 
-                                    <ul class="mb-0 ps-3">${guestsHTML || '<li>-</li>'}</ul>
-                                    조식: ${room.breakfast_included ? '포함' : '불포함'}
-                                </small>
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                roomsHTML = '<p class="text-muted small">객실 정보 없음</p>';
-            }
+            const extras = reservation.extras || [];
             
-            // 전송 이력
-            let historyHTML = '';
-            if (history.length > 0) {
-                history.forEach(h => {
-                    const date = new Date(h.sent_at);
-                    const dateStr = formatDate(h.sent_at);
-                    const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                    const typeLabel = h.assignment_type === 'NEW' ? 'NEW' : (h.assignment_type === 'REVISE' ? `REV#${h.revision_number}` : 'CANCEL');
-                    historyHTML += `
-                        <div class="alert alert-info alert-sm py-1 px-2 mb-1" style="font-size: 0.75rem;">
-                            <strong>[${typeLabel}]</strong> ${dateStr} ${timeStr} → ${h.sent_to_email} (${h.sent_by})
-                            ${h.changes_description ? `<br>변경: ${h.changes_description}` : ''}
-                            ${h.email_message_id ? '<br><span class="badge bg-success">✓ 전송완료</span>' : ''}
-                        </div>
+            // 객실별 테이블 생성
+            let roomsTableHTML = '';
+            rooms.forEach((room, idx) => {
+                const guests = room.guests || [];
+                let guestsHTML = '';
+                guests.forEach((g, gIdx) => {
+                    guestsHTML += `
+                        <tr>
+                            <td style="padding: 4px; border: 1px solid #ddd;">${gIdx + 1}</td>
+                            <td style="padding: 4px; border: 1px solid #ddd;">${g.korean_name || '-'}</td>
+                            <td style="padding: 4px; border: 1px solid #ddd;">${g.english_last_name || '-'}</td>
+                            <td style="padding: 4px; border: 1px solid #ddd;">${g.english_first_name || '-'}</td>
+                            <td style="padding: 4px; border: 1px solid #ddd;">${g.birth_date ? formatDate(g.birth_date) : '-'}</td>
+                        </tr>
                     `;
                 });
-            } else {
-                historyHTML = '<p class="text-muted">아직 전송 이력이 없습니다.</p>';
+                
+                roomsTableHTML += `
+                    <div style="margin-bottom: 15px; page-break-inside: avoid;">
+                        <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">Room ${idx + 1}: ${room.room_type_name || '-'}</h6>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <tr style="background: #ecf0f1;">
+                                <td style="padding: 4px; border: 1px solid #ddd; width: 40px;"><strong>No</strong></td>
+                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>한글명</strong></td>
+                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 성</strong></td>
+                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 이름</strong></td>
+                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>생년월일</strong></td>
+                            </tr>
+                            ${guestsHTML}
+                        </table>
+                        <div style="margin-top: 5px; font-size: 11px;">
+                            <strong>요금:</strong> $${room.room_rate || 0} | 
+                            <strong>조식:</strong> ${room.breakfast_included ? '포함' : '불포함'}
+                            ${room.breakfast_included ? ` (성인 ${room.breakfast_adult_count || 0}명 × $${room.breakfast_adult_price || 0}, 아동 ${room.breakfast_child_count || 0}명 × $${room.breakfast_child_price || 0})` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // 추가 항목
+            let extrasHTML = '';
+            if (extras.length > 0) {
+                extras.forEach(extra => {
+                    extrasHTML += `
+                        <tr>
+                            <td style="padding: 4px; border: 1px solid #ddd;">${extra.item_name}</td>
+                            <td style="padding: 4px; border: 1px solid #ddd; text-align: right;">$${extra.charge || 0}</td>
+                        </tr>
+                    `;
+                });
             }
             
             return `
-                <div class="card mb-3">
-                    <div class="card-header bg-dark text-white text-center">
-                        <h5 class="mb-0">🏨 ${title}</h5>
+                <div style="max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; font-size: 12px;">
+                    <!-- 헤더 -->
+                    <div style="text-align: center; background: #2c3e50; color: white; padding: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0; font-size: 20px;">🏨 HOTEL BOOKING REQUEST</h3>
+                        <p style="margin: 5px 0 0 0; font-size: 12px;">호텔 예약 수배서</p>
                     </div>
-                    <div class="card-body">
-                        <div class="row mb-2">
-                            <div class="col-6"><strong>Hotel:</strong> ${reservation.hotel_name || '-'}</div>
-                            <div class="col-6"><strong>Agency:</strong> ${reservation.booking_agency_name || '-'}</div>
+                    
+                    <!-- 기본 정보 -->
+                    <table style="width: 100%; margin-bottom: 15px; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>호텔명</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.hotel_name || '-'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>예약업체</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.booking_agency_name || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>체크인</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${formatDate(reservation.check_in_date)}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>체크아웃</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${formatDate(reservation.check_out_date)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>도착 항공편</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.arrival_flight || '-'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>출발 항공편</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.departure_flight || '-'}</td>
+                        </tr>
+                    </table>
+                    
+                    <!-- 객실 및 투숙객 정보 -->
+                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">📋 객실 및 투숙객 정보</h5>
+                    ${roomsTableHTML || '<p>객실 정보 없음</p>'}
+                    
+                    <!-- 추가 항목 -->
+                    ${extras.length > 0 ? `
+                        <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">➕ 추가 항목</h5>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                            <tr style="background: #ecf0f1;">
+                                <td style="padding: 4px; border: 1px solid #ddd;"><strong>항목</strong></td>
+                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px; text-align: right;"><strong>요금</strong></td>
+                            </tr>
+                            ${extrasHTML}
+                        </table>
+                    ` : ''}
+                    
+                    <!-- 총액 -->
+                    <div style="margin-top: 20px; text-align: right;">
+                        <h4 style="background: #2c3e50; color: white; padding: 10px; margin: 0; display: inline-block; min-width: 250px;">
+                            총 금액: $${reservation.total_selling_price || 0}
+                        </h4>
+                    </div>
+                    
+                    <!-- 특별 요청사항 -->
+                    ${reservation.special_requests ? `
+                        <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background: #fffacd;">
+                            <strong>📝 Special Requests:</strong><br>
+                            ${reservation.special_requests}
                         </div>
-                        <div class="row mb-2">
-                            <div class="col-6"><strong>Check-in:</strong> ${formatDate(reservation.check_in_date)}</div>
-                            <div class="col-6"><strong>Check-out:</strong> ${formatDate(reservation.check_out_date)}</div>
+                    ` : ''}
+                    
+                    <!-- 내부 메모 (출력 안됨) -->
+                    ${reservation.internal_memo ? `
+                        <div style="margin-top: 10px; padding: 10px; border: 1px solid #ddd; background: #f0f0f0;">
+                            <strong>🔒 내부 메모 (호텔에 전송 안됨):</strong><br>
+                            ${reservation.internal_memo}
                         </div>
-                        <div class="mt-3">
-                            <strong>객실 정보:</strong>
-                            ${roomsHTML}
-                        </div>
+                    ` : ''}
+                    
+                    <!-- 푸터 -->
+                    <div style="margin-top: 30px; padding-top: 15px; border-top: 2px solid #2c3e50; text-align: center; font-size: 10px; color: #7f8c8d;">
+                        <p>문의: ${reservation.booking_agency_name || 'Guam Save Card'}</p>
+                        <p>생성일시: ${new Date().toLocaleString('ko-KR')}</p>
                     </div>
-                </div>
-                
-                <div class="card mb-3">
-                    <div class="card-header bg-secondary text-white">
-                        <h6 class="mb-0">📜 전송 이력</h6>
-                    </div>
-                    <div class="card-body">
-                        ${historyHTML}
-                    </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <strong>💡 안내:</strong>
-                    <ul class="mb-0 small">
-                        <li>실제 수배서는 이메일로 전송되며, 호텔에서 출력 가능한 A4 양식으로 제공됩니다.</li>
-                        <li>수정(REVISE)을 전송하면 리비전 번호가 자동으로 증가합니다.</li>
-                        <li>취소(CANCEL)를 전송하면 취소 수배서가 발송됩니다.</li>
-                    </ul>
                 </div>
             `;
+        }
+        
+        // 전송 이력 HTML 생성
+        function generateHistoryHTML(history) {
+            if (history.length === 0) {
+                return '<p class="text-muted small">아직 전송 이력이 없습니다.</p>';
+            }
+            
+            let html = '';
+            history.forEach(h => {
+                const date = new Date(h.sent_at);
+                const dateStr = formatDate(h.sent_at);
+                const timeStr = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                const typeLabel = h.assignment_type === 'NEW' ? 'NEW' : (h.assignment_type === 'REVISE' ? `REV#${h.revision_number}` : 'CANCEL');
+                
+                let badgeClass = 'bg-primary';
+                if (h.assignment_type === 'REVISE') badgeClass = 'bg-warning';
+                if (h.assignment_type === 'CANCEL') badgeClass = 'bg-danger';
+                
+                html += `
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge ${badgeClass}">${typeLabel}</span>
+                            <small class="text-muted">${dateStr} ${timeStr}</small>
+                        </div>
+                        <small>
+                            <strong>수신:</strong> ${h.sent_to_email}<br>
+                            <strong>발신:</strong> ${h.sent_by}
+                            ${h.changes_description ? `<br><strong>사유:</strong> ${h.changes_description}` : ''}
+                        </small>
+                        ${h.email_message_id ? '<br><span class="badge bg-success mt-1">✓ 전송완료</span>' : ''}
+                    </div>
+                `;
+            });
+            
+            return html;
         }
         
         // 수배서 이메일 전송
@@ -2888,34 +3040,90 @@
             }
         }
         
-        // 수배서 미리보기 (새 창)
-        async function printAssignment() {
+        // 수배서 인쇄 (현재 미리보기 화면 출력)
+        function printAssignment() {
+            const printContent = document.getElementById('assignmentPreview').innerHTML;
+            const printWindow = window.open('', '', 'width=800,height=1000');
+            printWindow.document.write('<!DOCTYPE html><html><head><title>호텔 수배서</title>');
+            printWindow.document.write('<style>body { margin: 0; padding: 20px; font-family: Arial, sans-serif; } @media print { body { padding: 0; } }</style>');
+            printWindow.document.write('</head><body>' + printContent);
+            printWindow.document.write('<script>window.onload = function() { window.print(); }<\/script>');
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+        }
+        
+        // PDF 다운로드 (브라우저 인쇄 다이얼로그 이용)
+        function downloadAssignmentPDF() {
+            const printContent = document.getElementById('assignmentPreview').innerHTML;
+            const printWindow = window.open('', '', 'width=800,height=1000');
+            printWindow.document.write('<!DOCTYPE html><html><head><title>호텔 수배서</title>');
+            printWindow.document.write('<style>body { margin: 0; padding: 20px; font-family: Arial, sans-serif; } @media print { body { padding: 0; } }</style>');
+            printWindow.document.write('</head><body>' + printContent);
+            printWindow.document.write('<script>window.onload = function() { alert("PDF로 저장하려면 인쇄 대화상자에서 PDF로 저장을 선택하세요."); window.print(); }<\/script>');
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+        }
+        
+        // 새로운 이메일 전송 함수 (UI 폼 사용)
+        async function sendAssignmentEmailNew() {
             const reservationId = window.currentAssignmentReservationId;
             if (!reservationId) {
                 alert('예약 정보가 없습니다.');
                 return;
             }
             
+            const assignmentType = document.getElementById('assignmentTypeSelect').value;
+            const changesDescription = document.getElementById('changesDescriptionInput').value;
+            const recipientEmail = document.getElementById('recipientEmail').value;
+            
+            if (!recipientEmail) {
+                alert('수신 이메일을 입력하세요.');
+                return;
+            }
+            
+            if ((assignmentType === 'REVISE' || assignmentType === 'CANCEL') && !changesDescription) {
+                alert('변경/취소 사유를 입력하세요.');
+                return;
+            }
+            
+            // 최종 확인
+            let confirmMessage = '';
+            if (assignmentType === 'NEW') {
+                confirmMessage = `신규 수배서를 ${recipientEmail}로 전송하시겠습니까?`;
+            } else if (assignmentType === 'REVISE') {
+                confirmMessage = `수정 수배서를 ${recipientEmail}로 전송하시겠습니까?\n\n변경사유: ${changesDescription}`;
+            } else if (assignmentType === 'CANCEL') {
+                confirmMessage = `취소 수배서를 ${recipientEmail}로 전송하시겠습니까?\n\n취소사유: ${changesDescription}`;
+            }
+            
+            if (!confirm(confirmMessage)) return;
+            
             try {
-                // 예약 정보 조회
-                const response = await fetch(`/api/hotel-reservations/${reservationId}`);
-                const reservation = await response.json();
+                const response = await fetch(`/api/hotel-assignments/${reservationId}/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assignment_type: assignmentType,
+                        changes_description: changesDescription,
+                        recipient_email: recipientEmail
+                    })
+                });
                 
-                if (!reservation.assignment_token) {
-                    // 토큰이 없으면 생성 필요
-                    if (confirm('⚠️ 수배서를 먼저 전송하면 미리보기와 출력이 가능합니다.\n\n지금 전송하시겠습니까?')) {
-                        await sendAssignmentEmail();
-                    }
-                    return;
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 수배서가 성공적으로 전송되었습니다!\n\n타입: ${assignmentType}\n수신: ${recipientEmail}`);
+                    
+                    // 모달 새로고침 (최신 이력 표시)
+                    await createAssignment(reservationId);
+                    
+                } else {
+                    alert('❌ 전송 실패: ' + (result.message || '알 수 없는 오류'));
                 }
                 
-                // 새 창에서 수배서 열기
-                const link = `${window.location.origin}/hotel-assignment/${reservation.assignment_token}`;
-                window.open(link, '_blank', 'width=800,height=1000');
-                
             } catch (error) {
-                console.error('❌ 미리보기 오류:', error);
-                alert('❌ 미리보기 중 오류가 발생했습니다.');
+                console.error('❌ 이메일 전송 오류:', error);
+                alert('❌ 전송 중 오류가 발생했습니다: ' + error.message);
             }
         }
         
