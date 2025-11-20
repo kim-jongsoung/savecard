@@ -2785,6 +2785,11 @@
             console.log('- rooms 배열 길이:', rooms.length);
             console.log('- extras 배열 길이:', extras.length);
             
+            // 숙박 일수 계산
+            const checkInDate = new Date(reservation.check_in_date);
+            const checkOutDate = new Date(reservation.check_out_date);
+            const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+            
             // 객실별 테이블 생성
             let roomsTableHTML = '';
             if (rooms.length > 0) {
@@ -2796,13 +2801,20 @@
                     let guestsHTML = '';
                     if (guests.length > 0) {
                         guests.forEach((g, gIdx) => {
+                            // Pax Type 한글 표시
+                            let paxTypeKo = '';
+                            if (g.age_category === 'adult') paxTypeKo = '성인';
+                            else if (g.age_category === 'child') paxTypeKo = '소아';
+                            else if (g.age_category === 'infant') paxTypeKo = '유아';
+                            else paxTypeKo = '성인'; // 기본값
+                            
                             guestsHTML += `
                                 <tr>
                                     <td style="padding: 4px; border: 1px solid #ddd;">${gIdx + 1}</td>
-                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.korean_name || '-'}</td>
-                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.english_last_name || '-'}</td>
-                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.english_first_name || '-'}</td>
-                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.birth_date ? formatDate(g.birth_date) : '-'}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.guest_name_ko || '-'}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.guest_name_en || '-'}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${paxTypeKo}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.date_of_birth ? formatDate(g.date_of_birth) : '-'}</td>
                                 </tr>
                             `;
                         });
@@ -2810,23 +2822,29 @@
                         guestsHTML = '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #999;">투숙객 정보 없음</td></tr>';
                     }
                     
+                    // Promo Code 표시
+                    const promoCode = room.promotion_code ? `Promo: ${room.promotion_code}` : 'Promo: -';
+                    
                     roomsTableHTML += `
                         <div style="margin-bottom: 15px; page-break-inside: avoid;">
-                            <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">Room ${idx + 1}: ${room.room_type_name || '객실타입 미지정'}</h6>
+                            <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">
+                                Room ${idx + 1}: ${room.room_type_name || '객실타입 미지정'} 
+                                <span style="float: right; font-size: 10px;">${promoCode}</span>
+                            </h6>
                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                                 <tr style="background: #ecf0f1;">
                                     <td style="padding: 4px; border: 1px solid #ddd; width: 40px;"><strong>No</strong></td>
                                     <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>한글명</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 성</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>영문 이름</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 120px;"><strong>영문명</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 60px;"><strong>구분</strong></td>
                                     <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>생년월일</strong></td>
                                 </tr>
                                 ${guestsHTML}
                             </table>
                             <div style="margin-top: 5px; font-size: 11px;">
-                                <strong>요금:</strong> $${room.room_rate || 0} | 
-                                <strong>조식:</strong> ${room.breakfast_included ? '포함' : '불포함'}
-                                ${room.breakfast_included ? ` (성인 ${room.breakfast_adult_count || 0}명 × $${room.breakfast_adult_price || 0}, 아동 ${room.breakfast_child_count || 0}명 × $${room.breakfast_child_price || 0})` : ''}
+                                <strong>요금:</strong> $${room.room_rate || 0} × ${nights} nights = $${(room.room_rate || 0) * nights} | 
+                                <strong>조식:</strong> ${room.breakfast_included ? '☑ Included' : '☐ Not Included'}
+                                ${room.breakfast_included ? ` (Adult: ${room.breakfast_adult_count || 0}×${nights}=${(room.breakfast_adult_count || 0) * nights}, Child: ${room.breakfast_child_count || 0}×${nights}=${(room.breakfast_child_count || 0) * nights})` : ''}
                             </div>
                         </div>
                     `;
@@ -2848,33 +2866,46 @@
                 });
             }
             
+            // Contact 담당자 정보
+            const contactPerson = reservation.agency_contact_person || reservation.booking_agency_name || 'Guam Save Card';
+            const sentDate = new Date().toLocaleString('ko-KR', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
             return `
                 <div style="max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; font-size: 12px;">
                     <!-- 헤더 -->
-                    <div style="text-align: center; background: #2c3e50; color: white; padding: 15px; margin-bottom: 20px;">
+                    <div style="text-align: center; background: #2c3e50; color: white; padding: 15px; margin-bottom: 5px;">
                         <h3 style="margin: 0; font-size: 20px;">🏨 HOTEL BOOKING REQUEST</h3>
                         <p style="margin: 5px 0 0 0; font-size: 12px;">호텔 예약 수배서</p>
+                    </div>
+                    
+                    <!-- 발신 정보 -->
+                    <div style="text-align: right; padding: 5px 10px; background: #f8f9fa; border: 1px solid #dee2e6; margin-bottom: 15px; font-size: 11px;">
+                        <strong>📅 Sent:</strong> ${sentDate} | <strong>👤 Contact:</strong> ${contactPerson}
                     </div>
                     
                     <!-- 기본 정보 -->
                     <table style="width: 100%; margin-bottom: 15px; border-collapse: collapse;">
                         <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>호텔명</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.hotel_name || '-'}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>예약업체</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.booking_agency_name || '-'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>Hotel</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;" colspan="3">${reservation.hotel_name || '-'}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>체크인</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Check-in</strong></td>
                             <td style="padding: 5px; border: 1px solid #ddd;">${formatDate(reservation.check_in_date)}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>체크아웃</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>Check-out</strong></td>
                             <td style="padding: 5px; border: 1px solid #ddd;">${formatDate(reservation.check_out_date)}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>도착 항공편</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.arrival_flight || '-'}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>출발 항공편</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.departure_flight || '-'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Nights</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;"><strong>${nights}</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Flight</strong></td>
+                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.arrival_flight || '-'} / ${reservation.departure_flight || '-'}</td>
                         </tr>
                     </table>
                     
@@ -2917,10 +2948,40 @@
                         </div>
                     ` : ''}
                     
+                    <!-- Hotel Confirmation Section -->
+                    <div style="margin-top: 30px; padding: 20px; border: 2px solid #2c3e50; background: #f8f9fa;">
+                        <h5 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 5px;">
+                            ✍️ HOTEL CONFIRMATION SECTION
+                        </h5>
+                        
+                        ${rooms.map((room, idx) => `
+                            <div style="margin-bottom: 10px;">
+                                <strong>Room ${idx + 1} Confirmation Number:</strong>
+                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 250px; margin-left: 10px;"></span>
+                            </div>
+                        `).join('')}
+                        
+                        <div style="margin-top: 20px;">
+                            <strong>Hotel Notes/Comments:</strong><br>
+                            <div style="border: 1px solid #999; min-height: 60px; padding: 5px; background: white; margin-top: 5px;"></div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+                            <div>
+                                <strong>Hotel Staff Name:</strong> 
+                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 150px; margin-left: 10px;"></span>
+                            </div>
+                            <div>
+                                <strong>Date:</strong> 
+                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 120px; margin-left: 10px;"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- 푸터 -->
-                    <div style="margin-top: 30px; padding-top: 15px; border-top: 2px solid #2c3e50; text-align: center; font-size: 10px; color: #7f8c8d;">
-                        <p>문의: ${reservation.booking_agency_name || 'Guam Save Card'}</p>
-                        <p>생성일시: ${new Date().toLocaleString('ko-KR')}</p>
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #2c3e50; text-align: center; font-size: 10px; color: #7f8c8d;">
+                        <p><strong>문의:</strong> ${reservation.booking_agency_name || 'Guam Save Card'}</p>
+                        <p><strong>생성일시:</strong> ${new Date().toLocaleString('ko-KR')}</p>
                     </div>
                 </div>
             `;
