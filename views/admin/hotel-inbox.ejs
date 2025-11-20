@@ -1624,6 +1624,12 @@
                 );
                 const data = await response.json();
                 
+                // 🔍 API 응답 상세 로그 (디버깅용)
+                console.log(`📋 API 응답:`, data);
+                console.log(`  - success: ${data.success}`);
+                console.log(`  - promotions: ${data.promotions ? data.promotions.length : 0}개`);
+                console.log(`  - message: ${data.message || '없음'}`);
+                
                 if (data.success && data.promotions && data.promotions.length > 0) {
                     console.log(`✅ 적용 가능한 프로모션: ${data.promotions.length}개`);
                     
