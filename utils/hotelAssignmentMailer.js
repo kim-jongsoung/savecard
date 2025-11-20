@@ -43,14 +43,15 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     
     // 객실별 HTML 생성
     let roomsHTML = '';
-    let totalRoomCharge = 0;
-    let totalBreakfastCharge = 0;
+    let roomCharges = []; // 각 룸별 요금 저장
+    let breakfastCharges = []; // 각 룸별 조식 요금 저장
     let confirmationFields = '';
     
     rooms.forEach((room, idx) => {
         const roomNum = idx + 1;
-        const roomCharge = parseFloat(room.room_rate || 0) * nights;
-        totalRoomCharge += roomCharge;
+        const roomRate = parseFloat(room.room_rate || 0);
+        const roomCharge = roomRate * nights;
+        roomCharges.push({ roomNum, roomRate, nights, roomCharge });
         
         // 투숙객 정보
         let guestsHTML = '';
@@ -61,7 +62,6 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             guestsHTML += `
                 <tr style="font-size: 9px;">
                     <td style="padding: 2px 4px; border: 1px solid #ddd;">Guest${guestIdx + 1}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.korean_name || guest.guest_name_ko || ''}</td>
                     <td style="padding: 2px 4px; border: 1px solid #ddd;">${guestNameEn}</td>
                     <td style="padding: 2px 4px; border: 1px solid #ddd;">${guestType}</td>
                     <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.birth_date || guest.date_of_birth || ''}</td>
@@ -69,9 +69,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             `;
         });
         
-        // 조식 정보
+        // 조식 정보 (횟수만)
         let breakfastHTML = '';
-        let breakfastCharge = 0;
         if (room.breakfast_included) {
             const adultCount = room.breakfast_adult_count || 0;
             const childCount = room.breakfast_child_count || 0;
@@ -81,31 +80,28 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             const adultTotal = adultCount * nights;
             const childTotal = childCount * nights;
             
-            breakfastCharge = (adultTotal * adultPrice) + (childTotal * childPrice);
-            totalBreakfastCharge += breakfastCharge;
+            const breakfastCharge = (adultTotal * adultPrice) + (childTotal * childPrice);
+            breakfastCharges.push({ roomNum, adultCount, childCount, nights, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
             
             breakfastHTML = `
                 <tr style="font-size: 9px;">
-                    <td colspan="2" style="padding: 2px 4px; border: 1px solid #ddd;"><strong>☑ Breakfast Included</strong></td>
-                    <td colspan="3" style="padding: 2px 4px; border: 1px solid #ddd;">
-                        Adult: ${adultCount}×${nights}=${adultTotal} | Child: ${childCount}×${nights}=${childTotal}
+                    <td colspan="4" style="padding: 2px 4px; border: 1px solid #ddd;">
+                        <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${nights}=${adultTotal} │ Child: ${childCount}×${nights}=${childTotal}
                     </td>
                 </tr>
             `;
         } else {
             breakfastHTML = `
                 <tr style="font-size: 9px;">
-                    <td colspan="5" style="padding: 2px 4px; border: 1px solid #ddd;"><strong>☐ Breakfast Not Included</strong></td>
+                    <td colspan="4" style="padding: 2px 4px; border: 1px solid #ddd;"><strong>Breakfast: ☐ Not Included</strong></td>
                 </tr>
             `;
         }
         
         roomsHTML += `
             <tr style="background: #f8f9fa; font-size: 10px;">
-                <td colspan="5" style="padding: 4px; border: 1px solid #ddd;">
-                    <strong>ROOM ${roomNum}:</strong> ${room.room_type_name || ''} | 
-                    <strong>Promo:</strong> ${room.promotion_code || '-'} | 
-                    <strong>Rate:</strong> $${room.room_rate || 0}/Night
+                <td colspan="4" style="padding: 4px; border: 1px solid #ddd;">
+                    <strong>ROOM ${roomNum}:</strong> ${room.room_type_name || ''} │ <strong>Promo:</strong> ${room.promotion_code || '-'} │ <strong>Rate:</strong> $${roomRate}/Night
                 </td>
             </tr>
             ${guestsHTML}
@@ -122,19 +118,60 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         `;
     });
     
-    // 추가 서비스 금액
-    let totalExtrasCharge = 0;
-    let extrasHTML = '';
-    if (extras && extras.length > 0) {
-        extras.forEach(extra => {
-            const charge = parseFloat(extra.charge || 0);
-            totalExtrasCharge += charge;
-            extrasHTML += `${extra.item_name} $${charge.toFixed(2)} | `;
-        });
-        extrasHTML = extrasHTML.slice(0, -3); // 마지막 " | " 제거
-    }
+    // PAYMENT TO HOTEL 섹션 생성
+    let paymentHTML = '';
+    let totalAmount = 0;
     
-    const totalAmount = totalRoomCharge + totalBreakfastCharge + totalExtrasCharge;
+    // 룸 요금
+    roomCharges.forEach(r => {
+        paymentHTML += `
+        <tr style="font-size: 9px;">
+            <td style="padding: 3px;">Room ${r.roomNum}:</td>
+            <td style="padding: 3px; text-align: right;">$${r.roomRate}×${r.nights} nights = $${r.roomCharge.toFixed(2)}</td>
+        </tr>
+        `;
+        totalAmount += r.roomCharge;
+    });
+    
+    // 조식 요금
+    breakfastCharges.forEach(b => {
+        let breakfastDetail = '';
+        if (b.adultTotal > 0 && b.childTotal > 0) {
+            breakfastDetail = `Adult $${b.adultPrice}×${b.adultTotal} + Child $${b.childPrice}×${b.childTotal}`;
+        } else if (b.adultTotal > 0) {
+            breakfastDetail = `Adult $${b.adultPrice}×${b.adultTotal}`;
+        } else if (b.childTotal > 0) {
+            breakfastDetail = `Child $${b.childPrice}×${b.childTotal}`;
+        }
+        
+        paymentHTML += `
+        <tr style="font-size: 9px;">
+            <td style="padding: 3px;">Breakfast Room ${b.roomNum}:</td>
+            <td style="padding: 3px; text-align: right;">${breakfastDetail} = $${b.breakfastCharge.toFixed(2)}</td>
+        </tr>
+        `;
+        totalAmount += b.breakfastCharge;
+    });
+    
+    // 추가 서비스
+    if (extras && extras.length > 0) {
+        let extrasDetail = '';
+        let extrasTotal = 0;
+        extras.forEach((extra, idx) => {
+            const charge = parseFloat(extra.charge || 0);
+            extrasTotal += charge;
+            extrasDetail += `${extra.item_name} $${charge.toFixed(2)}`;
+            if (idx < extras.length - 1) extrasDetail += ' + ';
+        });
+        
+        paymentHTML += `
+        <tr style="font-size: 9px;">
+            <td style="padding: 3px;">Extra Services:</td>
+            <td style="padding: 3px; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
+        </tr>
+        `;
+        totalAmount += extrasTotal;
+    }
     
     // 변경 이력
     let historyHTML = '';
@@ -244,33 +281,21 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         <tr class="section-title" style="font-size: 10px;">
             <td colspan="2">PAYMENT TO HOTEL (TAX INCLUDED)</td>
         </tr>
+        ${paymentHTML}
         <tr style="font-size: 9px;">
-            <td style="padding: 3px;"><strong>Room Charges:</strong></td>
-            <td style="padding: 3px; text-align: right;">$${totalRoomCharge.toFixed(2)}</td>
+            <td colspan="2" style="padding: 3px;">&nbsp;</td>
         </tr>
-        ${totalBreakfastCharge > 0 ? `
-        <tr style="font-size: 9px;">
-            <td style="padding: 3px;"><strong>Breakfast:</strong></td>
-            <td style="padding: 3px; text-align: right;">$${totalBreakfastCharge.toFixed(2)}</td>
-        </tr>
-        ` : ''}
-        ${totalExtrasCharge > 0 ? `
-        <tr style="font-size: 9px;">
-            <td style="padding: 3px;"><strong>Extra Services:</strong> ${extrasHTML}</td>
-            <td style="padding: 3px; text-align: right;">$${totalExtrasCharge.toFixed(2)}</td>
-        </tr>
-        ` : ''}
         <tr style="font-size: 11px; background: #f0f0f0;">
-            <td style="padding: 4px;"><strong>💰 TOTAL:</strong></td>
+            <td style="padding: 4px;"><strong>💰 TOTAL AMOUNT:</strong></td>
             <td style="padding: 4px; text-align: right;"><strong>$${totalAmount.toFixed(2)}</strong></td>
         </tr>
     </table>
     
-    <!-- 내부 메모 -->
+    <!-- 내부 메모 (호텔 전달사항) -->
     ${reservation.internal_memo ? `
     <table>
         <tr class="section-title" style="font-size: 9px;">
-            <td>Internal Memo</td>
+            <td>Notes to Hotel</td>
         </tr>
         <tr style="font-size: 9px;">
             <td style="padding: 3px;">${reservation.internal_memo}</td>

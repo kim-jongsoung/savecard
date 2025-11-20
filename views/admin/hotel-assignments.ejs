@@ -2976,78 +2976,142 @@
             
             // 객실별 테이블 생성
             let roomsTableHTML = '';
+            let roomCharges = []; // 각 룸별 요금 저장
+            let breakfastCharges = []; // 각 룸별 조식 요금 저장
+            
             if (rooms.length > 0) {
                 rooms.forEach((room, idx) => {
                     console.log(`  📦 Room ${idx + 1}:`, room);
                     const guests = room.guests || [];
                     console.log(`    👥 Guests (${guests.length}):`, guests);
                     
+                    const roomNum = idx + 1;
+                    const roomRate = parseFloat(room.room_rate || 0);
+                    const roomCharge = roomRate * nights;
+                    roomCharges.push({ roomNum, roomRate, nights, roomCharge });
+                    
                     let guestsHTML = '';
                     if (guests.length > 0) {
                         guests.forEach((g, gIdx) => {
-                            // Pax Type 한글 표시
-                            let paxTypeKo = '';
-                            if (g.age_category === 'adult') paxTypeKo = '성인';
-                            else if (g.age_category === 'child') paxTypeKo = '소아';
-                            else if (g.age_category === 'infant') paxTypeKo = '유아';
-                            else paxTypeKo = '성인'; // 기본값
+                            // Pax Type 영문
+                            let paxType = '';
+                            if (g.age_category === 'adult') paxType = 'Adult';
+                            else if (g.age_category === 'child') paxType = 'Child';
+                            else if (g.age_category === 'infant') paxType = 'Infant';
+                            else paxType = 'Adult'; // 기본값
                             
                             guestsHTML += `
                                 <tr>
                                     <td style="padding: 4px; border: 1px solid #ddd;">${gIdx + 1}</td>
-                                    <td style="padding: 4px; border: 1px solid #ddd;">${g.guest_name_ko || '-'}</td>
                                     <td style="padding: 4px; border: 1px solid #ddd;">${g.guest_name_en || '-'}</td>
-                                    <td style="padding: 4px; border: 1px solid #ddd;">${paxTypeKo}</td>
+                                    <td style="padding: 4px; border: 1px solid #ddd;">${paxType}</td>
                                     <td style="padding: 4px; border: 1px solid #ddd;">${g.date_of_birth ? formatDate(g.date_of_birth) : '-'}</td>
                                 </tr>
                             `;
                         });
                     } else {
-                        guestsHTML = '<tr><td colspan="5" style="padding: 8px; text-align: center; color: #999;">투숙객 정보 없음</td></tr>';
+                        guestsHTML = '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #999;">No guest information</td></tr>';
                     }
                     
                     // Promo Code 표시
                     const promoCode = room.promotion_code ? `Promo: ${room.promotion_code}` : 'Promo: -';
                     
+                    // 조식 정보 (횟수만)
+                    let breakfastInfo = '';
+                    if (room.breakfast_included) {
+                        const adultCount = room.breakfast_adult_count || 0;
+                        const childCount = room.breakfast_child_count || 0;
+                        const adultPrice = parseFloat(room.breakfast_adult_price || 0);
+                        const childPrice = parseFloat(room.breakfast_child_price || 0);
+                        
+                        const adultTotal = adultCount * nights;
+                        const childTotal = childCount * nights;
+                        
+                        const breakfastCharge = (adultTotal * adultPrice) + (childTotal * childPrice);
+                        breakfastCharges.push({ roomNum, adultCount, childCount, nights, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
+                        
+                        breakfastInfo = `<strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${nights}=${adultTotal} │ Child: ${childCount}×${nights}=${childTotal}`;
+                    } else {
+                        breakfastInfo = '<strong>Breakfast: ☐ Not Included</strong>';
+                    }
+                    
                     roomsTableHTML += `
                         <div style="margin-bottom: 15px; page-break-inside: avoid;">
                             <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">
-                                Room ${idx + 1}: ${room.room_type_name || '객실타입 미지정'} 
-                                <span style="float: right; font-size: 10px;">${promoCode}</span>
+                                ROOM ${roomNum}: ${room.room_type_name || 'Room Type Not Specified'} │ ${promoCode} │ Rate: $${roomRate}/Night
                             </h6>
                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                                 <tr style="background: #ecf0f1;">
                                     <td style="padding: 4px; border: 1px solid #ddd; width: 40px;"><strong>No</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>한글명</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 120px;"><strong>영문명</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 60px;"><strong>구분</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>생년월일</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 150px;"><strong>English Name</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 80px;"><strong>Pax Type</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>Date of Birth</strong></td>
                                 </tr>
                                 ${guestsHTML}
                             </table>
-                            <div style="margin-top: 5px; font-size: 11px;">
-                                <strong>요금:</strong> $${room.room_rate || 0} × ${nights} nights = $${(room.room_rate || 0) * nights} | 
-                                <strong>조식:</strong> ${room.breakfast_included ? '☑ Included' : '☐ Not Included'}
-                                ${room.breakfast_included ? ` (Adult: ${room.breakfast_adult_count || 0}×${nights}=${(room.breakfast_adult_count || 0) * nights}, Child: ${room.breakfast_child_count || 0}×${nights}=${(room.breakfast_child_count || 0) * nights})` : ''}
+                            <div style="margin-top: 5px; font-size: 11px; padding: 4px; background: #f8f9fa; border: 1px solid #ddd;">
+                                ${breakfastInfo}
                             </div>
                         </div>
                     `;
                 });
             } else {
-                roomsTableHTML = '<div style="padding: 20px; text-align: center; color: #999; background: #f8f9fa; border: 1px dashed #ddd;"><strong>⚠️ 객실 정보가 등록되지 않았습니다.</strong><br><small>예약 수정 페이지에서 객실 정보를 추가하세요.</small></div>';
+                roomsTableHTML = '<div style="padding: 20px; text-align: center; color: #999; background: #f8f9fa; border: 1px dashed #ddd;"><strong>⚠️ No room information registered.</strong><br><small>Please add room details in the reservation edit page.</small></div>';
             }
             
-            // 추가 항목
-            let extrasHTML = '';
-            if (extras.length > 0) {
-                extras.forEach(extra => {
-                    extrasHTML += `
-                        <tr>
-                            <td style="padding: 4px; border: 1px solid #ddd;">${extra.item_name}</td>
-                            <td style="padding: 4px; border: 1px solid #ddd; text-align: right;">$${extra.charge || 0}</td>
-                        </tr>
-                    `;
+            // PAYMENT TO HOTEL 섹션 생성
+            let paymentHTML = '';
+            let totalAmount = 0;
+            
+            // 룸 요금
+            roomCharges.forEach(r => {
+                paymentHTML += `
+                    <tr>
+                        <td style="padding: 5px; border: 1px solid #ddd;">Room ${r.roomNum}:</td>
+                        <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">$${r.roomRate}×${r.nights} nights = $${r.roomCharge.toFixed(2)}</td>
+                    </tr>
+                `;
+                totalAmount += r.roomCharge;
+            });
+            
+            // 조식 요금
+            breakfastCharges.forEach(b => {
+                let breakfastDetail = '';
+                if (b.adultTotal > 0 && b.childTotal > 0) {
+                    breakfastDetail = `Adult $${b.adultPrice}×${b.adultTotal} + Child $${b.childPrice}×${b.childTotal}`;
+                } else if (b.adultTotal > 0) {
+                    breakfastDetail = `Adult $${b.adultPrice}×${b.adultTotal}`;
+                } else if (b.childTotal > 0) {
+                    breakfastDetail = `Child $${b.childPrice}×${b.childTotal}`;
+                }
+                
+                paymentHTML += `
+                    <tr>
+                        <td style="padding: 5px; border: 1px solid #ddd;">Breakfast Room ${b.roomNum}:</td>
+                        <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">${breakfastDetail} = $${b.breakfastCharge.toFixed(2)}</td>
+                    </tr>
+                `;
+                totalAmount += b.breakfastCharge;
+            });
+            
+            // 추가 서비스
+            if (extras && extras.length > 0) {
+                let extrasDetail = '';
+                let extrasTotal = 0;
+                extras.forEach((extra, idx) => {
+                    const charge = parseFloat(extra.charge || 0);
+                    extrasTotal += charge;
+                    extrasDetail += `${extra.item_name} $${charge.toFixed(2)}`;
+                    if (idx < extras.length - 1) extrasDetail += ' + ';
                 });
+                
+                paymentHTML += `
+                    <tr>
+                        <td style="padding: 5px; border: 1px solid #ddd;">Extra Services:</td>
+                        <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
+                    </tr>
+                `;
+                totalAmount += extrasTotal;
             }
             
             // Contact 담당자 정보
@@ -3094,40 +3158,26 @@
                     </table>
                     
                     <!-- 객실 및 투숙객 정보 -->
-                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">📋 객실 및 투숙객 정보</h5>
-                    ${roomsTableHTML || '<p>객실 정보 없음</p>'}
+                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">📋 Room & Guest Information</h5>
+                    ${roomsTableHTML || '<p>No room information</p>'}
                     
-                    <!-- 추가 항목 -->
-                    ${extras.length > 0 ? `
-                        <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">➕ 추가 항목</h5>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                            <tr style="background: #ecf0f1;">
-                                <td style="padding: 4px; border: 1px solid #ddd;"><strong>항목</strong></td>
-                                <td style="padding: 4px; border: 1px solid #ddd; width: 100px; text-align: right;"><strong>요금</strong></td>
-                            </tr>
-                            ${extrasHTML}
-                        </table>
-                    ` : ''}
+                    <!-- PAYMENT TO HOTEL -->
+                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">💰 PAYMENT TO HOTEL (TAX INCLUDED)</h5>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                        ${paymentHTML}
+                        <tr>
+                            <td colspan="2" style="padding: 5px;">&nbsp;</td>
+                        </tr>
+                        <tr style="background: #f0f0f0; font-weight: bold; font-size: 13px;">
+                            <td style="padding: 8px; border: 1px solid #ddd;">TOTAL AMOUNT:</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${totalAmount.toFixed(2)}</td>
+                        </tr>
+                    </table>
                     
-                    <!-- 총액 -->
-                    <div style="margin-top: 20px; text-align: right;">
-                        <h4 style="background: #2c3e50; color: white; padding: 10px; margin: 0; display: inline-block; min-width: 250px;">
-                            총 금액: $${reservation.total_selling_price || 0}
-                        </h4>
-                    </div>
-                    
-                    <!-- 특별 요청사항 -->
-                    ${reservation.special_requests ? `
-                        <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background: #fffacd;">
-                            <strong>📝 Special Requests:</strong><br>
-                            ${reservation.special_requests}
-                        </div>
-                    ` : ''}
-                    
-                    <!-- 내부 메모 (출력 안됨) -->
+                    <!-- 내부 메모 (호텔 전달사항) -->
                     ${reservation.internal_memo ? `
-                        <div style="margin-top: 10px; padding: 10px; border: 1px solid #ddd; background: #f0f0f0;">
-                            <strong>🔒 내부 메모 (호텔에 전송 안됨):</strong><br>
+                        <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background: #fffacd;">
+                            <strong>📝 Notes to Hotel:</strong><br>
                             ${reservation.internal_memo}
                         </div>
                     ` : ''}
