@@ -622,6 +622,21 @@ router.get('/api/promotions/room-type/:roomTypeId/rates', async (req, res) => {
   }
   
   try {
+    // 0. roomTypeId로 hotel_id 조회 (호텔 필터링용)
+    const roomTypeQuery = await pool.query(`
+      SELECT hotel_id FROM room_types WHERE id = $1
+    `, [roomTypeId]);
+    
+    if (roomTypeQuery.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '객실 타입을 찾을 수 없습니다.'
+      });
+    }
+    
+    const hotelId = roomTypeQuery.rows[0].hotel_id;
+    console.log(`  🏨 호텔 ID: ${hotelId}`);
+    
     // 1. 날짜 배열 생성
     const dates = [];
     const start = new Date(checkIn);
@@ -634,7 +649,7 @@ router.get('/api/promotions/room-type/:roomTypeId/rates', async (req, res) => {
     const nights = dates.length;
     console.log('  📅 투숙일:', dates, `(${nights}박)`);
     
-    // 2. 적용 가능한 프로모션 조회
+    // 2. 적용 가능한 프로모션 조회 (⭐ hotel_id 필터 추가)
     const promosQuery = `
       SELECT DISTINCT
         p.id as promotion_id,
@@ -646,21 +661,22 @@ router.get('/api/promotions/room-type/:roomTypeId/rates', async (req, res) => {
         p.stay_start_date,
         p.stay_end_date
       FROM promotions p
-      WHERE p.is_active = true
+      WHERE p.hotel_id = $1
+        AND p.is_active = true
         AND p.booking_start_date <= CURRENT_DATE
         AND p.booking_end_date >= CURRENT_DATE
-        AND p.stay_start_date <= $1::date
-        AND p.stay_end_date >= $2::date
+        AND p.stay_start_date <= $2::date
+        AND p.stay_end_date >= $3::date
         AND EXISTS (
           SELECT 1 FROM promotion_daily_rates pdr
           WHERE pdr.promotion_id = p.id
-            AND pdr.room_type_id = $3
-            AND pdr.stay_date = ANY($4::date[])
+            AND pdr.room_type_id = $4
+            AND pdr.stay_date = ANY($5::date[])
         )
       ORDER BY p.promo_code
     `;
     
-    const promosResult = await pool.query(promosQuery, [checkIn, checkOut, roomTypeId, dates]);
+    const promosResult = await pool.query(promosQuery, [hotelId, checkIn, checkOut, roomTypeId, dates]);
     console.log(`  ✅ 적용 가능한 프로모션: ${promosResult.rows.length}개`);
     
     if (promosResult.rows.length === 0) {
