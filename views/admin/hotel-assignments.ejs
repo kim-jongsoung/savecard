@@ -3325,24 +3325,41 @@
                 totalAmount += b.breakfastCharge;
             });
             
-            // 추가 서비스
+            // 추가 서비스 (IN_HOTEL만 표시)
             if (extras && extras.length > 0) {
-                let extrasDetail = '';
-                let extrasTotal = 0;
-                extras.forEach((extra, idx) => {
-                    const charge = parseFloat(extra.charge || 0);
-                    extrasTotal += charge;
-                    extrasDetail += `${extra.item_name} $${charge.toFixed(2)}`;
-                    if (idx < extras.length - 1) extrasDetail += ' + ';
-                });
-                
-                paymentHTML += `
-                    <tr>
-                        <td style="padding: 5px; border: 1px solid #ddd;">Extra Services:</td>
-                        <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
-                    </tr>
-                `;
-                totalAmount += extrasTotal;
+                let effectiveExtras = extras;
+
+                // hotel_reservation_extras 처럼 notes 컬럼이 있는 경우 OUT_HOTEL 제외
+                if (effectiveExtras.length > 0 && Object.prototype.hasOwnProperty.call(effectiveExtras[0], 'notes')) {
+                    effectiveExtras = effectiveExtras.filter(e => (e.notes || 'IN_HOTEL') !== 'OUT_HOTEL');
+                }
+
+                if (effectiveExtras.length > 0) {
+                    let extrasDetail = '';
+                    let extrasTotal = 0;
+
+                    effectiveExtras.forEach((extra, idx) => {
+                        // hotel_assignment_extras: charge
+                        // hotel_reservation_extras: total_selling_price
+                        const rawCharge =
+                            (typeof extra.charge !== 'undefined' && extra.charge !== null)
+                                ? extra.charge
+                                : extra.total_selling_price;
+                        const charge = parseFloat(rawCharge || 0);
+
+                        extrasTotal += charge;
+                        extrasDetail += `${extra.item_name} $${charge.toFixed(2)}`;
+                        if (idx < effectiveExtras.length - 1) extrasDetail += ' + ';
+                    });
+                    
+                    paymentHTML += `
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd;">Extra Services:</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    totalAmount += extrasTotal;
+                }
             }
             
             // Contact 담당자 정보 (예약 처음 입력한 담당자)
