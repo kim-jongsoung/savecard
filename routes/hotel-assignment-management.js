@@ -469,7 +469,10 @@ router.get('/view/:token', async (req, res) => {
     try {
         // 1. 수배서 조회
         const assignmentQuery = await pool.query(`
-            SELECT * FROM hotel_assignments WHERE assignment_token = $1
+            SELECT ha.*, hr.created_by as reservation_created_by
+            FROM hotel_assignments ha
+            LEFT JOIN hotel_reservations hr ON ha.reservation_id = hr.id
+            WHERE ha.assignment_token = $1
         `, [token]);
         
         if (assignmentQuery.rows.length === 0) {

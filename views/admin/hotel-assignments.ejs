@@ -3327,8 +3327,10 @@
                 totalAmount += extrasTotal;
             }
             
-            // Contact 담당자 정보
-            const contactPerson = reservation.agency_contact_person || reservation.booking_agency_name || 'Guam Save Card';
+            // Contact 담당자 정보 (예약 처음 입력한 담당자)
+            const contactPerson = reservation.created_by || 'LUXFIND Staff';
+            const agencyName = 'LUXFIND'; // Agency 명 고정
+            
             const sentDate = new Date().toLocaleString('ko-KR', { 
                 year: 'numeric', 
                 month: '2-digit', 
@@ -3338,97 +3340,97 @@
             });
             
             return `
-                <div style="max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif; font-size: 12px;">
+                <div style="max-width: 1000px; margin: 0 auto; font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 16px; line-height: 1.5;">
                     <!-- 헤더 -->
-                    <div style="text-align: center; background: #2c3e50; color: white; padding: 15px; margin-bottom: 5px;">
-                        <h3 style="margin: 0; font-size: 20px;">🏨 HOTEL BOOKING REQUEST</h3>
-                        <p style="margin: 5px 0 0 0; font-size: 12px;">LUXFIND(럭스파인드)</p>
+                    <div style="text-align: center; background: #2c3e50; color: white; padding: 25px; margin-bottom: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <h3 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: 1px;">🏨 HOTEL BOOKING REQUEST</h3>
+                        <p style="margin: 10px 0 0 0; font-size: 18px; font-weight: bold;">LUXFIND (럭스파인드)</p>
                     </div>
                     
                     <!-- 발신 정보 -->
-                    <div style="text-align: right; padding: 5px 10px; background: #f8f9fa; border: 1px solid #dee2e6; margin-bottom: 15px; font-size: 11px;">
+                    <div style="text-align: right; padding: 10px 15px; background: #f8f9fa; border: 1px solid #dee2e6; margin-bottom: 20px; font-size: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                         <strong>📅 Sent:</strong> ${sentDate} | <strong>👤 Contact:</strong> ${contactPerson}
                     </div>
                     
                     <!-- 기본 정보 -->
-                    <table style="width: 100%; margin-bottom: 15px; border-collapse: collapse;">
+                    <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size: 15px;">
                         <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>Hotel</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;" colspan="3">${reservation.hotel_name_en || reservation.hotel_name || '-'}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; background: #ecf0f1; width: 140px; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Hotel</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;" colspan="3">${reservation.hotel_name_en || reservation.hotel_name || '-'}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Check-in</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${formatDate(reservation.check_in_date)}</td>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>Check-out</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${formatDate(reservation.check_out_date)}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; background: #ecf0f1; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Check-in</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${formatDate(reservation.check_in_date)}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; background: #ecf0f1; width: 140px; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Check-out</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${formatDate(reservation.check_out_date)}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Nights</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;"><strong>${nights}</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Flight</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;">${reservation.arrival_flight || '-'} / ${reservation.departure_flight || '-'}</td>
+                            <td style="padding: 8px; border: 1px solid #ddd; background: #ecf0f1; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Nights</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;"><strong>${nights}</strong></td>
+                            <td style="padding: 8px; border: 1px solid #ddd; background: #ecf0f1; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Flight</td>
+                            <td style="padding: 8px; border: 1px solid #ddd;">${reservation.arrival_flight || '-'} / ${reservation.departure_flight || '-'}</td>
                         </tr>
                     </table>
                     
                     <!-- 객실 및 투숙객 정보 -->
-                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">📋 Room & Guest Information</h5>
+                    <h5 style="background: #34495e; color: white; padding: 12px; margin: 25px 0 15px 0; font-size: 18px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">📋 Room & Guest Information</h5>
                     ${roomsTableHTML || '<p>No room information</p>'}
                     
                     <!-- PAYMENT TO HOTEL -->
-                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0;">💰 PAYMENT TO HOTEL (TAX INCLUDED)</h5>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                    <h5 style="background: #34495e; color: white; padding: 12px; margin: 25px 0 15px 0; font-size: 18px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">💰 PAYMENT TO HOTEL (TAX INCLUDED)</h5>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
                         ${paymentHTML}
                         <tr>
-                            <td colspan="2" style="padding: 5px;">&nbsp;</td>
+                            <td colspan="2" style="padding: 8px;">&nbsp;</td>
                         </tr>
-                        <tr style="background: #f0f0f0; font-weight: bold; font-size: 13px;">
-                            <td style="padding: 8px; border: 1px solid #ddd;">TOTAL AMOUNT:</td>
-                            <td style="padding: 8px; border: 1px solid #ddd; text-align: right;">$${totalAmount.toFixed(2)}</td>
+                        <tr style="background: #f0f0f0; font-weight: bold; font-size: 18px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td style="padding: 12px; border: 1px solid #ddd;">TOTAL AMOUNT:</td>
+                            <td style="padding: 12px; border: 1px solid #ddd; text-align: right;">$${totalAmount.toFixed(2)}</td>
                         </tr>
                     </table>
                     
                     <!-- 내부 메모 (호텔 전달사항) -->
                     ${reservation.internal_memo ? `
-                        <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; background: #fffacd;">
+                        <div style="margin-top: 25px; padding: 15px; border: 1px solid #ddd; background: #fffacd; font-size: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                             <strong>📝 Notes to Hotel:</strong><br>
                             ${reservation.internal_memo}
                         </div>
                     ` : ''}
                     
                     <!-- Hotel Confirmation Section -->
-                    <div style="margin-top: 30px; padding: 20px; border: 2px solid #2c3e50; background: #f8f9fa;">
-                        <h5 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 5px;">
+                    <div style="margin-top: 40px; padding: 25px; border: 3px solid #2c3e50; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <h5 style="margin: 0 0 20px 0; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 8px; font-size: 20px;">
                             ✍️ HOTEL CONFIRMATION SECTION
                         </h5>
                         
                         ${rooms.map((room, idx) => `
-                            <div style="margin-bottom: 10px;">
+                            <div style="margin-bottom: 15px; font-size: 16px;">
                                 <strong>Room ${idx + 1} Confirmation Number:</strong>
-                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 250px; margin-left: 10px;"></span>
+                                <span style="display: inline-block; border-bottom: 2px solid #000; width: 300px; margin-left: 10px;"></span>
                             </div>
                         `).join('')}
                         
-                        <div style="margin-top: 20px;">
+                        <div style="margin-top: 25px; font-size: 16px;">
                             <strong>Hotel Notes/Comments:</strong><br>
-                            <div style="border: 1px solid #999; min-height: 60px; padding: 5px; background: white; margin-top: 5px;"></div>
+                            <div style="border: 1px solid #999; min-height: 80px; padding: 10px; background: white; margin-top: 8px;"></div>
                         </div>
                         
-                        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+                        <div style="margin-top: 30px; display: flex; justify-content: space-between; font-size: 16px;">
                             <div>
                                 <strong>Hotel Staff Name:</strong> 
-                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 150px; margin-left: 10px;"></span>
+                                <span style="display: inline-block; border-bottom: 2px solid #000; width: 200px; margin-left: 10px;"></span>
                             </div>
                             <div>
                                 <strong>Date:</strong> 
-                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 120px; margin-left: 10px;"></span>
+                                <span style="display: inline-block; border-bottom: 2px solid #000; width: 150px; margin-left: 10px;"></span>
                             </div>
                         </div>
                     </div>
                     
                     <!-- 푸터 -->
-                    <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #2c3e50; text-align: center; font-size: 10px; color: #7f8c8d;">
-                        <p><strong>문의:</strong> ${reservation.booking_agency_name || 'Guam Save Card'}</p>
-                        <p><strong>생성일시:</strong> ${new Date().toLocaleString('ko-KR')}</p>
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #2c3e50; text-align: center; font-size: 13px; color: #7f8c8d;">
+                        <p><strong>Agency:</strong> ${agencyName}</p>
+                        <p><strong>Date:</strong> ${new Date().toLocaleString('ko-KR')}</p>
                     </div>
                 </div>
             `;

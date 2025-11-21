@@ -187,7 +187,10 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         historyHTML = `[NEW] Initial booking`;
     }
     
-    // 호텔 컨펌 섹션 (컴팩트 버전)
+    // 호텔 컨펌 섹션 (컴팩트 버전) -> 스타일 대폭 수정 (LUXFIND)
+    const contactPerson = reservation.reservation_created_by || reservation.agency_contact_person || 'LUXFIND Staff';
+    const agencyName = 'LUXFIND';
+
     return `
 <!DOCTYPE html>
 <html>
@@ -196,132 +199,179 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     <style>
         @media print {
             @page { margin: 10mm; size: A4; }
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
             .no-print { display: none !important; }
+            /* 인쇄 시 폰트 강제 확대 */
+            body { font-size: 16px !important; }
+            table { font-size: 15px !important; }
+            h3 { font-size: 36px !important; }
         }
         body {
-            font-family: 'Courier New', monospace;
-            font-size: 10px;
-            line-height: 1.2;
+            font-family: 'Malgun Gothic', Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.5;
             margin: 0;
-            padding: 10px;
+            padding: 20px;
             color: #000;
+            max-width: 1000px;
+            margin: 0 auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 4px;
+            margin-bottom: 10px;
+            font-size: 15px;
         }
         td {
-            padding: 2px 4px;
+            padding: 8px;
             border: 1px solid #333;
         }
         .header {
             background: #000;
             color: #fff;
-            font-size: 14px;
-            font-weight: bold;
             text-align: center;
-            padding: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .header h3 {
+            margin: 0;
+            font-size: 36px;
+            font-weight: 900;
+            letter-spacing: 2px;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 18px;
+            font-weight: bold;
         }
         .section-title {
             background: #ddd;
             font-weight: bold;
-            padding: 4px;
+            padding: 10px;
             border: 1px solid #333;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        .info-label {
+            background: #eee;
+            font-weight: bold;
+            width: 150px;
         }
         .no-border {
             border: none;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .footer {
+            margin-top: 40px;
+            border-top: 2px solid #000;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <!-- 프린트 버튼 (출력 시 숨김) -->
-    <div class="no-print" style="text-align: center; margin-bottom: 10px;">
-        <button onclick="window.print()" style="padding: 10px 30px; font-size: 14px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">
-            🖨️ Print
+    <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 12px 40px; font-size: 18px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            🖨️ Print Assignment
         </button>
     </div>
     
     <!-- 타이틀 -->
     <div class="header">
-        🏨 ${title}
+        <h3>🏨 ${title}</h3>
+        <p>LUXFIND (럭스파인드)</p>
     </div>
     
     <!-- 헤더 정보 -->
-    <table style="margin-top: 4px;">
-        <tr style="font-size: 9px;">
-            <td style="width: 50%; padding: 3px;"><strong>Sent:</strong> ${new Date().toLocaleString('en-US')}</td>
-            <td style="width: 50%; padding: 3px;"><strong>Agency:</strong> ${reservation.booking_agency_name || ''}</td>
-        </tr>
-        <tr style="font-size: 9px;">
-            <td style="padding: 3px;"><strong>Contact:</strong> ${reservation.agency_contact_person || ''}</td>
-            <td style="padding: 3px;"><strong>Hotel:</strong> ${reservation.hotel_name || ''}</td>
-        </tr>
-    </table>
+    <div style="text-align: right; padding: 10px; background: #f8f9fa; border: 1px solid #ccc; margin-bottom: 20px;">
+        <strong>📅 Sent:</strong> ${new Date().toLocaleString('en-US')} | <strong>👤 Contact:</strong> ${contactPerson}
+    </div>
     
     <!-- 예약 기본정보 -->
-    <table>
-        <tr style="font-size: 9px;">
-            <td style="width: 30%; padding: 3px;"><strong>Check-in:</strong> ${formatDate(checkIn)}</td>
-            <td style="width: 35%; padding: 3px;"><strong>Check-out:</strong> ${formatDate(checkOut)}</td>
-            <td style="width: 35%; padding: 3px;"><strong>Nights:</strong> ${nights}</td>
+    <table style="margin-bottom: 20px;">
+        <tr>
+            <td class="info-label">Hotel</td>
+            <td colspan="3" style="font-size: 16px; font-weight: bold;">${reservation.hotel_name_en || reservation.hotel_name || ''}</td>
         </tr>
-        <tr style="font-size: 9px;">
-            <td colspan="3" style="padding: 3px;"><strong>Flight:</strong> ${reservation.arrival_flight || ''} / ${reservation.departure_flight || ''}</td>
+        <tr>
+            <td class="info-label">Check-in</td>
+            <td>${formatDate(checkIn)}</td>
+            <td class="info-label">Check-out</td>
+            <td>${formatDate(checkOut)}</td>
+        </tr>
+        <tr>
+            <td class="info-label">Nights</td>
+            <td><strong>${nights}</strong></td>
+            <td class="info-label">Flight</td>
+            <td>${reservation.arrival_flight || ''} / ${reservation.departure_flight || ''}</td>
         </tr>
     </table>
     
     <!-- 객실 정보 -->
-    <table>
+    <div class="section-title">📋 Room & Guest Information</div>
+    <table style="margin-top: 5px;">
         ${roomsHTML}
     </table>
     
     <!-- 금액 정보 -->
-    <table>
-        <tr class="section-title" style="font-size: 10px;">
-            <td colspan="2">PAYMENT TO HOTEL (TAX INCLUDED)</td>
-        </tr>
+    <div class="section-title">💰 PAYMENT TO HOTEL (TAX INCLUDED)</div>
+    <table style="margin-top: 5px;">
         ${paymentHTML}
-        <tr style="font-size: 9px;">
-            <td colspan="2" style="padding: 3px;">&nbsp;</td>
+        <tr>
+            <td colspan="2" style="padding: 10px;">&nbsp;</td>
         </tr>
-        <tr style="font-size: 11px; background: #f0f0f0;">
-            <td style="padding: 4px;"><strong>💰 TOTAL AMOUNT:</strong></td>
-            <td style="padding: 4px; text-align: right;"><strong>$${totalAmount.toFixed(2)}</strong></td>
+        <tr style="background: #f0f0f0; font-size: 18px;">
+            <td style="padding: 12px;"><strong>TOTAL AMOUNT:</strong></td>
+            <td style="padding: 12px; text-align: right;"><strong>$${totalAmount.toFixed(2)}</strong></td>
         </tr>
     </table>
     
     <!-- 내부 메모 (호텔 전달사항) -->
     ${reservation.internal_memo ? `
-    <table>
-        <tr class="section-title" style="font-size: 9px;">
-            <td>Notes to Hotel</td>
-        </tr>
-        <tr style="font-size: 9px;">
-            <td style="padding: 3px;">${reservation.internal_memo}</td>
-        </tr>
-    </table>
+    <div class="section-title">📝 Notes to Hotel</div>
+    <div style="padding: 15px; border: 1px solid #333; background: #fffacd; margin-top: 5px;">
+        ${reservation.internal_memo}
+    </div>
     ` : ''}
     
-    <!-- 변경 이력 -->
-    <table>
-        <tr class="section-title" style="font-size: 9px;">
-            <td>REVISION HISTORY</td>
-        </tr>
-        <tr style="font-size: 8px;">
-            <td style="padding: 3px;">${historyHTML}</td>
-        </tr>
-    </table>
+    <!-- Hotel Confirmation Section -->
+    <div style="margin-top: 40px; padding: 25px; border: 3px solid #000; background: #f8f9fa;">
+        <h3 style="margin: 0 0 20px 0; border-bottom: 2px solid #000; padding-bottom: 10px;">
+            ✍️ HOTEL CONFIRMATION SECTION
+        </h3>
+        
+        <table>
+            ${confirmationFields}
+        </table>
+        
+        <div style="margin-top: 25px;">
+            <strong>Hotel Notes/Comments:</strong><br>
+            <div style="border: 1px solid #999; min-height: 100px; background: white; margin-top: 5px;"></div>
+        </div>
+        
+        <table style="margin-top: 30px; border: none;">
+            <tr style="border: none;">
+                <td style="border: none; width: 60%;">
+                    <strong>Hotel Staff Name:</strong> 
+                    <span style="display: inline-block; border-bottom: 2px solid #000; width: 250px; margin-left: 10px;"></span>
+                </td>
+                <td style="border: none; width: 40%;">
+                    <strong>Date:</strong> 
+                    <span style="display: inline-block; border-bottom: 2px solid #000; width: 150px; margin-left: 10px;"></span>
+                </td>
+            </tr>
+        </table>
+    </div>
     
-    <!-- 호텔 컨펌 섹션 (컴팩트형) -->
-    <table style="border: 2px solid #000; margin-top: 10px;">
-        <tr style="background: #eee;">
-            <td colspan="2" style="padding: 4px; text-align: center; font-weight: bold; font-size: 10px; border-bottom: 1px solid #000;">
-                ✍️ HOTEL CONFIRMATION
-            </td>
-        </tr>
-        ${confirmationFields}
+    <div class="footer">
+        <p><strong>Agency:</strong> ${agencyName}</p>
+        <p>${new Date().toLocaleString('en-US')}</p>
+    </div>
         <tr style="font-size: 9px;">
             <td style="padding: 4px; width: 60%; vertical-align: top; border-right: 1px solid #000;">
                 <strong>Comments:</strong><br><br><br>
