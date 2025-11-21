@@ -12,19 +12,11 @@ async function createHotelAssignmentsTables(existingPool) {
     try {
         await client.query('BEGIN');
         
-        console.log('🔧 호텔 수배서 테이블 생성 시작...');
+        console.log('🔧 호텔 수배서 테이블 생성/확인 시작...');
         
-        // 기존 테이블 삭제 (CASCADE로 연관 테이블도 함께 삭제)
-        console.log('🗑️  기존 테이블 삭제 중...');
-        await client.query('DROP TABLE IF EXISTS hotel_assignment_extras CASCADE');
-        await client.query('DROP TABLE IF EXISTS hotel_assignment_guests CASCADE');
-        await client.query('DROP TABLE IF EXISTS hotel_assignment_rooms CASCADE');
-        await client.query('DROP TABLE IF EXISTS hotel_assignments CASCADE');
-        console.log('✅ 기존 테이블 삭제 완료');
-        
-        // 1. hotel_assignments 메인 테이블
+        // 1. hotel_assignments 메인 테이블 (이미 있으면 유지)
         await client.query(`
-            CREATE TABLE hotel_assignments (
+            CREATE TABLE IF NOT EXISTS hotel_assignments (
                 id SERIAL PRIMARY KEY,
                 reservation_id INTEGER,
                 assignment_type VARCHAR(20) NOT NULL,
@@ -69,9 +61,9 @@ async function createHotelAssignmentsTables(existingPool) {
         `);
         console.log('✅ hotel_assignments 테이블 생성 완료');
         
-        // 2. hotel_assignment_rooms 테이블
+        // 2. hotel_assignment_rooms 테이블 (이미 있으면 유지)
         await client.query(`
-            CREATE TABLE hotel_assignment_rooms (
+            CREATE TABLE IF NOT EXISTS hotel_assignment_rooms (
                 id SERIAL PRIMARY KEY,
                 assignment_id INTEGER REFERENCES hotel_assignments(id) ON DELETE CASCADE,
                 room_number INTEGER,
@@ -92,9 +84,9 @@ async function createHotelAssignmentsTables(existingPool) {
         `);
         console.log('✅ hotel_assignment_rooms 테이블 생성 완료');
         
-        // 3. hotel_assignment_guests 테이블
+        // 3. hotel_assignment_guests 테이블 (이미 있으면 유지)
         await client.query(`
-            CREATE TABLE hotel_assignment_guests (
+            CREATE TABLE IF NOT EXISTS hotel_assignment_guests (
                 id SERIAL PRIMARY KEY,
                 assignment_room_id INTEGER REFERENCES hotel_assignment_rooms(id) ON DELETE CASCADE,
                 guest_number INTEGER,
@@ -113,9 +105,9 @@ async function createHotelAssignmentsTables(existingPool) {
         `);
         console.log('✅ hotel_assignment_guests 테이블 생성 완료');
         
-        // 4. hotel_assignment_extras 테이블
+        // 4. hotel_assignment_extras 테이블 (이미 있으면 유지)
         await client.query(`
-            CREATE TABLE hotel_assignment_extras (
+            CREATE TABLE IF NOT EXISTS hotel_assignment_extras (
                 id SERIAL PRIMARY KEY,
                 assignment_id INTEGER REFERENCES hotel_assignments(id) ON DELETE CASCADE,
                 item_number INTEGER,
