@@ -366,8 +366,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     ` : ''}
     
     <!-- Hotel Confirmation Section -->
-    <div style="margin-top: 40px; padding: 25px; border: 3px solid #000; background: #f8f9fa;">
-        <h3 style="margin: 0 0 20px 0; border-bottom: 2px solid #000; padding-bottom: 10px;">
+    <div style="margin-top: 32px; padding: 24px; border: 2px solid #2c3e50; border-radius: 8px; background: #f8f9fa;">
+        <h3 style="margin: 0 0 20px 0; padding-bottom: 8px; border-bottom: 2px solid #2c3e50; font-size: 18px; font-weight: 700; color: #2c3e50;">
             ✍️ HOTEL CONFIRMATION SECTION
         </h3>
         
@@ -398,21 +398,6 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         <p><strong>Agency:</strong> ${agencyName}</p>
         <p>${new Date().toLocaleString('en-US')}</p>
     </div>
-        <tr style="font-size: 9px;">
-            <td style="padding: 4px; width: 60%; vertical-align: top; border-right: 1px solid #000;">
-                <strong>Comments:</strong><br><br><br>
-            </td>
-            <td style="padding: 0; width: 40%; vertical-align: top;">
-                <div style="padding: 4px; border-bottom: 1px solid #ccc;">
-                    <strong>Staff Name:</strong>
-                </div>
-                <div style="padding: 4px; height: 25px;"></div>
-                <div style="padding: 4px; border-top: 1px solid #000;">
-                    <strong>Date:</strong>
-                </div>
-            </td>
-        </tr>
-    </table>
 </body>
 </html>
     `;
