@@ -160,7 +160,7 @@ router.post('/create', async (req, res) => {
                 await client.query(`
                     INSERT INTO hotel_assignment_guests (
                         assignment_room_id, guest_number,
-                        korean_name, english_name, birth_date,
+                        guest_name_ko, guest_name_en, birth_date,
                         is_adult, is_child, is_infant
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 `, [
