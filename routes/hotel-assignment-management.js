@@ -528,7 +528,7 @@ router.get('/view/:token', async (req, res) => {
         
         // 6. HTML 렌더링
         const { generateAssignmentHTML } = require('../utils/hotelAssignmentMailer');
-        const htmlContent = generateAssignmentHTML(assignment);
+        const htmlContent = generateAssignmentHTML(assignment, assignment.assignment_type, assignment.revision_number);
         
         res.send(htmlContent);
         

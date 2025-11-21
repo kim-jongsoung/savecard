@@ -259,6 +259,10 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     // 호텔 컨펌 섹션 (컴팩트 버전) -> 스타일 대폭 수정 (LUXFIND)
     const contactPerson = reservation.reservation_created_by || reservation.agency_contact_person || 'LUXFIND Staff';
     const agencyName = 'LUXFIND';
+    const changeReason = reservation.changes_description || '';
+    const reasonText = (assignmentType === 'REVISE' || assignmentType === 'CANCEL') && changeReason
+        ? ` │ 사유: ${changeReason}`
+        : '';
 
     // 룸 수에 따라 Room #n Confirmation No. 필드 동적 생성
     const roomConfirmationLine = rooms.map((room, idx) => {
@@ -387,7 +391,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     <!-- 타이틀 -->
     <div class="header">
         <h3>🏨 ${title}</h3>
-        <p>LUXFIND (럭스파인드)</p>
+        <p>LUXFIND (럭스파인드)${reasonText}</p>
     </div>
     
     <!-- 헤더 정보 -->

@@ -281,10 +281,13 @@ router.get('/:token', async (req, res) => {
         
         reservation.assignment_history = historyQuery.rows;
         
-        // 6. 최신 이력에서 타입과 리바이스 번호 가져오기
+        // 6. 최신 이력에서 타입, 리비전 번호, 사유 가져오기
         const latestHistory = historyQuery.rows[historyQuery.rows.length - 1];
         const assignmentType = latestHistory ? latestHistory.assignment_type : 'NEW';
         const revisionNumber = latestHistory ? latestHistory.revision_number : 0;
+        if (latestHistory && latestHistory.changes_description) {
+            reservation.changes_description = latestHistory.changes_description;
+        }
         
         // 7. HTML 생성
         const html = generateAssignmentHTML(reservation, assignmentType, revisionNumber);
