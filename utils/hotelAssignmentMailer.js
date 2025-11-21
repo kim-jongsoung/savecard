@@ -395,7 +395,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         <strong>📅 Sent:</strong> ${new Date().toLocaleString('en-US')} | <strong>👤 Contact:</strong> ${contactPerson}
     </div>
     
-    <!-- 예약 기본정보 -->
+    <!-- 예약 기본정보 (1행: Hotel, 2행: Check-in / Check-out / Nights / Flight) -->
     <table style="margin-bottom: 20px;">
         <tr>
             <td class="info-label">Hotel</td>
@@ -405,13 +405,11 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             <td class="info-label">Check-in</td>
             <td>${formatDate(checkIn)}</td>
             <td class="info-label">Check-out</td>
-            <td>${formatDate(checkOut)}</td>
-        </tr>
-        <tr>
-            <td class="info-label">Nights</td>
-            <td><strong>${nights}</strong></td>
-            <td class="info-label">Flight</td>
-            <td>${reservation.arrival_flight || ''} / ${reservation.departure_flight || ''}</td>
+            <td>
+                ${formatDate(checkOut)}
+                <span style="margin-left: 8px;">Nights: <strong>${nights}</strong></span>
+                <span style="margin-left: 8px;">Flight: ${reservation.arrival_flight || ''} / ${reservation.departure_flight || ''}</span>
+            </td>
         </tr>
     </table>
     
