@@ -384,11 +384,6 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             &nbsp;&nbsp;Staff Name: <span style="display: inline-block; min-width: 160px; border-bottom: 1px solid #000;">&nbsp;</span>
         </p>
     </div>
-    
-    <div class="footer">
-        <p><strong>Agency:</strong> ${agencyName}</p>
-        <p>${new Date().toLocaleString('en-US')}</p>
-    </div>
 </body>
 </html>
     `;
