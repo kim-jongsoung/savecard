@@ -66,10 +66,10 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             const guestNameEn = guest.english_name || guest.guest_name_en || '';
             guestsHTML += `
                 <tr style="font-size: 9px;">
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">Guest${guestIdx + 1}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guestNameEn}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guestType}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #ddd;">${guest.birth_date || guest.date_of_birth || ''}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #000;">Guest${guestIdx + 1}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #000;">${guestNameEn}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #000;">${guestType}</td>
+                    <td style="padding: 2px 4px; border: 1px solid #000;">${guest.birth_date || guest.date_of_birth || ''}</td>
                 </tr>
             `;
         });
@@ -105,7 +105,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             
             breakfastHTML = `
                 <tr style="font-size: 9px;">
-                    <td colspan="4" style="padding: 2px 4px; border: 1px solid #ddd;">
+                    <td colspan="4" style="padding: 2px 4px; border: 1px solid #000;">
                         <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${breakfastDays}=${adultTotal} │ Child: ${childCount}×${breakfastDays}=${childTotal}
                     </td>
                 </tr>
@@ -113,14 +113,14 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         } else {
             breakfastHTML = `
                 <tr style="font-size: 9px;">
-                    <td colspan="4" style="padding: 2px 4px; border: 1px solid #ddd;"><strong>Breakfast: ☐ Not Included</strong></td>
+                    <td colspan="4" style="padding: 2px 4px; border: 1px solid #000;"><strong>Breakfast: ☐ Not Included</strong></td>
                 </tr>
             `;
         }
         
         roomsHTML += `
-            <tr style="background: #f8f9fa; font-size: 10px;">
-                <td colspan="4" style="padding: 4px; border: 1px solid #ddd;">
+            <tr style="font-size: 10px;">
+                <td colspan="4" style="padding: 4px; border: 1px solid #000;">
                     <strong>ROOM ${roomNum}:</strong> ${room.room_type_name || ''} │ <strong>Promo:</strong> ${room.promotion_code || '-'}
                 </td>
             </tr>
@@ -146,8 +146,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     roomCharges.forEach(r => {
         paymentHTML += `
         <tr style="font-size: 9px;">
-            <td style="padding: 3px;">Room ${r.roomNum}:</td>
-            <td style="padding: 3px; text-align: right;">$${r.roomCharge.toFixed(2)}</td>
+            <td style="padding: 3px; border: 1px solid #000;">Room ${r.roomNum}:</td>
+            <td style="padding: 3px; border: 1px solid #000; text-align: right;">$${r.roomCharge.toFixed(2)}</td>
         </tr>
         `;
         totalAmount += r.roomCharge;
@@ -166,8 +166,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         
         paymentHTML += `
         <tr style="font-size: 9px;">
-            <td style="padding: 3px;">Breakfast Room ${b.roomNum}:</td>
-            <td style="padding: 3px; text-align: right;">${breakfastDetail} = $${b.breakfastCharge.toFixed(2)}</td>
+            <td style="padding: 3px; border: 1px solid #000;">Breakfast Room ${b.roomNum}:</td>
+            <td style="padding: 3px; border: 1px solid #000; text-align: right;">${breakfastDetail} = $${b.breakfastCharge.toFixed(2)}</td>
         </tr>
         `;
         totalAmount += b.breakfastCharge;
@@ -202,8 +202,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             
             paymentHTML += `
             <tr style="font-size: 9px;">
-                <td style="padding: 3px;">Extra Services:</td>
-                <td style="padding: 3px; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
+                <td style="padding: 3px; border: 1px solid #000;">Extra Services:</td>
+                <td style="padding: 3px; border: 1px solid #000; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
             </tr>
             `;
             totalAmount += extrasTotal;
