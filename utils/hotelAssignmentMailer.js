@@ -191,6 +191,12 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     const contactPerson = reservation.reservation_created_by || reservation.agency_contact_person || 'LUXFIND Staff';
     const agencyName = 'LUXFIND';
 
+    // 룸 수에 따라 Room #n Confirmation No. 필드 동적 생성
+    const roomConfirmationLine = rooms.map((room, idx) => {
+        const roomNum = idx + 1;
+        return `Room #${roomNum} Confirmation No.: <span style="display: inline-block; min-width: 160px; border-bottom: 1px solid #000;">&nbsp;</span>`;
+    }).join('&nbsp;&nbsp;');
+
     return `
 <!DOCTYPE html>
 <html>
@@ -365,33 +371,18 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     </div>
     ` : ''}
     
-    <!-- Hotel Confirmation Section -->
-    <div style="margin-top: 32px; padding: 24px; border: 2px solid #2c3e50; border-radius: 8px; background: #f8f9fa;">
-        <h3 style="margin: 0 0 20px 0; padding-bottom: 8px; border-bottom: 2px solid #2c3e50; font-size: 18px; font-weight: 700; color: #2c3e50;">
+    <!-- Hotel Confirmation Section (Compact 2-line area) -->
+    <div style="margin-top: 24px; padding: 18px; border: 2px solid #2c3e50; border-radius: 8px; background: #f8f9fa;">
+        <h3 style="margin: 0 0 14px 0; padding-bottom: 6px; border-bottom: 2px solid #2c3e50; font-size: 16px; font-weight: 700; color: #2c3e50;">
             ✍️ HOTEL CONFIRMATION SECTION
         </h3>
-        
-        <table>
-            ${confirmationFields}
-        </table>
-        
-        <div style="margin-top: 25px;">
-            <strong>Hotel Notes/Comments:</strong><br>
-            <div style="border: 1px solid #999; min-height: 100px; background: white; margin-top: 5px;"></div>
-        </div>
-        
-        <table style="margin-top: 30px; border: none;">
-            <tr style="border: none;">
-                <td style="border: none; width: 60%;">
-                    <strong>Hotel Staff Name:</strong> 
-                    <span style="display: inline-block; border-bottom: 2px solid #000; width: 250px; margin-left: 10px;"></span>
-                </td>
-                <td style="border: none; width: 40%;">
-                    <strong>Date:</strong> 
-                    <span style="display: inline-block; border-bottom: 2px solid #000; width: 150px; margin-left: 10px;"></span>
-                </td>
-            </tr>
-        </table>
+        <p style="margin: 6px 0 4px 0; font-size: 13px;">
+            ${roomConfirmationLine}
+        </p>
+        <p style="margin: 4px 0 0 0; font-size: 13px;">
+            Date: <span style="display: inline-block; min-width: 140px; border-bottom: 1px solid #000;">&nbsp;</span>
+            &nbsp;&nbsp;Staff Name: <span style="display: inline-block; min-width: 160px; border-bottom: 1px solid #000;">&nbsp;</span>
+        </p>
     </div>
     
     <div class="footer">
