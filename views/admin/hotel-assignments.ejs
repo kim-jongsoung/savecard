@@ -732,7 +732,7 @@
         <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
                 <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title">
+                    <h5 class="modal-title" id="assignmentModalTitle">
                         <i class="fas fa-file-contract me-2"></i>호텔 수배서 작성 및 전송
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -2874,6 +2874,25 @@
             modal.show();
         }
         
+        // 전송 타입/방식에 따라 모달 타이틀 동적 변경
+        function updateAssignmentModalTitle() {
+            const type = document.getElementById('newAssignmentTypeSelect').value;
+            const method = document.querySelector('input[name="deliveryMethod"]:checked')?.value || 'create_only';
+            const titleEl = document.getElementById('assignmentModalTitle');
+
+            let typeLabel = '';
+            if (type === 'NEW') typeLabel = '신규 수배서';
+            else if (type === 'REVISE') typeLabel = '수정 수배서';
+            else if (type === 'CANCEL') typeLabel = '취소 수배서';
+
+            let methodLabel = '';
+            if (method === 'create_only') methodLabel = '생성';
+            else if (method === 'email') methodLabel = '생성 및 이메일 전송';
+            else if (method === 'link') methodLabel = '생성 및 링크 복사';
+
+            titleEl.innerHTML = `<i class="fas fa-file-contract me-2"></i>${typeLabel} ${methodLabel}`;
+        }
+
         // 전송 타입 변경 핸들러 (새 수배서 생성용)
         document.getElementById('newAssignmentTypeSelect').addEventListener('change', function(e) {
             const descGroup = document.getElementById('newChangesDescriptionGroup');
@@ -2882,6 +2901,7 @@
             } else {
                 descGroup.style.display = 'none';
             }
+            updateAssignmentModalTitle();
         });
         
         // 수배서 생성 및 처리 함수
@@ -2989,9 +3009,14 @@
                 document.getElementById('newChangesDescriptionGroup').style.display = 'none';
                 document.getElementById('methodCreateOnly').checked = true;
                 toggleEmailInput();
+                updateAssignmentModalTitle();
                 
-                // 목록 새로고침
-                loadAssignmentsList(reservationId);
+                // 목록 새로고침 후 목록 영역으로 스크롤
+                await loadAssignmentsList(reservationId);
+                const listContainer = document.getElementById('assignmentsList');
+                if (listContainer) {
+                    listContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
                 
             } catch (error) {
                 console.error('❌ 수배서 처리 오류:', error);
@@ -3045,48 +3070,46 @@
             });
             
             const assignmentLink = `${window.location.origin}/hotel-assignment/view/${assignment.assignment_token}`;
-            
-            // 메일 전송 여부
+
+            // 메일 전송/열람 상태
             const emailSent = assignment.sent_to_email && assignment.sent_at;
             const emailViewed = assignment.email_viewed;
-            
-            let emailStatusHTML = '';
+
+            let sentAtText = '-';
+            let viewedText = '-';
             if (emailSent) {
-                const sentDate = new Date(assignment.sent_at).toLocaleString('ko-KR', {
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                sentAtText = new Date(assignment.sent_at).toLocaleString('ko-KR', {
+                    year: '2-digit', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
                 });
-                emailStatusHTML = `
-                    <div class="mt-2 p-2 bg-light rounded" style="font-size: 11px;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-envelope me-1"></i>${assignment.sent_to_email}</span>
-                            ${emailViewed ? '<span class="badge bg-success">열람됨</span>' : '<span class="badge bg-secondary">미열람</span>'}
-                        </div>
-                        <small class="text-muted">전송: ${sentDate}</small>
-                        ${emailViewed && assignment.viewed_at ? `<br><small class="text-success">열람: ${new Date(assignment.viewed_at).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })} (${assignment.view_count || 1}회)</small>` : ''}
-                    </div>
-                `;
             }
-            
+            if (emailViewed && assignment.viewed_at) {
+                viewedText = `${new Date(assignment.viewed_at).toLocaleString('ko-KR', {
+                    year: '2-digit', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                })} (${assignment.view_count || 1}회)`;
+            }
+
             return `
                 <div class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
                         <div>
                             <span class="badge ${typeBadgeClass} me-2">${typeLabel}</span>
                             <small class="text-muted">${createdDate}</small>
                         </div>
                         <small class="text-muted">by ${assignment.sent_by || 'Admin'}</small>
                     </div>
-                    
+
                     ${assignment.changes_description ? `
                         <div class="alert alert-warning py-1 px-2 mb-2" style="font-size: 11px;">
                             <strong>사유:</strong> ${assignment.changes_description}
                         </div>
                     ` : ''}
-                    
+
                     <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                        <button class="btn btn-outline-secondary" onclick="window.open('${assignmentLink}', '_blank')">
+                            <i class="fas fa-eye me-1"></i>미리보기
+                        </button>
                         <button class="btn btn-outline-primary" onclick="sendAssignmentEmailById('${assignment.id}', '${assignment.assignment_token}')">
                             <i class="fas fa-envelope me-1"></i>메일 보내기
                         </button>
@@ -3094,8 +3117,27 @@
                             <i class="fas fa-link me-1"></i>링크 복사
                         </button>
                     </div>
-                    
-                    ${emailStatusHTML}
+
+                    <div class="row" style="font-size: 11px;">
+                        <div class="col-6">
+                            <div class="text-muted">전송 이메일</div>
+                            <div>${assignment.sent_to_email || '-'}</div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-muted">전송시간</div>
+                            <div>${sentAtText}</div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-muted">열람여부</div>
+                            <div>${emailViewed ? '<span class="text-success">열람</span>' : '<span class="text-secondary">미열람</span>'}</div>
+                        </div>
+                    </div>
+
+                    ${emailViewed && assignment.viewed_at ? `
+                        <div class="mt-1" style="font-size: 11px;">
+                            <span class="text-success">열람시간:</span> ${viewedText}
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
