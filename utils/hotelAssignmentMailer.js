@@ -187,6 +187,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         historyHTML = `[NEW] Initial booking`;
     }
     
+    // 호텔 컨펌 섹션 (컴팩트 버전)
     return `
 <!DOCTYPE html>
 <html>
@@ -313,23 +314,27 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         </tr>
     </table>
     
-    <!-- 호텔 컨펌 섹션 -->
-    <table>
-        <tr class="section-title" style="font-size: 10px;">
-            <td colspan="2">✍️ HOTEL CONFIRMATION SECTION</td>
+    <!-- 호텔 컨펌 섹션 (컴팩트형) -->
+    <table style="border: 2px solid #000; margin-top: 10px;">
+        <tr style="background: #eee;">
+            <td colspan="2" style="padding: 4px; text-align: center; font-weight: bold; font-size: 10px; border-bottom: 1px solid #000;">
+                ✍️ HOTEL CONFIRMATION
+            </td>
         </tr>
         ${confirmationFields}
         <tr style="font-size: 9px;">
-            <td colspan="2" style="padding: 3px;"><strong>Hotel Notes/Comments:</strong></td>
-        </tr>
-        <tr style="font-size: 9px;">
-            <td colspan="2" style="padding: 15px 3px; border-bottom: 1px solid #333;">
-                &nbsp;
+            <td style="padding: 4px; width: 60%; vertical-align: top; border-right: 1px solid #000;">
+                <strong>Comments:</strong><br><br><br>
             </td>
-        </tr>
-        <tr style="font-size: 9px;">
-            <td style="padding: 4px; width: 50%;"><strong>Hotel Staff Name:</strong> _________________</td>
-            <td style="padding: 4px; width: 50%;"><strong>Date:</strong> _________________</td>
+            <td style="padding: 0; width: 40%; vertical-align: top;">
+                <div style="padding: 4px; border-bottom: 1px solid #ccc;">
+                    <strong>Staff Name:</strong>
+                </div>
+                <div style="padding: 4px; height: 25px;"></div>
+                <div style="padding: 4px; border-top: 1px solid #000;">
+                    <strong>Date:</strong>
+                </div>
+            </td>
         </tr>
     </table>
 </body>

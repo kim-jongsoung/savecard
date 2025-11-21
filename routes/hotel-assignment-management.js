@@ -38,7 +38,7 @@ router.post('/create', async (req, res) => {
         const roomsQuery = await client.query(`
             SELECT 
                 hrr.*,
-                rt.name as room_type_name
+                rt.room_type_name
             FROM hotel_reservation_rooms hrr
             LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
             WHERE hrr.reservation_id = $1
