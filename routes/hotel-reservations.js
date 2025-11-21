@@ -402,6 +402,7 @@ router.get('/:id', async (req, res) => {
             SELECT 
                 hr.*,
                 h.hotel_name,
+                h.hotel_name_en,
                 ba.agency_name as booking_agency_name,
                 ba.contact_person as agency_contact_person,
                 ba.contact_email as agency_email
@@ -423,7 +424,8 @@ router.get('/:id', async (req, res) => {
             SELECT 
                 hrr.*,
                 rt.room_type_code,
-                rt.room_type_name
+                rt.room_type_name,
+                rt.hotel_room_name
             FROM hotel_reservation_rooms hrr
             LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
             WHERE hrr.reservation_id = $1

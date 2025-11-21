@@ -1224,6 +1224,15 @@ try {
             await ensureAllColumns();
         }
         
+        // ⭐ 호텔 ERP 테이블 V2 자동 초기화 추가
+        console.log('🏨 호텔 ERP 테이블 V2 초기화 시작...');
+        try {
+            await createHotelTablesV2();
+            console.log('✅ 호텔 ERP 테이블 V2 초기화 완료');
+        } catch (err) {
+            console.error('❌ 호텔 ERP 테이블 V2 초기화 실패:', err);
+        }
+        
         // 요금 RAG 매칭을 위한 컬럼 추가 마이그레이션
         console.log('🔧 요금 RAG 컬럼 마이그레이션 시작...');
         await pool.query(`

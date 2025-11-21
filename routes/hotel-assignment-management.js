@@ -19,6 +19,7 @@ router.post('/create', async (req, res) => {
             SELECT 
                 hr.*,
                 h.hotel_name,
+                h.hotel_name_en,
                 ba.agency_name as booking_agency_name,
                 ba.contact_person as agency_contact_person,
                 ba.contact_email as agency_contact_email
@@ -38,7 +39,8 @@ router.post('/create', async (req, res) => {
         const roomsQuery = await client.query(`
             SELECT 
                 hrr.*,
-                rt.room_type_name
+                rt.room_type_name,
+                rt.hotel_room_name
             FROM hotel_reservation_rooms hrr
             LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
             WHERE hrr.reservation_id = $1
@@ -110,7 +112,7 @@ router.post('/create', async (req, res) => {
             ) RETURNING id
         `, [
             reservation_id, assignment_type, revisionNumber, assignmentToken,
-            reservation.hotel_id, reservation.hotel_name,
+            reservation.hotel_id, reservation.hotel_name_en || reservation.hotel_name,
             reservation.booking_agency_id, reservation.booking_agency_name,
             reservation.agency_contact_person, reservation.agency_contact_email,
             reservation.check_in_date, reservation.check_out_date, nights,
@@ -141,7 +143,7 @@ router.post('/create', async (req, res) => {
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 RETURNING id
             `, [
-                assignmentId, i + 1, room.room_type_id, room.room_type_name,
+                assignmentId, i + 1, room.room_type_id, room.hotel_room_name || room.room_type_name,
                 roomRate, room.promotion_code,
                 room.breakfast_included, room.breakfast_adult_count, room.breakfast_adult_price,
                 room.breakfast_child_count, room.breakfast_child_price

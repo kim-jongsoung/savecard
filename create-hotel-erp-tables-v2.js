@@ -455,6 +455,62 @@ async function createHotelTablesV2() {
             )
         `);
         console.log('✅ hotel_assignments 테이블 생성 완료');
+
+        // ==========================================
+        // 10-1. 호텔 수배 객실 (신규)
+        // ==========================================
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS hotel_assignment_rooms (
+                id SERIAL PRIMARY KEY,
+                assignment_id INTEGER REFERENCES hotel_assignments(id) ON DELETE CASCADE,
+                room_number INTEGER,
+                room_type_id INTEGER REFERENCES room_types(id),
+                room_type_name VARCHAR(100),
+                room_rate DECIMAL(10, 2),
+                promotion_code VARCHAR(50),
+                breakfast_included BOOLEAN DEFAULT false,
+                breakfast_adult_count INTEGER DEFAULT 0,
+                breakfast_adult_price DECIMAL(10, 2) DEFAULT 0,
+                breakfast_child_count INTEGER DEFAULT 0,
+                breakfast_child_price DECIMAL(10, 2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ hotel_assignment_rooms 테이블 생성 완료');
+
+        // ==========================================
+        // 10-2. 호텔 수배 투숙객 (신규)
+        // ==========================================
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS hotel_assignment_guests (
+                id SERIAL PRIMARY KEY,
+                assignment_room_id INTEGER REFERENCES hotel_assignment_rooms(id) ON DELETE CASCADE,
+                guest_number INTEGER,
+                guest_name_ko VARCHAR(100),
+                guest_name_en VARCHAR(100),
+                birth_date DATE,
+                is_adult BOOLEAN DEFAULT true,
+                is_child BOOLEAN DEFAULT false,
+                is_infant BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ hotel_assignment_guests 테이블 생성 완료');
+
+        // ==========================================
+        // 10-3. 호텔 수배 추가항목 (신규)
+        // ==========================================
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS hotel_assignment_extras (
+                id SERIAL PRIMARY KEY,
+                assignment_id INTEGER REFERENCES hotel_assignments(id) ON DELETE CASCADE,
+                item_number INTEGER,
+                item_name VARCHAR(100),
+                charge DECIMAL(10, 2),
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        console.log('✅ hotel_assignment_extras 테이블 생성 완료');
         
         // ==========================================
         // 11. 호텔 정산 관리 (신규)
@@ -511,7 +567,10 @@ async function createHotelTablesV2() {
         throw error;
     } finally {
         client.release();
-        await pool.end();
+        // 주의: 모듈로 사용될 때 pool을 닫으면 안됨
+        if (require.main === module) {
+            await pool.end();
+        }
     }
 }
 

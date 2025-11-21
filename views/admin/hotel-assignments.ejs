@@ -3251,7 +3251,7 @@
                     roomsTableHTML += `
                         <div style="margin-bottom: 15px; page-break-inside: avoid;">
                             <h6 style="background: #34495e; color: white; padding: 5px; margin: 0;">
-                                ROOM ${roomNum}: ${room.room_type_name || 'Room Type Not Specified'} │ ${promoCode}
+                                ROOM ${roomNum}: ${room.hotel_room_name || room.room_type_name || 'Room Type Not Specified'} │ ${promoCode}
                             </h6>
                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                                 <tr style="background: #ecf0f1;">
@@ -3354,7 +3354,7 @@
                     <table style="width: 100%; margin-bottom: 15px; border-collapse: collapse;">
                         <tr>
                             <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1; width: 120px;"><strong>Hotel</strong></td>
-                            <td style="padding: 5px; border: 1px solid #ddd;" colspan="3">${reservation.hotel_name || '-'}</td>
+                            <td style="padding: 5px; border: 1px solid #ddd;" colspan="3">${reservation.hotel_name_en || reservation.hotel_name || '-'}</td>
                         </tr>
                         <tr>
                             <td style="padding: 5px; border: 1px solid #ddd; background: #ecf0f1;"><strong>Check-in</strong></td>
