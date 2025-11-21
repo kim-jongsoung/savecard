@@ -210,6 +210,9 @@ router.post('/', async (req, res) => {
                 const pricingType = extra.pricing_type || 'flat';
                 let totalPrice = 0;
                 
+                // 인/아웃 호텔 플래그 (프론트에서 in_hotel = 'in' | 'out')
+                const extraScope = extra.in_hotel === 'out' ? 'OUT_HOTEL' : 'IN_HOTEL';
+                
                 if (pricingType === 'per_person') {
                     const adultTotal = (parseInt(extra.adult_count) || 0) * (parseFloat(extra.adult_price) || 0);
                     const childTotal = (parseInt(extra.child_count) || 0) * (parseFloat(extra.child_price) || 0);
@@ -230,8 +233,9 @@ router.post('/', async (req, res) => {
                             infant_price,
                             total_selling_price,
                             currency,
+                            notes,
                             created_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
                     `, [
                         reservationId,
                         extra.item_name,
@@ -244,7 +248,8 @@ router.post('/', async (req, res) => {
                         parseInt(extra.infant_count) || 0,
                         parseFloat(extra.infant_price) || 0,
                         totalPrice,
-                        'USD'
+                        'USD',
+                        extraScope
                     ]);
                 } else {
                     totalPrice = (parseFloat(extra.unit_price) || 0) * (parseInt(extra.quantity) || 1);
@@ -258,8 +263,9 @@ router.post('/', async (req, res) => {
                             unit_price,
                             total_selling_price,
                             currency,
+                            notes,
                             created_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
                     `, [
                         reservationId,
                         extra.item_name,
@@ -267,7 +273,8 @@ router.post('/', async (req, res) => {
                         parseInt(extra.quantity) || 1,
                         parseFloat(extra.unit_price) || 0,
                         totalPrice,
-                        'USD'
+                        'USD',
+                        extraScope
                     ]);
                 }
                 
@@ -657,6 +664,9 @@ router.put('/:id', async (req, res) => {
                 const pricingType = extra.pricing_type || 'flat';
                 let totalPrice = 0;
                 
+                // 인/아웃 호텔 플래그 (프론트에서 in_hotel = 'in' | 'out')
+                const extraScope = extra.in_hotel === 'out' ? 'OUT_HOTEL' : 'IN_HOTEL';
+                
                 if (pricingType === 'per_person') {
                     const adultTotal = (parseInt(extra.adult_count) || 0) * (parseFloat(extra.adult_price) || 0);
                     const childTotal = (parseInt(extra.child_count) || 0) * (parseFloat(extra.child_price) || 0);
@@ -677,8 +687,9 @@ router.put('/:id', async (req, res) => {
                             infant_price,
                             total_selling_price,
                             currency,
+                            notes,
                             created_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
                     `, [
                         id,
                         extra.item_name,
@@ -691,7 +702,8 @@ router.put('/:id', async (req, res) => {
                         parseInt(extra.infant_count) || 0,
                         parseFloat(extra.infant_price) || 0,
                         totalPrice,
-                        'USD'
+                        'USD',
+                        extraScope
                     ]);
                 } else {
                     totalPrice = (parseFloat(extra.unit_price) || 0) * (parseInt(extra.quantity) || 1);
@@ -705,8 +717,9 @@ router.put('/:id', async (req, res) => {
                             unit_price,
                             total_selling_price,
                             currency,
+                            notes,
                             created_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
                     `, [
                         id,
                         extra.item_name,
@@ -714,7 +727,8 @@ router.put('/:id', async (req, res) => {
                         parseInt(extra.quantity) || 1,
                         parseFloat(extra.unit_price) || 0,
                         totalPrice,
-                        'USD'
+                        'USD',
+                        extraScope
                     ]);
                 }
                 

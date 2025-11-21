@@ -60,11 +60,12 @@ router.post('/create', async (req, res) => {
             room.guests = guestsQuery.rows;
         }
         
-        // 4. 추가 항목 조회
+        // 4. 추가 항목 조회 (OUT_HOTEL 표시는 호텔 수배서에서 제외)
         const extrasQuery = await client.query(`
             SELECT *
             FROM hotel_reservation_extras
             WHERE reservation_id = $1
+              AND COALESCE(notes, 'IN_HOTEL') != 'OUT_HOTEL'
             ORDER BY id
         `, [reservation_id]);
         
@@ -173,14 +174,19 @@ router.post('/create', async (req, res) => {
             }
         }
         
-        // 12. hotel_assignment_extras 테이블에 INSERT
+        // 12. hotel_assignment_extras 테이블에 INSERT (호텔로 전달할 인호텔 항목만)
         for (let i = 0; i < extras.length; i++) {
             const extra = extras[i];
             await client.query(`
                 INSERT INTO hotel_assignment_extras (
                     assignment_id, item_number, item_name, charge
                 ) VALUES ($1, $2, $3, $4)
-            `, [assignmentId, i + 1, extra.item_name, extra.charge]);
+            `, [
+                assignmentId,
+                i + 1,
+                extra.item_name,
+                parseFloat(extra.total_selling_price) || 0
+            ]);
         }
         
         // 13. CANCEL인 경우 예약 상태 변경

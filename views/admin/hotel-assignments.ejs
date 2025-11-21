@@ -2101,6 +2101,16 @@
                         </div>
                     </div>
                     
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-4">
+                            <label class="form-label small">인/아웃 호텔</label>
+                            <select class="form-control" data-extra-field="in_hotel" data-extra="${extraCounter}">
+                                <option value="in" selected>인호텔 (호텔 청구)</option>
+                                <option value="out">아웃호텔 (호텔 청구 아님)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
                     <div class="row g-2 mt-2" id="perPersonPricing_${extraCounter}">
                         <div class="col-md-3">
                             <label class="form-label small">성인 수</label>
@@ -2498,9 +2508,15 @@
                                         const itemNameInput = extraCard.querySelector('[data-extra-field="item_name"]');
                                         const quantityInput = extraCard.querySelector('[data-extra-field="quantity"]');
                                         const pricingTypeInput = extraCard.querySelector('[data-extra-field="pricing_type"]');
+                                        const inHotelSelect = extraCard.querySelector('[data-extra-field="in_hotel"]');
                                         
                                         if (itemNameInput) itemNameInput.value = extra.item_name || '';
                                         if (quantityInput) quantityInput.value = extra.quantity || 1;
+                                        // 인/아웃 호텔 설정 (notes 컬럼 기반, 기본값은 IN_HOTEL)
+                                        const scope = (extra.notes || 'IN_HOTEL');
+                                        if (inHotelSelect) {
+                                            inHotelSelect.value = scope === 'OUT_HOTEL' ? 'out' : 'in';
+                                        }
                                         
                                         // ⭐ pricing_type 설정 후 즉시 UI 전환
                                         const actualPricingType = extra.item_type || extra.pricing_type || 'flat';
@@ -2673,6 +2689,7 @@
                 }
                 
                 const pricingType = extraCard.querySelector('[data-extra-field="pricing_type"]')?.value || 'flat';
+                const inHotel = extraCard.querySelector('[data-extra-field="in_hotel"]')?.value || 'in';
                 const quantity = parseInt(extraCard.querySelector('[data-extra-field="quantity"]')?.value) || 1;
                 
                 console.log(`\n📝 추가항목 ${cardIndex + 1} (extraNum: ${extraNum}) 수집 시작:`);
@@ -2682,7 +2699,8 @@
                 let extraData = {
                     item_name: itemName,
                     pricing_type: pricingType,
-                    quantity: quantity
+                    quantity: quantity,
+                    in_hotel: inHotel
                 };
                 
                 if (pricingType === 'per_person') {
