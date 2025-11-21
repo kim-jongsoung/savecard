@@ -3177,7 +3177,13 @@
                     console.log(`    👥 Guests (${guests.length}):`, guests);
                     
                     const roomNum = idx + 1;
-                    const roomRate = parseFloat(room.room_rate || 0);
+                    
+                    // room_rate 계산 (없으면 total_selling_price에서 역산)
+                    let roomRate = parseFloat(room.room_rate || 0);
+                    if (roomRate === 0 && room.total_selling_price && nights > 0) {
+                        roomRate = parseFloat(room.total_selling_price) / nights;
+                    }
+                    
                     const roomCharge = roomRate * nights;
                     roomCharges.push({ roomNum, roomRate, nights, roomCharge });
                     
@@ -3205,7 +3211,7 @@
                     }
                     
                     // Promo Code 표시
-                    const promoCode = room.promotion_code ? `Promo: ${room.promotion_code}` : 'Promo: -';
+                    const promoCode = room.promotion_code ? `Promo: ${room.promotion_code} <span style="color: #e74c3c; font-weight: bold;">[PROMOTION APPLIED]</span>` : 'Promo: -';
                     
                     // 조식 정보 (횟수만)
                     let breakfastInfo = '';

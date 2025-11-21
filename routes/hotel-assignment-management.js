@@ -125,6 +125,13 @@ router.post('/create', async (req, res) => {
         // 10. hotel_assignment_rooms 테이블에 INSERT
         for (let i = 0; i < rooms.length; i++) {
             const room = rooms[i];
+            
+            // room_rate 계산 (없으면 총 판매가 / 박수)
+            let roomRate = parseFloat(room.room_rate || 0);
+            if (roomRate === 0 && room.total_selling_price && nights > 0) {
+                roomRate = parseFloat(room.total_selling_price) / nights;
+            }
+            
             const roomQuery = await client.query(`
                 INSERT INTO hotel_assignment_rooms (
                     assignment_id, room_number, room_type_id, room_type_name,
@@ -135,7 +142,7 @@ router.post('/create', async (req, res) => {
                 RETURNING id
             `, [
                 assignmentId, i + 1, room.room_type_id, room.room_type_name,
-                room.room_rate, room.promotion_code,
+                roomRate, room.promotion_code,
                 room.breakfast_included, room.breakfast_adult_count, room.breakfast_adult_price,
                 room.breakfast_child_count, room.breakfast_child_price
             ]);
