@@ -3408,12 +3408,10 @@
                     </table>
                     
                     <!-- 객실 및 투숙객 정보 -->
-                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0; font-size: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">📋 Room & Guest Information</h5>
                     ${roomsTableHTML || '<p>No room information</p>'}
                     
                     <!-- PAYMENT TO HOTEL -->
-                    <h5 style="background: #34495e; color: white; padding: 8px; margin: 20px 0 10px 0; font-size: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">💰 PAYMENT TO HOTEL (TAX INCLUDED)</h5>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px;">
                         ${paymentHTML}
                         <tr>
                             <td colspan="2" style="padding: 6px;">&nbsp;</td>
@@ -3427,16 +3425,12 @@
                     <!-- 내부 메모 (호텔 전달사항) -->
                     ${reservation.internal_memo ? `
                         <div style="margin-top: 20px; padding: 12px; border: 1px solid #ddd; background: #fffacd; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                            <strong>📝 Notes to Hotel:</strong><br>
                             ${reservation.internal_memo}
                         </div>
                     ` : ''}
                     
                     <!-- Hotel Confirmation Section -->
                     <div style="margin-top: 30px; padding: 20px; border: 2px solid #2c3e50; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                        <h5 style="margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; font-size: 16px !important; background: none !important; padding-left: 0 !important;">
-                            ✍️ HOTEL CONFIRMATION SECTION
-                        </h5>
                         
                         ${rooms.map((room, idx) => `
                             <div style="margin-bottom: 12px; font-size: 14px;">

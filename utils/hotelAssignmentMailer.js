@@ -136,7 +136,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             breakfastCharges.push({ roomNum, adultCount, childCount, nights: breakfastDays, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
             
             breakfastHTML = `
-                <tr style="font-size: 9px;">
+                <tr style="font-size: 13px;">
                     <td colspan="4" style="padding: 2px 4px; border: 1px solid #000;">
                         <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${breakfastDays}=${adultTotal} │ Child: ${childCount}×${breakfastDays}=${childTotal}
                     </td>
@@ -144,7 +144,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             `;
         } else {
             breakfastHTML = `
-                <tr style="font-size: 9px;">
+                <tr style="font-size: 13px;">
                     <td colspan="4" style="padding: 2px 4px; border: 1px solid #000;"><strong>Breakfast: ☐ Not Included</strong></td>
                 </tr>
             `;
@@ -416,19 +416,17 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     </table>
     
     <!-- 객실 정보 -->
-    <div class="section-title">📋 Room & Guest Information</div>
     <table style="margin-top: 5px;">
         ${roomsHTML}
     </table>
     
     <!-- 금액 정보 -->
-    <div class="section-title">💰 PAYMENT TO HOTEL (TAX INCLUDED)</div>
     <table style="margin-top: 5px;">
         ${paymentHTML}
         <tr>
             <td colspan="2" style="padding: 10px;">&nbsp;</td>
         </tr>
-        <tr style="background: #f0f0f0; font-size: 18px;">
+        <tr style="font-size: 18px;">
             <td style="padding: 12px;"><strong>TOTAL AMOUNT:</strong></td>
             <td style="padding: 12px; text-align: right;"><strong>$${totalAmount.toFixed(2)}</strong></td>
         </tr>
@@ -436,17 +434,13 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     
     <!-- 내부 메모 (호텔 전달사항) -->
     ${reservation.internal_memo ? `
-    <div class="section-title">📝 Notes to Hotel</div>
-    <div style="padding: 15px; border: 1px solid #333; background: #fffacd; margin-top: 5px;">
+    <div style="margin-top: 18px; padding: 15px; border: 1px solid #333; background: #fffacd;">
         ${reservation.internal_memo}
     </div>
     ` : ''}
     
     <!-- Hotel Confirmation Section (Compact 2-line area) -->
     <div style="margin-top: 24px; padding: 18px; border: 2px solid #2c3e50; border-radius: 8px; background: #f8f9fa;">
-        <h3 style="margin: 0 0 14px 0; padding-bottom: 6px; border-bottom: 2px solid #2c3e50; font-size: 16px; font-weight: 700; color: #2c3e50;">
-            ✍️ HOTEL CONFIRMATION SECTION
-        </h3>
         <p style="margin: 6px 0 4px 0; font-size: 13px;">
             ${roomConfirmationLine}
         </p>
