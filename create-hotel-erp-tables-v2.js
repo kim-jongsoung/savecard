@@ -497,6 +497,29 @@ async function createHotelTablesV2() {
         `);
         console.log('✅ hotel_assignment_guests 테이블 생성 완료');
 
+        // hotel_assignment_guests 컬럼 마이그레이션 (guest_name_ko/en 확인)
+        await client.query(`
+            DO $$ 
+            BEGIN 
+                -- guest_name_ko 추가
+                IF NOT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_name = 'hotel_assignment_guests' AND column_name = 'guest_name_ko'
+                ) THEN
+                    ALTER TABLE hotel_assignment_guests ADD COLUMN guest_name_ko VARCHAR(100);
+                END IF;
+
+                -- guest_name_en 추가
+                IF NOT EXISTS (
+                    SELECT FROM information_schema.columns 
+                    WHERE table_name = 'hotel_assignment_guests' AND column_name = 'guest_name_en'
+                ) THEN
+                    ALTER TABLE hotel_assignment_guests ADD COLUMN guest_name_en VARCHAR(100);
+                END IF;
+            END $$;
+        `);
+        console.log('✅ hotel_assignment_guests 컬럼 마이그레이션 완료');
+
         // ==========================================
         // 10-3. 호텔 수배 추가항목 (신규)
         // ==========================================
