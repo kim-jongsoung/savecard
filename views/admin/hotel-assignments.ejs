@@ -3272,15 +3272,15 @@
                                 ROOM ${roomNum}: ${room.hotel_room_name || room.room_type_name || 'Room Type Not Specified'} │ ${promoCode}
                             </h6>
                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                                <tr style="background: #ecf0f1;">
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 40px;"><strong>No</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 150px;"><strong>English Name</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 80px;"><strong>Pax Type</strong></td>
-                                    <td style="padding: 4px; border: 1px solid #ddd; width: 100px;"><strong>Date of Birth</strong></td>
+                                <tr>
+                                    <td style="padding: 4px; border: 1px solid #000; width: 40px;"><strong>No</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #000; width: 150px;"><strong>English Name</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #000; width: 80px;"><strong>Pax Type</strong></td>
+                                    <td style="padding: 4px; border: 1px solid #000; width: 100px;"><strong>Date of Birth</strong></td>
                                 </tr>
                                 ${guestsHTML}
                             </table>
-                            <div style="margin-top: 5px; font-size: 11px; padding: 4px; background: #f8f9fa; border: 1px solid #ddd;">
+                            <div style="margin-top: 5px; font-size: 11px; padding: 4px; border: 1px solid #000; background: #ffffff;">
                                 ${breakfastInfo}
                             </div>
                         </div>
@@ -3418,9 +3418,9 @@
                         <tr>
                             <td colspan="2" style="padding: 6px;">&nbsp;</td>
                         </tr>
-                        <tr style="background: #f0f0f0; font-weight: bold; font-size: 15px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                            <td style="padding: 10px; border: 1px solid #ddd;">TOTAL AMOUNT:</td>
-                            <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">$${totalAmount.toFixed(2)}</td>
+                        <tr style="font-weight: bold; font-size: 15px;">
+                            <td style="padding: 10px; border: 1px solid #000;">TOTAL AMOUNT:</td>
+                            <td style="padding: 10px; border: 1px solid #000; text-align: right;">$${totalAmount.toFixed(2)}</td>
                         </tr>
                     </table>
                     

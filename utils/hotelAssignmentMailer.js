@@ -277,9 +277,10 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             font-size: 13px;
         }
 
+        /* 흑백 프린트용: 테이블 구분선을 진하게, 배경색 없이 */
         td {
             padding: 8px 12px;
-            border: 1px solid #dfe6e9;
+            border: 1px solid #000;
             vertical-align: middle;
         }
 
@@ -318,7 +319,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         }
 
         .info-label {
-            background: #f1f3f5;
+            /* 테이블 셀은 배경색 제거, 글자만 강조 */
+            background: #ffffff;
             font-weight: 600;
             width: 150px;
             color: #2c3e50;
