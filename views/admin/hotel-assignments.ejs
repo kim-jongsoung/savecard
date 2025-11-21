@@ -782,8 +782,39 @@
                                                   placeholder="변경 또는 취소 사유를 입력하세요"></textarea>
                                     </div>
                                     
-                                    <button class="btn btn-success btn-lg w-100" onclick="createNewAssignment()">
-                                        <i class="fas fa-file-alt me-2"></i>수배서 생성
+                                    <!-- 전송 방식 선택 -->
+                                    <div class="mb-3">
+                                        <label class="form-label">전송 방식</label>
+                                        <div class="d-flex flex-column gap-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="deliveryMethod" id="methodCreateOnly" value="create_only" checked onchange="toggleEmailInput()">
+                                                <label class="form-check-label" for="methodCreateOnly">
+                                                    수배서 생성만 (나중에 전송)
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="deliveryMethod" id="methodEmail" value="email" onchange="toggleEmailInput()">
+                                                <label class="form-check-label" for="methodEmail">
+                                                    <i class="fas fa-envelope me-1 text-primary"></i>이메일 즉시 전송
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="deliveryMethod" id="methodLink" value="link" onchange="toggleEmailInput()">
+                                                <label class="form-check-label" for="methodLink">
+                                                    <i class="fas fa-link me-1 text-info"></i>링크 복사 (클립보드)
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 이메일 입력 (조건부 표시) -->
+                                    <div class="mb-3" id="instantEmailGroup" style="display: none;">
+                                        <label class="form-label">수신 이메일</label>
+                                        <input type="email" class="form-control" id="instantRecipientEmail" placeholder="호텔 이메일 주소 입력">
+                                    </div>
+                                    
+                                    <button class="btn btn-primary w-100" onclick="createNewAssignment()">
+                                        <i class="fas fa-plus-circle me-2"></i>수배서 생성 및 처리
                                     </button>
                                 </div>
                             </div>
@@ -2775,6 +2806,17 @@
             }
         }
         
+        // 이메일 입력 필드 토글
+        function toggleEmailInput() {
+            const method = document.querySelector('input[name="deliveryMethod"]:checked').value;
+            const emailGroup = document.getElementById('instantEmailGroup');
+            if (method === 'email') {
+                emailGroup.style.display = 'block';
+            } else {
+                emailGroup.style.display = 'none';
+            }
+        }
+
         // 수배서 모달 열기
         function openAssignmentModal(reservation, history) {
             console.log('🔧 모달 열기 - 예약 데이터:', reservation);
@@ -2795,6 +2837,22 @@
             // 생성된 수배서 목록 로드
             loadAssignmentsList(reservation.id);
             
+            // 모달 입력 필드 초기화
+            document.getElementById('newAssignmentTypeSelect').value = 'NEW';
+            document.getElementById('newChangesDescriptionInput').value = '';
+            document.getElementById('newChangesDescriptionGroup').style.display = 'none';
+            
+            // 전송 방식 초기화 (생성만 하기)
+            document.getElementById('methodCreateOnly').checked = true;
+            toggleEmailInput();
+            
+            // 호텔 이메일이 있으면 자동 채우기
+            if (reservation.hotel_email) {
+                document.getElementById('instantRecipientEmail').value = reservation.hotel_email;
+            } else {
+                document.getElementById('instantRecipientEmail').value = '';
+            }
+            
             modal.show();
         }
         
@@ -2808,7 +2866,7 @@
             }
         });
         
-        // 수배서 생성 함수
+        // 수배서 생성 및 처리 함수
         async function createNewAssignment() {
             const reservationId = window.currentAssignmentReservationId;
             if (!reservationId) {
@@ -2819,19 +2877,34 @@
             const assignmentType = document.getElementById('newAssignmentTypeSelect').value;
             const changesDescription = document.getElementById('newChangesDescriptionInput').value;
             
+            // 전송 방식 확인
+            const deliveryMethod = document.querySelector('input[name="deliveryMethod"]:checked').value;
+            const recipientEmail = document.getElementById('instantRecipientEmail').value;
+            
             // 검증
             if ((assignmentType === 'REVISE' || assignmentType === 'CANCEL') && !changesDescription.trim()) {
                 alert('변경/취소 사유를 입력하세요.');
                 return;
             }
             
-            // 확인
+            if (deliveryMethod === 'email' && !recipientEmail) {
+                alert('수신 이메일 주소를 입력하세요.');
+                document.getElementById('instantRecipientEmail').focus();
+                return;
+            }
+            
+            // 확인 메시지 구성
             let typeLabel = assignmentType === 'NEW' ? '신규' : (assignmentType === 'REVISE' ? '수정' : '취소');
-            if (!confirm(`${typeLabel} 수배서를 생성하시겠습니까?`)) {
+            let actionLabel = '생성';
+            if (deliveryMethod === 'email') actionLabel = `생성 후 ${recipientEmail}로 전송`;
+            else if (deliveryMethod === 'link') actionLabel = '생성 후 링크 복사';
+            
+            if (!confirm(`${typeLabel} 수배서를 ${actionLabel}하시겠습니까?`)) {
                 return;
             }
             
             try {
+                // 1. 수배서 생성
                 const response = await fetch('/api/hotel-assignment-management/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2845,22 +2918,65 @@
                 
                 const result = await response.json();
                 
-                if (result.success) {
-                    alert(`✅ 수배서가 생성되었습니다!\n\n타입: ${result.assignment_type}${result.revision_number > 0 ? ' #' + result.revision_number : ''}\n링크: ${window.location.origin}/hotel-assignment/view/${result.assignment_token}`);
+                if (!result.success) {
+                    alert('❌ 생성 실패: ' + (result.error || '알 수 없는 오류'));
+                    return;
+                }
+                
+                const assignmentId = result.assignment_id;
+                const assignmentToken = result.assignment_token;
+                const link = `${window.location.origin}/hotel-assignment/view/${assignmentToken}`;
+                
+                // 2. 후속 작업 수행
+                if (deliveryMethod === 'email') {
+                    // 이메일 전송 API 호출
+                    const sendResponse = await fetch(`/api/hotel-assignment-management/${assignmentId}/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hotel_email: recipientEmail })
+                    });
                     
-                    // 입력 필드 초기화
-                    document.getElementById('newAssignmentTypeSelect').value = 'NEW';
-                    document.getElementById('newChangesDescriptionInput').value = '';
-                    document.getElementById('newChangesDescriptionGroup').style.display = 'none';
+                    const sendResult = await sendResponse.json();
                     
-                    // 목록 새로고침
-                    loadAssignmentsList(reservationId);
+                    if (sendResult.success) {
+                        alert(`✅ 수배서 생성 및 이메일 전송 완료!\n\n수신: ${sendResult.sent_to}`);
+                    } else {
+                        alert(`⚠️ 수배서는 생성되었으나 이메일 전송에 실패했습니다.\n\n오류: ${sendResult.error}`);
+                    }
+                    
+                } else if (deliveryMethod === 'link') {
+                    // 링크 복사
+                    try {
+                        await navigator.clipboard.writeText(link);
+                        alert(`✅ 수배서가 생성되고 링크가 복사되었습니다!\n\n${link}`);
+                    } catch (err) {
+                        // fallback
+                        const tempInput = document.createElement('input');
+                        tempInput.value = link;
+                        document.body.appendChild(tempInput);
+                        tempInput.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tempInput);
+                        alert(`✅ 수배서가 생성되었습니다. 링크가 복사되었습니다.\n\n${link}`);
+                    }
                     
                 } else {
-                    alert('❌ 생성 실패: ' + (result.error || '알 수 없는 오류'));
+                    // 생성만 하기
+                    alert(`✅ 수배서가 생성되었습니다!\n\n타입: ${result.assignment_type}${result.revision_number > 0 ? ' #' + result.revision_number : ''}`);
                 }
+                
+                // 3. UI 초기화 및 목록 갱신
+                document.getElementById('newAssignmentTypeSelect').value = 'NEW';
+                document.getElementById('newChangesDescriptionInput').value = '';
+                document.getElementById('newChangesDescriptionGroup').style.display = 'none';
+                document.getElementById('methodCreateOnly').checked = true;
+                toggleEmailInput();
+                
+                // 목록 새로고침
+                loadAssignmentsList(reservationId);
+                
             } catch (error) {
-                console.error('❌ 수배서 생성 오류:', error);
+                console.error('❌ 수배서 처리 오류:', error);
                 alert('❌ 오류가 발생했습니다: ' + error.message);
             }
         }

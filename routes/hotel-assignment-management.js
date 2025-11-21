@@ -359,7 +359,23 @@ router.post('/:assignmentId/send', async (req, res) => {
         assignment.rooms = rooms;
         assignment.extras = extrasQuery.rows;
         
-        // 5. 이메일 발송
+        // 5. AI 이메일 문구 생성
+        const { generateHotelEmailContent } = require('../utils/hotelEmailGenerator');
+        const emailContent = await generateHotelEmailContent(assignment);
+        
+        // 6. HTML 생성
+        const { generateAssignmentHTML, generateEmailHTML } = require('../utils/hotelAssignmentMailer');
+        
+        // 6-1. 첨부파일용 수배서 HTML (A4 형식)
+        const assignmentHTML = generateAssignmentHTML(assignment, assignment.assignment_type, assignment.revision_number);
+        
+        // 6-2. 공개 링크
+        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/view/${assignment.assignment_token}`;
+        
+        // 6-3. 이메일 본문 HTML (AI 문구 + 스타일)
+        const emailHTML = generateEmailHTML(emailContent, assignmentLink, assignment);
+        
+        // 7. 이메일 발송 설정
         const nodemailer = require('nodemailer');
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -371,37 +387,37 @@ router.post('/:assignmentId/send', async (req, res) => {
             }
         });
         
-        // 6. HTML 생성
-        const { generateAssignmentHTML } = require('../utils/hotelAssignmentMailer');
-        const htmlContent = generateAssignmentHTML(assignment);
-        
-        // 7. 전송할 이메일 주소 결정
+        // 8. 전송할 이메일 주소 결정
         const toEmail = hotel_email || assignment.agency_contact_email;
         if (!toEmail) {
             throw new Error('전송할 이메일 주소가 없습니다.');
         }
         
-        // 8. 이메일 제목
-        let subject = 'New Hotel Booking Request';
-        if (assignment.assignment_type === 'REVISE') {
-            subject = `Revised Booking Request #${assignment.revision_number}`;
-        } else if (assignment.assignment_type === 'CANCEL') {
-            subject = 'Booking Cancellation Request';
-        }
-        
-        // 9. 공개 링크
-        const assignmentLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/hotel-assignment/view/${assignment.assignment_token}`;
-        
-        // 10. 이메일 전송
+        // 9. 이메일 전송
         const info = await transporter.sendMail({
-            from: process.env.SMTP_USER,
+            from: `"${assignment.agency_contact_person || 'Guam Save Card'}" <${process.env.SMTP_USER}>`,
+            replyTo: assignment.agency_contact_email || process.env.SMTP_USER,
             to: toEmail,
-            subject: `[Guam Save Card] ${subject} - ${assignment.hotel_name}`,
-            html: htmlContent,
-            text: `Please view this hotel assignment at: ${assignmentLink}`
+            subject: emailContent.subject, // AI가 생성한 제목 사용
+            html: emailHTML,
+            text: `
+${emailContent.greeting}
+
+${emailContent.body}
+
+${emailContent.closing}
+
+View Assignment: ${assignmentLink}
+            `.trim(),
+            attachments: [
+                {
+                    filename: `Assignment_${assignment.assignment_type}_${new Date().getTime()}.html`,
+                    content: assignmentHTML
+                }
+            ]
         });
         
-        // 11. 전송 정보 업데이트
+        // 10. 전송 정보 업데이트
         await client.query(`
             UPDATE hotel_assignments
             SET 
