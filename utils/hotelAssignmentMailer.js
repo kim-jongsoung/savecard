@@ -197,79 +197,105 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
 <head>
     <meta charset="UTF-8">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
         @media print {
-            @page { margin: 10mm; size: A4; }
-            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
-            .no-print { display: none !important; }
-            /* 인쇄 시 폰트 강제 확대 */
-            body { font-size: 16px !important; }
-            table { font-size: 15px !important; }
-            h3 { font-size: 36px !important; }
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-print {
+                display: none !important;
+            }
         }
+
         body {
-            font-family: 'Malgun Gothic', Arial, sans-serif;
-            font-size: 16px;
+            font-family: 'Noto Sans KR', 'Malgun Gothic', Arial, sans-serif;
+            font-size: 14px;
             line-height: 1.5;
             margin: 0;
-            padding: 20px;
-            color: #000;
+            padding: 24px;
+            color: #2c3e50;
             max-width: 1000px;
             margin: 0 auto;
+            -webkit-font-smoothing: antialiased;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            font-size: 15px;
+            margin-bottom: 16px;
+            font-size: 13px;
         }
+
         td {
-            padding: 8px;
-            border: 1px solid #333;
+            padding: 8px 12px;
+            border: 1px solid #dfe6e9;
+            vertical-align: middle;
         }
+
         .header {
-            background: #000;
+            background: #2c3e50;
             color: #fff;
             text-align: center;
             padding: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
+
         .header h3 {
             margin: 0;
-            font-size: 36px;
-            font-weight: 900;
-            letter-spacing: 2px;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
         }
+
         .header p {
-            margin: 10px 0 0 0;
-            font-size: 18px;
-            font-weight: bold;
+            margin: 8px 0 0 0;
+            font-size: 16px;
+            font-weight: 600;
         }
+
         .section-title {
-            background: #ddd;
-            font-weight: bold;
-            padding: 10px;
-            border: 1px solid #333;
-            font-size: 18px;
-            margin-top: 20px;
+            background: #34495e;
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 15px;
+            margin-top: 24px;
+            margin-bottom: 8px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
+
         .info-label {
-            background: #eee;
-            font-weight: bold;
+            background: #f1f3f5;
+            font-weight: 600;
             width: 150px;
+            color: #2c3e50;
         }
+
         .no-border {
-            border: none;
+            border: none !important;
         }
+
         .text-right {
             text-align: right;
         }
+
         .footer {
-            margin-top: 40px;
-            border-top: 2px solid #000;
-            padding-top: 20px;
+            margin-top: 32px;
+            border-top: 2px solid #2c3e50;
+            padding-top: 16px;
             text-align: center;
-            font-size: 14px;
-            color: #666;
+            font-size: 12px;
+            color: #7f8c8d;
         }
     </style>
 </head>
