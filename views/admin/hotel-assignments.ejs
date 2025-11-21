@@ -3588,23 +3588,106 @@
             }
         }
         
-        // 수배서 인쇄 (현재 미리보기 화면 출력)
+        // 수배서 인쇄 (개선된 UI)
         function printAssignment() {
             const printContent = document.getElementById('assignmentPreview').innerHTML;
             const printWindow = window.open('', '', 'width=1000,height=1200');
             printWindow.document.write('<!DOCTYPE html><html><head><title>호텔 수배서 - LUXFIND</title>');
             printWindow.document.write(`
                 <style>
-                    body { margin: 0; padding: 20px; font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 14px; line-height: 1.4; } 
-                    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                    td, th { padding: 6px; border: 1px solid #ddd; }
-                    h3 { font-size: 26px !important; font-weight: 900; margin: 0; }
-                    p { margin: 5px 0; }
-                    h5 { font-size: 16px !important; margin: 15px 0 10px 0; background: #2c3e50 !important; color: white !important; padding: 8px !important; -webkit-print-color-adjust: exact; }
-                    @media print { 
-                        @page { margin: 10mm; size: A4; }
-                        body { padding: 0; -webkit-print-color-adjust: exact; } 
-                        h5 { background: #2c3e50 !important; color: white !important; }
+                    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+                    
+                    body { 
+                        margin: 0; 
+                        padding: 30px; 
+                        font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+                        color: #2c3e50;
+                        -webkit-font-smoothing: antialiased;
+                    }
+                    
+                    /* 전체 컨테이너 재정의 */
+                    div[style*="max-width: 1000px"] {
+                        max-width: 100% !important;
+                        font-family: 'Noto Sans KR', sans-serif !important;
+                        margin: 0 !important;
+                    }
+                    
+                    /* 테이블 스타일 개선 */
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-bottom: 15px;
+                        box-shadow: none !important;
+                    }
+                    
+                    td, th { 
+                        padding: 8px 12px !important; 
+                        border: 1px solid #dfe6e9 !important; 
+                        font-size: 13px !important;
+                        vertical-align: middle;
+                    }
+                    
+                    /* 강조 셀 배경 */
+                    td[style*="background: #ecf0f1"] {
+                        background-color: #f1f3f5 !important;
+                        font-weight: 600 !important;
+                        color: #2c3e50 !important;
+                    }
+                    
+                    /* 헤더 스타일 */
+                    h3 {
+                        font-family: 'Noto Sans KR', sans-serif !important;
+                        letter-spacing: -0.5px !important;
+                    }
+                    
+                    /* 섹션 헤더 */
+                    h5 {
+                        background-color: #2c3e50 !important;
+                        color: #fff !important;
+                        padding: 10px 15px !important;
+                        font-size: 15px !important;
+                        font-weight: 600 !important;
+                        margin: 25px 0 15px 0 !important;
+                        border-radius: 4px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    
+                    /* 확인 섹션 */
+                    div[style*="border: 2px solid #2c3e50"] {
+                        border: 2px solid #2c3e50 !important;
+                        border-radius: 8px;
+                        background-color: #fff !important;
+                        padding: 25px !important;
+                        margin-top: 40px !important;
+                    }
+                    
+                    /* 인쇄 전용 설정 */
+                    @media print {
+                        @page { 
+                            size: A4; 
+                            margin: 15mm; 
+                        }
+                        body { 
+                            padding: 0; 
+                        }
+                        
+                        /* 페이지 넘김 방지 */
+                        h5, tr, div[style*="border: 2px solid #2c3e50"] { 
+                            page-break-inside: avoid; 
+                        }
+                        
+                        /* 배경색 출력 강제 */
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        
+                        /* 링크 URL 숨기기 */
+                        a[href]:after {
+                            content: none !important;
+                        }
                     }
                 </style>
             `);
@@ -3621,16 +3704,86 @@
             printWindow.document.write('<!DOCTYPE html><html><head><title>호텔 수배서 - LUXFIND</title>');
             printWindow.document.write(`
                 <style>
-                    body { margin: 0; padding: 20px; font-family: 'Malgun Gothic', Arial, sans-serif; font-size: 14px; line-height: 1.4; } 
-                    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-                    td, th { padding: 6px; border: 1px solid #ddd; }
-                    h3 { font-size: 26px !important; font-weight: 900; margin: 0; }
-                    p { margin: 5px 0; }
-                    h5 { font-size: 16px !important; margin: 15px 0 10px 0; background: #2c3e50 !important; color: white !important; padding: 8px !important; -webkit-print-color-adjust: exact; }
-                    @media print { 
-                        @page { margin: 10mm; size: A4; }
-                        body { padding: 0; -webkit-print-color-adjust: exact; } 
-                        h5 { background: #2c3e50 !important; color: white !important; }
+                    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+                    
+                    body { 
+                        margin: 0; 
+                        padding: 30px; 
+                        font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; 
+                        color: #2c3e50;
+                        -webkit-font-smoothing: antialiased;
+                    }
+                    
+                    div[style*="max-width: 1000px"] {
+                        max-width: 100% !important;
+                        font-family: 'Noto Sans KR', sans-serif !important;
+                        margin: 0 !important;
+                    }
+                    
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-bottom: 15px;
+                        box-shadow: none !important;
+                    }
+                    
+                    td, th { 
+                        padding: 8px 12px !important; 
+                        border: 1px solid #dfe6e9 !important; 
+                        font-size: 13px !important;
+                        vertical-align: middle;
+                    }
+                    
+                    td[style*="background: #ecf0f1"] {
+                        background-color: #f1f3f5 !important;
+                        font-weight: 600 !important;
+                        color: #2c3e50 !important;
+                    }
+                    
+                    h3 {
+                        font-family: 'Noto Sans KR', sans-serif !important;
+                        letter-spacing: -0.5px !important;
+                    }
+                    
+                    h5 {
+                        background-color: #2c3e50 !important;
+                        color: #fff !important;
+                        padding: 10px 15px !important;
+                        font-size: 15px !important;
+                        font-weight: 600 !important;
+                        margin: 25px 0 15px 0 !important;
+                        border-radius: 4px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    
+                    div[style*="border: 2px solid #2c3e50"] {
+                        border: 2px solid #2c3e50 !important;
+                        border-radius: 8px;
+                        background-color: #fff !important;
+                        padding: 25px !important;
+                        margin-top: 40px !important;
+                    }
+                    
+                    @media print {
+                        @page { 
+                            size: A4; 
+                            margin: 15mm; 
+                        }
+                        body { 
+                            padding: 0; 
+                        }
+                        h5, tr, div[style*="border: 2px solid #2c3e50"] { 
+                            page-break-inside: avoid; 
+                        }
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        a[href]:after {
+                            content: none !important;
+                        }
                     }
                 </style>
             `);
