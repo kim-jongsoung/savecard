@@ -49,7 +49,12 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     
     rooms.forEach((room, idx) => {
         const roomNum = idx + 1;
-        const roomRate = parseFloat(room.room_rate || 0);
+
+        // 룸 요금: room_rate가 없으면 total_selling_price / nights 로 보정
+        let roomRate = parseFloat(room.room_rate || 0);
+        if (roomRate === 0 && room.total_selling_price && nights > 0) {
+            roomRate = parseFloat(room.total_selling_price) / nights;
+        }
         const roomCharge = roomRate * nights;
         roomCharges.push({ roomNum, roomRate, nights, roomCharge });
         
@@ -72,21 +77,36 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         // 조식 정보 (횟수만)
         let breakfastHTML = '';
         if (room.breakfast_included) {
-            const adultCount = room.breakfast_adult_count || 0;
-            const childCount = room.breakfast_child_count || 0;
+            // 기본적으로 저장된 카운트 사용
+            let adultCount = parseInt(room.breakfast_adult_count || 0);
+            let childCount = parseInt(room.breakfast_child_count || 0);
+
+            // 카운트가 0이고 투숙객 정보가 있으면 투숙객에서 다시 계산
+            if (adultCount === 0 && childCount === 0 && room.guests && room.guests.length > 0) {
+                room.guests.forEach((guest) => {
+                    if (guest.age_category === 'adult' || guest.is_adult) {
+                        adultCount++;
+                    } else if (guest.age_category === 'child' || guest.is_child) {
+                        childCount++;
+                    }
+                });
+            }
+
             const adultPrice = parseFloat(room.breakfast_adult_price || 0);
             const childPrice = parseFloat(room.breakfast_child_price || 0);
-            
-            const adultTotal = adultCount * nights;
-            const childTotal = childCount * nights;
+
+            // 별도 일수 정보가 없으므로 박수(nights)를 기준으로 계산
+            const breakfastDays = nights;
+            const adultTotal = adultCount * breakfastDays;
+            const childTotal = childCount * breakfastDays;
             
             const breakfastCharge = (adultTotal * adultPrice) + (childTotal * childPrice);
-            breakfastCharges.push({ roomNum, adultCount, childCount, nights, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
+            breakfastCharges.push({ roomNum, adultCount, childCount, nights: breakfastDays, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
             
             breakfastHTML = `
                 <tr style="font-size: 9px;">
                     <td colspan="4" style="padding: 2px 4px; border: 1px solid #ddd;">
-                        <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${nights}=${adultTotal} │ Child: ${childCount}×${nights}=${childTotal}
+                        <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${breakfastDays}=${adultTotal} │ Child: ${childCount}×${breakfastDays}=${childTotal}
                     </td>
                 </tr>
             `;
@@ -153,24 +173,41 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         totalAmount += b.breakfastCharge;
     });
     
-    // 추가 서비스
+    // 추가 서비스 (IN_HOTEL만 표시)
     if (extras && extras.length > 0) {
-        let extrasDetail = '';
-        let extrasTotal = 0;
-        extras.forEach((extra, idx) => {
-            const charge = parseFloat(extra.charge || 0);
-            extrasTotal += charge;
-            extrasDetail += `${extra.item_name} $${charge.toFixed(2)}`;
-            if (idx < extras.length - 1) extrasDetail += ' + ';
-        });
-        
-        paymentHTML += `
-        <tr style="font-size: 9px;">
-            <td style="padding: 3px;">Extra Services:</td>
-            <td style="padding: 3px; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
-        </tr>
-        `;
-        totalAmount += extrasTotal;
+        let effectiveExtras = extras;
+
+        // hotel_reservation_extras 처럼 notes 컬럼이 있는 경우 OUT_HOTEL 제외
+        if (effectiveExtras.length > 0 && Object.prototype.hasOwnProperty.call(effectiveExtras[0], 'notes')) {
+            effectiveExtras = effectiveExtras.filter(e => (e.notes || 'IN_HOTEL') !== 'OUT_HOTEL');
+        }
+
+        if (effectiveExtras.length > 0) {
+            let extrasDetail = '';
+            let extrasTotal = 0;
+
+            effectiveExtras.forEach((extra, idx) => {
+                // hotel_assignment_extras: charge
+                // hotel_reservation_extras: total_selling_price
+                const rawCharge =
+                    (typeof extra.charge !== 'undefined' && extra.charge !== null)
+                        ? extra.charge
+                        : extra.total_selling_price;
+                const charge = parseFloat(rawCharge || 0);
+
+                extrasTotal += charge;
+                extrasDetail += `${extra.item_name} $${charge.toFixed(2)}`;
+                if (idx < effectiveExtras.length - 1) extrasDetail += ' + ';
+            });
+            
+            paymentHTML += `
+            <tr style="font-size: 9px;">
+                <td style="padding: 3px;">Extra Services:</td>
+                <td style="padding: 3px; text-align: right;">${extrasDetail} = $${extrasTotal.toFixed(2)}</td>
+            </tr>
+            `;
+            totalAmount += extrasTotal;
+        }
     }
     
     // 변경 이력
