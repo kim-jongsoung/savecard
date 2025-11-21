@@ -40,6 +40,17 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         const dayName = days[date.getDay()];
         return `${year}-${month}-${day} (${dayName})`;
     };
+
+    // 생년월일은 YYYY-MM-DD 로만 깔끔하게 표시
+    const formatBirthDate = (value) => {
+        if (!value) return '';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return value; // 파싱 안 되면 원본 그대로
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
     
     // 객실별 HTML 생성
     let roomsHTML = '';
@@ -58,21 +69,42 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         const roomCharge = roomRate * nights;
         roomCharges.push({ roomNum, roomRate, nights, roomCharge });
         
-        // 투숙객 정보
-        let guestsHTML = '';
+        // 투숙객 정보 (A4 미리보기와 동일한 테이블 레이아웃 적용)
         const guests = room.guests || [];
+        let guestRowsHTML = '';
         guests.forEach((guest, guestIdx) => {
-            const guestType = guest.is_adult ? 'Adult' : (guest.is_child ? 'Child' : 'Infant');
+            const paxType = guest.is_adult ? 'Adult' : (guest.is_child ? 'Child' : 'Infant');
             const guestNameEn = guest.english_name || guest.guest_name_en || '';
-            guestsHTML += `
-                <tr style="font-size: 9px;">
-                    <td style="padding: 2px 4px; border: 1px solid #000;">Guest${guestIdx + 1}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #000;">${guestNameEn}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #000;">${guestType}</td>
-                    <td style="padding: 2px 4px; border: 1px solid #000;">${guest.birth_date || guest.date_of_birth || ''}</td>
+            const birthRaw = guest.birth_date || guest.date_of_birth || '';
+            const birthFormatted = formatBirthDate(birthRaw);
+            guestRowsHTML += `
+                <tr style="font-size: 13px;">
+                    <td style="padding: 3px 4px; border: 1px solid #000;">${guestIdx + 1}</td>
+                    <td style="padding: 3px 4px; border: 1px solid #000;">${guestNameEn}</td>
+                    <td style="padding: 3px 4px; border: 1px solid #000;">${paxType}</td>
+                    <td style="padding: 3px 4px; border: 1px solid #000;">${birthFormatted}</td>
                 </tr>
             `;
         });
+
+        let guestsTableHTML = '';
+        if (guests.length > 0) {
+            guestsTableHTML = `
+                <tr style="font-size: 13px; font-weight: 600;">
+                    <td style="padding: 3px 4px; border: 1px solid #000; width: 40px;">No</td>
+                    <td style="padding: 3px 4px; border: 1px solid #000; width: 170px;">English Name</td>
+                    <td style="padding: 3px 4px; border: 1px solid #000; width: 90px;">Pax Type</td>
+                    <td style="padding: 3px 4px; border: 1px solid #000; width: 120px;">Date of Birth</td>
+                </tr>
+                ${guestRowsHTML}
+            `;
+        } else {
+            guestsTableHTML = `
+                <tr style="font-size: 13px;">
+                    <td colspan="4" style="padding: 4px; border: 1px solid #000; text-align: center;">No guest information</td>
+                </tr>
+            `;
+        }
         
         // 조식 정보 (횟수만)
         let breakfastHTML = '';
@@ -119,12 +151,12 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         }
         
         roomsHTML += `
-            <tr style="font-size: 10px;">
-                <td colspan="4" style="padding: 4px; border: 1px solid #000;">
+            <tr style="font-size: 14px;">
+                <td colspan="4" style="padding: 6px; border: 1px solid #000;">
                     <strong>ROOM ${roomNum}:</strong> ${room.room_type_name || ''} │ <strong>Promo:</strong> ${room.promotion_code || '-'}
                 </td>
             </tr>
-            ${guestsHTML}
+            ${guestsTableHTML}
             ${breakfastHTML}
         `;
         
