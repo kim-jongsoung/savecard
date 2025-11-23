@@ -460,6 +460,28 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
 
 // 이메일 본문용 HTML 생성 (AI 문구 반영)
 function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
+    const wrapText = (text, maxLen = 100) => {
+        if (!text) return '';
+        const words = text.split(/\s+/);
+        const lines = [];
+        let current = '';
+
+        for (const word of words) {
+            if (!word) continue;
+            if (!current.length) {
+                current = word;
+            } else if ((current + ' ' + word).length > maxLen) {
+                lines.push(current);
+                current = word;
+            } else {
+                current += ' ' + word;
+            }
+        }
+
+        if (current) lines.push(current);
+        return lines.join('\n');
+    };
+
     const formatDate = (value) => {
         if (!value) return '';
         const d = new Date(value);
@@ -573,7 +595,7 @@ function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
         <div class="content">
             <p>${emailContent.greeting}</p>
             
-            <p>${emailContent.body.replace(/\n/g, '<br>')}</p>
+            <p>${wrapText(emailContent.body || '').replace(/\n/g, '<br><br>')}</p>
             
             <div class="info-box">
                 <p><strong>🏨 Hotel:</strong> ${assignmentData.hotel_name}</p>
