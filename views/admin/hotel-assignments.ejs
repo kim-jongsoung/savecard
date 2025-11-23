@@ -728,75 +728,111 @@
     </div>
 
     <div class="modal fade" id="voucherInvoiceModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-md">
+        <div class="modal-dialog modal-fullscreen">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title">
-                        <i class="fas fa-file-invoice-dollar me-2"></i>바우처 인보이스 생성
+                        <i class="fas fa-file-invoice-dollar me-2"></i>호텔 바우처 인보이스
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="small text-muted mb-2" id="voucherInvoiceInfo"></div>
-
-                    <div class="mb-3">
-                        <label class="form-label mb-1">정산 통화</label>
-                        <select id="voucherCurrency" class="form-select form-select-sm" onchange="updateVoucherInvoiceTotals()">
-                            <option value="USD">USD로 정산</option>
-                            <option value="KRW">KRW로 정산 (환율 적용)</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label mb-1">기본 금액 (USD)</label>
-                        <input type="text" class="form-control form-control-sm" id="voucherBaseAmount" readonly>
-                    </div>
-
-                    <div class="row g-2 mb-2">
-                        <div class="col-6">
-                            <label class="form-label mb-1">할인 (-)</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm" id="voucherDiscount" value="0" oninput="updateVoucherInvoiceTotals()">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label mb-1">추가금 (+)</label>
-                            <input type="number" step="0.01" class="form-control form-control-sm" id="voucherSurcharge" value="0" oninput="updateVoucherInvoiceTotals()">
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="form-label mb-1">최종 금액 (USD)</label>
-                        <input type="text" class="form-control form-control-sm" id="voucherFinalAmountUSD" readonly>
-                    </div>
-
-                    <div class="mb-1 small text-muted" id="voucherFxRateLabel">환율 정보를 불러오는 중...</div>
-                    <div class="mb-2" id="voucherFinalKRWRow" style="display: none;">
-                        <label class="form-label mb-1">최종 금액 (KRW)</label>
-                        <input type="text" class="form-control form-control-sm" id="voucherFinalAmountKRW" readonly>
-                    </div>
-
-                    <div id="voucherInvoiceActions" class="mt-3 pt-2 border-top" style="display: none;">
-                        <div class="mb-2">
-                            <label class="form-label mb-1">바우처 인보이스 링크</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" class="form-control" id="voucherInvoiceLinkInput" readonly>
-                                <button type="button" class="btn btn-outline-secondary" onclick="copyVoucherInvoiceLink()">복사</button>
+                <div class="modal-body p-0" style="background: #f5f5f5;">
+                    <div class="row g-0 h-100">
+                        <!-- 왼쪽: 바우처 인보이스 미리보기 -->
+                        <div class="col-md-8 p-4" style="background: white; overflow-y: auto; max-height: 85vh;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">📄 바우처 인보이스 미리보기</h5>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="previewVoucherInvoice()" title="새 창에서 보기">
+                                        <i class="fas fa-external-link-alt me-1"></i>새 창
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="voucherInvoicePreview" style="background: white; padding: 30px; border: 1px solid #ddd; box-shadow: 0 0 10px rgba(0,0,0,0.05); min-height: 400px;">
+                                <div class="text-center text-muted">
+                                    바우처 인보이스 생성 전입니다.<br>
+                                    우측에서 금액을 설정한 후 [바우처 인보이스 생성] 버튼을 눌러주세요.
+                                </div>
                             </div>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="previewVoucherInvoice()">
-                                <i class="fas fa-eye me-1"></i>미리보기
-                            </button>
-                            <button type="button" class="btn btn-outline-success btn-sm flex-fill" onclick="sendVoucherInvoiceEmail()">
-                                <i class="fas fa-envelope me-1"></i>메일 보내기
-                            </button>
+
+                        <!-- 오른쪽: 금액/전송 설정 -->
+                        <div class="col-md-4 p-4" style="background: #f8f9fa; overflow-y: auto; max-height: 85vh;">
+                            <h5 class="mb-3">📨 바우처 인보이스 설정</h5>
+
+                            <div class="small text-muted mb-2" id="voucherInvoiceInfo"></div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>정산 금액</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">정산 통화</label>
+                                        <select id="voucherCurrency" class="form-select form-select-sm" onchange="updateVoucherInvoiceTotals()">
+                                            <option value="USD">USD로 정산</option>
+                                            <option value="KRW">KRW로 정산 (환율 적용)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">기본 금액 (USD)</label>
+                                        <input type="text" class="form-control form-control-sm" id="voucherBaseAmount" readonly>
+                                    </div>
+
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label mb-1">할인 (-)</label>
+                                            <input type="number" step="0.01" class="form-control form-control-sm" id="voucherDiscount" value="0" oninput="updateVoucherInvoiceTotals()">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label mb-1">추가금 (+)</label>
+                                            <input type="number" step="0.01" class="form-control form-control-sm" id="voucherSurcharge" value="0" oninput="updateVoucherInvoiceTotals()">
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-2">
+                                        <label class="form-label mb-1">최종 금액 (USD)</label>
+                                        <input type="text" class="form-control form-control-sm" id="voucherFinalAmountUSD" readonly>
+                                    </div>
+
+                                    <div class="mb-1 small text-muted" id="voucherFxRateLabel">환율 정보를 불러오는 중...</div>
+                                    <div class="mb-2" id="voucherFinalKRWRow" style="display: none;">
+                                        <label class="form-label mb-1">최종 금액 (KRW)</label>
+                                        <input type="text" class="form-control form-control-sm" id="voucherFinalAmountKRW" readonly>
+                                    </div>
+
+                                    <button type="button" class="btn btn-success btn-sm w-100 mt-2" onclick="saveVoucherInvoice()">
+                                        <i class="fas fa-check me-1"></i>바우처 인보이스 생성
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header bg-dark text-white">
+                                    <h6 class="mb-0"><i class="fas fa-link me-2"></i>발행된 인보이스 액션</h6>
+                                </div>
+                                <div class="card-body" id="voucherInvoiceActions" style="display: none;">
+                                    <div class="mb-2">
+                                        <label class="form-label mb-1">바우처 인보이스 링크</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" id="voucherInvoiceLinkInput" readonly>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="copyVoucherInvoiceLink()">복사</button>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="previewVoucherInvoice()">
+                                            <i class="fas fa-eye me-1"></i>미리보기
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm flex-fill" onclick="sendVoucherInvoiceEmail()">
+                                            <i class="fas fa-envelope me-1"></i>메일 보내기
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
-                    <button type="button" class="btn btn-success btn-sm" onclick="saveVoucherInvoice()">
-                        <i class="fas fa-check me-1"></i>생성
-                    </button>
                 </div>
             </div>
         </div>
@@ -3316,8 +3352,10 @@
             return `${year}-${month}-${day}`;
         }
         
-        // A4 수배서 미리보기 HTML 생성 (실제 전송되는 양식)
-        function generateA4AssignmentPreview(reservation, history) {
+        // A4 수배서/바우처 인보이스 미리보기 HTML 생성 (실제 전송되는 양식)
+        function generateA4AssignmentPreview(reservation, history, options) {
+            options = options || {};
+            const isVoucherDoc = options.documentType === 'voucher_invoice';
             console.log('📄 A4 미리보기 생성 시작');
             console.log('- reservation:', reservation);
             console.log('- reservation.rooms:', reservation.rooms);
@@ -3476,12 +3514,13 @@
                 totalAmount += b.breakfastCharge;
             });
             
-            // 추가 서비스 (IN_HOTEL만 표시)
+            // 추가 서비스 (기본: IN_HOTEL만 표시, 바우처 인보이스 모드에서는 IN/OUT 모두 표시)
             if (extras && extras.length > 0) {
                 let effectiveExtras = extras;
 
                 // hotel_reservation_extras 처럼 notes 컬럼이 있는 경우 OUT_HOTEL 제외
-                if (effectiveExtras.length > 0 && Object.prototype.hasOwnProperty.call(effectiveExtras[0], 'notes')) {
+                // 단, 바우처 인보이스 문서에서는 IN/OUT 모두 포함
+                if (!isVoucherDoc && effectiveExtras.length > 0 && Object.prototype.hasOwnProperty.call(effectiveExtras[0], 'notes')) {
                     effectiveExtras = effectiveExtras.filter(e => (e.notes || 'IN_HOTEL') !== 'OUT_HOTEL');
                 }
 
@@ -3515,7 +3554,13 @@
             
             // Contact 담당자 정보 (예약 처음 입력한 담당자)
             const contactPerson = reservation.created_by || 'LUXFIND Staff';
-            const agencyName = 'LUXFIND'; // Agency 명 고정
+
+            const headerTitle = isVoucherDoc ? 'HOTEL VOUCHER INVOICE' : 'HOTEL BOOKING REQUEST';
+            const headerSubtitle = isVoucherDoc
+                ? (reservation.booking_agency_name || reservation.agency_name
+                    ? `AGENCY: ${reservation.booking_agency_name || reservation.agency_name}${reservation.agency_contact_person ? ' │ CONTACT: ' + reservation.agency_contact_person : ''}`
+                    : 'LUXFIND (럭스파인드)')
+                : 'LUXFIND (럭스파인드)';
             
             const sentDate = new Date().toLocaleString('ko-KR', { 
                 year: 'numeric', 
@@ -3529,8 +3574,8 @@
                 <div style="max-width: 1000px; margin: 0 auto; font-size: 14px; line-height: 1.4;">
                     <!-- 헤더 -->
                     <div style="text-align: center; background: #2c3e50; color: white; padding: 20px; margin-bottom: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                        <h3 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: 1px;">🏨 HOTEL BOOKING REQUEST</h3>
-                        <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">LUXFIND (럭스파인드)</p>
+                        <h3 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: 1px;">🏨 ${headerTitle}</h3>
+                        <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">${headerSubtitle}</p>
                     </div>
                     
                     <!-- 발신 정보 -->
@@ -4174,6 +4219,7 @@
                 const info = document.getElementById('voucherInvoiceInfo');
                 const actions = document.getElementById('voucherInvoiceActions');
                 const linkInput = document.getElementById('voucherInvoiceLinkInput');
+                const previewContainer = document.getElementById('voucherInvoicePreview');
 
                 if (baseInput) baseInput.value = voucherBaseAmountUSD.toFixed(2);
                 if (discountInput) discountInput.value = '0';
@@ -4191,6 +4237,15 @@
                 currentVoucherAgencyEmail = data.agency_email || '';
                 if (actions) actions.style.display = 'none';
                 if (linkInput) linkInput.value = '';
+
+                if (previewContainer) {
+                    try {
+                        const voucherPreviewHtml = generateA4AssignmentPreview(data, [], { documentType: 'voucher_invoice' });
+                        previewContainer.innerHTML = voucherPreviewHtml;
+                    } catch (e) {
+                        console.error('바우처 인보이스 미리보기 생성 오류:', e);
+                    }
+                }
 
                 updateVoucherInvoiceTotals();
 
@@ -4270,6 +4325,20 @@
                         const linkInput = document.getElementById('voucherInvoiceLinkInput');
                         if (linkInput) linkInput.value = currentVoucherInvoiceLink;
                         if (actions) actions.style.display = '';
+
+                        // 서버에서 생성된 바우처 인보이스 HTML을 모달 내 미리보기 영역에 로드
+                        try {
+                            const previewResp = await fetch(currentVoucherInvoiceLink);
+                            if (previewResp.ok) {
+                                const previewHtml = await previewResp.text();
+                                const previewContainer = document.getElementById('voucherInvoicePreview');
+                                if (previewContainer) {
+                                    previewContainer.innerHTML = previewHtml;
+                                }
+                            }
+                        } catch (e) {
+                            console.error('바우처 인보이스 미리보기 로드 오류:', e);
+                        }
                     }
                     loadReservations();
                 } else {
