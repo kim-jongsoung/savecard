@@ -1397,26 +1397,29 @@
         
         // 특정 예약 행만 강조 (테이블 전체 리로드 없이)
         function highlightReservationRow(reservationId) {
-            // 모든 행의 강조 제거
-            document.querySelectorAll('tr[data-reservation-id]').forEach(row => {
-                const rowId = parseInt(row.dataset.reservationId);
-                const status = row.dataset.status;
+            // DOM 안정화를 위해 약간 지연
+            setTimeout(() => {
+                // 모든 행의 강조 제거
+                document.querySelectorAll('tr[data-reservation-id]').forEach(row => {
+                    const rowId = parseInt(row.dataset.reservationId);
+                    const status = row.dataset.status;
+                    
+                    // 기본 스타일로 복원
+                    if (status === 'pending' || status === 'modifying') {
+                        row.style.cssText = 'background: #fff3cd; border-left: 4px solid #ffc107;';
+                    } else if (status === 'processing') {
+                        row.style.cssText = 'background: #d1ecf1; border-left: 4px solid #17a2b8;';
+                    } else {
+                        row.style.cssText = '';
+                    }
+                });
                 
-                // 기본 스타일로 복원
-                if (status === 'pending' || status === 'modifying') {
-                    row.style.cssText = 'background: #fff3cd; border-left: 4px solid #ffc107;';
-                } else if (status === 'processing') {
-                    row.style.cssText = 'background: #d1ecf1; border-left: 4px solid #17a2b8;';
-                } else {
-                    row.style.cssText = '';
+                // 선택된 행만 초록색 강조
+                const targetRow = document.querySelector(`tr[data-reservation-id="${reservationId}"]`);
+                if (targetRow) {
+                    targetRow.style.cssText = 'background: #d4edda; border-left: 5px solid #28a745; box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);';
                 }
-            });
-            
-            // 선택된 행만 초록색 강조
-            const targetRow = document.querySelector(`tr[data-reservation-id="${reservationId}"]`);
-            if (targetRow) {
-                targetRow.style.cssText = 'background: #d4edda; border-left: 5px solid #28a745; box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);';
-            }
+            }, 100);
         }
         let currentVoucherInvoiceId = null;
         let currentVoucherInvoiceLink = '';
