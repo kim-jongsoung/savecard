@@ -4445,6 +4445,7 @@
 
                 // 기존 바우처인보이스가 있는지 조회 (서버 재시작 후에도 복구)
                 let hasExistingInvoice = false;
+                let invoiceHtmlLoaded = false;
                 try {
                     const invRes = await fetch(`/api/hotel-assignments/${reservationId}/invoice`);
                     if (invRes.ok) {
@@ -4471,6 +4472,7 @@
                                     if (previewResp.ok) {
                                         const previewHtml = await previewResp.text();
                                         previewContainer.innerHTML = previewHtml;
+                                        invoiceHtmlLoaded = true;
                                     }
                                 } catch (e) {
                                     console.error('바우처 인보이스 미리보기 로드 오류:', e);
@@ -4501,9 +4503,11 @@
                 modal.show();
                 
                 // 모달과 모든 컨텐츠 로드 완료 후 행 강조
+                // 기존 바우처 HTML 로드한 경우 더 긴 지연 필요
+                const highlightDelay = invoiceHtmlLoaded ? 800 : 200;
                 setTimeout(() => {
                     highlightReservationRow(reservationId);
-                }, 500);
+                }, highlightDelay);
 
             } catch (error) {
                 console.error('바우처인보이스 생성 준비 오류:', error);
