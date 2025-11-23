@@ -179,6 +179,32 @@ router.post('/', async (req, res) => {
     }
 });
 
+// 호텔 바우처인보이스 조회 API (예약별 최신 1건)
+// GET /api/hotel-assignments/:reservationId/invoice
+router.get('/:reservationId/invoice', async (req, res) => {
+    const { reservationId } = req.params;
+    const pool = req.app.get('pool');
+
+    try {
+        const result = await pool.query(`
+            SELECT *
+            FROM hotel_invoices
+            WHERE hotel_reservation_id = $1
+            ORDER BY id DESC
+            LIMIT 1
+        `, [reservationId]);
+
+        if (result.rows.length === 0) {
+            return res.json({ success: false, message: '바우처인보이스가 없습니다.' });
+        }
+
+        return res.json({ success: true, invoice: result.rows[0] });
+    } catch (error) {
+        console.error('❌ 바우처인보이스 조회 오류:', error);
+        return res.status(500).json({ success: false, message: '바우처인보이스 조회 중 오류가 발생했습니다.' });
+    }
+});
+
 /**
  * 수배서 전송 이력 조회 API
  * GET /api/hotel-assignments/:reservationId/history

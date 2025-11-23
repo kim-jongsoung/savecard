@@ -4225,6 +4225,7 @@
                 }
                 const data = await response.json();
 
+                // 기본 금액: 예약의 total_selling_price 또는 grand_total 사용
                 voucherBaseAmountUSD = parseFloat(data.total_selling_price || data.grand_total || 0) || 0;
 
                 // 최신 USD 환율 조회
@@ -4269,16 +4270,56 @@
                 }
 
                 currentVoucherAgencyEmail = data.agency_email || '';
-                if (actions) actions.style.display = 'none';
-                if (linkInput) linkInput.value = '';
 
-                if (previewContainer) {
+                // 기존 바우처인보이스가 있는지 조회 (서버 재시작 후에도 복구)
+                let hasExistingInvoice = false;
+                try {
+                    const invRes = await fetch(`/api/hotel-assignments/${reservationId}/invoice`);
+                    if (invRes.ok) {
+                        const invJson = await invRes.json();
+                        if (invJson && invJson.success && invJson.invoice) {
+                            hasExistingInvoice = true;
+                            const invoice = invJson.invoice;
+
+                            currentVoucherInvoiceId = invoice.id;
+                            currentVoucherInvoiceLink = `${window.location.origin}/api/hotel-assignments/invoice/${invoice.id}/preview`;
+
+                            // 인보이스가 있다면 금액은 인보이스 total_amount 기준으로 표시
+                            const invoiceAmount = parseFloat(invoice.total_amount || 0) || voucherBaseAmountUSD;
+                            voucherBaseAmountUSD = invoiceAmount;
+                            if (baseInput) baseInput.value = voucherBaseAmountUSD.toFixed(2);
+
+                            if (actions) actions.style.display = '';
+                            if (linkInput) linkInput.value = currentVoucherInvoiceLink;
+
+                            // 서버가 만든 최종 인보이스 HTML을 그대로 로드
+                            if (previewContainer) {
+                                try {
+                                    const previewResp = await fetch(currentVoucherInvoiceLink);
+                                    if (previewResp.ok) {
+                                        const previewHtml = await previewResp.text();
+                                        previewContainer.innerHTML = previewHtml;
+                                    }
+                                } catch (e) {
+                                    console.error('바우처 인보이스 미리보기 로드 오류:', e);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('바우처 인보이스 조회 오류:', e);
+                }
+
+                // 인보이스가 없으면 예약 기반 임시 바우처 미리보기 생성
+                if (!hasExistingInvoice && previewContainer) {
                     try {
                         const voucherPreviewHtml = generateA4AssignmentPreview(data, [], { documentType: 'voucher_invoice' });
                         previewContainer.innerHTML = voucherPreviewHtml;
                     } catch (e) {
                         console.error('바우처 인보이스 미리보기 생성 오류:', e);
                     }
+                    if (actions) actions.style.display = 'none';
+                    if (linkInput) linkInput.value = '';
                 }
 
                 updateVoucherInvoiceTotals();
