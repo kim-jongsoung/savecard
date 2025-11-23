@@ -455,6 +455,15 @@ router.get('/:id', async (req, res) => {
             ORDER BY id
         `, [id]);
         
+        // 5. 수배서 이력 (최신 1건의 viewed_at 확인용)
+        const assignmentHistory = await pool.query(`
+            SELECT *
+            FROM hotel_assignment_history
+            WHERE reservation_id = $1
+            ORDER BY sent_at DESC
+            LIMIT 1
+        `, [id]);
+        
         // 데이터 조합
         const data = {
             ...reservation.rows[0],
@@ -462,7 +471,8 @@ router.get('/:id', async (req, res) => {
                 ...room,
                 guests: guests.rows.filter(g => g.reservation_room_id === room.id)
             })),
-            extras: extras.rows
+            extras: extras.rows,
+            latest_assignment: assignmentHistory.rows[0] || null
         };
         
         res.json(data);

@@ -1270,13 +1270,13 @@
                 step1Color = '#dc3545'; // 빨간색
             }
             
-            // 2단계: 수배중/열람 구분
+            // 2단계: 수배중/열람 구분 (latest_assignment.viewed_at 확인)
             let step2Label = '호텔수배중';
             let step2Color = '#17a2b8';
             if (res.status === 'processing') {
-                if (res.assignment_viewed) {
+                if (res.latest_assignment && res.latest_assignment.viewed_at) {
                     step2Label = '메일열람';
-                    step2Color = '#20c997'; // 청록색
+                    step2Color = '#20c997'; // 밝은 청록색
                 } else {
                     step2Label = '수배중';
                     step2Color = '#17a2b8';

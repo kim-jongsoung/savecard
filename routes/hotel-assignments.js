@@ -324,7 +324,17 @@ router.get('/:token', async (req, res) => {
             reservation.changes_description = latestHistory.changes_description;
         }
         
-        // 7. HTML 생성
+        // 7. 수배서 열람 시간 기록 (최신 이력에만)
+        if (latestHistory && !latestHistory.viewed_at) {
+            await pool.query(`
+                UPDATE hotel_assignment_history
+                SET viewed_at = NOW()
+                WHERE id = $1
+            `, [latestHistory.id]);
+            console.log(`✅ 수배서 열람 기록: 예약 ID ${reservation.id}`);
+        }
+        
+        // 8. HTML 생성
         const html = generateAssignmentHTML(reservation, assignmentType, revisionNumber);
         
         res.send(html);
