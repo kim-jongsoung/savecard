@@ -4452,8 +4452,10 @@
                 const modal = new bootstrap.Modal(modalEl);
                 modal.show();
                 
-                // 모달 열린 후 행 강조 (DOM 안정화 후)
-                highlightReservationRow(reservationId);
+                // 모달 열린 후 행 강조 (DOM 완전히 안정화될 때까지 대기)
+                setTimeout(() => {
+                    highlightReservationRow(reservationId);
+                }, 300);
 
             } catch (error) {
                 console.error('바우처인보이스 생성 준비 오류:', error);
