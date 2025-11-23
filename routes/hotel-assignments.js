@@ -471,7 +471,7 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
             rooms: roomsQuery.rows
         };
 
-        // 추가 서비스 조회
+        // 추가 서비스 조회 (인호텔/아웃호텔 모두 인보이스에 표시)
         const extrasQuery = await pool.query(`
             SELECT *
             FROM hotel_reservation_extras
@@ -479,7 +479,12 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
             ORDER BY id
         `, [reservationId]);
 
-        reservation.extras = extrasQuery.rows;
+        // 수배서 HTML에서는 notes 가 'OUT_HOTEL' 인 항목을 숨기므로,
+        // 바우처 인보이스에서는 모두 표시되도록 notes 값을 정규화한다.
+        reservation.extras = extrasQuery.rows.map(e => ({
+            ...e,
+            notes: 'IN_HOTEL'
+        }));
 
         const invoice = {
             id: row.id,

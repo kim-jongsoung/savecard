@@ -548,14 +548,42 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
     </div>
     `;
 
-    const originalHtml = generateAssignmentHTML(reservation, 'NEW', 0);
-    const marker = '<!-- 헤더 정보 -->';
+    let html = generateAssignmentHTML(reservation, 'NEW', 0);
 
-    if (originalHtml.includes(marker)) {
-        return originalHtml.replace(marker, `${invoiceHeaderHtml}\n    ${marker}`);
+    // 상단 타이틀을 바우처 인보이스 전용으로 교체
+    try {
+        const headerStart = html.indexOf('<div class="header">');
+        if (headerStart !== -1) {
+            const headerEnd = html.indexOf('</div>', headerStart);
+            if (headerEnd !== -1) {
+                const headerClose = headerEnd + '</div>'.length;
+
+                const agencyContact = reservation.agency_contact_person || reservation.agency_contact || '';
+                const partnerLine = (agencyName || agencyContact)
+                    ? `거래처: ${agencyName || '-'}${agencyContact ? ' │ 담당자: ' + agencyContact : ''}`
+                    : 'LUXFIND (럭스파인드)';
+
+                const newHeader = `
+    <div class="header">
+        <h3>🏨 HOTEL VOUCHER INVOICE</h3>
+        <p>${partnerLine}</p>
+    </div>`;
+
+                html = html.slice(0, headerStart) + newHeader + html.slice(headerClose);
+            }
+        }
+    } catch (e) {
+        // 헤더 교체 실패 시, 기존 수배서 헤더를 그대로 사용
+        console.warn('⚠️ 바우처 인보이스 헤더 교체 실패:', e.message);
     }
 
-    return originalHtml;
+    const marker = '<!-- 헤더 정보 -->';
+
+    if (html.includes(marker)) {
+        return html.replace(marker, `${invoiceHeaderHtml}\n    ${marker}`);
+    }
+
+    return html;
 }
 
 // 이메일 본문용 HTML 생성 (AI 문구 반영)
