@@ -529,7 +529,7 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
         <h4 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #2c3e50;">
             HOTEL VOUCHER INVOICE
         </h4>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 12px;">
             <tr>
                 <td style="padding: 4px 8px; border: 1px solid #000; width: 140px; font-weight: 600;">Invoice No.</td>
                 <td style="padding: 4px 8px; border: 1px solid #000;">${invoiceNumber || '-'}</td>
@@ -542,9 +542,6 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
                 <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Currency</td>
                 <td style="padding: 4px 8px; border: 1px solid #000;">${currency}</td>
             </tr>
-        </table>
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            ${amountSummaryRows}
         </table>
     </div>
     `;

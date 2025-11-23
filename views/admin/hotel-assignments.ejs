@@ -772,12 +772,14 @@
                                         <input type="text" class="form-control form-control-sm" value="USD (기본 통화)" readonly>
                                     </div>
 
-                                    <div class="mb-3">
+                                    <!-- 내부 계산용 기본 금액 (숨김) -->
+                                    <div class="mb-3 d-none">
                                         <label class="form-label mb-1">기본 금액 (USD)</label>
                                         <input type="text" class="form-control form-control-sm" id="voucherBaseAmount" readonly>
                                     </div>
 
-                                    <div class="row g-2 mb-2">
+                                    <!-- 할인/추가금은 사용하지 않으므로 UI에서 숨김 -->
+                                    <div class="row g-2 mb-2 d-none">
                                         <div class="col-6">
                                             <label class="form-label mb-1">할인 (-)</label>
                                             <input type="number" step="0.01" class="form-control form-control-sm" id="voucherDiscount" value="0" oninput="updateVoucherInvoiceTotals()">
@@ -4280,24 +4282,17 @@
         }
 
         function updateVoucherInvoiceTotals() {
-            const discountInput = document.getElementById('voucherDiscount');
-            const surchargeInput = document.getElementById('voucherSurcharge');
             const finalUSDInput = document.getElementById('voucherFinalAmountUSD');
             const finalKRWInput = document.getElementById('voucherFinalAmountKRW');
-            const fxLabel = document.getElementById('voucherFxRateLabel');
             const krwRow = document.getElementById('voucherFinalKRWRow');
 
-            const discount = parseFloat(discountInput && discountInput.value ? discountInput.value : 0) || 0;
-            const surcharge = parseFloat(surchargeInput && surchargeInput.value ? surchargeInput.value : 0) || 0;
-
-            // 인보이스는 항상 USD 기준으로 정산하되, 환율을 적용한 KRW 금액을 함께 보여준다.
-            const finalUSD = voucherBaseAmountUSD - discount + surcharge;
+            // 인보이스 최종 금액은 왼쪽 미리보기 TOTAL(예약의 총 판매가/그랜드토탈) 그대로 사용
+            const finalUSD = voucherBaseAmountUSD || 0;
             if (finalUSDInput) finalUSDInput.value = finalUSD.toFixed(2);
 
-            if (!fxLabel || !finalKRWInput || !krwRow) return;
+            if (!finalKRWInput || !krwRow) return;
 
             const fx = voucherFxRate || 1300;
-            fxLabel.textContent = `환율: 1 USD = ${fx.toLocaleString('ko-KR')} KRW`;
             const finalKRW = finalUSD * fx;
             finalKRWInput.value = Math.round(finalKRW).toLocaleString('ko-KR');
             krwRow.style.display = '';
