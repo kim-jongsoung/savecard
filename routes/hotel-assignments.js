@@ -555,4 +555,49 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
     }
 });
 
+// 임시 디버그 엔드포인트 - 수배서 이력 확인
+router.get('/debug/history', async (req, res) => {
+    const pool = req.app.get('pool');
+    try {
+        const result = await pool.query(`
+            SELECT * FROM hotel_assignment_history 
+            ORDER BY sent_at DESC 
+            LIMIT 20
+        `);
+        res.json({
+            success: true,
+            count: result.rows.length,
+            data: result.rows
+        });
+    } catch (error) {
+        res.json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// 임시 디버그 엔드포인트 - 예약 상태 확인
+router.get('/debug/reservations', async (req, res) => {
+    const pool = req.app.get('pool');
+    try {
+        const result = await pool.query(`
+            SELECT id, status, assignment_token, created_at 
+            FROM hotel_reservations 
+            ORDER BY id DESC 
+            LIMIT 20
+        `);
+        res.json({
+            success: true,
+            count: result.rows.length,
+            data: result.rows
+        });
+    } catch (error) {
+        res.json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
