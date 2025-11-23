@@ -426,7 +426,15 @@ router.post('/:assignmentId/send', async (req, res) => {
         };
 
         const checkInDateLabel = formatDate(assignment.check_in_date);
-        const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - LUXFIND`;
+
+        // 대표 게스트 (첫 번째 객실의 첫 번째 투숙객)
+        let leadGuestName = 'Guest';
+        if (assignment.rooms && assignment.rooms[0] && assignment.rooms[0].guests && assignment.rooms[0].guests[0]) {
+            const g = assignment.rooms[0].guests[0];
+            leadGuestName = g.english_name || g.guest_name_en || g.guest_name_ko || 'Guest';
+        }
+
+        const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - LUXFIND - ${leadGuestName}`;
         const senderName = assignment.sent_by || assignment.agency_contact_person || 'LUXFIND';
         
         // 9. 이메일 전송
@@ -438,6 +446,9 @@ router.post('/:assignmentId/send', async (req, res) => {
             html: emailHTML,
             text: `
 ${emailContent.greeting}
+
+Guest: ${leadGuestName}
+Check-in: ${checkInDateLabel}
 
 ${emailContent.body}
 
