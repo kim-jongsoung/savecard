@@ -508,14 +508,21 @@ router.put('/:id', async (req, res) => {
     try {
         await client.query('BEGIN');
         
-        // 1. 예약 존재 확인
-        const checkResult = await client.query('SELECT id FROM hotel_reservations WHERE id = $1', [id]);
+        // 1. 예약 존재 확인 및 현재 상태 조회
+        const checkResult = await client.query('SELECT id, status FROM hotel_reservations WHERE id = $1', [id]);
         if (checkResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(404).json({
                 success: false,
                 error: '예약을 찾을 수 없습니다.'
             });
+        }
+        
+        // 현재 상태가 pending이면 modifying으로 변경
+        const currentStatus = checkResult.rows[0].status;
+        let newStatus = status || currentStatus;
+        if (currentStatus === 'pending' && !status) {
+            newStatus = 'modifying';
         }
         
         // 2. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
@@ -767,7 +774,7 @@ router.put('/:id', async (req, res) => {
             hotel_id,
             booking_agency_id || null,
             reservation_date,
-            status || 'pending',
+            newStatus,
             check_in_date,
             check_out_date,
             nights,
