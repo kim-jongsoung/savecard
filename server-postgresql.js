@@ -16649,7 +16649,7 @@ async function startServer() {
                     await pool.query(`
                         ALTER TABLE hotel_reservations 
                         ADD CONSTRAINT hotel_reservations_status_check 
-                        CHECK (status IN ('pending', 'processing', 'confirmed', 'cancelled', 'modifying', 'completed'))
+                        CHECK (status IN ('pending', 'processing', 'confirmed', 'voucher', 'settlement', 'cancelled', 'modifying', 'completed'))
                     `);
                     
                     console.log('✅ hotel_reservations.status 제약조건 업데이트 완료');

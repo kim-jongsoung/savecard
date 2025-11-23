@@ -40,7 +40,7 @@ async function updateHotelStatusOptions() {
         await client.query(`
             ALTER TABLE hotel_reservations 
             ADD CONSTRAINT hotel_reservations_status_check 
-            CHECK (status IN ('pending', 'processing', 'confirmed', 'cancelled', 'modifying', 'completed'))
+            CHECK (status IN ('pending', 'processing', 'confirmed', 'voucher', 'settlement', 'cancelled', 'modifying', 'completed'))
         `);
         console.log('   ✅ 새로운 제약조건 추가 완료');
         

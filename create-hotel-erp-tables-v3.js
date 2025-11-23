@@ -274,7 +274,7 @@ async function createHotelTablesV3() {
                 
                 -- 상태 관리
                 status VARCHAR(20) DEFAULT 'pending' 
-                    CHECK (status IN ('pending', 'processing', 'confirmed', 'cancelled', 'completed')),
+                    CHECK (status IN ('pending', 'processing', 'confirmed', 'voucher', 'settlement', 'cancelled', 'completed')),
                 
                 -- 담당자
                 assigned_to VARCHAR(100),
