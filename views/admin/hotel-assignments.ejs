@@ -4210,18 +4210,23 @@
                 });
                 
                 const result = await response.json();
+                console.log('🔍 수배서 전송 응답:', result);
+                console.log('🔍 응답 상태:', response.status);
                 
                 if (result.success) {
                     alert(`✅ 수배서가 성공적으로 전송되었습니다!\n\n타입: ${assignmentType}\n수신: ${recipientEmail}`);
                     
                     // 리스트 새로고침 (상태 변경 반영)
-                    loadReservations();
+                    console.log('🔄 리스트 새로고침 시작...');
+                    await loadReservations();
+                    console.log('✅ 리스트 새로고침 완료');
                     
                     // 모달 새로고침 (최신 이력 표시)
                     await createAssignment(reservationId);
                     
                 } else {
-                    alert('❌ 전송 실패: ' + (result.message || '알 수 없는 오류'));
+                    console.error('❌ 전송 실패:', result);
+                    alert('❌ 전송 실패: ' + (result.message || result.error || '알 수 없는 오류'));
                 }
                 
             } catch (error) {
