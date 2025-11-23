@@ -16376,6 +16376,18 @@ async function startServer() {
             console.warn('⚠️  조식 필드 마이그레이션 경고:', migrateErr.message);
         }
         
+        // ⭐ 호텔 예약 객실 테이블에 컨펌번호 필드 추가
+        try {
+            console.log('🔢 hotel_reservation_rooms 테이블에 confirmation_number 필드 추가 중...');
+            await pool.query(`
+                ALTER TABLE hotel_reservation_rooms
+                ADD COLUMN IF NOT EXISTS confirmation_number VARCHAR(100)
+            `);
+            console.log('✅ 컨펌번호 필드 추가 완료 (confirmation_number)');
+        } catch (migrateErr) {
+            console.warn('⚠️  컨펌번호 필드 마이그레이션 경고:', migrateErr.message);
+        }
+        
         // ⭐ 호텔 예약 메인 테이블에 요금 필드 추가
         try {
             console.log('💰 hotel_reservations 테이블에 요금 필드 추가 중...');

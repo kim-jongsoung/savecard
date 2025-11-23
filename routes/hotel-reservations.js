@@ -923,4 +923,65 @@ ${reservationText}
     }
 });
 
+/**
+ * 호텔 예약 컨펌 처리 (객실별 컨펌번호 저장)
+ * POST /api/hotel-reservations/:id/confirm
+ */
+router.post('/:id/confirm', async (req, res) => {
+    const { id } = req.params;
+    const { rooms } = req.body;
+
+    const pool = req.app.get('pool');
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const checkResult = await client.query('SELECT id FROM hotel_reservations WHERE id = $1', [id]);
+        if (checkResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                error: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        if (Array.isArray(rooms)) {
+            for (const room of rooms) {
+                if (!room || !room.id) continue;
+                const confirmationNumber = (room.confirmation_number || '').trim();
+                await client.query(`
+                    UPDATE hotel_reservation_rooms
+                    SET confirmation_number = $1,
+                        updated_at = NOW()
+                    WHERE id = $2 AND reservation_id = $3
+                `, [confirmationNumber || null, room.id, id]);
+            }
+        }
+
+        await client.query(`
+            UPDATE hotel_reservations
+            SET status = 'confirmed', updated_at = NOW()
+            WHERE id = $1
+        `, [id]);
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: '예약이 확정되었고 객실별 컨펌번호가 저장되었습니다.'
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ 호텔 예약 컨펌 처리 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '예약 컨펌 처리 중 오류가 발생했습니다: ' + error.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;

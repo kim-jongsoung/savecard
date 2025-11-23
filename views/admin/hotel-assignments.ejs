@@ -727,6 +727,26 @@
         </div>
     </div>
 
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check me-2"></i>호텔 컨펌번호 입력
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="confirmRoomsContainer"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-success" onclick="saveConfirmationNumbers()">확정 저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 수배서 생성/보기 모달 -->
     <div class="modal fade" id="assignmentModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-fullscreen">
@@ -1193,6 +1213,7 @@
         let currentPromotion = null;
         let roomPromotions = {};
         let isLoadingData = false;  // ⭐ 데이터 로드 중 플래그 (조식 중복 방지)
+        let currentConfirmReservationId = null;
         
         // 모달 오픈 시 호텔/거래처 로드
         document.getElementById('editReservationModal').addEventListener('show.bs.modal', async function() {
@@ -1799,7 +1820,10 @@
             const roomHtml = `
                 <div class="room-card" id="${roomId}" data-room-id="${roomCounter}">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0"><i class="fas fa-bed me-2"></i>객실 ${roomCounter}</h6>
+                        <h6 class="mb-0">
+                            <i class="fas fa-bed me-2"></i>객실 ${roomCounter}
+                            <small class="text-success ms-2" id="room_${roomCounter}_cfn_label" style="font-size: 0.75rem;"></small>
+                        </h6>
                         <button type="button" class="btn btn-sm btn-danger" onclick="removeRoom('${roomId}')">
                             <i class="fas fa-trash"></i> 삭제
                         </button>
@@ -2364,7 +2388,11 @@
                                 if (rateInput && room.total_selling_price) {
                                     rateInput.value = `$${parseFloat(room.total_selling_price).toFixed(2)}`;
                                 }
-                                
+                                const cfnLabel = document.getElementById(`room_${currentRoomNum}_cfn_label`);
+                                if (cfnLabel) {
+                                    cfnLabel.textContent = room.confirmation_number ? `CFN - #${room.confirmation_number}` : '';
+                                }
+
                                 // 투숙객 정보 채우기
                                 if (room.guests && room.guests.length > 0) {
                                     console.log(`  👥 객실 ${currentRoomNum} 투숙객 수:`, room.guests.length);
@@ -3927,26 +3955,97 @@
             }
         }
         
-        // 확정
+        // 확정 - 객실별 컨펌번호 입력 모달 오픈
         async function confirmReservation(reservationId) {
-            if (!confirm('예약을 확정하시겠습니까?')) return;
-            
+            currentConfirmReservationId = reservationId;
+
             try {
-                const response = await fetch(`/api/hotel-reservations/${reservationId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: 'confirmed' })
+                const response = await fetch(`/api/hotel-reservations/${reservationId}`);
+                if (!response.ok) {
+                    alert('예약 정보를 불러오지 못했습니다.');
+                    return;
+                }
+                const data = await response.json();
+
+                const container = document.getElementById('confirmRoomsContainer');
+                if (!container) {
+                    alert('컨펌번호 입력 영역을 찾을 수 없습니다.');
+                    return;
+                }
+
+                const rooms = data.rooms || [];
+                if (rooms.length === 0) {
+                    container.innerHTML = '<p class="text-muted">객실 정보가 없습니다.</p>';
+                } else {
+                    container.innerHTML = rooms.map((room, index) => {
+                        const roomLabel = `객실 ${index + 1}`;
+                        const roomType = room.hotel_room_name || room.room_type_name || '';
+                        const guestSummary = (room.total_guests || room.total_guests === 0)
+                            ? `${room.total_guests}명`
+                            : `${room.adults_count || 0}A ${room.children_count || 0}C ${room.infants_count || 0}I`;
+                        const value = room.confirmation_number || '';
+                        return `
+                            <div class="border rounded p-2 mb-2" data-confirm-room-id="${room.id}">
+                                <div class="small text-muted mb-1">
+                                    <strong>${roomLabel}</strong> - ${roomType}
+                                    ${guestSummary ? `<span class="ms-2">(${guestSummary})</span>` : ''}
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">컨펌번호</span>
+                                    <input type="text" class="form-control" value="${value}" placeholder="예: 123456 / K12345">
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                const modalEl = document.getElementById('confirmModal');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+            } catch (error) {
+                console.error('확정 정보 로드 오류:', error);
+                alert('❌ 컨펌번호 입력 화면을 여는 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function saveConfirmationNumbers() {
+            if (!currentConfirmReservationId) return;
+
+            const container = document.getElementById('confirmRoomsContainer');
+            if (!container) return;
+
+            const roomBlocks = container.querySelectorAll('[data-confirm-room-id]');
+            const rooms = [];
+            roomBlocks.forEach(block => {
+                const roomId = block.getAttribute('data-confirm-room-id');
+                const input = block.querySelector('input');
+                rooms.push({
+                    id: parseInt(roomId, 10),
+                    confirmation_number: input ? input.value.trim() : ''
                 });
-                
-                if (response.ok) {
-                    alert('✅ 예약이 확정되었습니다.');
+            });
+
+            try {
+                const response = await fetch(`/api/hotel-reservations/${currentConfirmReservationId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rooms })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alert('✅ 컨펌번호가 저장되었습니다.');
+                    const modalEl = document.getElementById('confirmModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
                     loadReservations();
                 } else {
-                    alert('❌ 확정 실패');
+                    alert('❌ 컨펌번호 저장 실패: ' + (result.message || result.error || '알 수 없는 오류'));
                 }
             } catch (error) {
-                console.error('확정 오류:', error);
-                alert('❌ 오류가 발생했습니다.');
+                console.error('컨펌번호 저장 오류:', error);
+                alert('❌ 컨펌번호 저장 중 오류가 발생했습니다.');
             }
         }
         

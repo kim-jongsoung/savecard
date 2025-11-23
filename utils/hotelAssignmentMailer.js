@@ -267,7 +267,9 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     // 룸 수에 따라 Room #n Confirmation No. 필드 동적 생성
     const roomConfirmationLine = rooms.map((room, idx) => {
         const roomNum = idx + 1;
-        return `Room #${roomNum} Confirmation No.: <span style="display: inline-block; min-width: 160px; border-bottom: 1px solid #000;">&nbsp;</span>`;
+        const cfn = (room && room.confirmation_number) ? String(room.confirmation_number) : '';
+        const displayValue = cfn || '&nbsp;';
+        return `Room #${roomNum} Confirmation No.: <span style="display: inline-block; min-width: 160px; border-bottom: 1px solid #000;">${displayValue}</span>`;
     }).join('&nbsp;&nbsp;');
 
     return `
