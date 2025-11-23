@@ -4190,13 +4190,15 @@
             if (!confirm(confirmMessage)) return;
             
             try {
-                const response = await fetch(`/api/hotel-assignments/${reservationId}/send`, {
+                const response = await fetch(`/api/hotel-assignments`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        reservation_id: reservationId,
+                        hotel_email: recipientEmail,
                         assignment_type: assignmentType,
                         changes_description: changesDescription,
-                        recipient_email: recipientEmail
+                        sent_by: 'Admin'
                     })
                 });
                 
