@@ -2887,6 +2887,13 @@
                 }
             });
             
+            // 전체 요금 요약 값 계산 (⭐ 조식 + 추가요금 + 수배피 포함)
+            const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+            const totalBreakfastCharge = parseFloat(document.getElementById('totalBreakfastCharge').value) || 0;
+            const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
+            const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0;
+            const grandTotal = totalRoomCharge + totalBreakfastCharge + totalExtrasCharge + agencyFee;
+
             // 전체 데이터 구성
             const updatedData = {
                 hotel_id: parseInt(hotelId),
@@ -2899,7 +2906,12 @@
                 departure_flight: document.getElementById('departure_flight').value || null,
                 special_requests: document.getElementById('special_requests').value || null,
                 internal_memo: document.getElementById('internal_memo').value || null,
-                total_selling_price: parseFloat(document.getElementById('totalRoomCharge').value) || 0,
+                // ⭐ 요약 금액 필드들 (수배피 포함)
+                total_room_rate: totalRoomCharge,
+                total_extras_rate: totalExtrasCharge,
+                agency_fee: agencyFee,
+                grand_total: grandTotal,
+                total_selling_price: grandTotal,
                 rooms: rooms,
                 extras: extras
             };
