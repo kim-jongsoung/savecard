@@ -455,9 +455,107 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             &nbsp;&nbsp;Staff Name: <span style="display: inline-block; min-width: 160px; border-bottom: 1px solid #000;">&nbsp;</span>
         </p>
     </div>
-</body>
+ </body>
 </html>
     `;
+}
+
+function generateVoucherInvoiceHTML(reservation, invoice) {
+    const formatDate = (value) => {
+        if (!value) return '';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const agencyName = reservation.booking_agency_name || reservation.agency_name || '';
+    const invoiceNumber = invoice.invoice_number || '';
+    const invoiceDateStr = formatDate(invoice.invoice_date || new Date());
+    const fxRate = invoice.fx_rate ? parseFloat(invoice.fx_rate) : null;
+    const fxRateStr = fxRate ? fxRate.toFixed(4) : '';
+    const fxRateDateStr = invoice.fx_rate_date ? formatDate(invoice.fx_rate_date) : '';
+    const currency = invoice.currency || 'USD';
+
+    const baseAmount = parseFloat(reservation.total_selling_price || reservation.grand_total || 0) || 0;
+    const costAmount = parseFloat(reservation.total_cost_price || 0) || 0;
+    const marginAmount = parseFloat(reservation.total_margin || 0) || 0;
+    const invoiceTotalUSD = parseFloat(invoice.total_amount || 0) || 0;
+    const invoiceTotalKRW = parseFloat(invoice.total_amount_krw || 0) || 0;
+
+    let amountSummaryRows = `
+        <tr>
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Hotel Net Cost (USD)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${costAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Handling Fee (USD)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${marginAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Selling Total (USD)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${baseAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Invoice Total (USD)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${invoiceTotalUSD.toFixed(2)}</td>
+        </tr>
+    `;
+
+    if (currency === 'KRW' && invoiceTotalKRW > 0 && fxRateStr) {
+        const krwDisplay = Number.isNaN(invoiceTotalKRW)
+            ? ''
+            : `₩${Math.round(invoiceTotalKRW).toLocaleString('ko-KR')}`;
+
+        amountSummaryRows += `
+        <tr>
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Invoice Total (KRW)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">${krwDisplay}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 8px; border: 1px solid #000;">FX Rate</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">
+                1 USD = ${fxRateStr} KRW${fxRateDateStr ? ` (${fxRateDateStr})` : ''}
+            </td>
+        </tr>
+        `;
+    }
+
+    const invoiceHeaderHtml = `
+    <div style="margin-bottom: 20px; padding: 12px; border: 2px solid #2c3e50; background: #f8f9fa; font-size: 13px;">
+        <h4 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #2c3e50;">
+            HOTEL VOUCHER INVOICE
+        </h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px;">
+            <tr>
+                <td style="padding: 4px 8px; border: 1px solid #000; width: 140px; font-weight: 600;">Invoice No.</td>
+                <td style="padding: 4px 8px; border: 1px solid #000;">${invoiceNumber || '-'}</td>
+                <td style="padding: 4px 8px; border: 1px solid #000; width: 140px; font-weight: 600;">Invoice Date</td>
+                <td style="padding: 4px 8px; border: 1px solid #000;">${invoiceDateStr || '-'}</td>
+            </tr>
+            <tr>
+                <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Agency</td>
+                <td style="padding: 4px 8px; border: 1px solid #000;">${agencyName || '-'}</td>
+                <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Currency</td>
+                <td style="padding: 4px 8px; border: 1px solid #000;">${currency}</td>
+            </tr>
+        </table>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            ${amountSummaryRows}
+        </table>
+    </div>
+    `;
+
+    const originalHtml = generateAssignmentHTML(reservation, 'NEW', 0);
+    const marker = '<!-- 헤더 정보 -->';
+
+    if (originalHtml.includes(marker)) {
+        return originalHtml.replace(marker, `${invoiceHeaderHtml}\n    ${marker}`);
+    }
+
+    return originalHtml;
 }
 
 // 이메일 본문용 HTML 생성 (AI 문구 반영)
@@ -639,12 +737,12 @@ function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
 
 // 호텔 수배서 이메일 발송
 async function sendHotelAssignment(reservation, hotelEmail, assignmentType = 'NEW', revisionNumber = 0, sentBy = 'Admin') {
-    // ... (기존 코드와 동일하게 유지하되 사용 안함 - 라우트에서 직접 처리)
     // 호환성을 위해 남겨둡니다.
 }
 
 module.exports = {
     sendHotelAssignment,
     generateAssignmentHTML,
+    generateVoucherInvoiceHTML,
     generateEmailHTML
 };

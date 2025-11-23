@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const { sendHotelAssignment, generateAssignmentHTML } = require('../utils/hotelAssignmentMailer');
+const { sendHotelAssignment, generateAssignmentHTML, generateVoucherInvoiceHTML } = require('../utils/hotelAssignmentMailer');
 
 /**
  * 호텔 수배서 생성 및 전송 API
@@ -411,6 +411,95 @@ router.post('/:reservationId/invoice', async (req, res) => {
         });
     } finally {
         client.release();
+    }
+});
+
+// 호텔 바우처인보이스 미리보기 (HTML)
+// GET /api/hotel-assignments/invoice/:invoiceId/preview
+router.get('/invoice/:invoiceId/preview', async (req, res) => {
+    const { invoiceId } = req.params;
+    const pool = req.app.get('pool');
+
+    try {
+        const invoiceQuery = await pool.query(`
+            SELECT 
+                i.*,
+                hr.*,
+                h.hotel_name,
+                ba.agency_name AS booking_agency_name,
+                ba.contact_person AS agency_contact_person,
+                ba.contact_email AS agency_email
+            FROM hotel_invoices i
+            LEFT JOIN hotel_reservations hr ON i.hotel_reservation_id = hr.id
+            LEFT JOIN hotels h ON hr.hotel_id = h.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            WHERE i.id = $1
+        `, [invoiceId]);
+
+        if (invoiceQuery.rows.length === 0) {
+            return res.status(404).send('바우처 인보이스를 찾을 수 없습니다.');
+        }
+
+        const row = invoiceQuery.rows[0];
+        const reservationId = row.hotel_reservation_id;
+
+        // 객실 정보 조회
+        const roomsQuery = await pool.query(`
+            SELECT 
+                hrr.*, 
+                rt.room_type_name
+            FROM hotel_reservation_rooms hrr
+            LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
+            WHERE hrr.reservation_id = $1
+            ORDER BY hrr.id
+        `, [reservationId]);
+
+        // 투숙객 정보 조회
+        for (let room of roomsQuery.rows) {
+            const guestsQuery = await pool.query(`
+                SELECT *
+                FROM hotel_room_guests
+                WHERE room_id = $1
+                ORDER BY id
+            `, [room.id]);
+            room.guests = guestsQuery.rows;
+        }
+
+        const reservation = {
+            ...row,
+            id: reservationId,
+            rooms: roomsQuery.rows
+        };
+
+        // 추가 서비스 조회
+        const extrasQuery = await pool.query(`
+            SELECT *
+            FROM hotel_reservation_extras
+            WHERE reservation_id = $1
+            ORDER BY id
+        `, [reservationId]);
+
+        reservation.extras = extrasQuery.rows;
+
+        const invoice = {
+            id: row.id,
+            invoice_number: row.invoice_number,
+            invoice_date: row.invoice_date,
+            due_date: row.due_date,
+            total_amount: row.total_amount,
+            currency: row.currency,
+            fx_rate: row.fx_rate,
+            fx_rate_date: row.fx_rate_date,
+            total_amount_krw: row.total_amount_krw,
+            status: row.status
+        };
+
+        const html = generateVoucherInvoiceHTML(reservation, invoice);
+
+        res.send(html);
+    } catch (error) {
+        console.error('❌ 바우처인보이스 미리보기 오류:', error);
+        res.status(500).send('바우처인보이스 미리보기를 생성하는 중 오류가 발생했습니다.');
     }
 });
 
