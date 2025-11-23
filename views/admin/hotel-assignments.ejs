@@ -4554,6 +4554,11 @@
                     // 인보이스 목록 다시 로드
                     await loadVoucherInvoicesList(currentVoucherReservationId);
                     
+                    // 목록 로드 후 행 강조 다시 적용 (DOM 변경으로 인한 깨짐 방지)
+                    setTimeout(() => {
+                        highlightReservationRow(currentVoucherReservationId);
+                    }, 500);
+                    
                     // 예약 목록 갱신
                     loadReservations();
                 } else {
@@ -4669,6 +4674,11 @@
                 if (result.success) {
                     alert('✅ 인보이스가 삭제되었습니다.');
                     await loadVoucherInvoicesList(currentVoucherReservationId);
+                    
+                    // 목록 로드 후 행 강조 다시 적용
+                    setTimeout(() => {
+                        highlightReservationRow(currentVoucherReservationId);
+                    }, 500);
                 } else {
                     alert('❌ 삭제 실패: ' + (result.error || '알 수 없는 오류'));
                 }
