@@ -809,23 +809,12 @@
 
                             <div class="card">
                                 <div class="card-header bg-dark text-white">
-                                    <h6 class="mb-0"><i class="fas fa-link me-2"></i>발행된 인보이스 액션</h6>
+                                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>발행된 인보이스 목록</h6>
                                 </div>
-                                <div class="card-body" id="voucherInvoiceActions" style="display: none;">
-                                    <div class="mb-2">
-                                        <label class="form-label mb-1">바우처 인보이스 링크</label>
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control" id="voucherInvoiceLinkInput" readonly>
-                                            <button type="button" class="btn btn-outline-secondary" onclick="copyVoucherInvoiceLink()">복사</button>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="previewVoucherInvoice()">
-                                            <i class="fas fa-eye me-1"></i>미리보기
-                                        </button>
-                                        <button type="button" class="btn btn-outline-success btn-sm flex-fill" onclick="sendVoucherInvoiceEmail()">
-                                            <i class="fas fa-envelope me-1"></i>메일 보내기
-                                        </button>
+                                <div class="card-body p-0" id="voucherInvoicesList" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="text-center text-muted p-4">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                        <p class="mb-0 small">아직 발행된 인보이스가 없습니다</p>
                                     </div>
                                 </div>
                             </div>
@@ -4497,6 +4486,9 @@
                 }
 
                 updateVoucherInvoiceTotals();
+                
+                // 인보이스 목록 로드
+                await loadVoucherInvoicesList(reservationId);
 
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 const modal = new bootstrap.Modal(modalEl);
@@ -4558,28 +4550,11 @@
                 if (response.ok && result.success) {
                     alert('✅ 바우처인보이스가 생성되었습니다.');
                     lastClosedReservationId = currentVoucherReservationId;
-                    if (result.invoice && result.invoice.id) {
-                        currentVoucherInvoiceId = result.invoice.id;
-                        currentVoucherInvoiceLink = `${window.location.origin}/api/hotel-assignments/invoice/${currentVoucherInvoiceId}/preview`;
-                        const actions = document.getElementById('voucherInvoiceActions');
-                        const linkInput = document.getElementById('voucherInvoiceLinkInput');
-                        if (linkInput) linkInput.value = currentVoucherInvoiceLink;
-                        if (actions) actions.style.display = '';
-
-                        // 서버에서 생성된 바우처 인보이스 HTML을 모달 내 미리보기 영역에 로드
-                        try {
-                            const previewResp = await fetch(currentVoucherInvoiceLink);
-                            if (previewResp.ok) {
-                                const previewHtml = await previewResp.text();
-                                const previewContainer = document.getElementById('voucherInvoicePreview');
-                                if (previewContainer) {
-                                    previewContainer.innerHTML = previewHtml;
-                                }
-                            }
-                        } catch (e) {
-                            console.error('바우처 인보이스 미리보기 로드 오류:', e);
-                        }
-                    }
+                    
+                    // 인보이스 목록 다시 로드
+                    await loadVoucherInvoicesList(currentVoucherReservationId);
+                    
+                    // 예약 목록 갱신
                     loadReservations();
                 } else {
                     alert('❌ 바우처인보이스 생성 실패: ' + (result.message || result.error || '알 수 없는 오류'));
@@ -4587,6 +4562,119 @@
             } catch (error) {
                 console.error('바우처인보이스 생성 오류:', error);
                 alert('❌ 바우처인보이스 생성 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 바우처 인보이스 목록 로드
+        async function loadVoucherInvoicesList(reservationId) {
+            try {
+                const response = await fetch(`/api/hotel-assignments/${reservationId}/invoices`);
+                const result = await response.json();
+                
+                const listContainer = document.getElementById('voucherInvoicesList');
+                
+                if (result.success && result.invoices && result.invoices.length > 0) {
+                    let html = '<div class="list-group list-group-flush">';
+                    
+                    result.invoices.forEach((invoice, index) => {
+                        const invoiceDate = new Date(invoice.created_at).toLocaleDateString('ko-KR');
+                        const link = `${window.location.origin}/api/hotel-assignments/invoice/${invoice.id}/preview`;
+                        
+                        html += `
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <span class="badge bg-primary">#${invoice.id}</span>
+                                            ${invoice.invoice_number || 'N/A'}
+                                        </h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>${invoiceDate}
+                                            <i class="fas fa-dollar-sign ms-2 me-1"></i>${parseFloat(invoice.total_amount || 0).toFixed(2)}
+                                        </small>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteVoucherInvoice(${invoice.id})" title="삭제">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="btn-group btn-group-sm w-100" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="copyInvoiceLink('${link}')" title="링크 복사">
+                                        <i class="fas fa-copy me-1"></i>복사
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="window.open('${link}', '_blank')" title="새 창에서 보기">
+                                        <i class="fas fa-external-link-alt me-1"></i>보기
+                                    </button>
+                                    <button type="button" class="btn btn-outline-info" onclick="loadInvoicePreview(${invoice.id}, '${link}')" title="미리보기 로드">
+                                        <i class="fas fa-eye me-1"></i>미리보기
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    listContainer.innerHTML = html;
+                } else {
+                    listContainer.innerHTML = `
+                        <div class="text-center text-muted p-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i>
+                            <p class="mb-0 small">아직 발행된 인보이스가 없습니다</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('인보이스 목록 로드 오류:', error);
+            }
+        }
+        
+        // 인보이스 링크 복사
+        function copyInvoiceLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                alert('✅ 링크가 복사되었습니다!');
+            }).catch(err => {
+                console.error('복사 실패:', err);
+                alert('❌ 링크 복사에 실패했습니다.');
+            });
+        }
+        
+        // 인보이스 미리보기 로드
+        async function loadInvoicePreview(invoiceId, link) {
+            try {
+                const response = await fetch(link);
+                if (response.ok) {
+                    const html = await response.text();
+                    const previewContainer = document.getElementById('voucherInvoicePreview');
+                    if (previewContainer) {
+                        previewContainer.innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                console.error('미리보기 로드 오류:', error);
+                alert('❌ 미리보기 로드에 실패했습니다.');
+            }
+        }
+        
+        // 인보이스 삭제
+        async function deleteVoucherInvoice(invoiceId) {
+            if (!confirm('이 인보이스를 삭제하시겠습니까?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/hotel-assignments/invoice/${invoiceId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ 인보이스가 삭제되었습니다.');
+                    await loadVoucherInvoicesList(currentVoucherReservationId);
+                } else {
+                    alert('❌ 삭제 실패: ' + (result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('인보이스 삭제 오류:', error);
+                alert('❌ 삭제 중 오류가 발생했습니다.');
             }
         }
         

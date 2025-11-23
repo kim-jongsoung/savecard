@@ -393,6 +393,66 @@ router.get('/:token', async (req, res) => {
     }
 });
 
+// 예약의 모든 바우처 인보이스 목록 조회
+// GET /api/hotel-assignments/:reservationId/invoices
+router.get('/:reservationId/invoices', async (req, res) => {
+    const { reservationId } = req.params;
+    const pool = req.app.get('pool');
+    
+    try {
+        const result = await pool.query(`
+            SELECT * FROM hotel_invoices
+            WHERE hotel_reservation_id = $1
+            ORDER BY created_at DESC
+        `, [reservationId]);
+        
+        res.json({
+            success: true,
+            invoices: result.rows
+        });
+    } catch (error) {
+        console.error('❌ 인보이스 목록 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '인보이스 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 바우처 인보이스 삭제
+// DELETE /api/hotel-assignments/invoice/:invoiceId
+router.delete('/invoice/:invoiceId', async (req, res) => {
+    const { invoiceId } = req.params;
+    const pool = req.app.get('pool');
+    
+    try {
+        const result = await pool.query(`
+            DELETE FROM hotel_invoices
+            WHERE id = $1
+            RETURNING *
+        `, [invoiceId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: '인보이스를 찾을 수 없습니다.'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: '인보이스가 삭제되었습니다.',
+            invoice: result.rows[0]
+        });
+    } catch (error) {
+        console.error('❌ 인보이스 삭제 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '인보이스 삭제 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 호텔 바우처인보이스 생성 API (예약 1건 기준)
 // POST /api/hotel-assignments/:reservationId/invoice
 router.post('/:reservationId/invoice', async (req, res) => {
