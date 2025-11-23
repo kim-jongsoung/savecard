@@ -4477,6 +4477,7 @@
                 // 인보이스가 없으면 예약 기반 임시 바우처 미리보기 생성
                 if (!hasExistingInvoice && previewContainer) {
                     try {
+                        console.log('🔍 바우처 미리보기 생성 - agency_fee:', data.agency_fee);
                         const voucherPreviewHtml = generateA4AssignmentPreview(data, [], { documentType: 'voucher_invoice' });
                         previewContainer.innerHTML = voucherPreviewHtml;
                     } catch (e) {
