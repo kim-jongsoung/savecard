@@ -438,7 +438,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         </tr>
     </table>
     
-    <!-- 내부 메모 (호텔 전달사항) -->
+    <!-- 내부 메모 (호텔 전달사항) - 수배서 용 -->
     ${reservation.internal_memo ? `
     <div style="margin-top: 18px; padding: 15px; border: 1px solid #333; background: #fffacd;">
         ${reservation.internal_memo}
@@ -504,7 +504,8 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
         </tr>
     `;
 
-    if (currency === 'KRW' && invoiceTotalKRW > 0 && fxRateStr) {
+    // 통화와 상관없이 환율/원화 금액이 있으면 항상 함께 표기
+    if (invoiceTotalKRW > 0 && fxRateStr) {
         const krwDisplay = Number.isNaN(invoiceTotalKRW)
             ? ''
             : `₩${Math.round(invoiceTotalKRW).toLocaleString('ko-KR')}`;
@@ -577,10 +578,32 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
         console.warn('⚠️ 바우처 인보이스 헤더 교체 실패:', e.message);
     }
 
-    const marker = '<!-- 헤더 정보 -->';
+    // 1) 상단에 바우처 인보이스 헤더 블록 삽입
+    const headerMarker = '<!-- 헤더 정보 -->';
+    if (html.includes(headerMarker)) {
+        html = html.replace(headerMarker, `${invoiceHeaderHtml}\n    ${headerMarker}`);
+    }
 
-    if (html.includes(marker)) {
-        return html.replace(marker, `${invoiceHeaderHtml}\n    ${marker}`);
+    // 2) 내부 메모 블록을 바우처용 정산 계좌 안내 박스로 교체 (기존 internal_memo 미표시)
+    const memoMarker = '<!-- 내부 메모 (호텔 전달사항) - 수배서 용 -->';
+    const confirmMarker = '<!-- Hotel Confirmation Section (Compact 2-line area) -->';
+
+    const memoIdx = html.indexOf(memoMarker);
+    const confirmIdx = html.indexOf(confirmMarker);
+
+    if (memoIdx !== -1 && confirmIdx !== -1 && confirmIdx > memoIdx) {
+        const before = html.slice(0, memoIdx);
+        const after = html.slice(confirmIdx); // 확인 섹션 주석부터 끝까지 유지
+
+        const accountBlock = `
+    <!-- 정산 계좌 안내 (바우처 인보이스 전용) -->
+    <div style="margin-top: 18px; padding: 15px; border: 1px solid #333; background: #fffacd;">
+        <div><strong>원화계좌:</strong> 신한은행 140-013-623890  (주)럭스파인드</div>
+        <div><strong>외화계좌:</strong> 신한은행 180-011-678887  (주)럭스파인드</div>
+    </div>
+`;
+
+        html = before + accountBlock + after;
     }
 
     return html;

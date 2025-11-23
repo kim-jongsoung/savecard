@@ -384,7 +384,7 @@ router.post('/:reservationId/invoice', async (req, res) => {
             currency,
             fxRate,
             fxRateDate,
-            currency === 'KRW' ? totalAmountKRW : null
+            totalAmountKRW
         ]);
         
         // 예약 상태를 바우처 단계로 업데이트

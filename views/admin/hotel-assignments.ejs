@@ -769,10 +769,7 @@
                                 <div class="card-body">
                                     <div class="mb-3">
                                         <label class="form-label mb-1">정산 통화</label>
-                                        <select id="voucherCurrency" class="form-select form-select-sm" onchange="updateVoucherInvoiceTotals()">
-                                            <option value="USD">USD로 정산</option>
-                                            <option value="KRW">KRW로 정산 (환율 적용)</option>
-                                        </select>
+                                        <input type="text" class="form-control form-control-sm" value="USD (기본 통화)" readonly>
                                     </div>
 
                                     <div class="mb-3">
@@ -3551,6 +3548,20 @@
                     totalAmount += extrasTotal;
                 }
             }
+
+            // 바우처 인보이스 미리보기에서는 수배피(agency_fee)를 별도 라인으로 표시하고 총액에 포함
+            if (isVoucherDoc) {
+                const agencyFee = parseFloat(reservation.agency_fee || 0) || 0;
+                if (agencyFee > 0) {
+                    paymentHTML += `
+                        <tr>
+                            <td style="padding: 5px; border: 1px solid #ddd;">Agency Handling Fee:</td>
+                            <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">$${agencyFee.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    totalAmount += agencyFee;
+                }
+            }
             
             // Contact 담당자 정보 (예약 처음 입력한 담당자)
             const contactPerson = reservation.created_by || 'LUXFIND Staff';
@@ -3619,12 +3630,20 @@
                         </tr>
                     </table>
                     
-                    <!-- 내부 메모 (호텔 전달사항) -->
-                    ${reservation.internal_memo ? `
-                        <div style="margin-top: 20px; padding: 12px; border: 1px solid #ddd; background: #fffacd; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                            ${reservation.internal_memo}
-                        </div>
-                    ` : ''}
+                    <!-- 내부 메모 / 정산 계좌 안내 -->
+                    ${isVoucherDoc
+                        ? `
+                            <div style="margin-top: 20px; padding: 12px; border: 1px solid #ddd; background: #fffacd; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <div><strong>원화계좌:</strong> 신한은행 140-013-623890  (주)럭스파인드</div>
+                                <div><strong>외화계좌:</strong> 신한은행 180-011-678887  (주)럭스파인드</div>
+                            </div>
+                        `
+                        : (reservation.internal_memo ? `
+                            <div style="margin-top: 20px; padding: 12px; border: 1px solid #ddd; background: #fffacd; font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                ${reservation.internal_memo}
+                            </div>
+                        ` : '')
+                    }
                     
                     <!-- Hotel Confirmation Section -->
                     <div style="margin-top: 30px; padding: 20px; border: 2px solid #2c3e50; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
@@ -4263,7 +4282,6 @@
         function updateVoucherInvoiceTotals() {
             const discountInput = document.getElementById('voucherDiscount');
             const surchargeInput = document.getElementById('voucherSurcharge');
-            const currencySelect = document.getElementById('voucherCurrency');
             const finalUSDInput = document.getElementById('voucherFinalAmountUSD');
             const finalKRWInput = document.getElementById('voucherFinalAmountKRW');
             const fxLabel = document.getElementById('voucherFxRateLabel');
@@ -4271,24 +4289,18 @@
 
             const discount = parseFloat(discountInput && discountInput.value ? discountInput.value : 0) || 0;
             const surcharge = parseFloat(surchargeInput && surchargeInput.value ? surchargeInput.value : 0) || 0;
-            const currency = currencySelect ? currencySelect.value : 'USD';
 
+            // 인보이스는 항상 USD 기준으로 정산하되, 환율을 적용한 KRW 금액을 함께 보여준다.
             const finalUSD = voucherBaseAmountUSD - discount + surcharge;
             if (finalUSDInput) finalUSDInput.value = finalUSD.toFixed(2);
 
             if (!fxLabel || !finalKRWInput || !krwRow) return;
 
-            if (currency === 'KRW') {
-                const fx = voucherFxRate || 1300;
-                fxLabel.textContent = `환율: 1 USD = ${fx.toLocaleString('ko-KR')} KRW`;
-                const finalKRW = finalUSD * fx;
-                finalKRWInput.value = Math.round(finalKRW).toLocaleString('ko-KR');
-                krwRow.style.display = '';
-            } else {
-                fxLabel.textContent = '환율: 사용 안 함 (USD 정산)';
-                finalKRWInput.value = '';
-                krwRow.style.display = 'none';
-            }
+            const fx = voucherFxRate || 1300;
+            fxLabel.textContent = `환율: 1 USD = ${fx.toLocaleString('ko-KR')} KRW`;
+            const finalKRW = finalUSD * fx;
+            finalKRWInput.value = Math.round(finalKRW).toLocaleString('ko-KR');
+            krwRow.style.display = '';
         }
 
         async function saveVoucherInvoice() {
@@ -4299,18 +4311,15 @@
 
             const discountInput = document.getElementById('voucherDiscount');
             const surchargeInput = document.getElementById('voucherSurcharge');
-            const currencySelect = document.getElementById('voucherCurrency');
 
             const discount = parseFloat(discountInput && discountInput.value ? discountInput.value : 0) || 0;
             const surcharge = parseFloat(surchargeInput && surchargeInput.value ? surchargeInput.value : 0) || 0;
-            const currency = currencySelect ? currencySelect.value : 'USD';
 
             try {
                 const response = await fetch(`/api/hotel-assignments/${currentVoucherReservationId}/invoice`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        currency,
                         discount_usd: discount,
                         surcharge_usd: surcharge
                     })
