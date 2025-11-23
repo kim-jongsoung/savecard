@@ -2408,6 +2408,7 @@
         // 예약 변경 - 모달로 오픈
         async function editReservation(reservationId) {
             currentEditingId = reservationId;
+            lastClosedReservationId = reservationId;
             
             // 먼저 모달 오픈
             const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
@@ -3031,8 +3032,9 @@
         // 수배서 모달 열기
         function openAssignmentModal(reservation, history) {
             console.log('🔧 모달 열기 - 예약 데이터:', reservation);
-            console.log('🔧 rooms 배열:', reservation.rooms);
-            console.log('🔧 extras 배열:', reservation.extras);
+            console.log('- reservation:', reservation);
+            console.log('- reservation.rooms:', reservation.rooms);
+            console.log('- reservation.extras:', reservation.extras);
             
             const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
             
@@ -4155,6 +4157,7 @@
         // 확정 - 객실별 컨펌번호 입력 모달 오픈
         async function confirmReservation(reservationId) {
             currentConfirmReservationId = reservationId;
+            lastClosedReservationId = reservationId;
 
             try {
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
@@ -4250,6 +4253,7 @@
         // 바우처+인보이스 생성 모달 오픈
         async function createVoucher(reservationId) {
             currentVoucherReservationId = reservationId;
+            lastClosedReservationId = reservationId;
             currentVoucherInvoiceId = null;
             currentVoucherInvoiceLink = '';
             currentVoucherAgencyEmail = '';
