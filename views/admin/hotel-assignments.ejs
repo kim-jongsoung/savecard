@@ -4344,6 +4344,7 @@
         async function createVoucher(reservationId) {
             currentVoucherReservationId = reservationId;
             lastClosedReservationId = reservationId;
+            highlightReservationRow(reservationId); // 데이터 로드 전 행 강조
             currentVoucherInvoiceId = null;
             currentVoucherInvoiceLink = '';
             currentVoucherAgencyEmail = '';
@@ -4459,11 +4460,6 @@
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 const modal = new bootstrap.Modal(modalEl);
                 modal.show();
-                
-                // 바우처 모달에서는 행 강조 비활성화 (테이블 레이아웃 깨짐 방지)
-                // setTimeout(() => {
-                //     highlightReservationRow(reservationId);
-                // }, 300);
 
             } catch (error) {
                 console.error('바우처인보이스 생성 준비 오류:', error);
