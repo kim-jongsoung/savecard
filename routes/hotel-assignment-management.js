@@ -189,13 +189,23 @@ router.post('/create', async (req, res) => {
             ]);
         }
         
-        // 13. CANCEL인 경우 예약 상태 변경
+        // 13. 상태 자동 변경
         if (assignment_type === 'CANCEL') {
+            // CANCEL 전송 시 예약 상태를 'cancelled'로 변경
             await client.query(`
                 UPDATE hotel_reservations
                 SET status = 'cancelled', updated_at = NOW()
                 WHERE id = $1
             `, [reservation_id]);
+            console.log(`✅ 예약 ID ${reservation_id} 상태가 'cancelled'로 변경되었습니다.`);
+        } else if (assignment_type === 'NEW' || assignment_type === 'REVISE') {
+            // 수배서 생성 시 pending/modifying → processing으로 변경
+            await client.query(`
+                UPDATE hotel_reservations
+                SET status = 'processing', updated_at = NOW()
+                WHERE id = $1 AND status IN ('pending', 'modifying')
+            `, [reservation_id]);
+            console.log(`✅ 예약 ID ${reservation_id} 상태가 'processing'으로 변경되었습니다.`);
         }
         
         await client.query('COMMIT');

@@ -381,14 +381,15 @@ router.get('/', async (req, res) => {
                 (hr.internal_memo IS NOT NULL AND hr.internal_memo != '') as has_memo,
                 (
                     SELECT json_build_object(
-                        'id', hah.id,
-                        'viewed_at', hah.viewed_at,
-                        'sent_at', hah.sent_at,
-                        'assignment_type', hah.assignment_type
+                        'id', ha.id,
+                        'viewed_at', ha.viewed_at,
+                        'created_at', ha.created_at,
+                        'assignment_type', ha.assignment_type,
+                        'email_viewed', ha.email_viewed
                     )
-                    FROM hotel_assignment_history hah
-                    WHERE hah.reservation_id = hr.id
-                    ORDER BY hah.sent_at DESC
+                    FROM hotel_assignments ha
+                    WHERE ha.reservation_id = hr.id
+                    ORDER BY ha.created_at DESC
                     LIMIT 1
                 ) as latest_assignment
             FROM hotel_reservations hr
@@ -467,12 +468,12 @@ router.get('/:id', async (req, res) => {
             ORDER BY id
         `, [id]);
         
-        // 5. 수배서 이력 (최신 1건의 viewed_at 확인용)
+        // 5. 수배서 정보 (최신 1건의 viewed_at 확인용)
         const assignmentHistory = await pool.query(`
             SELECT *
-            FROM hotel_assignment_history
+            FROM hotel_assignments
             WHERE reservation_id = $1
-            ORDER BY sent_at DESC
+            ORDER BY created_at DESC
             LIMIT 1
         `, [id]);
         
