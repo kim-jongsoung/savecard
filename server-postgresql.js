@@ -16428,6 +16428,64 @@ async function startServer() {
         } catch (migrateErr) {
             console.warn('⚠️  담당자 필드 마이그레이션 경고:', migrateErr.message);
         }
+
+        // ⭐ 호텔 인보이스 테이블 생성/확장 (바우처인보이스 헤더)
+        try {
+            console.log('🧾 hotel_invoices 테이블 생성/확장 중...');
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS hotel_invoices (
+                    id SERIAL PRIMARY KEY,
+                    invoice_number VARCHAR(100) UNIQUE NOT NULL,
+                    hotel_reservation_id INTEGER REFERENCES hotel_reservations(id) ON DELETE CASCADE,
+                    booking_agency_id INTEGER REFERENCES booking_agencies(id),
+                    invoice_date DATE DEFAULT CURRENT_DATE,
+                    due_date DATE,
+                    total_amount DECIMAL(10, 2),
+                    currency VARCHAR(10) DEFAULT 'USD',
+                    status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'cancelled')),
+                    sent_at TIMESTAMP,
+                    sent_by VARCHAR(100),
+                    sent_method VARCHAR(20),
+                    paid_at TIMESTAMP,
+                    payment_method VARCHAR(50),
+                    payment_reference VARCHAR(100),
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            `);
+
+            // 환율 및 KRW 금액 필드 추가 (바우처인보이스용)
+            await pool.query(`
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hotel_invoices' AND column_name = 'fx_rate'
+                    ) THEN
+                        ALTER TABLE hotel_invoices ADD COLUMN fx_rate DECIMAL(10,4);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hotel_invoices' AND column_name = 'fx_rate_date'
+                    ) THEN
+                        ALTER TABLE hotel_invoices ADD COLUMN fx_rate_date DATE;
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hotel_invoices' AND column_name = 'total_amount_krw'
+                    ) THEN
+                        ALTER TABLE hotel_invoices ADD COLUMN total_amount_krw DECIMAL(12,2);
+                    END IF;
+                END $$;
+            `);
+
+            console.log('✅ hotel_invoices 테이블 생성/확장 완료');
+        } catch (migrateErr) {
+            console.warn('⚠️  hotel_invoices 마이그레이션 경고:', migrateErr.message);
+        }
         
         // ⭐ 호텔 수배서 시스템 테이블 생성
         try {

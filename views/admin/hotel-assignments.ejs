@@ -727,6 +727,63 @@
         </div>
     </div>
 
+    <div class="modal fade" id="voucherInvoiceModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>바우처 인보이스 생성
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="small text-muted mb-2" id="voucherInvoiceInfo"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label mb-1">정산 통화</label>
+                        <select id="voucherCurrency" class="form-select form-select-sm" onchange="updateVoucherInvoiceTotals()">
+                            <option value="USD">USD로 정산</option>
+                            <option value="KRW">KRW로 정산 (환율 적용)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label mb-1">기본 금액 (USD)</label>
+                        <input type="text" class="form-control form-control-sm" id="voucherBaseAmount" readonly>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label mb-1">할인 (-)</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" id="voucherDiscount" value="0" oninput="updateVoucherInvoiceTotals()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label mb-1">추가금 (+)</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" id="voucherSurcharge" value="0" oninput="updateVoucherInvoiceTotals()">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label mb-1">최종 금액 (USD)</label>
+                        <input type="text" class="form-control form-control-sm" id="voucherFinalAmountUSD" readonly>
+                    </div>
+
+                    <div class="mb-1 small text-muted" id="voucherFxRateLabel">환율 정보를 불러오는 중...</div>
+                    <div class="mb-2" id="voucherFinalKRWRow" style="display: none;">
+                        <label class="form-label mb-1">최종 금액 (KRW)</label>
+                        <input type="text" class="form-control form-control-sm" id="voucherFinalAmountKRW" readonly>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="saveVoucherInvoice()">
+                        <i class="fas fa-check me-1"></i>생성
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -1214,6 +1271,9 @@
         let roomPromotions = {};
         let isLoadingData = false;  // ⭐ 데이터 로드 중 플래그 (조식 중복 방지)
         let currentConfirmReservationId = null;
+        let currentVoucherReservationId = null;
+        let voucherBaseAmountUSD = 0;
+        let voucherFxRate = 1300;
         
         // 모달 오픈 시 호텔/거래처 로드
         document.getElementById('editReservationModal').addEventListener('show.bs.modal', async function() {
@@ -4049,10 +4109,140 @@
             }
         }
         
-        // 바우처+인보이스 생성
-        function createVoucher(reservationId) {
-            if (confirm('바우처와 인보이스를 생성하시겠습니까?')) {
-                alert('바우처+인보이스 생성 기능은 곧 추가됩니다.');
+        // 바우처+인보이스 생성 모달 오픈
+        async function createVoucher(reservationId) {
+            currentVoucherReservationId = reservationId;
+
+            try {
+                // 예약 상세 데이터 로드
+                const response = await fetch(`/api/hotel-reservations/${reservationId}`);
+                if (!response.ok) {
+                    alert('예약 정보를 불러오지 못했습니다.');
+                    return;
+                }
+                const data = await response.json();
+
+                voucherBaseAmountUSD = parseFloat(data.total_selling_price || data.grand_total || 0) || 0;
+
+                // 최신 USD 환율 조회
+                voucherFxRate = 1300;
+                let fxText = '';
+                try {
+                    const rateRes = await fetch('/api/exchange-rates?currency=USD');
+                    const rateJson = await rateRes.json();
+                    if (rateJson.success && rateJson.data && rateJson.data.length > 0) {
+                        voucherFxRate = parseFloat(rateJson.data[0].rate) || 1300;
+                        const rateDate = rateJson.data[0].rate_date;
+                        fxText = `환율: 1 USD = ${voucherFxRate.toLocaleString('ko-KR')} KRW${rateDate ? ` (${rateDate})` : ''}`;
+                    } else {
+                        fxText = `환율 정보를 불러오지 못해 기본값 ${voucherFxRate.toLocaleString('ko-KR')} KRW 사용`;
+                    }
+                } catch (e) {
+                    console.error('바우처인보이스 환율 조회 오류:', e);
+                    fxText = `환율 조회 오류, 기본값 ${voucherFxRate.toLocaleString('ko-KR')} KRW 사용`;
+                }
+
+                const baseInput = document.getElementById('voucherBaseAmount');
+                const discountInput = document.getElementById('voucherDiscount');
+                const surchargeInput = document.getElementById('voucherSurcharge');
+                const currencySelect = document.getElementById('voucherCurrency');
+                const fxLabel = document.getElementById('voucherFxRateLabel');
+                const info = document.getElementById('voucherInvoiceInfo');
+
+                if (baseInput) baseInput.value = voucherBaseAmountUSD.toFixed(2);
+                if (discountInput) discountInput.value = '0';
+                if (surchargeInput) surchargeInput.value = '0';
+                if (currencySelect) currencySelect.value = 'USD';
+                if (fxLabel) fxLabel.textContent = fxText;
+
+                if (info) {
+                    const guestName = data.rooms && data.rooms[0] && data.rooms[0].guests && data.rooms[0].guests[0]
+                        ? (data.rooms[0].guests[0].guest_name_ko || data.rooms[0].guests[0].guest_name_en || '')
+                        : '';
+                    info.textContent = `예약번호: ${data.reservation_number || '-'} / 손님: ${guestName || '-'} / 수배처: ${data.agency_name || '-'}`;
+                }
+
+                updateVoucherInvoiceTotals();
+
+                const modalEl = document.getElementById('voucherInvoiceModal');
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+
+            } catch (error) {
+                console.error('바우처인보이스 생성 준비 오류:', error);
+                alert('❌ 바우처인보이스 생성 화면을 여는 중 오류가 발생했습니다.');
+            }
+        }
+
+        function updateVoucherInvoiceTotals() {
+            const discountInput = document.getElementById('voucherDiscount');
+            const surchargeInput = document.getElementById('voucherSurcharge');
+            const currencySelect = document.getElementById('voucherCurrency');
+            const finalUSDInput = document.getElementById('voucherFinalAmountUSD');
+            const finalKRWInput = document.getElementById('voucherFinalAmountKRW');
+            const fxLabel = document.getElementById('voucherFxRateLabel');
+            const krwRow = document.getElementById('voucherFinalKRWRow');
+
+            const discount = parseFloat(discountInput && discountInput.value ? discountInput.value : 0) || 0;
+            const surcharge = parseFloat(surchargeInput && surchargeInput.value ? surchargeInput.value : 0) || 0;
+            const currency = currencySelect ? currencySelect.value : 'USD';
+
+            const finalUSD = voucherBaseAmountUSD - discount + surcharge;
+            if (finalUSDInput) finalUSDInput.value = finalUSD.toFixed(2);
+
+            if (!fxLabel || !finalKRWInput || !krwRow) return;
+
+            if (currency === 'KRW') {
+                const fx = voucherFxRate || 1300;
+                fxLabel.textContent = `환율: 1 USD = ${fx.toLocaleString('ko-KR')} KRW`;
+                const finalKRW = finalUSD * fx;
+                finalKRWInput.value = Math.round(finalKRW).toLocaleString('ko-KR');
+                krwRow.style.display = '';
+            } else {
+                fxLabel.textContent = '환율: 사용 안 함 (USD 정산)';
+                finalKRWInput.value = '';
+                krwRow.style.display = 'none';
+            }
+        }
+
+        async function saveVoucherInvoice() {
+            if (!currentVoucherReservationId) {
+                alert('예약 정보가 없습니다.');
+                return;
+            }
+
+            const discountInput = document.getElementById('voucherDiscount');
+            const surchargeInput = document.getElementById('voucherSurcharge');
+            const currencySelect = document.getElementById('voucherCurrency');
+
+            const discount = parseFloat(discountInput && discountInput.value ? discountInput.value : 0) || 0;
+            const surcharge = parseFloat(surchargeInput && surchargeInput.value ? surchargeInput.value : 0) || 0;
+            const currency = currencySelect ? currencySelect.value : 'USD';
+
+            try {
+                const response = await fetch(`/api/hotel-assignments/${currentVoucherReservationId}/invoice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        currency,
+                        discount_usd: discount,
+                        surcharge_usd: surcharge
+                    })
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alert('✅ 바우처인보이스가 생성되었습니다.');
+                    const modalEl = document.getElementById('voucherInvoiceModal');
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                    loadReservations();
+                } else {
+                    alert('❌ 바우처인보이스 생성 실패: ' + (result.message || result.error || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error('바우처인보이스 생성 오류:', error);
+                alert('❌ 바우처인보이스 생성 중 오류가 발생했습니다.');
             }
         }
         

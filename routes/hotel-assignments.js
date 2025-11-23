@@ -300,4 +300,118 @@ router.get('/:token', async (req, res) => {
     }
 });
 
+// 호텔 바우처인보이스 생성 API (예약 1건 기준)
+// POST /api/hotel-assignments/:reservationId/invoice
+router.post('/:reservationId/invoice', async (req, res) => {
+    const { reservationId } = req.params;
+    const { currency = 'USD', discount_usd = 0, surcharge_usd = 0 } = req.body;
+
+    const pool = req.app.get('pool');
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // 1. 예약 기본 정보 및 거래처 조회
+        const reservationQuery = await client.query(`
+            SELECT hr.*, ba.id AS booking_agency_id
+            FROM hotel_reservations hr
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            WHERE hr.id = $1
+        `, [reservationId]);
+
+        if (reservationQuery.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ success: false, message: '예약을 찾을 수 없습니다.' });
+        }
+
+        const reservation = reservationQuery.rows[0];
+
+        // 2. 기본 금액: total_selling_price 또는 grand_total 사용
+        const baseAmount = parseFloat(reservation.total_selling_price || reservation.grand_total || 0);
+        const discount = parseFloat(discount_usd || 0);
+        const surcharge = parseFloat(surcharge_usd || 0);
+        const finalAmountUSD = baseAmount - discount + surcharge;
+
+        // 3. 최신 USD 환율 조회 (없으면 1300 기본값)
+        let fxRate = 1300;
+        let fxRateDate = new Date();
+        try {
+            const rateResult = await pool.query(`
+                SELECT * FROM exchange_rates
+                WHERE currency_code = 'USD'
+                ORDER BY rate_date DESC, rate_time DESC
+                LIMIT 1
+            `);
+            if (rateResult.rows.length > 0) {
+                fxRate = parseFloat(rateResult.rows[0].rate) || 1300;
+                fxRateDate = rateResult.rows[0].rate_date || fxRateDate;
+            }
+        } catch (e) {
+            console.warn('⚠️ 바우처인보이스 환율 조회 실패, 기본값 사용:', e.message);
+        }
+
+        const totalAmountKRW = finalAmountUSD * fxRate;
+
+        // 4. 인보이스 번호 생성 (간단 버전)
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const invoiceNumber = `HV-${y}${m}${d}-${reservationId}`;
+
+        // 5. hotel_invoices 레코드 생성
+        const insertResult = await client.query(`
+            INSERT INTO hotel_invoices (
+                invoice_number, hotel_reservation_id, booking_agency_id,
+                invoice_date, total_amount, currency,
+                fx_rate, fx_rate_date, total_amount_krw,
+                status, created_at, updated_at
+            ) VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, $7, $8, 'draft', NOW(), NOW())
+            ON CONFLICT (invoice_number) DO UPDATE SET
+                total_amount = EXCLUDED.total_amount,
+                currency = EXCLUDED.currency,
+                fx_rate = EXCLUDED.fx_rate,
+                fx_rate_date = EXCLUDED.fx_rate_date,
+                total_amount_krw = EXCLUDED.total_amount_krw,
+                updated_at = NOW()
+            RETURNING *
+        `, [
+            invoiceNumber,
+            reservationId,
+            reservation.booking_agency_id || null,
+            finalAmountUSD,
+            currency,
+            fxRate,
+            fxRateDate,
+            currency === 'KRW' ? totalAmountKRW : null
+        ]);
+        
+        // 예약 상태를 바우처 단계로 업데이트
+        await client.query(`
+            UPDATE hotel_reservations
+            SET status = 'voucher', updated_at = NOW()
+            WHERE id = $1
+        `, [reservationId]);
+
+        await client.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: '바우처인보이스가 생성되었습니다.',
+            invoice: insertResult.rows[0]
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ 바우처인보이스 생성 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '바우처인보이스 생성 중 오류가 발생했습니다.'
+        });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;
