@@ -4233,6 +4233,7 @@
 
                 if (response.ok && result.success) {
                     alert('✅ 컨펌번호가 저장되었습니다.');
+                    lastClosedReservationId = currentConfirmReservationId;
                     const modalEl = document.getElementById('confirmModal');
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
@@ -4413,6 +4414,7 @@
 
                 if (response.ok && result.success) {
                     alert('✅ 바우처인보이스가 생성되었습니다.');
+                    lastClosedReservationId = currentVoucherReservationId;
                     if (result.invoice && result.invoice.id) {
                         currentVoucherInvoiceId = result.invoice.id;
                         currentVoucherInvoiceLink = `${window.location.origin}/api/hotel-assignments/invoice/${currentVoucherInvoiceId}/preview`;
