@@ -460,9 +460,29 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
 
 // 이메일 본문용 HTML 생성 (AI 문구 반영)
 function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
+    const formatDate = (value) => {
+        if (!value) return '';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return value;
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const checkInDate = formatDate(assignmentData.check_in_date);
+    const checkOutDate = formatDate(assignmentData.check_out_date);
+    const guestName =
+        assignmentData.rooms &&
+        assignmentData.rooms[0] &&
+        assignmentData.rooms[0].guests &&
+        assignmentData.rooms[0].guests[0]
+            ? assignmentData.rooms[0].guests[0].english_name || 'Guest'
+            : 'Guest';
+
     return `
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -557,9 +577,9 @@ function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
             
             <div class="info-box">
                 <p><strong>🏨 Hotel:</strong> ${assignmentData.hotel_name}</p>
-                <p><strong>👤 Guest:</strong> ${assignmentData.rooms && assignmentData.rooms[0] && assignmentData.rooms[0].guests && assignmentData.rooms[0].guests[0] ? (assignmentData.rooms[0].guests[0].english_name || 'Guest') : 'Guest'}</p>
-                <p><strong>📅 Check-in:</strong> ${assignmentData.check_in_date}</p>
-                <p><strong>📅 Check-out:</strong> ${assignmentData.check_out_date}</p>
+                <p><strong>👤 Guest:</strong> ${guestName}</p>
+                <p><strong>📅 Check-in:</strong> ${checkInDate}</p>
+                <p><strong>📅 Check-out:</strong> ${checkOutDate}</p>
                 <p><strong>🌙 Nights:</strong> ${assignmentData.nights}</p>
             </div>
             
@@ -575,10 +595,9 @@ function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
             </p>
             
             <p style="margin-top: 30px;">${emailContent.closing}</p>
-            <p><strong>${assignmentData.agency_contact_person || 'Reservation Team'}</strong></p>
+            <p><strong>LUXFIND</strong></p>
             <p style="font-size: 14px; color: #666; margin-top: 10px;">
-                ${assignmentData.booking_agency_name || 'Guam Save Card'}<br>
-                ${assignmentData.agency_contact_email || 'support@guamsavecard.com'}
+                E-mail: luxfind01@gmail.com
             </p>
         </div>
         

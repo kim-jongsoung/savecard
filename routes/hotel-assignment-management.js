@@ -407,13 +407,34 @@ router.post('/:assignmentId/send', async (req, res) => {
         if (!toEmail) {
             throw new Error('전송할 이메일 주소가 없습니다.');
         }
+
+        const typeLabel =
+            assignment.assignment_type === 'NEW'
+                ? 'NEW BOOKING'
+                : assignment.assignment_type === 'REVISE'
+                ? 'REVISED BOOKING'
+                : 'CANCELLATION';
+
+        const formatDate = (value) => {
+            if (!value) return '';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return value;
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const checkInDateLabel = formatDate(assignment.check_in_date);
+        const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - LUXFIND`;
+        const senderName = assignment.sent_by || assignment.agency_contact_person || 'LUXFIND';
         
         // 9. 이메일 전송
         const info = await transporter.sendMail({
-            from: `"${assignment.agency_contact_person || 'Guam Save Card'}" <${process.env.SMTP_USER}>`,
-            replyTo: assignment.agency_contact_email || process.env.SMTP_USER,
+            from: `"${senderName} (LUXFIND)" <${process.env.SMTP_USER}>`,
+            replyTo: process.env.SMTP_USER,
             to: toEmail,
-            subject: emailContent.subject, // AI가 생성한 제목 사용
+            subject: mailSubject,
             html: emailHTML,
             text: `
 ${emailContent.greeting}
