@@ -1003,13 +1003,34 @@
         function displayReservations(reservations) {
             const container = document.getElementById('reservationsContainer');
             
-            if (reservations.length === 0) {
+            // 캔슬 제외 (필터에서만 조회)
+            const activeReservations = reservations.filter(r => r.status !== 'cancelled');
+            
+            if (activeReservations.length === 0) {
                 container.innerHTML = '';
                 document.getElementById('emptyState').style.display = 'block';
                 return;
             }
             
             document.getElementById('emptyState').style.display = 'none';
+            
+            // 정렬: 접수/수정 → 수배중/열람 → 확정(출발일순) → 바우처 → 정산
+            const sorted = [...activeReservations].sort((a, b) => {
+                const priority = { 'pending': 1, 'modifying': 1, 'processing': 2, 'confirmed': 3, 'voucher': 4, 'settlement': 5 };
+                const aPri = priority[a.status] || 99;
+                const bPri = priority[b.status] || 99;
+                
+                if (aPri !== bPri) return aPri - bPri;
+                
+                // 확정 그룹 내에서는 출발일(체크인일) 가까운 순
+                if (a.status === 'confirmed' && b.status === 'confirmed') {
+                    const aDate = new Date(a.check_in_date || '9999-12-31');
+                    const bDate = new Date(b.check_in_date || '9999-12-31');
+                    return aDate - bDate;
+                }
+                
+                return 0;
+            });
             
             container.innerHTML = `
                 <table class="reservation-table">
@@ -1031,8 +1052,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${reservations.map((res, index) => `
-                            <tr data-reservation-id="${res.id}" data-status="${res.status}">
+                        ${sorted.map((res, index) => {
+                            // 상태별 행 스타일
+                            let rowStyle = '';
+                            if (res.status === 'pending' || res.status === 'modifying') {
+                                rowStyle = 'background: #fff3cd; border-left: 4px solid #ffc107;'; // 노란색 강조
+                            } else if (res.status === 'processing') {
+                                rowStyle = 'background: #d1ecf1; border-left: 4px solid #17a2b8;'; // 청록색 강조
+                            }
+                            
+                            return `
+                            <tr data-reservation-id="${res.id}" data-status="${res.status}" style="${rowStyle}">
                                 <td>${index + 1}</td>
                                 <td>${formatDateShort(res.reservation_date)}</td>
                                 <td style="font-weight: 600; color: #2c3e50;">${res.reservation_number}</td>
@@ -1073,7 +1103,8 @@
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
+                        `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
