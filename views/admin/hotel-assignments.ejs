@@ -2442,6 +2442,7 @@
         async function editReservation(reservationId) {
             currentEditingId = reservationId;
             lastClosedReservationId = reservationId;
+            loadReservations(); // 최근 작업 예약 강조
             
             // 먼저 모달 오픈
             const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
@@ -4191,6 +4192,7 @@
         async function confirmReservation(reservationId) {
             currentConfirmReservationId = reservationId;
             lastClosedReservationId = reservationId;
+            loadReservations(); // 최근 작업 예약 강조
 
             try {
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
@@ -4287,6 +4289,7 @@
         async function createVoucher(reservationId) {
             currentVoucherReservationId = reservationId;
             lastClosedReservationId = reservationId;
+            loadReservations(); // 최근 작업 예약 강조
             currentVoucherInvoiceId = null;
             currentVoucherInvoiceLink = '';
             currentVoucherAgencyEmail = '';
