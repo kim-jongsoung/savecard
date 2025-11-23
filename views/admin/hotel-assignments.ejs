@@ -3039,6 +3039,9 @@
         
         // 수배서 생성/보기
         async function createAssignment(reservationId) {
+            lastClosedReservationId = reservationId;
+            highlightReservationRow(reservationId); // 해당 행만 강조
+            
             try {
                 // 예약 정보 조회
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
