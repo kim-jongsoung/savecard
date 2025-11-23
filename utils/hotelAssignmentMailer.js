@@ -499,7 +499,10 @@ function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
         assignmentData.rooms[0] &&
         assignmentData.rooms[0].guests &&
         assignmentData.rooms[0].guests[0]
-            ? assignmentData.rooms[0].guests[0].english_name || 'Guest'
+            ? assignmentData.rooms[0].guests[0].guest_name_en ||
+              assignmentData.rooms[0].guests[0].english_name ||
+              assignmentData.rooms[0].guests[0].guest_name_ko ||
+              'Guest'
             : 'Guest';
 
     return `

@@ -434,7 +434,8 @@ router.post('/:assignmentId/send', async (req, res) => {
             leadGuestName = g.english_name || g.guest_name_en || g.guest_name_ko || 'Guest';
         }
 
-        const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - LUXFIND - ${leadGuestName}`;
+        // 제목: [타입] Check-in 날짜 - 게스트이름 - LUXFIND
+        const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - ${leadGuestName} - LUXFIND`;
         const senderName = assignment.sent_by || assignment.agency_contact_person || 'LUXFIND';
         
         // 9. 이메일 전송
