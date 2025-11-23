@@ -1256,23 +1256,56 @@
         
         // 진행도 바 생성 (컴팩트)
         function getProgressBarCompact(res) {
+            // 1단계: 접수 상태 세분화
+            let step1Label = '접수';
+            let step1Color = '#17a2b8';
+            if (res.status === 'pending') {
+                step1Label = '신규';
+                step1Color = '#ffc107'; // 노란색
+            } else if (res.status === 'modifying') {
+                step1Label = '수정';
+                step1Color = '#fd7e14'; // 오렌지
+            } else if (res.status === 'cancelled') {
+                step1Label = '캔슬';
+                step1Color = '#dc3545'; // 빨간색
+            }
+            
+            // 2단계: 수배중/열람 구분
+            let step2Label = '호텔수배중';
+            let step2Color = '#17a2b8';
+            if (res.status === 'processing') {
+                if (res.assignment_viewed) {
+                    step2Label = '메일열람';
+                    step2Color = '#20c997'; // 청록색
+                } else {
+                    step2Label = '수배중';
+                    step2Color = '#17a2b8';
+                }
+            }
+            
             const steps = [
-                { key: 'pending', label: '접수', color: '#17a2b8' },
-                { key: 'processing', label: '호텔수배중', color: '#17a2b8' },
+                { key: 'pending', label: step1Label, color: step1Color },
+                { key: 'processing', label: step2Label, color: step2Color },
                 { key: 'confirmed', label: '확정', color: '#28a745' },
-                { key: 'voucher', label: '바우처발행', color: '#6f42c1' },
-                { key: 'settlement', label: '정산완료', color: '#ffc107' }
+                { key: 'voucher', label: '바우처', color: '#6f42c1' },
+                { key: 'settlement', label: '정산', color: '#ffc107' }
             ];
             
-            const statusOrder = ['pending', 'processing', 'confirmed', 'voucher', 'settlement'];
+            const statusOrder = ['pending', 'modifying', 'cancelled', 'processing', 'confirmed', 'voucher', 'settlement'];
             const currentIndex = statusOrder.indexOf(res.status);
             
             return steps.map((step, index) => {
-                const isCompleted = index <= currentIndex;
-                const bgColor = isCompleted ? step.color : '#e9ecef';
-                const textColor = isCompleted ? 'white' : '#6c757d';
+                const stepIndex = statusOrder.indexOf(step.key);
+                const isCompleted = stepIndex !== -1 && stepIndex <= currentIndex;
+                const isCurrent = step.key === res.status || 
+                                 (res.status === 'modifying' && step.key === 'pending') ||
+                                 (res.status === 'cancelled' && step.key === 'pending');
                 
-                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 3px 6px;">${step.label}</span>`;
+                const bgColor = isCompleted || isCurrent ? step.color : '#e9ecef';
+                const textColor = isCompleted || isCurrent ? 'white' : '#6c757d';
+                const fontWeight = isCurrent ? 'bold' : 'normal';
+                
+                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 3px 6px; font-weight: ${fontWeight};">${step.label}</span>`;
             }).join('');
         }
         
