@@ -3555,10 +3555,11 @@
             // Contact 담당자 정보 (예약 처음 입력한 담당자)
             const contactPerson = reservation.created_by || 'LUXFIND Staff';
 
+            const agencyName = reservation.booking_agency_name || reservation.agency_name || 'LUXFIND';
             const headerTitle = isVoucherDoc ? 'HOTEL VOUCHER INVOICE' : 'HOTEL BOOKING REQUEST';
             const headerSubtitle = isVoucherDoc
-                ? (reservation.booking_agency_name || reservation.agency_name
-                    ? `AGENCY: ${reservation.booking_agency_name || reservation.agency_name}${reservation.agency_contact_person ? ' │ CONTACT: ' + reservation.agency_contact_person : ''}`
+                ? (agencyName
+                    ? `AGENCY: ${agencyName}${reservation.agency_contact_person ? ' │ CONTACT: ' + reservation.agency_contact_person : ''}`
                     : 'LUXFIND (럭스파인드)')
                 : 'LUXFIND (럭스파인드)';
             

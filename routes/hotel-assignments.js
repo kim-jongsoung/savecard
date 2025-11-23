@@ -454,12 +454,12 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
             ORDER BY hrr.id
         `, [reservationId]);
 
-        // 투숙객 정보 조회
+        // 투숙객 정보 조회 (hotel_reservation_guests 테이블 사용)
         for (let room of roomsQuery.rows) {
             const guestsQuery = await pool.query(`
                 SELECT *
-                FROM hotel_room_guests
-                WHERE room_id = $1
+                FROM hotel_reservation_guests
+                WHERE reservation_room_id = $1
                 ORDER BY id
             `, [room.id]);
             room.guests = guestsQuery.rows;
