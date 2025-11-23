@@ -3673,15 +3673,16 @@
             // 바우처 인보이스 미리보기에서는 수배피(agency_fee)를 별도 라인으로 표시하고 총액에 포함
             if (isVoucherDoc) {
                 const agencyFee = parseFloat(reservation.agency_fee || 0) || 0;
-                if (agencyFee > 0) {
-                    paymentHTML += `
-                        <tr>
-                            <td style="padding: 5px; border: 1px solid #ddd;">Agency Handling Fee:</td>
-                            <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">$${agencyFee.toFixed(2)}</td>
-                        </tr>
-                    `;
-                    totalAmount += agencyFee;
-                }
+                console.log('🔍 바우처 수배피:', agencyFee, 'reservation.agency_fee:', reservation.agency_fee);
+                
+                // 수배피가 0이어도 항상 표시
+                paymentHTML += `
+                    <tr>
+                        <td style="padding: 5px; border: 1px solid #ddd;">Agency Handling Fee:</td>
+                        <td style="padding: 5px; border: 1px solid #ddd; text-align: right;">$${agencyFee.toFixed(2)}</td>
+                    </tr>
+                `;
+                totalAmount += agencyFee;
             }
             
             // Contact 담당자 정보 (예약 처음 입력한 담당자)
