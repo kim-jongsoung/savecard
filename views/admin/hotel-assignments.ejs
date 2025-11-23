@@ -773,6 +773,24 @@
                         <label class="form-label mb-1">최종 금액 (KRW)</label>
                         <input type="text" class="form-control form-control-sm" id="voucherFinalAmountKRW" readonly>
                     </div>
+
+                    <div id="voucherInvoiceActions" class="mt-3 pt-2 border-top" style="display: none;">
+                        <div class="mb-2">
+                            <label class="form-label mb-1">바우처 인보이스 링크</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="voucherInvoiceLinkInput" readonly>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyVoucherInvoiceLink()">복사</button>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm flex-fill" onclick="previewVoucherInvoice()">
+                                <i class="fas fa-eye me-1"></i>미리보기
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm flex-fill" onclick="sendVoucherInvoiceEmail()">
+                                <i class="fas fa-envelope me-1"></i>메일 보내기
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">닫기</button>
@@ -1272,6 +1290,9 @@
         let isLoadingData = false;  // ⭐ 데이터 로드 중 플래그 (조식 중복 방지)
         let currentConfirmReservationId = null;
         let currentVoucherReservationId = null;
+        let currentVoucherInvoiceId = null;
+        let currentVoucherInvoiceLink = '';
+        let currentVoucherAgencyEmail = '';
         let voucherBaseAmountUSD = 0;
         let voucherFxRate = 1300;
         
@@ -4112,6 +4133,9 @@
         // 바우처+인보이스 생성 모달 오픈
         async function createVoucher(reservationId) {
             currentVoucherReservationId = reservationId;
+            currentVoucherInvoiceId = null;
+            currentVoucherInvoiceLink = '';
+            currentVoucherAgencyEmail = '';
 
             try {
                 // 예약 상세 데이터 로드
@@ -4148,6 +4172,8 @@
                 const currencySelect = document.getElementById('voucherCurrency');
                 const fxLabel = document.getElementById('voucherFxRateLabel');
                 const info = document.getElementById('voucherInvoiceInfo');
+                const actions = document.getElementById('voucherInvoiceActions');
+                const linkInput = document.getElementById('voucherInvoiceLinkInput');
 
                 if (baseInput) baseInput.value = voucherBaseAmountUSD.toFixed(2);
                 if (discountInput) discountInput.value = '0';
@@ -4161,6 +4187,10 @@
                         : '';
                     info.textContent = `예약번호: ${data.reservation_number || '-'} / 손님: ${guestName || '-'} / 수배처: ${data.agency_name || '-'}`;
                 }
+
+                currentVoucherAgencyEmail = data.agency_email || '';
+                if (actions) actions.style.display = 'none';
+                if (linkInput) linkInput.value = '';
 
                 updateVoucherInvoiceTotals();
 
@@ -4233,11 +4263,13 @@
 
                 if (response.ok && result.success) {
                     alert('✅ 바우처인보이스가 생성되었습니다.');
-                    const modalEl = document.getElementById('voucherInvoiceModal');
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
                     if (result.invoice && result.invoice.id) {
-                        openVoucherInvoicePreview(result.invoice.id);
+                        currentVoucherInvoiceId = result.invoice.id;
+                        currentVoucherInvoiceLink = `${window.location.origin}/api/hotel-assignments/invoice/${currentVoucherInvoiceId}/preview`;
+                        const actions = document.getElementById('voucherInvoiceActions');
+                        const linkInput = document.getElementById('voucherInvoiceLinkInput');
+                        if (linkInput) linkInput.value = currentVoucherInvoiceLink;
+                        if (actions) actions.style.display = '';
                     }
                     loadReservations();
                 } else {
@@ -4256,6 +4288,52 @@
             }
             const url = `/api/hotel-assignments/invoice/${invoiceId}/preview`;
             window.open(url, '_blank', 'width=900,height=900');
+        }
+        
+        function previewVoucherInvoice() {
+            if (!currentVoucherInvoiceId) {
+                alert('먼저 바우처 인보이스를 생성해주세요.');
+                return;
+            }
+            openVoucherInvoicePreview(currentVoucherInvoiceId);
+        }
+
+        function copyVoucherInvoiceLink() {
+            if (!currentVoucherInvoiceLink) {
+                alert('먼저 바우처 인보이스를 생성해주세요.');
+                return;
+            }
+            const linkInput = document.getElementById('voucherInvoiceLinkInput');
+            if (linkInput) {
+                linkInput.select();
+                linkInput.setSelectionRange(0, 99999);
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(currentVoucherInvoiceLink).then(() => {
+                    alert('인보이스 링크가 복사되었습니다.');
+                }).catch(() => {
+                    alert('클립보드 복사에 실패했습니다. 입력창에서 직접 복사해주세요.');
+                });
+            } else {
+                alert('브라우저에서 자동 복사를 지원하지 않습니다. 입력창에서 직접 복사해주세요.');
+            }
+        }
+
+        function sendVoucherInvoiceEmail() {
+            if (!currentVoucherInvoiceLink) {
+                alert('먼저 바우처 인보이스를 생성해주세요.');
+                return;
+            }
+            const recipient = currentVoucherAgencyEmail || '';
+            const subject = encodeURIComponent('[LUXFIND] Hotel Voucher Invoice');
+            const body = encodeURIComponent(
+                '안녕하세요,\n\n' +
+                '아래 링크에서 호텔 바우처 인보이스를 확인하실 수 있습니다.\n' +
+                currentVoucherInvoiceLink +
+                '\n\n감사합니다.'
+            );
+            const mailtoUrl = `mailto:${recipient}?subject=${subject}&body=${body}`;
+            window.location.href = mailtoUrl;
         }
         
         // 정산 이관
