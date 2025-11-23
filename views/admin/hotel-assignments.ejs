@@ -1411,20 +1411,28 @@
                     const rowId = parseInt(row.dataset.reservationId);
                     const status = row.dataset.status;
                     
-                    // 기본 스타일로 복원
+                    // 기본 스타일로 복원 (개별 속성만 변경)
                     if (status === 'pending' || status === 'modifying') {
-                        row.style.cssText = 'background: #fff3cd; border-left: 4px solid #ffc107;';
+                        row.style.background = '#fff3cd';
+                        row.style.borderLeft = '4px solid #ffc107';
+                        row.style.boxShadow = '';
                     } else if (status === 'processing') {
-                        row.style.cssText = 'background: #d1ecf1; border-left: 4px solid #17a2b8;';
+                        row.style.background = '#d1ecf1';
+                        row.style.borderLeft = '4px solid #17a2b8';
+                        row.style.boxShadow = '';
                     } else {
-                        row.style.cssText = '';
+                        row.style.background = '';
+                        row.style.borderLeft = '';
+                        row.style.boxShadow = '';
                     }
                 });
                 
                 // 선택된 행만 초록색 강조
                 const targetRow = document.querySelector(`tr[data-reservation-id="${reservationId}"]`);
                 if (targetRow) {
-                    targetRow.style.cssText = 'background: #d4edda; border-left: 5px solid #28a745; box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);';
+                    targetRow.style.background = '#d4edda';
+                    targetRow.style.borderLeft = '5px solid #28a745';
+                    targetRow.style.boxShadow = '0 0 10px rgba(40, 167, 69, 0.3)';
                 }
             }, 100);
         }
