@@ -1055,7 +1055,11 @@
                         ${sorted.map((res, index) => {
                             // 상태별 행 스타일
                             let rowStyle = '';
-                            if (res.status === 'pending' || res.status === 'modifying') {
+                            
+                            // 최근 작업한 예약 강조 (최우선)
+                            if (res.id === lastClosedReservationId) {
+                                rowStyle = 'background: #d4edda; border-left: 5px solid #28a745; box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);'; // 초록색 강조
+                            } else if (res.status === 'pending' || res.status === 'modifying') {
                                 rowStyle = 'background: #fff3cd; border-left: 4px solid #ffc107;'; // 노란색 강조
                             } else if (res.status === 'processing') {
                                 rowStyle = 'background: #d1ecf1; border-left: 4px solid #17a2b8;'; // 청록색 강조
@@ -1346,6 +1350,7 @@
         }
         
         let currentEditingId = null;
+        let lastClosedReservationId = null;
         let allHotels = [];
         let allRoomTypes = [];
         let allAgencies = [];
@@ -2960,6 +2965,7 @@
                 
                 if (response.ok) {
                     alert('✅ 예약이 수정되었습니다.');
+                    lastClosedReservationId = currentEditingId;
                     bootstrap.Modal.getInstance(document.getElementById('editReservationModal')).hide();
                     loadReservations();
                 } else {
