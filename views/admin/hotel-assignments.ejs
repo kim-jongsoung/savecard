@@ -4207,6 +4207,9 @@
                 if (result.success) {
                     alert(`✅ 수배서가 성공적으로 전송되었습니다!\n\n타입: ${assignmentType}\n수신: ${recipientEmail}`);
                     
+                    // 리스트 새로고침 (상태 변경 반영)
+                    loadReservations();
+                    
                     // 모달 새로고침 (최신 이력 표시)
                     await createAssignment(reservationId);
                     
