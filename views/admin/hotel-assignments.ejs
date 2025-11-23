@@ -4398,10 +4398,10 @@
                     const guestName = data.rooms && data.rooms[0] && data.rooms[0].guests && data.rooms[0].guests[0]
                         ? (data.rooms[0].guests[0].guest_name_ko || data.rooms[0].guests[0].guest_name_en || '')
                         : '';
-                    info.textContent = `예약번호: ${data.reservation_number || '-'} / 손님: ${guestName || '-'} / 수배처: ${data.agency_name || '-'}`;
+                    info.textContent = `예약번호: ${data.reservation_number || '-'} / 손님: ${guestName || '-'} / 예약거래처: ${data.booking_agency_name || '-'}`;
                 }
 
-                currentVoucherAgencyEmail = data.agency_email || '';
+                currentVoucherAgencyEmail = data.agency_contact_email || data.agency_email || '';
 
                 // 기존 바우처인보이스가 있는지 조회 (서버 재시작 후에도 복구)
                 let hasExistingInvoice = false;
