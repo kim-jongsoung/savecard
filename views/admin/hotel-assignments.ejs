@@ -1273,7 +1273,8 @@
             // 2단계: 수배중/열람 구분 (latest_assignment.viewed_at 확인)
             let step2Label = '호텔수배중';
             let step2Color = '#17a2b8';
-            if (res.status === 'processing') {
+            // 상태가 processing이거나, latest_assignment가 있으면 수배 단계로 간주
+            if (res.status === 'processing' || res.latest_assignment) {
                 if (res.latest_assignment && res.latest_assignment.viewed_at) {
                     step2Label = '메일열람';
                     step2Color = '#20c997'; // 밝은 청록색
@@ -1292,14 +1293,20 @@
             ];
             
             const statusOrder = ['pending', 'modifying', 'cancelled', 'processing', 'confirmed', 'voucher', 'settlement'];
-            const currentIndex = statusOrder.indexOf(res.status);
+            let currentIndex = statusOrder.indexOf(res.status);
+            
+            // latest_assignment가 있으면 최소한 processing 단계로 간주
+            if (res.latest_assignment && currentIndex < statusOrder.indexOf('processing')) {
+                currentIndex = statusOrder.indexOf('processing');
+            }
             
             return steps.map((step, index) => {
                 const stepIndex = statusOrder.indexOf(step.key);
                 const isCompleted = stepIndex !== -1 && stepIndex <= currentIndex;
-                const isCurrent = step.key === res.status || 
+                const isCurrent = (step.key === res.status || 
                                  (res.status === 'modifying' && step.key === 'pending') ||
-                                 (res.status === 'cancelled' && step.key === 'pending');
+                                 (res.status === 'cancelled' && step.key === 'pending') ||
+                                 (res.latest_assignment && step.key === 'processing' && res.status === 'pending'));
                 
                 const bgColor = isCompleted || isCurrent ? step.color : '#e9ecef';
                 const textColor = isCompleted || isCurrent ? 'white' : '#6c757d';
