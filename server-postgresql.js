@@ -16533,6 +16533,28 @@ async function startServer() {
             console.warn('⚠️  호텔 수배서 테이블 마이그레이션 경고:', migrateErr.message);
         }
         
+        // 4. viewed_at 컬럼 추가 (수배서 열람 추적)
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'hotel_assignment_history' 
+                        AND column_name = 'viewed_at'
+                    ) THEN
+                        ALTER TABLE hotel_assignment_history 
+                        ADD COLUMN viewed_at TIMESTAMP;
+                        
+                        COMMENT ON COLUMN hotel_assignment_history.viewed_at IS '수배서 열람 시간';
+                    END IF;
+                END $$;
+            `);
+            console.log('✅ hotel_assignment_history.viewed_at 컬럼 추가 완료');
+        } catch (viewedErr) {
+            console.warn('⚠️  viewed_at 컬럼 추가 경고:', viewedErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
