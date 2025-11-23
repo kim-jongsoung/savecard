@@ -378,7 +378,19 @@ router.get('/', async (req, res) => {
                     WHERE hrr.reservation_id = hr.id
                     GROUP BY hrr.reservation_id
                 ) as room_types,
-                (hr.internal_memo IS NOT NULL AND hr.internal_memo != '') as has_memo
+                (hr.internal_memo IS NOT NULL AND hr.internal_memo != '') as has_memo,
+                (
+                    SELECT json_build_object(
+                        'id', hah.id,
+                        'viewed_at', hah.viewed_at,
+                        'sent_at', hah.sent_at,
+                        'assignment_type', hah.assignment_type
+                    )
+                    FROM hotel_assignment_history hah
+                    WHERE hah.reservation_id = hr.id
+                    ORDER BY hah.sent_at DESC
+                    LIMIT 1
+                ) as latest_assignment
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
