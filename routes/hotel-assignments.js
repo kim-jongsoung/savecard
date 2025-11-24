@@ -656,7 +656,12 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
         const invoiceQuery = await pool.query(`
             SELECT 
                 i.*,
-                hr.*,
+                hr.agency_fee,
+                hr.total_cost_price,
+                hr.reservation_number,
+                hr.check_in_date,
+                hr.check_out_date,
+                hr.special_requests,
                 h.hotel_name,
                 ba.agency_name AS booking_agency_name,
                 ba.contact_person AS agency_contact_person,
