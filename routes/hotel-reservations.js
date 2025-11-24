@@ -694,7 +694,7 @@ router.put('/:id', async (req, res) => {
                     }
                 }
                 
-                // ⭐ 객실별 인원 수 + 조식 정보 업데이트 (조식 인원 수 포함)
+                // ⭐ 객실별 인원 수 + 조식 정보 업데이트
                 await client.query(`
                     UPDATE hotel_reservation_rooms
                     SET adults_count = $1,
@@ -703,11 +703,9 @@ router.put('/:id', async (req, res) => {
                         total_guests = $4,
                         breakfast_included = $5,
                         breakfast_days = $6,
-                        breakfast_adult_count = $7,
-                        breakfast_adult_price = $8,
-                        breakfast_child_count = $9,
-                        breakfast_child_price = $10
-                    WHERE id = $11
+                        breakfast_adult_price = $7,
+                        breakfast_child_price = $8
+                    WHERE id = $9
                 `, [
                     roomAdults, 
                     roomChildren, 
@@ -715,9 +713,7 @@ router.put('/:id', async (req, res) => {
                     roomAdults + roomChildren + roomInfants, 
                     room.breakfast_included || false,
                     room.breakfast_days || 0,
-                    roomAdults,  // ⭐ 조식 성인 수 = 투숙 성인 수
                     room.breakfast_adult_price || 0,
-                    roomChildren,  // ⭐ 조식 소아 수 = 투숙 소아 수 (유아 제외)
                     room.breakfast_child_price || 0,
                     roomId
                 ]);
