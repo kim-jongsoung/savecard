@@ -508,8 +508,59 @@ router.post('/:reservationId/invoice', async (req, res) => {
 
         const reservation = reservationQuery.rows[0];
 
-        // 2. 기본 금액: total_selling_price 또는 grand_total 사용
-        const baseAmount = parseFloat(reservation.total_selling_price || reservation.grand_total || 0);
+        // 2. 기본 금액 계산: 객실 + 조식 + 추가항목 + 수배피
+        // 객실 정보 조회
+        const roomsResult = await client.query(`
+            SELECT * FROM hotel_reservation_rooms WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        // 추가 항목 조회
+        const extrasResult = await client.query(`
+            SELECT * FROM hotel_reservation_extras WHERE reservation_id = $1
+        `, [reservationId]);
+        
+        const rooms = roomsResult.rows;
+        const extras = extrasResult.rows;
+        
+        // 숙박 일수 계산
+        const checkInDate = new Date(reservation.check_in_date);
+        const checkOutDate = new Date(reservation.check_out_date);
+        const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+        
+        let totalAmount = 0;
+        
+        // 객실 요금
+        rooms.forEach(room => {
+            let roomRate = parseFloat(room.room_rate || 0);
+            if (roomRate === 0 && room.total_selling_price && nights > 0) {
+                roomRate = parseFloat(room.total_selling_price) / nights;
+            }
+            totalAmount += roomRate * nights;
+            
+            // 조식 요금
+            const isBreakfastIncluded = room.breakfast_included === true || room.breakfast_included === 'true' || room.breakfast_included === 1;
+            if (isBreakfastIncluded) {
+                const adultCount = parseInt(room.breakfast_adult_count || 0);
+                const childCount = parseInt(room.breakfast_child_count || 0);
+                const adultPrice = parseFloat(room.breakfast_adult_price || 0);
+                const childPrice = parseFloat(room.breakfast_child_price || 0);
+                const breakfastDays = parseInt(room.breakfast_days || nights);
+                
+                totalAmount += (adultCount * breakfastDays * adultPrice) + (childCount * breakfastDays * childPrice);
+            }
+        });
+        
+        // 추가 서비스
+        extras.forEach(extra => {
+            const charge = parseFloat(extra.charge || extra.total_selling_price || 0);
+            totalAmount += charge;
+        });
+        
+        // ⭐ 수배피 추가 (중요!)
+        const agencyFee = parseFloat(reservation.agency_fee || 0);
+        totalAmount += agencyFee;
+        
+        const baseAmount = totalAmount;
         const discount = parseFloat(discount_usd || 0);
         const surcharge = parseFloat(surcharge_usd || 0);
         const finalAmountUSD = baseAmount - discount + surcharge;

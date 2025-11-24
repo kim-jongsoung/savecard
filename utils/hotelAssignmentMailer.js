@@ -479,11 +479,15 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
     const fxRateDateStr = invoice.fx_rate_date ? formatDate(invoice.fx_rate_date) : '';
     const currency = invoice.currency || 'USD';
 
-    const baseAmount = parseFloat(reservation.total_selling_price || reservation.grand_total || 0) || 0;
-    const costAmount = parseFloat(reservation.total_cost_price || 0) || 0;
-    const marginAmount = parseFloat(reservation.total_margin || 0) || 0;
+    // ⭐ 인보이스 total_amount 사용 (이미 객실+조식+추가항목+수배피 포함됨)
     const invoiceTotalUSD = parseFloat(invoice.total_amount || 0) || 0;
     const invoiceTotalKRW = parseFloat(invoice.total_amount_krw || 0) || 0;
+    
+    // 수배피 포함된 금액
+    const agencyFee = parseFloat(reservation.agency_fee || 0) || 0;
+    const baseAmount = invoiceTotalUSD; // 인보이스 금액 사용
+    const costAmount = parseFloat(reservation.total_cost_price || 0) || 0;
+    const marginAmount = baseAmount - costAmount - agencyFee; // 마진 = 총액 - 원가 - 수배피
 
     let amountSummaryRows = `
         <tr>
@@ -495,12 +499,12 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
             <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${marginAmount.toFixed(2)}</td>
         </tr>
         <tr>
-            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Selling Total (USD)</td>
-            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${baseAmount.toFixed(2)}</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Agency Fee (수배피) (USD)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${agencyFee.toFixed(2)}</td>
         </tr>
-        <tr>
-            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Invoice Total (USD)</td>
-            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right;">$${invoiceTotalUSD.toFixed(2)}</td>
+        <tr style="background: #f0f8ff;">
+            <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 700; font-size: 14px;">Invoice Total (USD)</td>
+            <td style="padding: 4px 8px; border: 1px solid #000; text-align: right; font-weight: 700; font-size: 14px;">$${invoiceTotalUSD.toFixed(2)}</td>
         </tr>
     `;
 
