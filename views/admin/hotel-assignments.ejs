@@ -4968,6 +4968,14 @@
                     // 인보이스 목록 갱신
                     await loadVoucherInvoicesList(currentVoucherReservationId);
                     
+                    // ⭐ 최신 예약 데이터로 금액 상세 내역 재계산
+                    await refreshVoucherAmountDetails(currentVoucherReservationId);
+                    
+                    // 프로세스 초기화
+                    updateProcessStep(1, 'success');
+                    updateProcessStep(2, 'progress'); // 인보이스 삭제됨
+                    document.getElementById('btnSendEmail').disabled = true;
+                    
                     // 예약 목록 갱신 (뱃지 상태 업데이트)
                     await loadReservations();
                     
@@ -4981,6 +4989,99 @@
             } catch (error) {
                 console.error('인보이스 삭제 오류:', error);
                 alert('❌ 삭제 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 금액 상세 내역 새로고침
+        async function refreshVoucherAmountDetails(reservationId) {
+            try {
+                const response = await fetch(`/api/hotel-reservations/${reservationId}`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                // 금액 재계산
+                let totalAmount = 0;
+                let totalRoomCharge = 0;
+                let totalBreakfastCharge = 0;
+                let totalExtrasCharge = 0;
+                const rooms = data.rooms || [];
+                const extras = data.extras || [];
+                
+                const checkInDate = new Date(data.check_in_date);
+                const checkOutDate = new Date(data.check_out_date);
+                const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+                
+                let breakfastDetails = [];
+                
+                // 객실 요금
+                rooms.forEach(room => {
+                    let roomRate = parseFloat(room.room_rate || 0);
+                    if (roomRate === 0 && room.total_selling_price && nights > 0) {
+                        roomRate = parseFloat(room.total_selling_price) / nights;
+                    }
+                    const roomCharge = roomRate * nights;
+                    totalRoomCharge += roomCharge;
+                    totalAmount += roomCharge;
+                    
+                    // 조식 요금
+                    const isBreakfastIncluded = room.breakfast_included === true || room.breakfast_included === 'true' || room.breakfast_included === 1;
+                    if (isBreakfastIncluded) {
+                        const adultCount = parseInt(room.breakfast_adult_count || 0);
+                        const childCount = parseInt(room.breakfast_child_count || 0);
+                        const adultPrice = parseFloat(room.breakfast_adult_price || 0);
+                        const childPrice = parseFloat(room.breakfast_child_price || 0);
+                        const breakfastDays = parseInt(room.breakfast_days || nights);
+                        
+                        const breakfastCharge = (adultCount * breakfastDays * adultPrice) + (childCount * breakfastDays * childPrice);
+                        totalBreakfastCharge += breakfastCharge;
+                        totalAmount += breakfastCharge;
+                        
+                        if (breakfastCharge > 0) {
+                            let detail = '';
+                            if (adultCount > 0) detail += `성인 ${adultCount}명 x $${adultPrice} x ${breakfastDays}일`;
+                            if (childCount > 0) {
+                                if (detail) detail += ' + ';
+                                detail += `소아 ${childCount}명 x $${childPrice} x ${breakfastDays}일`;
+                            }
+                            breakfastDetails.push(detail);
+                        }
+                    }
+                });
+                
+                // 추가 서비스
+                let extrasDetails = [];
+                extras.forEach(extra => {
+                    const charge = parseFloat(extra.charge || extra.total_selling_price || 0);
+                    totalExtrasCharge += charge;
+                    totalAmount += charge;
+                    if (charge > 0) {
+                        extrasDetails.push(`${extra.service_name || extra.extra_name || '추가항목'}: $${charge.toFixed(2)}`);
+                    }
+                });
+                
+                // 수배피
+                const agencyFee = parseFloat(data.agency_fee || 0);
+                totalAmount += agencyFee;
+                
+                // UI 업데이트
+                document.getElementById('voucherRoomChargeDisplay').textContent = '$' + totalRoomCharge.toFixed(2);
+                document.getElementById('voucherBreakfastChargeDisplay').textContent = '$' + totalBreakfastCharge.toFixed(2);
+                document.getElementById('voucherBreakfastDetail').textContent = breakfastDetails.length > 0 ? breakfastDetails.join(', ') : '조식 미포함';
+                document.getElementById('voucherExtrasChargeDisplay').textContent = '$' + totalExtrasCharge.toFixed(2);
+                document.getElementById('voucherExtrasDetail').textContent = extrasDetails.length > 0 ? extrasDetails.join(', ') : '추가항목 없음';
+                document.getElementById('voucherAgencyFeeDisplay').textContent = '$' + agencyFee.toFixed(2);
+                document.getElementById('voucherAgencyNameDisplay').textContent = data.booking_agency_name || data.agency_name || '-';
+                document.getElementById('voucherTotalUSD').textContent = '$' + totalAmount.toFixed(2);
+                document.getElementById('voucherTotalKRW').textContent = '₩' + (totalAmount * voucherFxRate).toLocaleString('ko-KR', {maximumFractionDigits: 0});
+                
+                // hidden input 업데이트
+                document.getElementById('voucherBaseAmount').value = totalAmount.toFixed(2);
+                voucherBaseAmountUSD = totalAmount;
+                
+                console.log('✅ 금액 상세 내역 갱신 완료:', totalAmount);
+            } catch (error) {
+                console.error('금액 상세 내역 갱신 오류:', error);
             }
         }
         
