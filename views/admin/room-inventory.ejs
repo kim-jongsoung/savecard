@@ -190,9 +190,18 @@
               if (status === 0) cls = 'cell-X';
               else if (status > 0) cls = 'cell-O';
             } else {
-              // status 방식: O/X/V
-              displayValue = status || '';
-              cls = status ? `cell-${status}` : '';
+              // status 방식: O/X/V/WO/WX
+              // WO/WX는 O/X로 표시하되 노란색 배경
+              if (status === 'WO') {
+                displayValue = 'O';
+                cls = 'cell-WO';
+              } else if (status === 'WX') {
+                displayValue = 'X';
+                cls = 'cell-WX';
+              } else {
+                displayValue = status || '';
+                cls = status ? `cell-${status}` : '';
+              }
             }
             
             const sel = selected.has(key) ? ' cell-selected' : '';
