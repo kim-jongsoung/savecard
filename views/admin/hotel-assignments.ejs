@@ -4443,19 +4443,27 @@
                     console.log(`🔍 createVoucher - Room ${idx + 1} breakfast_included:`, room.breakfast_included, '→', isBreakfastIncluded);
                     
                     if (isBreakfastIncluded) {
+                        console.log(`🔍 createVoucher - Room ${idx + 1} 원본 조식 데이터:`, {
+                            breakfast_adult_count: room.breakfast_adult_count,
+                            breakfast_child_count: room.breakfast_child_count,
+                            breakfast_adult_price: room.breakfast_adult_price,
+                            breakfast_child_price: room.breakfast_child_price,
+                            breakfast_days: room.breakfast_days
+                        });
+                        
                         const adultCount = parseInt(room.breakfast_adult_count || 0);
                         const childCount = parseInt(room.breakfast_child_count || 0);
                         const adultPrice = parseFloat(room.breakfast_adult_price || 0);
                         const childPrice = parseFloat(room.breakfast_child_price || 0);
                         const breakfastDays = parseInt(room.breakfast_days || nights);
                         
-                        console.log(`🔍 createVoucher - Room ${idx + 1} 조식 정보:`, { adultCount, childCount, adultPrice, childPrice, breakfastDays });
+                        console.log(`🔍 createVoucher - Room ${idx + 1} 파싱된 조식 정보:`, { adultCount, childCount, adultPrice, childPrice, breakfastDays });
                         
                         const breakfastCharge = (adultCount * breakfastDays * adultPrice) + (childCount * breakfastDays * childPrice);
+                        console.log(`🔍 createVoucher - Room ${idx + 1} 계산식: (${adultCount} × ${breakfastDays} × ${adultPrice}) + (${childCount} × ${breakfastDays} × ${childPrice}) = ${breakfastCharge}`);
+                        
                         totalBreakfastCharge += breakfastCharge;
                         totalAmount += breakfastCharge;
-                        
-                        console.log(`🔍 createVoucher - Room ${idx + 1} 조식 요금:`, breakfastCharge);
                         
                         if (breakfastCharge > 0) {
                             let detail = '';
