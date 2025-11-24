@@ -491,6 +491,11 @@ function generateVoucherInvoiceHTML(reservation, invoice) {
     const costAmount = parseFloat(reservation.total_cost_price || 0) || 0;
     const marginAmount = baseAmount - costAmount - agencyFee; // 마진 = 총액 - 원가 - 수배피
 
+    console.log('📄 HTML Generation - agencyFee:', agencyFee);
+    console.log('📄 HTML Generation - costAmount:', costAmount);
+    console.log('📄 HTML Generation - marginAmount:', marginAmount);
+    console.log('📄 HTML Generation - invoiceTotalUSD:', invoiceTotalUSD);
+
     let amountSummaryRows = `
         <tr>
             <td style="padding: 4px 8px; border: 1px solid #000; font-weight: 600;">Hotel Net Cost (USD)</td>
