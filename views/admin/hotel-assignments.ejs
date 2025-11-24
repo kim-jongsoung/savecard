@@ -4526,12 +4526,6 @@
 
                 updateVoucherInvoiceTotals();
 
-                // 테이블을 숨겨서 모달 열리는 동안 깨지는 것 방지
-                const tableContainer = document.getElementById('reservationsContainer');
-                if (tableContainer) {
-                    tableContainer.style.visibility = 'hidden';
-                }
-
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 
                 // Bootstrap 모달의 스크롤바 보정 비활성화 (테이블 깨짐 방지)
@@ -4543,16 +4537,15 @@
                 
                 // body padding 변경 방지
                 const originalPadding = document.body.style.paddingRight;
-                modalEl.addEventListener('show.bs.modal', function() {
+                const preventPaddingChange = function() {
                     document.body.style.paddingRight = originalPadding;
-                });
-                modalEl.addEventListener('shown.bs.modal', function() {
-                    document.body.style.paddingRight = originalPadding;
-                });
+                };
                 
-                // 모달이 완전히 열린 후 인보이스 목록 로드 및 행 강조
-                modalEl.addEventListener('shown.bs.modal', async function onModalShown() {
-                    // 이벤트 리스너 제거 (한 번만 실행)
+                // 모달이 완전히 열린 후 인보이스 목록 로드
+                const onModalShown = async function() {
+                    // 이벤트 리스너 제거
+                    modalEl.removeEventListener('show.bs.modal', preventPaddingChange);
+                    modalEl.removeEventListener('shown.bs.modal', preventPaddingChange);
                     modalEl.removeEventListener('shown.bs.modal', onModalShown);
                     
                     // 인보이스 목록 로드 (모달 열린 후)
@@ -4561,21 +4554,19 @@
                     // 목록 로드 후 행 강조
                     setTimeout(() => {
                         highlightReservationRow(reservationId);
-                        
-                        // 테이블 다시 보이기
-                        if (tableContainer) {
-                            tableContainer.style.visibility = 'visible';
-                        }
                     }, 200);
-                });
+                };
                 
-                // 모달이 닫힐 때도 테이블 보이기 (에러 발생 시 대비)
-                modalEl.addEventListener('hidden.bs.modal', function onModalHidden() {
+                // 모달이 닫힐 때 정리
+                const onModalHidden = function() {
                     modalEl.removeEventListener('hidden.bs.modal', onModalHidden);
-                    if (tableContainer) {
-                        tableContainer.style.visibility = 'visible';
-                    }
-                });
+                };
+                
+                // 이벤트 리스너 등록
+                modalEl.addEventListener('show.bs.modal', preventPaddingChange);
+                modalEl.addEventListener('shown.bs.modal', preventPaddingChange);
+                modalEl.addEventListener('shown.bs.modal', onModalShown);
+                modalEl.addEventListener('hidden.bs.modal', onModalHidden);
                 
                 modal.show();
 
@@ -4632,13 +4623,13 @@
                     // 인보이스 목록 다시 로드
                     await loadVoucherInvoicesList(currentVoucherReservationId);
                     
-                    // 목록 로드 후 행 강조 다시 적용
+                    // 예약 목록 갱신 (await로 완료 대기)
+                    await loadReservations();
+                    
+                    // 모든 로드 완료 후 행 강조 다시 적용
                     setTimeout(() => {
                         highlightReservationRow(currentVoucherReservationId);
-                    }, 800);
-                    
-                    // 예약 목록 갱신
-                    loadReservations();
+                    }, 300);
                 } else {
                     alert('❌ 바우처인보이스 생성 실패: ' + (result.message || result.error || '알 수 없는 오류'));
                 }
