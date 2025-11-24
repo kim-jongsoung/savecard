@@ -73,7 +73,9 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         const guests = room.guests || [];
         let guestRowsHTML = '';
         guests.forEach((guest, guestIdx) => {
-            const paxType = guest.is_adult ? 'Adult' : (guest.is_child ? 'Child' : 'Infant');
+            // age_category 필드 사용 (adult, child, infant)
+            const ageCategory = guest.age_category || 'adult';
+            const paxType = ageCategory === 'adult' ? 'Adult' : (ageCategory === 'child' ? 'Child' : 'Infant');
             const guestNameEn = guest.english_name || guest.guest_name_en || '';
             const birthRaw = guest.birth_date || guest.date_of_birth || '';
             const birthFormatted = formatBirthDate(birthRaw);

@@ -738,6 +738,9 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
             status: row.status
         };
 
+        console.log('🔍 Invoice Preview - agency_fee:', reservation.agency_fee);
+        console.log('🔍 Invoice Preview - total_cost_price:', reservation.total_cost_price);
+
         const html = generateVoucherInvoiceHTML(reservation, invoice);
 
         res.send(html);
