@@ -244,6 +244,21 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         }
     }
     
+    // ⭐ 수배피 (바우처 인보이스에만 표시)
+    if (reservation.__isVoucherInvoice) {
+        const agencyFee = parseFloat(reservation.agency_fee || 0);
+        if (agencyFee > 0) {
+            const agencyName = reservation.booking_agency_name || reservation.agency_name || '수배피';
+            paymentHTML += `
+            <tr style="font-size: 9px;">
+                <td style="padding: 3px; border: 1px solid #000;">Agency Fee (${agencyName}):</td>
+                <td style="padding: 3px; border: 1px solid #000; text-align: right;">$${agencyFee.toFixed(2)}</td>
+            </tr>
+            `;
+            totalAmount += agencyFee;
+        }
+    }
+    
     // 변경 이력
     let historyHTML = '';
     if (history && history.length > 0) {
