@@ -4488,7 +4488,40 @@
                     totalExtrasCharge += charge;
                     totalAmount += charge;
                     if (charge > 0) {
-                        extrasDetails.push(`${extra.service_name || extra.extra_name || '추가항목'}: $${charge.toFixed(2)}`);
+                        const itemName = extra.service_name || extra.item_name || extra.extra_name || '추가항목';
+                        let detail = `${itemName}: $${charge.toFixed(2)}`;
+                        
+                        // 수량 정보 추가
+                        const quantity = parseInt(extra.quantity || 1);
+                        if (quantity > 1) {
+                            detail += ` (수량: ${quantity})`;
+                        }
+                        
+                        // 인원별 가격 정보 추가
+                        const adultCount = parseInt(extra.adult_count || 0);
+                        const childCount = parseInt(extra.child_count || 0);
+                        const infantCount = parseInt(extra.infant_count || 0);
+                        
+                        if (adultCount > 0 || childCount > 0 || infantCount > 0) {
+                            const details = [];
+                            if (adultCount > 0) {
+                                const adultPrice = parseFloat(extra.adult_price || 0);
+                                details.push(`성인 ${adultCount}명×$${adultPrice}`);
+                            }
+                            if (childCount > 0) {
+                                const childPrice = parseFloat(extra.child_price || 0);
+                                details.push(`소아 ${childCount}명×$${childPrice}`);
+                            }
+                            if (infantCount > 0) {
+                                const infantPrice = parseFloat(extra.infant_price || 0);
+                                details.push(`유아 ${infantCount}명×$${infantPrice}`);
+                            }
+                            if (details.length > 0) {
+                                detail += ` (${details.join(', ')})`;
+                            }
+                        }
+                        
+                        extrasDetails.push(detail);
                     }
                 });
                 
@@ -5024,7 +5057,40 @@
                     totalExtrasCharge += charge;
                     totalAmount += charge;
                     if (charge > 0) {
-                        extrasDetails.push(`${extra.service_name || extra.extra_name || '추가항목'}: $${charge.toFixed(2)}`);
+                        const itemName = extra.service_name || extra.item_name || extra.extra_name || '추가항목';
+                        let detail = `${itemName}: $${charge.toFixed(2)}`;
+                        
+                        // 수량 정보 추가
+                        const quantity = parseInt(extra.quantity || 1);
+                        if (quantity > 1) {
+                            detail += ` (수량: ${quantity})`;
+                        }
+                        
+                        // 인원별 가격 정보 추가
+                        const adultCount = parseInt(extra.adult_count || 0);
+                        const childCount = parseInt(extra.child_count || 0);
+                        const infantCount = parseInt(extra.infant_count || 0);
+                        
+                        if (adultCount > 0 || childCount > 0 || infantCount > 0) {
+                            const details = [];
+                            if (adultCount > 0) {
+                                const adultPrice = parseFloat(extra.adult_price || 0);
+                                details.push(`성인 ${adultCount}명×$${adultPrice}`);
+                            }
+                            if (childCount > 0) {
+                                const childPrice = parseFloat(extra.child_price || 0);
+                                details.push(`소아 ${childCount}명×$${childPrice}`);
+                            }
+                            if (infantCount > 0) {
+                                const infantPrice = parseFloat(extra.infant_price || 0);
+                                details.push(`유아 ${infantCount}명×$${infantPrice}`);
+                            }
+                            if (details.length > 0) {
+                                detail += ` (${details.join(', ')})`;
+                            }
+                        }
+                        
+                        extrasDetails.push(detail);
                     }
                 });
                 
