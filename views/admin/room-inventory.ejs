@@ -20,6 +20,8 @@
     .cell-O { color: #27ae60; background: #d5f4e6; }
     .cell-X { color: #e74c3c; background: #fadbd8; }
     .cell-V { color: #3498db; background: #d6eaf8; }
+    .cell-WO { color: #f39c12; background: #fff3cd; font-weight: 700; }
+    .cell-WX { color: #e67e22; background: #ffe5cc; font-weight: 700; }
     .cell-updated { background: #fff59d !important; }
     .cell-selected { background: #bbdefb !important; outline: 2px solid #2196f3; }
     .cell-chk { position: absolute; top: 1px; left: 1px; transform: scale(0.7); }
@@ -47,6 +49,8 @@
         <button class="btn btn-success btn-sm me-2" onclick="bulkUpdate('O')">Open</button>
         <button class="btn btn-danger btn-sm me-2" onclick="bulkUpdate('X')">Close</button>
         <button class="btn btn-info btn-sm me-2" onclick="bulkUpdate('V')">Check</button>
+        <button class="btn btn-warning btn-sm me-2" onclick="bulkUpdate('WO')" style="color: #000;">⚠️ 주의 오픈</button>
+        <button class="btn btn-warning btn-sm me-2" onclick="bulkUpdate('WX')" style="color: #000; background: #ffc107; border-color: #ffc107;">⚠️ 주의 클로즈</button>
         <span class="text-muted me-2">|</span>
         <button class="btn btn-warning btn-sm me-3" onclick="saveChanges()">💾 저장</button>
         <span class="text-muted me-2">|</span>
@@ -144,7 +148,7 @@
       if (currentHotel.inventory_type === 'count') {
         hint.textContent = '💡 숫자 카운팅 방식: Open 클릭 시 객실 수 입력';
       } else {
-        hint.textContent = '💡 상태 표시 방식: O(오픈)/X(마감)/V(확인필요)';
+        hint.textContent = '💡 상태 표시 방식: O(오픈)/X(마감)/V(확인필요)/WO(주의오픈)/WX(주의클로즈)';
       }
       
       renderInventory(year, month);
@@ -331,12 +335,13 @@
         const rtid = parts[0];
         const date = parts.slice(1).join('-'); // 나머지를 다시 join
         
-        // count 방식: 숫자 그대로, status 방식: O/X/V를 숫자로 변환
+        // count 방식: 숫자 그대로, status 방식: O/X/V/WO/WX를 숫자로 변환
         let rooms;
         if (currentHotel && currentHotel.inventory_type === 'count') {
           rooms = value; // 이미 숫자
         } else {
-          rooms = value === 'O' ? 10 : (value === 'X' ? 0 : 5);
+          // O=10, X=0, V=5, WO=10, WX=0 (주의 상태도 동일한 숫자로 저장)
+          rooms = (value === 'O' || value === 'WO') ? 10 : ((value === 'X' || value === 'WX') ? 0 : 5);
         }
         
         const payload = {hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms, notes: ''};
