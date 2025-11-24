@@ -1593,7 +1593,19 @@
             //     await calculateAgencyFee();
             // }
             
-            const totalRoomCharge = parseFloat(document.getElementById('totalRoomCharge').value) || 0;
+            // ⭐ 각 객실의 입력 필드에서 직접 값을 읽어서 합산
+            let totalRoomCharge = 0;
+            document.querySelectorAll('.room-card').forEach(room => {
+                const roomNum = room.dataset.roomId;
+                const roomRateInput = document.getElementById(`room_${roomNum}_rate`);
+                if (roomRateInput) {
+                    totalRoomCharge += parseFloat(roomRateInput.value) || 0;
+                }
+            });
+            
+            // 총 객실요금 필드 업데이트
+            document.getElementById('totalRoomCharge').value = totalRoomCharge.toFixed(2);
+            
             const totalBreakfastCharge = parseFloat(document.getElementById('totalBreakfastCharge').value) || 0;
             const totalExtrasCharge = parseFloat(document.getElementById('totalExtrasCharge').value) || 0;
             const agencyFee = parseFloat(document.getElementById('agencyFee').value) || 0; // ⭐ 저장된 값 그대로 사용
@@ -2116,7 +2128,7 @@
                             <option value="">객실 타입 선택</option>
                         </select>
                         <label class="form-label mb-0 ms-1" style="min-width: 95px;">총 객실요금(자동)</label>
-                        <input type="text" class="form-control form-control-sm" id="room_${roomCounter}_rate" style="flex: 1;">
+                        <input type="text" class="form-control form-control-sm" id="room_${roomCounter}_rate" oninput="calculateTotal()" style="flex: 1;">
                     </div>
                     
                     <!-- ⭐ 조식 정보 섹션 (수정 가능) -->
