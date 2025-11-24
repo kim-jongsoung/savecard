@@ -4463,6 +4463,13 @@
                                         const previewHtml = await previewResp.text();
                                         previewContainer.innerHTML = previewHtml;
                                         invoiceHtmlLoaded = true;
+                                        
+                                        // DOM 변경 후 브라우저가 레이아웃을 완전히 다시 계산할 때까지 대기
+                                        await new Promise(resolve => {
+                                            requestAnimationFrame(() => {
+                                                requestAnimationFrame(resolve);
+                                            });
+                                        });
                                     }
                                 } catch (e) {
                                     console.error('바우처 인보이스 미리보기 로드 오류:', e);
@@ -4494,12 +4501,19 @@
 
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 const modal = new bootstrap.Modal(modalEl);
-                modal.show();
                 
-                // 모달 열린 후 행 강조
-                setTimeout(() => {
-                    highlightReservationRow(reservationId);
-                }, invoiceHtmlLoaded ? 1000 : 300);
+                // 모달이 완전히 열린 후 행 강조 (Bootstrap shown.bs.modal 이벤트 사용)
+                modalEl.addEventListener('shown.bs.modal', function onModalShown() {
+                    // 이벤트 리스너 제거 (한 번만 실행)
+                    modalEl.removeEventListener('shown.bs.modal', onModalShown);
+                    
+                    // 모달 애니메이션 완료 후 행 강조
+                    setTimeout(() => {
+                        highlightReservationRow(reservationId);
+                    }, 200);
+                });
+                
+                modal.show();
 
             } catch (error) {
                 console.error('바우처인보이스 생성 준비 오류:', error);
