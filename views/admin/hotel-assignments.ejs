@@ -4537,17 +4537,26 @@
 
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 
-                // Bootstrap 모달의 스크롤바 보정 비활성화 (테이블 깨짐 방지)
+                // ⭐ 모달 열기 전에 먼저 body에 스타일 고정
+                const originalPadding = document.body.style.paddingRight;
+                const originalOverflow = document.body.style.overflow;
+                
+                // body padding 변경 방지 (모달 열기 전에 미리 설정)
+                document.body.style.paddingRight = originalPadding;
+                
+                // Bootstrap 모달 생성
                 const modal = new bootstrap.Modal(modalEl, {
                     backdrop: true,
                     keyboard: true,
                     focus: true
                 });
                 
-                // body padding 변경 방지
-                const originalPadding = document.body.style.paddingRight;
-                const preventPaddingChange = function() {
-                    document.body.style.paddingRight = originalPadding;
+                // 모달이 열리는 중에도 padding 유지
+                const preventPaddingChange = function(e) {
+                    // 모달이 body에 padding을 추가하려고 하면 즉시 원래대로 복구
+                    requestAnimationFrame(() => {
+                        document.body.style.paddingRight = originalPadding;
+                    });
                 };
                 
                 // 모달이 완전히 열린 후 인보이스 목록 로드
@@ -4556,6 +4565,9 @@
                     modalEl.removeEventListener('show.bs.modal', preventPaddingChange);
                     modalEl.removeEventListener('shown.bs.modal', preventPaddingChange);
                     modalEl.removeEventListener('shown.bs.modal', onModalShown);
+                    
+                    // padding 최종 확인
+                    document.body.style.paddingRight = originalPadding;
                     
                     // 인보이스 목록 로드 (모달 열린 후)
                     await loadVoucherInvoicesList(reservationId);
@@ -4569,14 +4581,18 @@
                 // 모달이 닫힐 때 정리
                 const onModalHidden = function() {
                     modalEl.removeEventListener('hidden.bs.modal', onModalHidden);
+                    // 원래 상태 복구
+                    document.body.style.paddingRight = originalPadding;
+                    document.body.style.overflow = originalOverflow;
                 };
                 
-                // 이벤트 리스너 등록
+                // 이벤트 리스너 등록 (모달 열기 전에)
                 modalEl.addEventListener('show.bs.modal', preventPaddingChange);
                 modalEl.addEventListener('shown.bs.modal', preventPaddingChange);
                 modalEl.addEventListener('shown.bs.modal', onModalShown);
                 modalEl.addEventListener('hidden.bs.modal', onModalHidden);
                 
+                // 모달 열기
                 modal.show();
 
             } catch (error) {
