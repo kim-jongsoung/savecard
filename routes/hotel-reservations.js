@@ -541,11 +541,44 @@ router.put('/:id', async (req, res) => {
             });
         }
         
-        // 현재 상태가 pending이면 modifying으로 변경
         const currentStatus = checkResult.rows[0].status;
-        let newStatus = status || currentStatus;
-        if (currentStatus === 'pending' && !status) {
-            newStatus = 'modifying';
+        
+        // 상태 자동 관리 로직
+        // - 수배서가 있으면 최소 processing
+        // - 컨펌번호가 있으면 confirmed
+        // - 인보이스가 있으면 voucher
+        // - 수배서 생성 후 예약 내용 변경 시 modifying
+        const assignmentCheck = await client.query(
+            'SELECT id, confirmation_number FROM hotel_assignments WHERE reservation_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [id]
+        );
+        const invoiceCheck = await client.query(
+            'SELECT id FROM hotel_invoices WHERE hotel_reservation_id = $1 LIMIT 1',
+            [id]
+        );
+        
+        let newStatus = currentStatus;
+        
+        // 인보이스가 있으면 voucher
+        if (invoiceCheck.rows.length > 0) {
+            newStatus = 'voucher';
+        }
+        // 컨펌번호가 있으면 confirmed (인보이스 없을 때만)
+        else if (assignmentCheck.rows.length > 0 && assignmentCheck.rows[0].confirmation_number) {
+            newStatus = 'confirmed';
+        }
+        // 수배서가 있으면 processing (컨펌 없을 때만)
+        else if (assignmentCheck.rows.length > 0) {
+            // 수배서 생성 후 예약 내용이 변경되면 modifying
+            if (currentStatus === 'processing' || currentStatus === 'confirmed') {
+                newStatus = 'modifying';
+            } else {
+                newStatus = 'processing';
+            }
+        }
+        // 수배서도 없으면 pending
+        else {
+            newStatus = 'pending';
         }
         
         // 2. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
