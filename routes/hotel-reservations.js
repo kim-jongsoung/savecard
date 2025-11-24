@@ -423,6 +423,7 @@ router.get('/:id', async (req, res) => {
                 hr.*,
                 h.hotel_name,
                 h.hotel_name_en,
+                h.email as hotel_email,
                 ba.agency_name as booking_agency_name,
                 ba.contact_person as agency_contact_person,
                 ba.contact_email as agency_email
