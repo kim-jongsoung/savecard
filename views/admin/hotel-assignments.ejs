@@ -4514,11 +4514,8 @@
                 if (surchargeInput) surchargeInput.value = '0';
                 if (fxLabel) fxLabel.textContent = fxText;
 
-                // 이메일 자동 입력
+                // 이메일 주소 저장 (인보이스 목록에서 사용)
                 currentVoucherAgencyEmail = data.agency_contact_email || data.agency_email || '';
-                if (currentVoucherAgencyEmail) {
-                    document.getElementById('invoiceRecipientEmail').value = currentVoucherAgencyEmail;
-                }
                 
                 // 금액 상세 내역 표시
                 document.getElementById('voucherRoomChargeDisplay').textContent = '$' + totalRoomCharge.toFixed(2);
