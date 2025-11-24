@@ -2610,8 +2610,8 @@
                     
                     console.log('✅ 기본 정보 채움 (총 객실: $' + (data.total_room_rate || 0) + ', 총 조식: $' + (data.total_breakfast_charge || 0) + ', 총 추가: $' + (data.total_extras_rate || 0) + ', 수배피: $' + (data.agency_fee || 0) + ')');
                     
-                    // ⭐ 초기 총액 계산
-                    calculateTotal();
+                    // ⭐ 초기 총액 계산 (객실 로드 전이므로 일단 기본값으로 표시)
+                    // calculateTotal(); // 객실 로드 후 다시 계산
                     
                     // 호텔 선택 (⭐ 변경 불가 - disabled 설정)
                     if (data.hotel_id) {
@@ -2678,10 +2678,10 @@
                                     console.log(`✅ 객실 ${currentRoomNum} 타입 선택:`, room.room_type_id);
                                 }
                                 
-                                // 객실 요금 표시
+                                // 객실 요금 표시 (⭐ $ 기호 없이 숫자만 저장)
                                 const rateInput = document.getElementById(`room_${currentRoomNum}_rate`);
                                 if (rateInput && room.total_selling_price) {
-                                    rateInput.value = `$${parseFloat(room.total_selling_price).toFixed(2)}`;
+                                    rateInput.value = parseFloat(room.total_selling_price).toFixed(2);
                                 }
                                 const cfnLabel = document.getElementById(`room_${currentRoomNum}_cfn_label`);
                                 if (cfnLabel) {
@@ -2900,6 +2900,12 @@
                                 // ⭐ 데이터 로드 완료 - 이제 프로모션 조회 가능
                                 isLoadingData = false;
                                 console.log('✅ 데이터 로드 완료 - 프로모션 조회 활성화');
+                                
+                                // ⭐ 모든 데이터 로드 후 최종 합계 계산
+                                setTimeout(() => {
+                                    calculateTotal();
+                                    console.log('💰 최종 합계 계산 완료');
+                                }, 100);
                             }, delayTime);
                         } else {
                             // 추가 항목이 없는 경우도 조식 요금 계산
@@ -2907,6 +2913,12 @@
                                 updateRoomCharges();
                                 isLoadingData = false;
                                 console.log('✅ 데이터 로드 완료 (추가 항목 없음)');
+                                
+                                // ⭐ 모든 데이터 로드 후 최종 합계 계산
+                                setTimeout(() => {
+                                    calculateTotal();
+                                    console.log('💰 최종 합계 계산 완료');
+                                }, 100);
                             }, 200);
                         }
                     }, 500);
@@ -2967,6 +2979,10 @@
                 // 프로모션 정보
                 const roomPromo = roomPromotions[roomNum];
                 
+                // ⭐ 객실 요금 (입력 필드에서 직접 읽기)
+                const roomRateInput = document.getElementById(`room_${roomNum}_rate`);
+                const totalSellingPrice = parseFloat(roomRateInput?.value) || 0;
+                
                 // ⭐ 조식 정보 수집
                 const breakfastIncluded = document.getElementById(`breakfast_included_${roomNum}`)?.checked || false;
                 const breakfastDays = parseInt(document.getElementById(`breakfast_days_${roomNum}`)?.value) || 1;
@@ -2978,7 +2994,7 @@
                     guests: guests,
                     promotion_code: roomPromo?.promotion?.promo_code || null,
                     rate_condition_id: roomPromo?.rate_condition_id || null,
-                    total_selling_price: roomPromo?.total_room_rate || 0,
+                    total_selling_price: totalSellingPrice, // ⭐ 입력 필드에서 직접 읽은 값 사용
                     // ⭐ 조식 정보 추가
                     breakfast_included: breakfastIncluded,
                     breakfast_days: breakfastIncluded ? breakfastDays : 0,
@@ -2986,7 +3002,7 @@
                     breakfast_child_price: breakfastIncluded ? breakfastChildPrice : 0
                 });
                 
-                console.log(`  → 객실 ${roomNum} 저장: 룸타입=${roomTypeId}, 프로모션=${roomPromo?.promotion?.promo_code}, 요금=$${roomPromo?.total_room_rate || 0}, 조식=${breakfastIncluded}`);
+                console.log(`  → 객실 ${roomNum} 저장: 룸타입=${roomTypeId}, 프로모션=${roomPromo?.promotion?.promo_code}, 요금=$${totalSellingPrice}, 조식=${breakfastIncluded}`);
             });
             
             if (rooms.length === 0) {
