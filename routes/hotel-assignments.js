@@ -424,32 +424,60 @@ router.get('/:reservationId/invoices', async (req, res) => {
 router.delete('/invoice/:invoiceId', async (req, res) => {
     const { invoiceId } = req.params;
     const pool = req.app.get('pool');
+    const client = await pool.connect();
     
     try {
-        const result = await pool.query(`
+        await client.query('BEGIN');
+        
+        // 인보이스 삭제 및 예약 ID 가져오기
+        const result = await client.query(`
             DELETE FROM hotel_invoices
             WHERE id = $1
-            RETURNING *
+            RETURNING hotel_reservation_id
         `, [invoiceId]);
         
         if (result.rows.length === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({
                 success: false,
                 error: '인보이스를 찾을 수 없습니다.'
             });
         }
         
+        const reservationId = result.rows[0].hotel_reservation_id;
+        
+        // 해당 예약의 남은 인보이스 개수 확인
+        const remainingInvoices = await client.query(`
+            SELECT COUNT(*) as count
+            FROM hotel_invoices
+            WHERE hotel_reservation_id = $1
+        `, [reservationId]);
+        
+        // 인보이스가 모두 삭제되었으면 예약 상태를 confirmed로 변경
+        if (parseInt(remainingInvoices.rows[0].count) === 0) {
+            await client.query(`
+                UPDATE hotel_reservations
+                SET status = 'confirmed'
+                WHERE id = $1
+            `, [reservationId]);
+        }
+        
+        await client.query('COMMIT');
+        
         res.json({
             success: true,
             message: '인보이스가 삭제되었습니다.',
-            invoice: result.rows[0]
+            reservationId: reservationId
         });
     } catch (error) {
+        await client.query('ROLLBACK');
         console.error('❌ 인보이스 삭제 오류:', error);
         res.status(500).json({
             success: false,
             error: '인보이스 삭제 중 오류가 발생했습니다.'
         });
+    } finally {
+        client.release();
     }
 });
 

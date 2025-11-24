@@ -4734,7 +4734,12 @@
                 
                 if (result.success) {
                     alert('✅ 인보이스가 삭제되었습니다.');
+                    
+                    // 인보이스 목록 갱신
                     await loadVoucherInvoicesList(currentVoucherReservationId);
+                    
+                    // 예약 목록 갱신 (뱃지 상태 업데이트)
+                    await loadReservations();
                     
                     // 목록 로드 후 행 강조 다시 적용
                     setTimeout(() => {
