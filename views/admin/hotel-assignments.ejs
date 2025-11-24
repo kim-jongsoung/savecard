@@ -824,21 +824,67 @@
                         <div class="col-md-6">
                             <div class="card mb-3">
                                 <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>정산 금액</h6>
+                                    <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>정산 금액 상세 내역</h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">최종 금액 (USD)</label>
-                                        <input type="text" class="form-control form-control-lg text-end fw-bold" id="voucherFinalAmountUSD" readonly style="font-size: 1.5rem; color: #28a745;">
+                                    <!-- 금액 상세 내역 -->
+                                    <div class="mb-3 p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                        <h6 class="mb-3 text-primary"><i class="fas fa-list-ul me-2"></i>금액 구성</h6>
+                                        
+                                        <!-- 총 객실 요금 -->
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span><i class="fas fa-bed me-2 text-info"></i>총 객실 요금</span>
+                                            <strong id="voucherRoomChargeDisplay">$0.00</strong>
+                                        </div>
+                                        
+                                        <!-- 조식 요금 -->
+                                        <div class="mb-2" id="voucherBreakfastSection">
+                                            <div class="d-flex justify-content-between">
+                                                <span><i class="fas fa-utensils me-2 text-warning"></i>조식 요금</span>
+                                                <strong id="voucherBreakfastChargeDisplay">$0.00</strong>
+                                            </div>
+                                            <small class="text-muted ms-4" id="voucherBreakfastDetail">-</small>
+                                        </div>
+                                        
+                                        <!-- 추가 항목 요금 -->
+                                        <div class="mb-2" id="voucherExtrasSection">
+                                            <div class="d-flex justify-content-between">
+                                                <span><i class="fas fa-plus-circle me-2 text-success"></i>추가 항목 요금</span>
+                                                <strong id="voucherExtrasChargeDisplay">$0.00</strong>
+                                            </div>
+                                            <small class="text-muted ms-4" id="voucherExtrasDetail">-</small>
+                                        </div>
+                                        
+                                        <!-- 수배피 -->
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span><i class="fas fa-handshake me-2 text-danger"></i>수배피 <span id="voucherAgencyNameDisplay" class="badge bg-secondary ms-1" style="font-size: 0.7rem;">-</span></span>
+                                            <strong id="voucherAgencyFeeDisplay">$0.00</strong>
+                                        </div>
+                                        
+                                        <hr class="my-2">
+                                        
+                                        <!-- 합계 -->
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <strong class="text-success"><i class="fas fa-equals me-2"></i>합계 (USD)</strong>
+                                            <h5 class="mb-0 text-success" id="voucherTotalUSD">$0.00</h5>
+                                        </div>
+                                        
+                                        <!-- 환율 적용 원화 -->
+                                        <div class="d-flex justify-content-between align-items-center p-2" style="background: white; border-radius: 6px;">
+                                            <div>
+                                                <strong class="text-primary"><i class="fas fa-won-sign me-2"></i>합계 (KRW)</strong>
+                                                <br>
+                                                <small class="text-muted" id="voucherFxRateLabel">환율 정보 로딩 중...</small>
+                                            </div>
+                                            <h5 class="mb-0 text-primary" id="voucherTotalKRW">₩0</h5>
+                                        </div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">최종 금액 (KRW)</label>
-                                        <input type="text" class="form-control text-end" id="voucherFinalAmountKRW" readonly>
-                                        <small class="text-muted" id="voucherFxRateLabel">환율 정보 로딩 중...</small>
-                                    </div>
+                                    
                                     <input type="hidden" id="voucherBaseAmount">
                                     <input type="hidden" id="voucherDiscount" value="0">
                                     <input type="hidden" id="voucherSurcharge" value="0">
+                                    <input type="hidden" id="voucherFinalAmountUSD">
+                                    <input type="hidden" id="voucherFinalAmountKRW">
                                     
                                     <button type="button" class="btn btn-success w-100 btn-lg" onclick="saveVoucherInvoice()">
                                         <i class="fas fa-file-invoice me-2"></i>인보이스 생성
@@ -4443,6 +4489,9 @@
 
                 // 바우처 TOTAL 금액 계산 (rooms + breakfast + extras + agency_fee)
                 let totalAmount = 0;
+                let totalRoomCharge = 0;
+                let totalBreakfastCharge = 0;
+                let totalExtrasCharge = 0;
                 const rooms = data.rooms || [];
                 const extras = data.extras || [];
                 
@@ -4451,13 +4500,18 @@
                 const checkOutDate = new Date(data.check_out_date);
                 const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
                 
+                // 조식 상세 정보 수집
+                let breakfastDetails = [];
+                
                 // 객실 요금
                 rooms.forEach(room => {
                     let roomRate = parseFloat(room.room_rate || 0);
                     if (roomRate === 0 && room.total_selling_price && nights > 0) {
                         roomRate = parseFloat(room.total_selling_price) / nights;
                     }
-                    totalAmount += roomRate * nights;
+                    const roomCharge = roomRate * nights;
+                    totalRoomCharge += roomCharge;
+                    totalAmount += roomCharge;
                     
                     // 조식 요금
                     const isBreakfastIncluded = room.breakfast_included === true || room.breakfast_included === 'true' || room.breakfast_included === 1;
@@ -4468,14 +4522,31 @@
                         const childPrice = parseFloat(room.breakfast_child_price || 0);
                         const breakfastDays = parseInt(room.breakfast_days || nights);
                         
-                        totalAmount += (adultCount * breakfastDays * adultPrice) + (childCount * breakfastDays * childPrice);
+                        const breakfastCharge = (adultCount * breakfastDays * adultPrice) + (childCount * breakfastDays * childPrice);
+                        totalBreakfastCharge += breakfastCharge;
+                        totalAmount += breakfastCharge;
+                        
+                        if (breakfastCharge > 0) {
+                            let detail = '';
+                            if (adultCount > 0) detail += `성인 ${adultCount}명 x $${adultPrice} x ${breakfastDays}일`;
+                            if (childCount > 0) {
+                                if (detail) detail += ' + ';
+                                detail += `소아 ${childCount}명 x $${childPrice} x ${breakfastDays}일`;
+                            }
+                            breakfastDetails.push(detail);
+                        }
                     }
                 });
                 
                 // 추가 서비스 (IN_HOTEL + OUT_HOTEL 모두 포함)
+                let extrasDetails = [];
                 extras.forEach(extra => {
                     const charge = parseFloat(extra.charge || extra.total_selling_price || 0);
+                    totalExtrasCharge += charge;
                     totalAmount += charge;
+                    if (charge > 0) {
+                        extrasDetails.push(`${extra.service_name || extra.extra_name || '추가항목'}: $${charge.toFixed(2)}`);
+                    }
                 });
                 
                 // 수배피 (바우처에 포함)
@@ -4527,6 +4598,17 @@
                 if (currentVoucherAgencyEmail) {
                     document.getElementById('invoiceRecipientEmail').value = currentVoucherAgencyEmail;
                 }
+                
+                // 금액 상세 내역 표시
+                document.getElementById('voucherRoomChargeDisplay').textContent = '$' + totalRoomCharge.toFixed(2);
+                document.getElementById('voucherBreakfastChargeDisplay').textContent = '$' + totalBreakfastCharge.toFixed(2);
+                document.getElementById('voucherBreakfastDetail').textContent = breakfastDetails.length > 0 ? breakfastDetails.join(', ') : '조식 미포함';
+                document.getElementById('voucherExtrasChargeDisplay').textContent = '$' + totalExtrasCharge.toFixed(2);
+                document.getElementById('voucherExtrasDetail').textContent = extrasDetails.length > 0 ? extrasDetails.join(', ') : '추가항목 없음';
+                document.getElementById('voucherAgencyFeeDisplay').textContent = '$' + agencyFee.toFixed(2);
+                document.getElementById('voucherAgencyNameDisplay').textContent = data.booking_agency_name || data.agency_name || '-';
+                document.getElementById('voucherTotalUSD').textContent = '$' + voucherBaseAmountUSD.toFixed(2);
+                document.getElementById('voucherTotalKRW').textContent = '₩' + (voucherBaseAmountUSD * voucherFxRate).toLocaleString('ko-KR', {maximumFractionDigits: 0});
                 
                 // 프로세스 초기화
                 updateProcessStep(1, 'success'); // 금액 확인 완료
