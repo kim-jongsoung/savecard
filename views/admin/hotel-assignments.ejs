@@ -4555,12 +4555,30 @@
 
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 
-                // ⭐ 모달 열기 전에 먼저 body에 스타일 고정
-                const originalPadding = document.body.style.paddingRight;
-                const originalOverflow = document.body.style.overflow;
+                // ⭐ Bootstrap 모달의 body 스타일 변경을 완전히 차단
+                const originalPadding = document.body.style.paddingRight || '';
+                const originalOverflow = document.body.style.overflow || '';
                 
-                // body padding 변경 방지 (모달 열기 전에 미리 설정)
-                document.body.style.paddingRight = originalPadding;
+                // MutationObserver로 body 스타일 변경 감시 및 즉시 복구
+                const bodyObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                            // body 스타일이 변경되면 즉시 원래대로 복구
+                            if (document.body.style.paddingRight !== originalPadding) {
+                                document.body.style.paddingRight = originalPadding;
+                            }
+                            if (document.body.style.overflow !== originalOverflow) {
+                                document.body.style.overflow = originalOverflow;
+                            }
+                        }
+                    });
+                });
+                
+                // body 감시 시작
+                bodyObserver.observe(document.body, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
                 
                 // Bootstrap 모달 생성
                 const modal = new bootstrap.Modal(modalEl, {
@@ -4571,10 +4589,8 @@
                 
                 // 모달이 열리는 중에도 padding 유지
                 const preventPaddingChange = function(e) {
-                    // 모달이 body에 padding을 추가하려고 하면 즉시 원래대로 복구
-                    requestAnimationFrame(() => {
-                        document.body.style.paddingRight = originalPadding;
-                    });
+                    document.body.style.paddingRight = originalPadding;
+                    document.body.style.overflow = originalOverflow;
                 };
                 
                 // 모달이 완전히 열린 후 인보이스 목록 로드
@@ -4599,6 +4615,8 @@
                 // 모달이 닫힐 때 정리
                 const onModalHidden = function() {
                     modalEl.removeEventListener('hidden.bs.modal', onModalHidden);
+                    // Observer 중지
+                    bodyObserver.disconnect();
                     // 원래 상태 복구
                     document.body.style.paddingRight = originalPadding;
                     document.body.style.overflow = originalOverflow;
