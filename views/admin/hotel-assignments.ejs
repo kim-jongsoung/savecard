@@ -764,61 +764,6 @@
                         </div>
                     </div>
 
-                    <!-- 업무 프로세스 단계 -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-primary text-white">
-                            <h6 class="mb-0"><i class="fas fa-tasks me-2"></i>업무 프로세스</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row text-center">
-                                <div class="col">
-                                    <div class="process-step" id="step1">
-                                        <div class="step-icon">
-                                            <i class="fas fa-calculator fa-2x text-primary"></i>
-                                        </div>
-                                        <div class="step-title mt-2">1. 금액 확인</div>
-                                        <div class="step-status">
-                                            <span class="badge bg-secondary" id="step1Status">대기</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="process-step" id="step2">
-                                        <div class="step-icon">
-                                            <i class="fas fa-file-invoice fa-2x text-muted"></i>
-                                        </div>
-                                        <div class="step-title mt-2">2. 인보이스 생성</div>
-                                        <div class="step-status">
-                                            <span class="badge bg-secondary" id="step2Status">대기</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="process-step" id="step3">
-                                        <div class="step-icon">
-                                            <i class="fas fa-envelope fa-2x text-muted"></i>
-                                        </div>
-                                        <div class="step-title mt-2">3. 이메일 전송</div>
-                                        <div class="step-status">
-                                            <span class="badge bg-secondary" id="step3Status">대기</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="process-step" id="step4">
-                                        <div class="step-icon">
-                                            <i class="fas fa-check-circle fa-2x text-muted"></i>
-                                        </div>
-                                        <div class="step-title mt-2">4. 완료</div>
-                                        <div class="step-status">
-                                            <span class="badge bg-secondary" id="step4Status">대기</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="row">
                         <!-- 왼쪽: 정산 금액 및 생성 -->
                         <div class="col-md-6">
@@ -891,30 +836,6 @@
                                     </button>
                                 </div>
                             </div>
-
-                            <!-- 이메일 전송 -->
-                            <div class="card">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0"><i class="fas fa-envelope me-2"></i>이메일 전송</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-3">
-                                        <label class="form-label">받는 사람 이메일</label>
-                                        <input type="email" class="form-control" id="invoiceRecipientEmail" placeholder="example@email.com">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">제목</label>
-                                        <input type="text" class="form-control" id="invoiceEmailSubject" value="[괌세이브카드] 호텔 바우처 인보이스">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">메시지</label>
-                                        <textarea class="form-control" id="invoiceEmailMessage" rows="3" placeholder="추가 메시지를 입력하세요..."></textarea>
-                                    </div>
-                                    <button type="button" class="btn btn-info w-100" onclick="sendInvoiceEmail()" id="btnSendEmail" disabled>
-                                        <i class="fas fa-paper-plane me-2"></i>이메일 전송
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- 오른쪽: 발행된 인보이스 목록 -->
@@ -922,11 +843,11 @@
                             <div class="card">
                                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0"><i class="fas fa-list me-2"></i>발행된 인보이스</h6>
-                                    <button class="btn btn-sm btn-outline-light" onclick="refreshInvoiceList()">
+                                    <button class="btn btn-sm btn-outline-light" onclick="refreshInvoiceList()" title="새로고침">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
-                                <div class="card-body p-0" id="voucherInvoicesList" style="max-height: 600px; overflow-y: auto;">
+                                <div class="card-body p-0" id="voucherInvoicesList" style="max-height: 700px; overflow-y: auto;">
                                     <div class="text-center text-muted p-5">
                                         <i class="fas fa-inbox fa-3x mb-3"></i>
                                         <p class="mb-0">아직 발행된 인보이스가 없습니다</p>
@@ -4610,36 +4531,6 @@
                 document.getElementById('voucherTotalUSD').textContent = '$' + voucherBaseAmountUSD.toFixed(2);
                 document.getElementById('voucherTotalKRW').textContent = '₩' + (voucherBaseAmountUSD * voucherFxRate).toLocaleString('ko-KR', {maximumFractionDigits: 0});
                 
-                // 프로세스 초기화
-                updateProcessStep(1, 'success'); // 금액 확인 완료
-                document.getElementById('btnSendEmail').disabled = true;
-
-                // 기존 바우처인보이스가 있는지 조회 (인보이스 목록 표시용)
-                let hasExistingInvoice = false;
-                try {
-                    const invRes = await fetch(`/api/hotel-assignments/${reservationId}/invoice`);
-                    if (invRes.ok) {
-                        const invJson = await invRes.json();
-                        if (invJson && invJson.success && invJson.invoice) {
-                            hasExistingInvoice = true;
-                            const invoice = invJson.invoice;
-
-                            currentVoucherInvoiceId = invoice.id;
-                            currentVoucherInvoiceLink = `${window.location.origin}/api/hotel-assignments/invoice/${invoice.id}/preview`;
-                            
-                            // 프로세스 단계 업데이트 (이미 생성된 인보이스가 있음)
-                            updateProcessStep(2, 'success');
-                            document.getElementById('btnSendEmail').disabled = false;
-                            
-                            // ⚠️ 주의: 기존 인보이스가 있어도 항상 최신 예약 데이터로 금액을 다시 계산합니다
-                            // 예약 수정 후 인보이스를 삭제하고 재생성하는 경우를 위함
-                            console.log('⚠️ 기존 인보이스 존재 - 하지만 최신 예약 데이터로 금액 재계산');
-                        }
-                    }
-                } catch (e) {
-                    console.error('바우처 인보이스 조회 오류:', e);
-                }
-                
                 // 인보이스 목록 로드
                 await loadVoucherInvoicesList(reservationId);
 
@@ -4770,17 +4661,11 @@
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    // 프로세스 단계 업데이트
-                    updateProcessStep(2, 'success');
-                    
                     alert('✅ 바우처인보이스가 생성되었습니다.');
                     lastClosedReservationId = currentVoucherReservationId;
                     
                     // 인보이스 목록 다시 로드
                     await loadVoucherInvoicesList(currentVoucherReservationId);
-                    
-                    // 이메일 전송 버튼 활성화
-                    document.getElementById('btnSendEmail').disabled = false;
                     
                     // 예약 목록 갱신 (모달이 열려있으면 스킵)
                     await loadReservations();
@@ -4793,23 +4678,6 @@
             }
         }
         
-        // 프로세스 단계 업데이트
-        function updateProcessStep(step, status) {
-            const stepEl = document.getElementById(`step${step}`);
-            const statusEl = document.getElementById(`step${step}Status`);
-            const iconEl = stepEl.querySelector('.step-icon i');
-            
-            if (status === 'success') {
-                iconEl.classList.remove('text-muted', 'text-primary');
-                iconEl.classList.add('text-success');
-                statusEl.innerHTML = '<span class="badge bg-success">완료</span>';
-            } else if (status === 'progress') {
-                iconEl.classList.remove('text-muted');
-                iconEl.classList.add('text-primary');
-                statusEl.innerHTML = '<span class="badge bg-primary">진행중</span>';
-            }
-        }
-        
         // 인보이스 목록 새로고침
         function refreshInvoiceList() {
             if (currentVoucherReservationId) {
@@ -4817,27 +4685,26 @@
             }
         }
         
-        // 이메일 전송
-        async function sendInvoiceEmail() {
-            const email = document.getElementById('invoiceRecipientEmail').value;
-            const subject = document.getElementById('invoiceEmailSubject').value;
-            const message = document.getElementById('invoiceEmailMessage').value;
+        // 이메일 전송 (인보이스별)
+        async function sendInvoiceEmail(invoiceId) {
+            const email = document.getElementById(`email${invoiceId}Recipient`).value;
+            const subject = document.getElementById(`email${invoiceId}Subject`).value;
+            const message = document.getElementById(`email${invoiceId}Message`).value;
             
             if (!email) {
                 alert('받는 사람 이메일을 입력해주세요.');
                 return;
             }
             
-            if (!currentVoucherReservationId) {
-                alert('예약 정보가 없습니다.');
-                return;
+            // 이메일 상태 업데이트
+            const statusEl = document.getElementById(`invoice${invoiceId}EmailStatus`);
+            if (statusEl) {
+                statusEl.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
             }
             
-            updateProcessStep(3, 'progress');
-            
             try {
-                // TODO: 이메일 전송 API 호출
-                const response = await fetch(`/api/hotel-assignments/${currentVoucherReservationId}/invoice/send-email`, {
+                // 이메일 전송 API 호출
+                const response = await fetch(`/api/hotel-assignments/invoice/${invoiceId}/send-email`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -4848,14 +4715,23 @@
                 });
                 
                 if (response.ok) {
-                    updateProcessStep(3, 'success');
-                    updateProcessStep(4, 'success');
+                    if (statusEl) {
+                        statusEl.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+                    }
                     alert('✅ 이메일이 성공적으로 전송되었습니다!');
+                    // 이메일 폼 접기
+                    const collapseEl = document.getElementById(`emailForm${invoiceId}`);
+                    if (collapseEl) {
+                        bootstrap.Collapse.getInstance(collapseEl)?.hide();
+                    }
                 } else {
                     throw new Error('이메일 전송 실패');
                 }
             } catch (error) {
                 console.error('이메일 전송 오류:', error);
+                if (statusEl) {
+                    statusEl.innerHTML = '<i class="fas fa-exclamation-circle text-danger"></i>';
+                }
                 alert('❌ 이메일 전송에 실패했습니다.');
             }
         }
@@ -4869,43 +4745,94 @@
                 const listContainer = document.getElementById('voucherInvoicesList');
                 
                 if (result.success && result.invoices && result.invoices.length > 0) {
-                    let html = '<div class="list-group list-group-flush">';
+                    let html = '';
                     
                     result.invoices.forEach((invoice, index) => {
-                        const invoiceDate = new Date(invoice.created_at).toLocaleDateString('ko-KR');
+                        const invoiceDate = new Date(invoice.created_at).toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
                         const link = `${window.location.origin}/api/hotel-assignments/invoice/${invoice.id}/preview`;
+                        const amount = parseFloat(invoice.total_amount || 0);
+                        const amountKRW = parseFloat(invoice.total_amount_krw || 0);
                         
                         html += `
-                            <div class="list-group-item list-group-item-action">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <span class="badge bg-success me-2">#${invoice.id}</span>
+                            <div class="border-bottom p-3" style="background: ${index % 2 === 0 ? '#f8f9fa' : 'white'};">
+                                <!-- 인보이스 헤더 -->
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-file-invoice text-success me-2"></i>
                                             <strong>${invoice.invoice_number || 'N/A'}</strong>
-                                        </div>
+                                        </h6>
                                         <div class="small text-muted">
                                             <i class="fas fa-calendar me-1"></i>${invoiceDate}
-                                            <span class="mx-2">|</span>
-                                            <i class="fas fa-dollar-sign me-1"></i>$${parseFloat(invoice.total_amount || 0).toFixed(2)}
+                                        </div>
+                                        <div class="mt-2">
+                                            <span class="badge bg-success">$${amount.toFixed(2)}</span>
+                                            ${amountKRW > 0 ? `<span class="badge bg-info ms-1">₩${Math.round(amountKRW).toLocaleString('ko-KR')}</span>` : ''}
                                         </div>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteVoucherInvoice(${invoice.id}); event.stopPropagation();" title="삭제">
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteVoucherInvoice(${invoice.id})" title="삭제">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
-                                <div class="d-grid gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.open('${link}', '_blank'); event.stopPropagation();">
-                                        <i class="fas fa-external-link-alt me-1"></i>새 창에서 보기
+                                
+                                <!-- 업무 프로세스 (인보이스별) -->
+                                <div class="mb-3 p-2" style="background: white; border-radius: 6px; border: 1px solid #dee2e6;">
+                                    <div class="d-flex justify-content-around text-center small">
+                                        <div class="flex-fill">
+                                            <div class="text-success"><i class="fas fa-check-circle"></i></div>
+                                            <div class="mt-1" style="font-size: 0.75rem;">생성완료</div>
+                                        </div>
+                                        <div class="flex-fill">
+                                            <div class="text-muted" id="invoice${invoice.id}EmailStatus"><i class="fas fa-envelope"></i></div>
+                                            <div class="mt-1" style="font-size: 0.75rem;">이메일</div>
+                                        </div>
+                                        <div class="flex-fill">
+                                            <div class="text-muted"><i class="fas fa-check-circle"></i></div>
+                                            <div class="mt-1" style="font-size: 0.75rem;">완료</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 이메일 전송 폼 (접기/펼치기) -->
+                                <div class="mb-2">
+                                    <button class="btn btn-sm btn-outline-info w-100" type="button" data-bs-toggle="collapse" data-bs-target="#emailForm${invoice.id}">
+                                        <i class="fas fa-envelope me-1"></i>이메일 전송
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInvoiceLink('${link}'); event.stopPropagation();">
-                                        <i class="fas fa-copy me-1"></i>링크 복사
+                                </div>
+                                <div class="collapse" id="emailForm${invoice.id}">
+                                    <div class="card card-body p-2 mb-2" style="background: #f0f8ff;">
+                                        <div class="mb-2">
+                                            <input type="email" class="form-control form-control-sm" id="email${invoice.id}Recipient" placeholder="받는 사람 이메일" value="${currentVoucherAgencyEmail || ''}">
+                                        </div>
+                                        <div class="mb-2">
+                                            <input type="text" class="form-control form-control-sm" id="email${invoice.id}Subject" value="[괌세이브카드] 호텔 바우처 인보이스">
+                                        </div>
+                                        <div class="mb-2">
+                                            <textarea class="form-control form-control-sm" id="email${invoice.id}Message" rows="2" placeholder="추가 메시지..."></textarea>
+                                        </div>
+                                        <button class="btn btn-sm btn-info w-100" onclick="sendInvoiceEmail(${invoice.id})">
+                                            <i class="fas fa-paper-plane me-1"></i>전송
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- 액션 버튼 -->
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.open('${link}', '_blank')">
+                                        <i class="fas fa-external-link-alt me-1"></i>미리보기
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyInvoiceLink('${link}')">
+                                        <i class="fas fa-copy me-1"></i>링크복사
                                     </button>
                                 </div>
                             </div>
                         `;
                     });
                     
-                    html += '</div>';
                     listContainer.innerHTML = html;
                 } else {
                     listContainer.innerHTML = `
@@ -4970,11 +4897,6 @@
                     
                     // ⭐ 최신 예약 데이터로 금액 상세 내역 재계산
                     await refreshVoucherAmountDetails(currentVoucherReservationId);
-                    
-                    // 프로세스 초기화
-                    updateProcessStep(1, 'success');
-                    updateProcessStep(2, 'progress'); // 인보이스 삭제됨
-                    document.getElementById('btnSendEmail').disabled = true;
                     
                     // 예약 목록 갱신 (뱃지 상태 업데이트)
                     await loadReservations();
