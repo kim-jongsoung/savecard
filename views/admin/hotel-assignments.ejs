@@ -783,21 +783,25 @@
                                         </div>
                                         
                                         <!-- 조식 요금 -->
-                                        <div class="mb-2" id="voucherBreakfastSection">
-                                            <div class="d-flex justify-content-between">
-                                                <span><i class="fas fa-utensils me-2 text-warning"></i>조식 요금</span>
-                                                <strong id="voucherBreakfastChargeDisplay">$0.00</strong>
+                                        <div class="mb-3" id="voucherBreakfastSection">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span><i class="fas fa-utensils me-2 text-warning"></i><strong>조식 요금</strong></span>
+                                                <strong id="voucherBreakfastChargeDisplay" class="text-warning">$0.00</strong>
                                             </div>
-                                            <small class="text-muted ms-4" id="voucherBreakfastDetail">-</small>
+                                            <div class="ms-4" id="voucherBreakfastDetailContainer" style="font-size: 0.85rem;">
+                                                <!-- 조식 상세 내역이 여기에 표시됩니다 -->
+                                            </div>
                                         </div>
                                         
                                         <!-- 추가 항목 요금 -->
-                                        <div class="mb-2" id="voucherExtrasSection">
-                                            <div class="d-flex justify-content-between">
-                                                <span><i class="fas fa-plus-circle me-2 text-success"></i>추가 항목 요금</span>
-                                                <strong id="voucherExtrasChargeDisplay">$0.00</strong>
+                                        <div class="mb-3" id="voucherExtrasSection">
+                                            <div class="d-flex justify-content-between mb-1">
+                                                <span><i class="fas fa-plus-circle me-2 text-success"></i><strong>추가 항목</strong></span>
+                                                <strong id="voucherExtrasChargeDisplay" class="text-success">$0.00</strong>
                                             </div>
-                                            <small class="text-muted ms-4" id="voucherExtrasDetail">-</small>
+                                            <div class="ms-4" id="voucherExtrasDetailContainer" style="font-size: 0.85rem;">
+                                                <!-- 추가 항목 상세 내역이 여기에 표시됩니다 -->
+                                            </div>
                                         </div>
                                         
                                         <!-- 수배피 -->
@@ -4537,10 +4541,29 @@
                 
                 // 금액 상세 내역 표시
                 document.getElementById('voucherRoomChargeDisplay').textContent = '$' + totalRoomCharge.toFixed(2);
+                
+                // 조식 상세 내역
                 document.getElementById('voucherBreakfastChargeDisplay').textContent = '$' + totalBreakfastCharge.toFixed(2);
-                document.getElementById('voucherBreakfastDetail').textContent = breakfastDetails.length > 0 ? breakfastDetails.join(', ') : '조식 미포함';
+                const breakfastContainer = document.getElementById('voucherBreakfastDetailContainer');
+                if (breakfastDetails.length > 0) {
+                    breakfastContainer.innerHTML = breakfastDetails.map(detail => 
+                        `<div class="text-muted mb-1">• ${detail}</div>`
+                    ).join('');
+                } else {
+                    breakfastContainer.innerHTML = '<div class="text-muted">조식 미포함</div>';
+                }
+                
+                // 추가 항목 상세 내역
                 document.getElementById('voucherExtrasChargeDisplay').textContent = '$' + totalExtrasCharge.toFixed(2);
-                document.getElementById('voucherExtrasDetail').textContent = extrasDetails.length > 0 ? extrasDetails.join(', ') : '추가항목 없음';
+                const extrasContainer = document.getElementById('voucherExtrasDetailContainer');
+                if (extrasDetails.length > 0) {
+                    extrasContainer.innerHTML = extrasDetails.map(detail => 
+                        `<div class="text-muted mb-1">• ${detail}</div>`
+                    ).join('');
+                } else {
+                    extrasContainer.innerHTML = '<div class="text-muted">추가항목 없음</div>';
+                }
+                
                 document.getElementById('voucherAgencyFeeDisplay').textContent = '$' + agencyFee.toFixed(2);
                 document.getElementById('voucherAgencyNameDisplay').textContent = data.booking_agency_name || data.agency_name || '-';
                 document.getElementById('voucherTotalUSD').textContent = '$' + voucherBaseAmountUSD.toFixed(2);
@@ -5011,10 +5034,33 @@
                 
                 // UI 업데이트
                 document.getElementById('voucherRoomChargeDisplay').textContent = '$' + totalRoomCharge.toFixed(2);
+                
+                // 조식 상세 내역
                 document.getElementById('voucherBreakfastChargeDisplay').textContent = '$' + totalBreakfastCharge.toFixed(2);
-                document.getElementById('voucherBreakfastDetail').textContent = breakfastDetails.length > 0 ? breakfastDetails.join(', ') : '조식 미포함';
+                const breakfastContainer = document.getElementById('voucherBreakfastDetailContainer');
+                if (breakfastContainer) {
+                    if (breakfastDetails.length > 0) {
+                        breakfastContainer.innerHTML = breakfastDetails.map(detail => 
+                            `<div class="text-muted mb-1">• ${detail}</div>`
+                        ).join('');
+                    } else {
+                        breakfastContainer.innerHTML = '<div class="text-muted">조식 미포함</div>';
+                    }
+                }
+                
+                // 추가 항목 상세 내역
                 document.getElementById('voucherExtrasChargeDisplay').textContent = '$' + totalExtrasCharge.toFixed(2);
-                document.getElementById('voucherExtrasDetail').textContent = extrasDetails.length > 0 ? extrasDetails.join(', ') : '추가항목 없음';
+                const extrasContainer = document.getElementById('voucherExtrasDetailContainer');
+                if (extrasContainer) {
+                    if (extrasDetails.length > 0) {
+                        extrasContainer.innerHTML = extrasDetails.map(detail => 
+                            `<div class="text-muted mb-1">• ${detail}</div>`
+                        ).join('');
+                    } else {
+                        extrasContainer.innerHTML = '<div class="text-muted">추가항목 없음</div>';
+                    }
+                }
+                
                 document.getElementById('voucherAgencyFeeDisplay').textContent = '$' + agencyFee.toFixed(2);
                 document.getElementById('voucherAgencyNameDisplay').textContent = data.booking_agency_name || data.agency_name || '-';
                 document.getElementById('voucherTotalUSD').textContent = '$' + totalAmount.toFixed(2);
