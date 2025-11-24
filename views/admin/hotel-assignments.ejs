@@ -4614,7 +4614,7 @@
                 updateProcessStep(1, 'success'); // 금액 확인 완료
                 document.getElementById('btnSendEmail').disabled = true;
 
-                // 기존 바우처인보이스가 있는지 조회 (서버 재시작 후에도 복구)
+                // 기존 바우처인보이스가 있는지 조회 (인보이스 목록 표시용)
                 let hasExistingInvoice = false;
                 try {
                     const invRes = await fetch(`/api/hotel-assignments/${reservationId}/invoice`);
@@ -4626,15 +4626,14 @@
 
                             currentVoucherInvoiceId = invoice.id;
                             currentVoucherInvoiceLink = `${window.location.origin}/api/hotel-assignments/invoice/${invoice.id}/preview`;
-
-                            // 인보이스가 있다면 금액은 인보이스 total_amount 기준으로 표시
-                            const invoiceAmount = parseFloat(invoice.total_amount || 0) || voucherBaseAmountUSD;
-                            voucherBaseAmountUSD = invoiceAmount;
-                            if (baseInput) baseInput.value = voucherBaseAmountUSD.toFixed(2);
                             
                             // 프로세스 단계 업데이트 (이미 생성된 인보이스가 있음)
                             updateProcessStep(2, 'success');
                             document.getElementById('btnSendEmail').disabled = false;
+                            
+                            // ⚠️ 주의: 기존 인보이스가 있어도 항상 최신 예약 데이터로 금액을 다시 계산합니다
+                            // 예약 수정 후 인보이스를 삭제하고 재생성하는 경우를 위함
+                            console.log('⚠️ 기존 인보이스 존재 - 하지만 최신 예약 데이터로 금액 재계산');
                         }
                     }
                 } catch (e) {
