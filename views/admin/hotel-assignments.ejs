@@ -760,8 +760,8 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="voucherInvoicePreview" style="background: white; padding: 30px; border: 1px solid #ddd; box-shadow: 0 0 10px rgba(0,0,0,0.05); min-height: 400px;">
-                                <div class="text-center text-muted">
+                            <div id="voucherInvoicePreview" style="background: white; padding: 30px; border: 1px solid #ddd; box-shadow: 0 0 10px rgba(0,0,0,0.05); min-height: 400px; isolation: isolate;">
+                                <div class="text-center text-muted" id="voucherInvoicePreviewPlaceholder">
                                     바우처 인보이스 생성 전입니다.<br>
                                     우측에서 금액을 설정한 후 [바우처 인보이스 생성] 버튼을 눌러주세요.
                                 </div>
@@ -4741,13 +4741,15 @@
         // 인보이스 미리보기 로드
         async function loadInvoicePreview(invoiceId, link) {
             try {
-                const response = await fetch(link);
-                if (response.ok) {
-                    const html = await response.text();
-                    const previewContainer = document.getElementById('voucherInvoicePreview');
-                    if (previewContainer) {
-                        previewContainer.innerHTML = html;
-                    }
+                const previewContainer = document.getElementById('voucherInvoicePreview');
+                if (previewContainer) {
+                    // iframe으로 격리하여 외부 스타일에 영향 방지
+                    previewContainer.innerHTML = `
+                        <iframe src="${link}" 
+                                style="width: 100%; min-height: 800px; border: none; background: white;"
+                                onload="this.style.height = (this.contentWindow.document.body.scrollHeight + 50) + 'px'">
+                        </iframe>
+                    `;
                 }
             } catch (error) {
                 console.error('미리보기 로드 오류:', error);
