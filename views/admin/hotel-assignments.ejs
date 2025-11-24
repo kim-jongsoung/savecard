@@ -4407,6 +4407,8 @@
                     return;
                 }
                 const data = await response.json();
+                
+                console.log('🔍 createVoucher - 예약 데이터:', data);
 
                 // 바우처 TOTAL 금액 계산 (rooms + breakfast + extras + agency_fee)
                 let totalAmount = 0;
@@ -4415,6 +4417,8 @@
                 let totalExtrasCharge = 0;
                 const rooms = data.rooms || [];
                 const extras = data.extras || [];
+                
+                console.log('🔍 createVoucher - 객실 수:', rooms.length);
                 
                 // 숙박 일수
                 const checkInDate = new Date(data.check_in_date);
@@ -4425,7 +4429,7 @@
                 let breakfastDetails = [];
                 
                 // 객실 요금
-                rooms.forEach(room => {
+                rooms.forEach((room, idx) => {
                     let roomRate = parseFloat(room.room_rate || 0);
                     if (roomRate === 0 && room.total_selling_price && nights > 0) {
                         roomRate = parseFloat(room.total_selling_price) / nights;
@@ -4436,6 +4440,8 @@
                     
                     // 조식 요금
                     const isBreakfastIncluded = room.breakfast_included === true || room.breakfast_included === 'true' || room.breakfast_included === 1;
+                    console.log(`🔍 createVoucher - Room ${idx + 1} breakfast_included:`, room.breakfast_included, '→', isBreakfastIncluded);
+                    
                     if (isBreakfastIncluded) {
                         const adultCount = parseInt(room.breakfast_adult_count || 0);
                         const childCount = parseInt(room.breakfast_child_count || 0);
@@ -4443,9 +4449,13 @@
                         const childPrice = parseFloat(room.breakfast_child_price || 0);
                         const breakfastDays = parseInt(room.breakfast_days || nights);
                         
+                        console.log(`🔍 createVoucher - Room ${idx + 1} 조식 정보:`, { adultCount, childCount, adultPrice, childPrice, breakfastDays });
+                        
                         const breakfastCharge = (adultCount * breakfastDays * adultPrice) + (childCount * breakfastDays * childPrice);
                         totalBreakfastCharge += breakfastCharge;
                         totalAmount += breakfastCharge;
+                        
+                        console.log(`🔍 createVoucher - Room ${idx + 1} 조식 요금:`, breakfastCharge);
                         
                         if (breakfastCharge > 0) {
                             let detail = '';
