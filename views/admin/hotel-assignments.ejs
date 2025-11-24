@@ -4495,19 +4495,19 @@
                 }
 
                 updateVoucherInvoiceTotals();
-                
-                // 인보이스 목록 로드
-                await loadVoucherInvoicesList(reservationId);
 
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 const modal = new bootstrap.Modal(modalEl);
                 
-                // 모달이 완전히 열린 후 행 강조 (Bootstrap shown.bs.modal 이벤트 사용)
-                modalEl.addEventListener('shown.bs.modal', function onModalShown() {
+                // 모달이 완전히 열린 후 인보이스 목록 로드 및 행 강조
+                modalEl.addEventListener('shown.bs.modal', async function onModalShown() {
                     // 이벤트 리스너 제거 (한 번만 실행)
                     modalEl.removeEventListener('shown.bs.modal', onModalShown);
                     
-                    // 모달 애니메이션 완료 후 행 강조
+                    // 인보이스 목록 로드 (모달 열린 후)
+                    await loadVoucherInvoicesList(reservationId);
+                    
+                    // 목록 로드 후 행 강조
                     setTimeout(() => {
                         highlightReservationRow(reservationId);
                     }, 200);
