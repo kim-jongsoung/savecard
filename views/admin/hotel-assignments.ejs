@@ -974,6 +974,24 @@
         // 페이지 로드 시
         document.addEventListener('DOMContentLoaded', function() {
             loadReservations();
+            
+            // 모달이 닫힐 때 테이블 업데이트
+            const editModal = document.getElementById('editReservationModal');
+            const voucherModal = document.getElementById('voucherInvoiceModal');
+            
+            if (editModal) {
+                editModal.addEventListener('hidden.bs.modal', function() {
+                    console.log('예약 수정 모달 닫힘 - 테이블 업데이트');
+                    displayReservations(allReservations);
+                });
+            }
+            
+            if (voucherModal) {
+                voucherModal.addEventListener('hidden.bs.modal', function() {
+                    console.log('바우처 모달 닫힘 - 테이블 업데이트');
+                    displayReservations(allReservations);
+                });
+            }
         });
         
         // 예약 목록 로드
@@ -1000,6 +1018,13 @@
         // 예약 카드 표시
         function displayReservations(reservations) {
             const container = document.getElementById('reservationsContainer');
+            
+            // 모달이 열려있으면 테이블 재생성 방지
+            const modalOpen = document.querySelector('.modal.show');
+            if (modalOpen) {
+                console.log('모달 열림 - 테이블 재생성 스킵');
+                return;
+            }
             
             // 캔슬 제외 (필터에서만 조회)
             const activeReservations = reservations.filter(r => r.status !== 'cancelled');
