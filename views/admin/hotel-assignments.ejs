@@ -90,51 +90,6 @@
             border-right: none !important;
         }
         
-        /* 모달 열릴 때 테이블 스타일 강제 유지 */
-        body.modal-open .reservation-table {
-            width: 100% !important;
-            margin: 0 !important;
-            transform: none !important;
-            position: relative !important;
-            left: 0 !important;
-            right: 0 !important;
-        }
-        body.modal-open .reservation-table td,
-        body.modal-open .reservation-table th {
-            border-color: #e9ecef !important;
-            border-width: 1px !important;
-            border-style: solid !important;
-        }
-        body.modal-open .reservation-table tbody tr {
-            border-bottom: 1px solid #e9ecef !important;
-        }
-        
-        /* 예약 컨테이너 격리 */
-        body.modal-open #reservationsContainer {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            position: relative !important;
-            overflow: visible !important;
-        }
-        
-        /* 모달 열릴 때 통계 카드와 필터 버튼 레이아웃 유지 */
-        body.modal-open .stats-card {
-            transform: none !important;
-            margin: 0 !important;
-            position: relative !important;
-        }
-        body.modal-open .filter-btn {
-            margin: 0 0.25rem !important;
-            position: relative !important;
-            transform: none !important;
-        }
-        body.modal-open .card {
-            margin-bottom: 1.5rem !important;
-            position: relative !important;
-        }
-        
         /* 바우처 인보이스 목록 격리 - 외부 테이블에 영향 방지 */
         #voucherInvoicesList {
             contain: layout style !important;
