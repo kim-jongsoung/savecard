@@ -1326,15 +1326,15 @@
             
             // 2단계: 수배중/열람 구분 (latest_assignment.viewed_at 확인)
             let step2Label = '호텔수배중';
-            let step2Color = '#17a2b8';
+            let step2Color = '#6c757d'; // 회색 (아직 수배 전)
             // 상태가 processing이거나, latest_assignment가 있으면 수배 단계로 간주
             if (res.status === 'processing' || res.latest_assignment) {
                 if (res.latest_assignment && res.latest_assignment.viewed_at) {
-                    step2Label = '메일열람';
-                    step2Color = '#20c997'; // 밝은 청록색
+                    step2Label = '열람';
+                    step2Color = '#20c997'; // 밝은 청록색 (열람 완료)
                 } else {
                     step2Label = '수배중';
-                    step2Color = '#17a2b8';
+                    step2Color = '#17a2b8'; // 파란색 (수배서 발송됨)
                 }
             }
             
