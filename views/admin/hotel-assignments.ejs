@@ -4496,6 +4496,12 @@
 
                 updateVoucherInvoiceTotals();
 
+                // 테이블을 숨겨서 모달 열리는 동안 깨지는 것 방지
+                const tableContainer = document.getElementById('reservationsContainer');
+                if (tableContainer) {
+                    tableContainer.style.visibility = 'hidden';
+                }
+
                 const modalEl = document.getElementById('voucherInvoiceModal');
                 const modal = new bootstrap.Modal(modalEl);
                 
@@ -4510,7 +4516,20 @@
                     // 목록 로드 후 행 강조
                     setTimeout(() => {
                         highlightReservationRow(reservationId);
+                        
+                        // 테이블 다시 보이기
+                        if (tableContainer) {
+                            tableContainer.style.visibility = 'visible';
+                        }
                     }, 200);
+                });
+                
+                // 모달이 닫힐 때도 테이블 보이기 (에러 발생 시 대비)
+                modalEl.addEventListener('hidden.bs.modal', function onModalHidden() {
+                    modalEl.removeEventListener('hidden.bs.modal', onModalHidden);
+                    if (tableContainer) {
+                        tableContainer.style.visibility = 'visible';
+                    }
                 });
                 
                 modal.show();
