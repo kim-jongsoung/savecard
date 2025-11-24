@@ -111,11 +111,19 @@
           const dateOnly = inv.availability_date.split('T')[0];
           const key = `${inv.room_type_id}-${dateOnly}`;
           
-          // count 방식: 숫자 그대로, status 방식: O/X로 변환
+          // count 방식: 숫자 그대로, status 방식: O/X/WO/WX로 변환
           if (currentHotel.inventory_type === 'count') {
             inventory[key] = inv.available_rooms;
           } else {
-            inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
+            // notes가 'WARNING'이면 WO/WX, 아니면 O/X
+            const isWarning = inv.notes === 'WARNING';
+            if (inv.available_rooms === 0) {
+              inventory[key] = isWarning ? 'WX' : 'X';
+            } else if (inv.available_rooms > 0) {
+              inventory[key] = isWarning ? 'WO' : 'O';
+            } else {
+              inventory[key] = '';
+            }
           }
           console.log(`  → inventory["${key}"] = ${inventory[key]}`);
           
@@ -345,15 +353,19 @@
         const date = parts.slice(1).join('-'); // 나머지를 다시 join
         
         // count 방식: 숫자 그대로, status 방식: O/X/V/WO/WX를 숫자로 변환
-        let rooms;
+        let rooms, notes = '';
         if (currentHotel && currentHotel.inventory_type === 'count') {
           rooms = value; // 이미 숫자
         } else {
           // O=10, X=0, V=5, WO=10, WX=0 (주의 상태도 동일한 숫자로 저장)
           rooms = (value === 'O' || value === 'WO') ? 10 : ((value === 'X' || value === 'WX') ? 0 : 5);
+          // WO/WX는 notes에 'WARNING' 저장하여 구분
+          if (value === 'WO' || value === 'WX') {
+            notes = 'WARNING';
+          }
         }
         
-        const payload = {hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms, notes: ''};
+        const payload = {hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms, notes: notes};
         console.log('📤 API 요청:', payload);
         
         try {
