@@ -4503,7 +4503,22 @@
                 }
 
                 const modalEl = document.getElementById('voucherInvoiceModal');
-                const modal = new bootstrap.Modal(modalEl);
+                
+                // Bootstrap 모달의 스크롤바 보정 비활성화 (테이블 깨짐 방지)
+                const modal = new bootstrap.Modal(modalEl, {
+                    backdrop: true,
+                    keyboard: true,
+                    focus: true
+                });
+                
+                // body padding 변경 방지
+                const originalPadding = document.body.style.paddingRight;
+                modalEl.addEventListener('show.bs.modal', function() {
+                    document.body.style.paddingRight = originalPadding;
+                });
+                modalEl.addEventListener('shown.bs.modal', function() {
+                    document.body.style.paddingRight = originalPadding;
+                });
                 
                 // 모달이 완전히 열린 후 인보이스 목록 로드 및 행 강조
                 modalEl.addEventListener('shown.bs.modal', async function onModalShown() {
