@@ -477,13 +477,24 @@ router.get('/:id', async (req, res) => {
             LIMIT 1
         `, [id]);
         
-        // 데이터 조합
+        // 데이터 조합 + 조식 인원 수 실시간 계산
         const data = {
             ...reservation.rows[0],
-            rooms: rooms.rows.map(room => ({
-                ...room,
-                guests: guests.rows.filter(g => g.reservation_room_id === room.id)
-            })),
+            rooms: rooms.rows.map(room => {
+                const roomGuests = guests.rows.filter(g => g.reservation_room_id === room.id);
+                
+                // ⭐ 투숙객 정보 기반으로 조식 인원 수 계산
+                const adultCount = roomGuests.filter(g => g.age_category === 'adult').length;
+                const childCount = roomGuests.filter(g => g.age_category === 'child').length;
+                
+                return {
+                    ...room,
+                    guests: roomGuests,
+                    // ⭐ 조식 인원 수 추가 (실시간 계산)
+                    breakfast_adult_count: adultCount,
+                    breakfast_child_count: childCount
+                };
+            }),
             extras: extras.rows,
             latest_assignment: assignmentHistory.rows[0] || null
         };
