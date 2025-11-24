@@ -92,11 +92,8 @@
         
         /* 바우처 인보이스 목록 격리 - 외부 테이블에 영향 방지 */
         #voucherInvoicesList {
-            contain: layout style !important;
-            will-change: auto !important;
-        }
-        #voucherInvoicesList * {
-            contain: layout !important;
+            isolation: isolate;
+            position: relative;
         }
         
         .status-badge {
@@ -4663,10 +4660,6 @@
                 
                 const listContainer = document.getElementById('voucherInvoicesList');
                 
-                // DOM 업데이트 전에 컨테이너를 숨겨서 리플로우 최소화
-                const originalDisplay = listContainer.style.display;
-                listContainer.style.display = 'none';
-                
                 if (result.success && result.invoices && result.invoices.length > 0) {
                     let html = '<div class="list-group list-group-flush">';
                     
@@ -4716,12 +4709,6 @@
                         </div>
                     `;
                 }
-                
-                // DOM 업데이트 완료 후 다시 보이기
-                listContainer.style.display = originalDisplay;
-                
-                // 브라우저가 레이아웃을 다시 계산할 시간 주기
-                await new Promise(resolve => requestAnimationFrame(resolve));
                 
             } catch (error) {
                 console.error('인보이스 목록 로드 오류:', error);
