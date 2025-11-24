@@ -101,6 +101,22 @@
             border-color: #e9ecef !important;
         }
         
+        /* 모달 열릴 때 통계 카드와 필터 버튼 레이아웃 유지 */
+        body.modal-open .stats-card {
+            transform: none !important;
+            margin: 0 !important;
+            position: relative !important;
+        }
+        body.modal-open .filter-btn {
+            margin: 0 0.25rem !important;
+            position: relative !important;
+            transform: none !important;
+        }
+        body.modal-open .card {
+            margin-bottom: 1.5rem !important;
+            position: relative !important;
+        }
+        
         .status-badge {
             padding: 0.35rem 0.8rem;
             border-radius: 20px;
