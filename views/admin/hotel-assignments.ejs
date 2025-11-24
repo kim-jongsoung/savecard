@@ -570,16 +570,15 @@
                                 <input type="text" class="form-control form-control-sm" id="reservation_number" required style="flex: 1;">
                                 <label class="form-label mb-0 ms-1" style="min-width: 50px;">예약일</label>
                                 <input type="date" class="form-control form-control-sm fw-bold" id="reservation_date" readonly style="background: #f0f0f0; flex: 1;">
-                                <label class="form-label mb-0 ms-1" style="min-width: 40px;">상태</label>
-                                <select class="form-control form-control-sm" id="status" style="flex: 0.8;" disabled title="상태는 자동으로 관리됩니다">
-                                    <option value="pending">대기중 (신규접수)</option>
-                                    <option value="processing">수배중 (수배서전송)</option>
-                                    <option value="confirmed">확정 (컨펌완료)</option>
-                                    <option value="voucher">바우처 (인보이스발행)</option>
-                                    <option value="modifying">수정중 (예약변경)</option>
+                                <label class="form-label mb-0 ms-1" style="min-width: 40px;">상태*</label>
+                                <select class="form-control form-control-sm" id="status" style="flex: 0.8;" required>
+                                    <option value="pending">대기중</option>
+                                    <option value="processing">수배중</option>
+                                    <option value="confirmed">확정</option>
+                                    <option value="voucher">바우처</option>
+                                    <option value="modifying">수정중</option>
                                     <option value="cancelled">예약취소</option>
                                 </select>
-                                <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">자동관리</span>
                             </div>
                         </div>
                     </div>
@@ -3032,7 +3031,7 @@
                 hotel_id: parseInt(hotelId),
                 booking_agency_id: bookingAgencyId ? parseInt(bookingAgencyId) : null,
                 reservation_date: document.getElementById('reservation_date').value,
-                // status는 백엔드에서 자동 관리 (수배서/컨펌/바우처 상태에 따라)
+                status: document.getElementById('status').value,
                 check_in_date: document.getElementById('check_in_date').value,
                 check_out_date: document.getElementById('check_out_date').value,
                 arrival_flight: document.getElementById('arrival_flight').value || null,

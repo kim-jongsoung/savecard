@@ -543,42 +543,41 @@ router.put('/:id', async (req, res) => {
         
         const currentStatus = checkResult.rows[0].status;
         
-        // 상태 자동 관리 로직
-        // - 수배서가 있으면 최소 processing
-        // - 컨펌번호가 있으면 confirmed
-        // - 인보이스가 있으면 voucher
-        // - 수배서 생성 후 예약 내용 변경 시 modifying
-        const assignmentCheck = await client.query(
-            'SELECT id, confirmation_number FROM hotel_assignments WHERE reservation_id = $1 ORDER BY created_at DESC LIMIT 1',
-            [id]
-        );
-        const invoiceCheck = await client.query(
-            'SELECT id FROM hotel_invoices WHERE hotel_reservation_id = $1 LIMIT 1',
-            [id]
-        );
+        // 상태 결정 로직
+        // 1. 수동으로 status가 제공되면 그것을 사용 (예: 취소 등)
+        // 2. 제공되지 않으면 자동 계산
+        let newStatus;
         
-        let newStatus = currentStatus;
-        
-        // 인보이스가 있으면 voucher
-        if (invoiceCheck.rows.length > 0) {
-            newStatus = 'voucher';
-        }
-        // 컨펌번호가 있으면 confirmed (인보이스 없을 때만)
-        else if (assignmentCheck.rows.length > 0 && assignmentCheck.rows[0].confirmation_number) {
-            newStatus = 'confirmed';
-        }
-        // 수배서가 있으면 processing (컨펌 없을 때만)
-        else if (assignmentCheck.rows.length > 0) {
-            // 수배서 생성 후 예약 내용이 변경되면 modifying
-            if (currentStatus === 'processing' || currentStatus === 'confirmed') {
-                newStatus = 'modifying';
-            } else {
+        if (status) {
+            // 수동으로 상태가 지정된 경우 (취소, 강제 변경 등)
+            newStatus = status;
+        } else {
+            // 자동 계산: 수배서/컨펌/인보이스 상태에 따라
+            const assignmentCheck = await client.query(
+                'SELECT id, confirmation_number FROM hotel_assignments WHERE reservation_id = $1 ORDER BY created_at DESC LIMIT 1',
+                [id]
+            );
+            const invoiceCheck = await client.query(
+                'SELECT id FROM hotel_invoices WHERE hotel_reservation_id = $1 LIMIT 1',
+                [id]
+            );
+            
+            // 인보이스가 있으면 voucher
+            if (invoiceCheck.rows.length > 0) {
+                newStatus = 'voucher';
+            }
+            // 컨펌번호가 있으면 confirmed
+            else if (assignmentCheck.rows.length > 0 && assignmentCheck.rows[0].confirmation_number) {
+                newStatus = 'confirmed';
+            }
+            // 수배서가 있으면 processing
+            else if (assignmentCheck.rows.length > 0) {
                 newStatus = 'processing';
             }
-        }
-        // 수배서도 없으면 pending
-        else {
-            newStatus = 'pending';
+            // 수배서도 없으면 pending
+            else {
+                newStatus = 'pending';
+            }
         }
         
         // 2. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
