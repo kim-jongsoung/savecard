@@ -123,6 +123,12 @@
           }
           console.log(`  → inventory["${key}"] = ${inventory[key]}`);
           
+          // 노란색 표시 로드 (notes='HIGHLIGHT')
+          if (inv.notes === 'HIGHLIGHT') {
+            highlighted.add(key);
+            console.log(`  → 노란색 표시: ${key}`);
+          }
+          
           // 가장 최근 업데이트 시간 추적
           if (inv.updated_at) {
             const updateTime = new Date(inv.updated_at);
@@ -300,21 +306,67 @@
       renderInventory(year, month);
     }
     
-    function toggleHighlight() {
+    async function toggleHighlight() {
       if (selected.size === 0) return alert('셀을 먼저 선택하세요');
       
-      // 선택된 셀들의 노란색 표시 토글
-      selected.forEach(key => {
-        if (highlighted.has(key)) {
-          highlighted.delete(key);
+      const hid = document.getElementById('hotelSelect').value;
+      let saved = 0;
+      
+      // 선택된 셀들의 노란색 표시 토글 및 DB 저장
+      for (const key of selected) {
+        const parts = key.split('-');
+        const rtid = parts[0];
+        const date = parts.slice(1).join('-');
+        
+        let isHighlighted = highlighted.has(key);
+        let newHighlight = !isHighlighted;
+        
+        // 현재 재고 값 가져오기
+        const status = changes[key] !== undefined ? changes[key] : inventory[key];
+        let rooms;
+        if (currentHotel && currentHotel.inventory_type === 'count') {
+          rooms = status !== undefined && status !== '' ? status : 0;
         } else {
-          highlighted.add(key);
+          rooms = (status === 'O') ? 10 : ((status === 'X') ? 0 : 5);
         }
-      });
+        
+        const payload = {
+          hotel_id: hid,
+          room_type_id: rtid,
+          start_date: date,
+          end_date: date,
+          days_of_week: [],
+          available_rooms: rooms,
+          notes: newHighlight ? 'HIGHLIGHT' : ''
+        };
+        
+        try {
+          const response = await fetch('/api/inventory/bulk', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            if (newHighlight) {
+              highlighted.add(key);
+            } else {
+              highlighted.delete(key);
+            }
+            saved++;
+          }
+        } catch (err) {
+          console.error('노란색 표시 저장 실패:', err);
+        }
+      }
       
       selected.clear();
       const [year, month] = document.getElementById('startMonth').value.split('-').map(Number);
       renderInventory(year, month);
+      
+      if (saved > 0) {
+        alert(`✅ ${saved}개 셀의 노란색 표시가 저장되었습니다`);
+      }
     }
     
     function bulkUpdate(status) {
@@ -336,10 +388,18 @@
           rooms = parseInt(rooms);
           if (isNaN(rooms) || rooms < 0) return alert('유효한 숫자를 입력하세요');
         }
-        selected.forEach(key => changes[key] = rooms);
+        selected.forEach(key => {
+          changes[key] = rooms;
+          // 재고 변경 시 노란색 표시 제거
+          highlighted.delete(key);
+        });
       } else {
         // 상태 방식: O/X/V 그대로
-        selected.forEach(key => changes[key] = status);
+        selected.forEach(key => {
+          changes[key] = status;
+          // 재고 변경 시 노란색 표시 제거
+          highlighted.delete(key);
+        });
       }
       
       selected.clear();
@@ -369,6 +429,9 @@
           // O=10, X=0, V=5
           rooms = (value === 'O') ? 10 : ((value === 'X') ? 0 : 5);
         }
+        
+        // 재고 저장 시 노란색 표시 제거 (1회성 리마크)
+        // notes는 빈 문자열로 저장하여 노란색 제거
         
         const payload = {hotel_id: hid, room_type_id: rtid, start_date: date, end_date: date, days_of_week: [], available_rooms: rooms, notes: notes};
         console.log('📤 API 요청:', payload);
