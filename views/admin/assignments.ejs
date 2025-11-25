@@ -235,36 +235,40 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-2">
-                        <label class="form-label">업체명</label>
-                        <input type="text" class="form-control" id="searchCompany" placeholder="업체명 검색">
+                        <label class="form-label">날짜 구분</label>
+                        <select class="form-select" id="searchDateType">
+                            <option value="">선택안함</option>
+                            <option value="reservation">예약일</option>
+                            <option value="usage">출발일</option>
+                        </select>
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">상품명</label>
-                        <input type="text" class="form-control" id="searchProduct" placeholder="상품명 검색">
+                        <label class="form-label">시작일</label>
+                        <input type="date" class="form-control" id="searchStartDate">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">종료일</label>
+                        <input type="date" class="form-control" id="searchEndDate">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">예약자명</label>
-                        <input type="text" class="form-control" id="searchCustomer" placeholder="예약자명 검색">
+                        <input type="text" class="form-control" id="searchCustomer" placeholder="예약자명">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">출발일</label>
-                        <input type="date" class="form-control" id="searchDepartureDate">
+                        <label class="form-label">업체예약번호</label>
+                        <input type="text" class="form-control" id="searchReservationNumber" placeholder="예약번호">
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">예약상태</label>
                         <select class="form-select" id="searchStatus">
                             <option value="">전체</option>
-                            <option value="in_revision">수정중(예약변경)</option>
-                            <option value="pending">대기중(신규)</option>
+                            <option value="in_revision">수정중</option>
+                            <option value="pending">대기중</option>
                             <option value="in_progress">수배중</option>
-                            <option value="confirmed">확정완료</option>
+                            <option value="confirmed">확정</option>
                             <option value="voucher_sent">바우처전송</option>
-                            <option value="cancelled">예약취소</option>
+                            <option value="cancelled">취소</option>
                         </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">수배업체</label>
-                        <input type="text" class="form-control" id="searchVendor" placeholder="수배업체 검색">
                     </div>
                 </div>
                 <div class="mt-3">
@@ -1209,6 +1213,9 @@
         let currentPage = 1;
         let currentStatus = '';
         let currentSearch = '';
+        let currentDateType = '';
+        let currentStartDate = '';
+        let currentEndDate = '';
 
         // 최신 USD 환율 가져오기 (인박스와 동일)
         async function fetchLatestExchangeRate() {
@@ -1276,7 +1283,10 @@
                 const params = new URLSearchParams({
                     page: page,
                     status: currentStatus,
-                    search: currentSearch
+                    search: currentSearch,
+                    dateType: currentDateType,
+                    startDate: currentStartDate,
+                    endDate: currentEndDate
                 });
 
                 const response = await fetch(`/api/assignments?${params}`);
@@ -1543,28 +1553,36 @@
 
         // 검색 함수
         function searchAssignments() {
-            const company = document.getElementById('searchCompany').value;
-            const product = document.getElementById('searchProduct').value;
+            const dateType = document.getElementById('searchDateType').value;
+            const startDate = document.getElementById('searchStartDate').value;
+            const endDate = document.getElementById('searchEndDate').value;
             const customer = document.getElementById('searchCustomer').value;
+            const reservationNumber = document.getElementById('searchReservationNumber').value;
             const status = document.getElementById('searchStatus').value;
             
             currentStatus = status;
-            currentSearch = [company, product, customer].filter(s => s.trim()).join(' ');
+            currentSearch = [customer, reservationNumber].filter(s => s.trim()).join(' ');
+            currentDateType = dateType;
+            currentStartDate = startDate;
+            currentEndDate = endDate;
             
             loadAssignments(1);
         }
 
         // 검색 초기화
         function clearSearch() {
-            document.getElementById('searchCompany').value = '';
-            document.getElementById('searchProduct').value = '';
+            document.getElementById('searchDateType').value = '';
+            document.getElementById('searchStartDate').value = '';
+            document.getElementById('searchEndDate').value = '';
             document.getElementById('searchCustomer').value = '';
-            document.getElementById('searchDepartureDate').value = '';
+            document.getElementById('searchReservationNumber').value = '';
             document.getElementById('searchStatus').value = '';
-            document.getElementById('searchVendor').value = '';
             
             currentStatus = '';
             currentSearch = '';
+            currentDateType = '';
+            currentStartDate = '';
+            currentEndDate = '';
             
             loadAssignments(1);
         }

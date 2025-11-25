@@ -12261,7 +12261,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         `);
         console.log('📋 존재하는 테이블:', tableCheck.rows.map(r => r.table_name));
         
-        const { page = 1, status = '', search = '' } = req.query;
+        const { page = 1, status = '', search = '', dateType = '', startDate = '', endDate = '' } = req.query;
         const limit = 100;  // 페이지당 100개로 증가
         const offset = (page - 1) * limit;
         
@@ -12280,6 +12280,18 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             console.log(`🔒 권한 필터: ${currentUserRole} - 담당자(${currentUserName}) 예약만 표시`);
         } else {
             console.log('🔓 관리자 권한: 모든 예약 표시');
+        }
+        
+        // 📅 날짜 필터링 (예약일 또는 출발일)
+        if (dateType && startDate && endDate) {
+            const dateColumn = dateType === 'reservation' ? 'r.created_at' : 'r.usage_date';
+            paramIndex++;
+            whereClause += ` AND ${dateColumn} >= $${paramIndex}`;
+            queryParams.push(startDate);
+            paramIndex++;
+            whereClause += ` AND ${dateColumn} <= $${paramIndex}`;
+            queryParams.push(endDate);
+            console.log(`📅 날짜 필터: ${dateType === 'reservation' ? '예약일' : '출발일'} ${startDate} ~ ${endDate}`);
         }
         
         // 예약 상태 필터 (선택 사항)
