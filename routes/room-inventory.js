@@ -33,7 +33,13 @@ router.get('/api/inventory/public', async (req, res) => {
     
     let query = `
       SELECT 
-        ra.*,
+        ra.id,
+        ra.room_type_id,
+        ra.availability_date,
+        ra.available_rooms,
+        ra.notes,
+        ra.created_at,
+        ra.updated_at,
         h.hotel_name,
         h.hotel_code,
         rt.room_type_code,
@@ -129,10 +135,17 @@ router.get('/api/inventory', requireLogin, async (req, res) => {
     
     const result = await pool.query(query, params);
     console.log(`✅ 재고 조회 결과: ${result.rows.length}개`);
+    
+    // notes 필드 로깅
+    const highlightedCount = result.rows.filter(r => r.notes === 'HIGHLIGHT').length;
+    console.log(`🟡 노란색 표시된 재고: ${highlightedCount}개`);
+    
     res.json(result.rows);
   } catch (error) {
     console.error('❌ 재고 조회 오류:', error);
-    res.status(500).json({ error: error.message });
+    console.error('쿼리:', query);
+    console.error('파라미터:', params);
+    res.status(500).json({ error: error.message, details: error.stack });
   }
 });
 

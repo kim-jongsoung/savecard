@@ -83,6 +83,7 @@
     .cell-available { background: #d4edda; color: #155724; font-weight: bold; }
     .cell-closed { background: #f8d7da; color: #721c24; font-weight: bold; }
     .cell-limited { background: #fff3cd; color: #856404; font-weight: bold; }
+    .cell-highlighted { background: #ffeb3b !important; font-weight: 700; }
     
     @media (max-width: 768px) {
       .calendar-section {
@@ -132,6 +133,7 @@
     let hotels = [];
     let roomTypes = [];
     let inventory = {};
+    let highlighted = new Set();
     let currentHotel = null;
 
     async function loadHotels() {
@@ -179,6 +181,11 @@
             inventory[key] = inv.available_rooms;
           } else {
             inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
+          }
+          
+          // 노란색 표시 로드 (notes='HIGHLIGHT')
+          if (inv.notes === 'HIGHLIGHT') {
+            highlighted.add(key);
           }
           
           // 가장 최근 업데이트 시간 추적
@@ -258,6 +265,11 @@
                   display = val;
                 }
               }
+            }
+            
+            // 노란색 표시 추가
+            if (highlighted.has(key)) {
+              cellClass += ' cell-highlighted';
             }
             
             html += `<td class="${cellClass}">${display}</td>`;
