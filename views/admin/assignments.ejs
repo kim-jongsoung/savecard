@@ -1341,8 +1341,8 @@
                             <th style="width: 130px;">업체예약번호</th>
                             <th style="width: 80px;">출발일</th>
                             <th style="width: 80px;">고객명</th>
-                            <th style="width: 50px;">담당자</th>
                             <th style="width: 80px;">플랫폼</th>
+                            <th style="width: 50px;">담당자</th>
                             <th style="min-width: 200px;">상품명</th>
                             <th style="width: 150px;">패키지타입</th>
                             <th style="width: 100px;">수배업체</th>
@@ -1436,12 +1436,12 @@
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.reservation_number || '-', 15)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${formatDateShort(reservation.usage_date)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.korean_name || '-', 8)}</td>
+                        <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.platform_name || '-', 8)}</td>
                         <td>
                             <span class="badge bg-info" style="font-size: 0.2rem; padding: 1px 2px;">${truncate(reservation.assigned_to || '미지정', 5)}</span>
                         </td>
-                        <td style="font-size: 0.7rem;">${truncate(reservation.platform_name || '-', 8)}</td>
-                        <td style="text-align: left; font-size: 0.65rem;" title="${reservation.product_name || '-'}">${reservation.product_name || '-'}</td>
-                        <td style="font-size: 0.7rem;">${reservation.package_type || '-'}</td>
+                        <td style="text-align: left; font-size: 0.65rem;" title="${reservation.product_name || '-'}">${truncate(reservation.product_name || '-', 25)}</td>
+                        <td style="font-size: 0.7rem;">${truncate(reservation.package_type || '-', 15)}</td>
                         <td style="font-size: 0.7rem;">${truncate(reservation.vendor_name || '미지정', 10)}</td>
                         <td style="font-size: 0.65rem;">
                             <span class="badge bg-primary" style="font-size: 0.18rem; padding: 1px 2px;">성${reservation.people_adult || 0}</span>
