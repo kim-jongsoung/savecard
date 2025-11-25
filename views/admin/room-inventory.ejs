@@ -102,17 +102,28 @@
         const y = month + m > 12 ? year + 1 : year;
         const mo = month + m > 12 ? month + m - 12 : month + m;
         const res = await fetch(`/api/inventory?hotel_id=${hid}&year=${y}&month=${mo}`);
+        
+        // HTTP 상태 체크
+        if (!res.ok) {
+          console.error(`❌ ${y}-${mo} HTTP 에러: ${res.status} ${res.statusText}`);
+          const errorText = await res.text();
+          console.error('에러 응답:', errorText);
+          alert(`재고 데이터 로드 실패 (${res.status}): ${errorText.substring(0, 200)}`);
+          return;
+        }
+        
         const data = await res.json();
         
         // 에러 응답 체크
         if (data.error) {
-          console.error(`❌ ${y}-${mo} 데이터 로드 실패:`, data.error);
-          alert(`재고 데이터 로드 실패: ${data.error}`);
+          console.error(`❌ ${y}-${mo} 데이터 로드 실패:`, data);
+          alert(`재고 데이터 로드 실패: ${data.error}\n\n${data.details || ''}`);
           return;
         }
         
         if (!Array.isArray(data)) {
-          console.error(`❌ ${y}-${mo} 데이터가 배열이 아닙니다:`, data);
+          console.error(`❌ ${y}-${mo} 데이터가 배열이 아닙니다:`, typeof data, data);
+          alert(`재고 데이터 형식 오류: 배열이 아닌 ${typeof data} 타입입니다.`);
           return;
         }
         
