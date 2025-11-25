@@ -120,8 +120,14 @@
         <!-- 마지막 업데이트 시간 표시 -->
         <div id="lastUpdateInfo" class="alert alert-info" style="display: none; padding: 10px; margin-bottom: 15px; border-left: 4px solid #667eea;">
           <strong>📅 재고 현황 업데이트:</strong> <span id="lastUpdateTime"></span>
-          <br>
-          <small class="text-muted">※ 실시간 예약 상황에 따라 변동될 수 있으니, 예약 전 다시 한번 확인해주세요.</small>
+        </div>
+        
+        <!-- 호텔 공지사항 -->
+        <div id="noticesSection" style="display: none; margin-bottom: 20px;">
+          <div class="alert alert-warning" style="border-left: 4px solid #ffc107;">
+            <h6 class="fw-bold mb-2">📢 호텔 공지사항</h6>
+            <div id="noticesList"></div>
+          </div>
         </div>
 
         <div id="inventoryContainer"></div>
@@ -157,6 +163,9 @@
       if (!hid) return;
 
       currentHotel = hotels.find(h => h.id == hid);
+      
+      // 공지사항 로드
+      loadNotices();
       
       // 객실 타입 로드 (공개 인벤토리 노출 설정된 것만)
       const rtRes = await fetch(`/api/room-types?hotel_id=${hid}&is_active=true&visible_in_inventory=true`);
@@ -305,6 +314,44 @@
       }
       
       container.innerHTML = html;
+    }
+    
+    // 공지사항 로드
+    async function loadNotices() {
+      const hid = document.getElementById('hotelSelect').value;
+      if (!hid) {
+        document.getElementById('noticesSection').style.display = 'none';
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/hotel-notices?hotel_id=${hid}`);
+        const notices = await res.json();
+        
+        const noticesList = document.getElementById('noticesList');
+        const noticesSection = document.getElementById('noticesSection');
+        
+        if (notices.length === 0) {
+          noticesSection.style.display = 'none';
+        } else {
+          noticesSection.style.display = 'block';
+          noticesList.innerHTML = notices.map(notice => {
+            const date = new Date(notice.created_at).toLocaleDateString('ko-KR');
+            return `
+              <div style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
+                <div style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">
+                  ${notice.notice_text}
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                  ${date}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch (error) {
+        console.error('❌ 공지사항 로드 오류:', error);
+      }
     }
 
     // 페이지 로드 시 호텔 목록 로드

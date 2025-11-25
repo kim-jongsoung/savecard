@@ -920,6 +920,15 @@ try {
     console.error('⚠️ 객실 재고 관리 라우트 연결 실패:', error.message);
 }
 
+// 호텔 공지사항 API 라우트 연결 ⭐ 신규
+try {
+    const hotelNoticesRouter = require('./routes/hotel-notices');
+    app.use('/', hotelNoticesRouter);
+    console.log('✅ 호텔 공지사항 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 호텔 공지사항 라우트 연결 실패:', error.message);
+}
+
 // 재고 챗봇 API 라우트 연결 ⭐ 신규
 try {
     const inventoryChatRouter = require('./routes/inventory-chat');

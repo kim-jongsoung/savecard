@@ -63,6 +63,17 @@
         <strong>📅 재고 최종 업데이트:</strong> <span id="lastUpdateTime"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 6px;"></button>
       </div>
+      
+      <!-- 호텔 공지사항 -->
+      <div class="card mb-3" id="noticesCard" style="display: none;">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center" style="padding: 8px 12px;">
+          <strong>📢 호텔 공지사항</strong>
+          <button class="btn btn-sm btn-dark" onclick="showAddNoticeModal()">+ 공지 추가</button>
+        </div>
+        <div class="card-body" style="padding: 12px;" id="noticesList">
+          <p class="text-muted small mb-0">공지사항이 없습니다.</p>
+        </div>
+      </div>
     </div>
     
     <div id="inventoryContainer"></div>
@@ -92,6 +103,9 @@
       
       const rtRes = await fetch(`/api/hotels/${hid}/room-types`);
       roomTypes = await rtRes.json();
+      
+      // 공지사항 로드
+      loadNotices();
       
       const start = document.getElementById('startMonth').value.split('-');
       const year = parseInt(start[0]), month = parseInt(start[1]);
@@ -505,6 +519,105 @@
       
       // 서버에서 데이터 다시 불러오기
       await loadData();
+    }
+    
+    // ==========================================
+    // 공지사항 관리
+    // ==========================================
+    async function loadNotices() {
+      const hid = document.getElementById('hotelSelect').value;
+      if (!hid) {
+        document.getElementById('noticesCard').style.display = 'none';
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/hotel-notices?hotel_id=${hid}`);
+        const notices = await res.json();
+        
+        const noticesList = document.getElementById('noticesList');
+        document.getElementById('noticesCard').style.display = 'block';
+        
+        if (notices.length === 0) {
+          noticesList.innerHTML = '<p class="text-muted small mb-0">공지사항이 없습니다.</p>';
+        } else {
+          noticesList.innerHTML = notices.map(notice => {
+            const date = new Date(notice.created_at).toLocaleDateString('ko-KR');
+            return `
+              <div class="alert alert-warning mb-2" style="padding: 8px 12px; font-size: 11px;">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div style="flex: 1;">
+                    <strong>${notice.notice_text}</strong>
+                    <br>
+                    <small class="text-muted">${date}</small>
+                  </div>
+                  <button class="btn btn-sm btn-danger ms-2" onclick="deleteNotice(${notice.id})" style="padding: 2px 8px; font-size: 10px;">삭제</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch (error) {
+        console.error('❌ 공지사항 로드 오류:', error);
+      }
+    }
+    
+    function showAddNoticeModal() {
+      const noticeText = prompt('공지사항을 입력하세요:');
+      if (!noticeText || !noticeText.trim()) return;
+      
+      addNotice(noticeText.trim());
+    }
+    
+    async function addNotice(noticeText) {
+      const hid = document.getElementById('hotelSelect').value;
+      if (!hid) {
+        alert('호텔을 먼저 선택해주세요.');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/hotel-notices', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotel_id: hid,
+            notice_text: noticeText
+          })
+        });
+        
+        const result = await res.json();
+        if (result.success) {
+          alert('공지사항이 추가되었습니다.');
+          loadNotices();
+        } else {
+          alert('공지사항 추가 실패: ' + (result.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('❌ 공지사항 추가 오류:', error);
+        alert('공지사항 추가 중 오류가 발생했습니다.');
+      }
+    }
+    
+    async function deleteNotice(noticeId) {
+      if (!confirm('이 공지사항을 삭제하시겠습니까?')) return;
+      
+      try {
+        const res = await fetch(`/api/hotel-notices/${noticeId}`, {
+          method: 'DELETE'
+        });
+        
+        const result = await res.json();
+        if (result.success) {
+          alert('공지사항이 삭제되었습니다.');
+          loadNotices();
+        } else {
+          alert('공지사항 삭제 실패: ' + (result.error || '알 수 없는 오류'));
+        }
+      } catch (error) {
+        console.error('❌ 공지사항 삭제 오류:', error);
+        alert('공지사항 삭제 중 오류가 발생했습니다.');
+      }
     }
     
     loadHotels();
