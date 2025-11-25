@@ -173,6 +173,19 @@
         const mo = month + m > 12 ? month + m - 12 : month + m;
         const res = await fetch(`/api/inventory/public?hotel_id=${hid}&year=${y}&month=${mo}`);
         const data = await res.json();
+        
+        // 에러 응답 체크
+        if (data.error) {
+          console.error(`❌ ${y}-${mo} 데이터 로드 실패:`, data.error);
+          alert(`재고 데이터 로드 실패: ${data.error}`);
+          return;
+        }
+        
+        if (!Array.isArray(data)) {
+          console.error(`❌ ${y}-${mo} 데이터가 배열이 아닙니다:`, data);
+          return;
+        }
+        
         data.forEach(inv => {
           const dateOnly = inv.availability_date.split('T')[0];
           const key = `${inv.room_type_id}-${dateOnly}`;
