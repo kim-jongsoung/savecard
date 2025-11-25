@@ -1107,9 +1107,27 @@ app.get('/api/reservations', async (req, res) => {
     try {
         console.log('🔍 예약관리 API 호출 - 수배서 미생성 예약 조회');
         
+        // 현재 로그인한 사용자 정보 (세션이 있는 경우)
+        const currentUserRole = req.session?.adminRole || 'staff';
+        const currentUserName = req.session?.adminName || req.session?.adminUsername;
+        console.log('👤 사용자:', currentUserName, '/ 권한:', currentUserRole);
+        
         // ✅ 예약관리 페이지: assignment_token이 없는 예약만 표시 (수배서 미생성)
         // 즉, 수배업체 자동 매칭 안 된 예약들
         // 날짜 형식을 YYYY-MM-DD로 명시적으로 변환
+        
+        let whereClause = 'WHERE a.assignment_token IS NULL';
+        const queryParams = [];
+        
+        // 🔐 권한별 필터링: 일반직원과 매니저는 본인 담당 예약만 표시
+        if (currentUserRole !== 'admin' && currentUserName) {
+            whereClause += ' AND r.assigned_to = $1';
+            queryParams.push(currentUserName);
+            console.log(`🔒 권한 필터: ${currentUserRole} - 담당자(${currentUserName}) 예약만 표시`);
+        } else if (currentUserRole === 'admin') {
+            console.log('🔓 관리자 권한: 모든 예약 표시');
+        }
+        
         const query = `
             SELECT 
                 r.*,
@@ -1117,14 +1135,14 @@ app.get('/api/reservations', async (req, res) => {
                 TO_CHAR(r.reservation_datetime, 'YYYY-MM-DD"T"HH24:MI') as reservation_datetime
             FROM reservations r
             LEFT JOIN assignments a ON r.id = a.reservation_id
-            WHERE a.assignment_token IS NULL
+            ${whereClause}
             ORDER BY 
                 CASE WHEN r.payment_status = 'pending' THEN 0 ELSE 1 END,
                 r.created_at DESC 
             LIMIT 100
         `;
         
-        const result = await pool.query(query);
+        const result = await pool.query(query, queryParams);
         
         console.log(`📋 예약관리 조회 결과: ${result.rows.length}건 (수배서 미생성)`);
         
@@ -12229,6 +12247,11 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
     try {
         console.log('🔍 수배관리 API 호출 시작');
         
+        // 현재 로그인한 사용자 정보
+        const currentUserRole = req.session.adminRole || 'staff';
+        const currentUserName = req.session.adminName || req.session.adminUsername;
+        console.log('👤 사용자:', currentUserName, '/ 권한:', currentUserRole);
+        
         // 먼저 테이블 존재 여부 확인
         const tableCheck = await pool.query(`
             SELECT table_name 
@@ -12248,6 +12271,16 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         let paramIndex = 0;
         
         console.log('🔍 수배관리 필터: 수배서 생성된 예약만 표시 (assignment_token 존재)');
+        
+        // 🔐 권한별 필터링: 일반직원과 매니저는 본인 담당 예약만 표시
+        if (currentUserRole !== 'admin') {
+            paramIndex++;
+            whereClause += ` AND r.assigned_to = $${paramIndex}`;
+            queryParams.push(currentUserName);
+            console.log(`🔒 권한 필터: ${currentUserRole} - 담당자(${currentUserName}) 예약만 표시`);
+        } else {
+            console.log('🔓 관리자 권한: 모든 예약 표시');
+        }
         
         // 예약 상태 필터 (선택 사항)
         if (status) {
