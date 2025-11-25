@@ -38,7 +38,7 @@
             color: white;
         }
         .assignments-table th {
-            padding: 12px 8px;
+            padding: 2px 3px;
             font-size: 0.75rem;
             font-weight: 600;
             text-align: center;
@@ -66,7 +66,7 @@
             border-left: 4px solid #dc3545 !important;
         }
         .assignments-table td {
-            padding: 10px 8px;
+            padding: 2px 3px;
             font-size: 0.75rem;
             vertical-align: middle;
             text-align: center;
@@ -1338,7 +1338,6 @@
                         <tr>
                             <th style="width: 40px;">No</th>
                             <th style="width: 80px;">예약일</th>
-                            <th style="width: 100px;">시스템번호</th>
                             <th style="width: 130px;">업체예약번호</th>
                             <th style="width: 80px;">출발일</th>
                             <th style="width: 80px;">고객명</th>
@@ -1375,34 +1374,34 @@
                 
                 // 변경중
                 if (isInRevision) {
-                    statusBadges += '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>변경중</span>';
+                    statusBadges += '<span class="badge bg-warning text-dark ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>변경중</span>';
                 }
                 
                 // 신규
                 if (isNewReservation) {
-                    statusBadges += '<span class="badge bg-danger ms-2" style="font-size: 0.75rem;"><i class="bi bi-star-fill me-1"></i>신규</span>';
+                    statusBadges += '<span class="badge bg-danger ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-star-fill me-1"></i>신규</span>';
                 }
                 
                 // 수배서 열람 상황 (수배 방식 구분)
                 if (reservation.assignment_token) {
                     if (reservation.viewed_at) {
                         // ✅ 열람됨
-                        statusBadges += '<span class="badge bg-success ms-2" style="font-size: 0.75rem;"><i class="bi bi-check-circle-fill me-1"></i>열람</span>';
+                        statusBadges += '<span class="badge bg-success ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-check-circle-fill me-1"></i>열람</span>';
                     } else if (reservation.sent_at) {
                         // 📧 이메일 전송 (미열람)
-                        statusBadges += '<span class="badge bg-warning text-dark ms-2" style="font-size: 0.75rem;"><i class="bi bi-envelope me-1"></i>이메일전송</span>';
+                        statusBadges += '<span class="badge bg-warning text-dark ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-envelope me-1"></i>이메일전송</span>';
                     } else {
                         // 🔗 링크만 생성 (카톡 전달용, 미열람)
-                        statusBadges += '<span class="badge bg-secondary ms-2" style="font-size: 0.75rem;"><i class="bi bi-link-45deg me-1"></i>링크생성</span>';
+                        statusBadges += '<span class="badge bg-secondary ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-link-45deg me-1"></i>링크생성</span>';
                     }
                 }
                 
                 // 바우처 열람 상황
                 if (reservation.voucher_token) {
                     if (reservation.voucher_viewed_at) {
-                        statusBadges += '<span class="badge bg-success ms-2" style="font-size: 0.75rem;"><i class="bi bi-eye-fill me-1"></i>바우처열람</span>';
+                        statusBadges += '<span class="badge bg-success ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-eye-fill me-1"></i>바우처열람</span>';
                     } else if (reservation.voucher_sent_at) {
-                        statusBadges += '<span class="badge bg-secondary ms-2" style="font-size: 0.75rem;"><i class="bi bi-eye-slash me-1"></i>바우처미열람</span>';
+                        statusBadges += '<span class="badge bg-secondary ms-1" style="font-size: 0.45rem; padding: 1px 3px;"><i class="bi bi-eye-slash me-1"></i>바우처미열람</span>';
                     }
                 }
                 
@@ -1434,7 +1433,6 @@
                     <tr class="${revisionClass} ${passedClass}" data-reservation-id="${reservation.id}">
                         <td>${index + 1}</td>
                         <td style="font-size: 0.7rem;">${formatDateShort(reservation.created_at)}</td>
-                        <td style="font-weight: 600; color: #2c3e50;">${reservation.id}</td>
                         <td style="font-size: 0.7rem;">${truncate(reservation.reservation_number || '-', 12)}</td>
                         <td style="font-size: 0.7rem;">${formatDateShort(reservation.usage_date)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.korean_name || '-', 8)}</td>
@@ -1450,11 +1448,11 @@
                             <span class="badge bg-success" style="font-size: 0.6rem;">아${reservation.people_child || 0}</span>
                             <span class="badge bg-secondary" style="font-size: 0.6rem;">유${reservation.people_infant || 0}</span>
                         </td>
-                        <td style="padding: 5px;">
-                            <span class="badge bg-${bootstrapClass}" style="font-size: 0.65rem;">${statusText}</span>
+                        <td style="padding: 2px;">
+                            <span class="badge bg-${bootstrapClass}" style="font-size: 0.39rem; padding: 1px 3px;">${statusText}</span>
                             ${statusBadges}
-                            ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<br><span class="badge bg-info mt-1" style="font-size: 0.6rem;">정산대기</span>' : ''}
-                            ${reservation.payment_status === 'settlement_completed' ? '<br><span class="badge bg-dark mt-1" style="font-size: 0.6rem;">정산완료</span>' : ''}
+                            ${isUsageDatePassed && reservation.payment_status === 'confirmed' ? '<br><span class="badge bg-info mt-1" style="font-size: 0.36rem; padding: 1px 3px;">정산대기</span>' : ''}
+                            ${reservation.payment_status === 'settlement_completed' ? '<br><span class="badge bg-dark mt-1" style="font-size: 0.36rem; padding: 1px 3px;">정산완료</span>' : ''}
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm" role="group">
