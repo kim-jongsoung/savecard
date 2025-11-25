@@ -327,7 +327,16 @@
         if (currentHotel && currentHotel.inventory_type === 'count') {
           rooms = status !== undefined && status !== '' ? status : 0;
         } else {
-          rooms = (status === 'O') ? 10 : ((status === 'X') ? 0 : 5);
+          // status 방식: O/X/V를 숫자로 변환, 값이 없으면 기본 10 (Open)
+          if (status === 'X') {
+            rooms = 0;
+          } else if (status === 'V') {
+            rooms = 5;
+          } else if (status === 'O') {
+            rooms = 10;
+          } else {
+            rooms = 10; // 기본값
+          }
         }
         
         const payload = {
@@ -340,12 +349,17 @@
           notes: newHighlight ? 'HIGHLIGHT' : ''
         };
         
+        console.log('🟡 노란색 표시 저장:', payload);
+        
         try {
           const response = await fetch('/api/inventory/bulk', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
           });
+          
+          const result = await response.json();
+          console.log('📥 응답:', result);
           
           if (response.ok) {
             if (newHighlight) {
@@ -354,9 +368,11 @@
               highlighted.delete(key);
             }
             saved++;
+          } else {
+            console.error('❌ 저장 실패:', result);
           }
         } catch (err) {
-          console.error('노란색 표시 저장 실패:', err);
+          console.error('❌ 노란색 표시 저장 실패:', err);
         }
       }
       
