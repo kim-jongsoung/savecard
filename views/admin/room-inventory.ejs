@@ -121,12 +121,12 @@
               inventory[key] = '';
             }
           }
-          console.log(`  → inventory["${key}"] = ${inventory[key]}`);
+          console.log(`  → inventory["${key}"] = ${inventory[key]}, notes="${inv.notes}"`);
           
           // 노란색 표시 로드 (notes='HIGHLIGHT')
           if (inv.notes === 'HIGHLIGHT') {
             highlighted.add(key);
-            console.log(`  → 노란색 표시: ${key}`);
+            console.log(`  ✅ 노란색 표시 로드: ${key}`);
           }
           
           // 가장 최근 업데이트 시간 추적

@@ -93,7 +93,13 @@ router.get('/api/inventory', requireLogin, async (req, res) => {
     
     let query = `
       SELECT 
-        ra.*,
+        ra.id,
+        ra.room_type_id,
+        ra.availability_date,
+        ra.available_rooms,
+        ra.notes,
+        ra.created_at,
+        ra.updated_at,
         h.hotel_name,
         h.hotel_code,
         rt.room_type_code,
