@@ -1337,11 +1337,11 @@
                     <thead>
                         <tr>
                             <th style="width: 40px;">No</th>
-                            <th style="width: 80px;">예약일</th>
+                            <th style="width: 65px;">예약일</th>
                             <th style="width: 130px;">업체예약번호</th>
-                            <th style="width: 80px;">출발일</th>
+                            <th style="width: 65px;">출발일</th>
                             <th style="width: 80px;">고객명</th>
-                            <th style="width: 80px;">플랫폼</th>
+                            <th style="width: 110px;">플랫폼</th>
                             <th style="width: 50px;">담당자</th>
                             <th style="min-width: 200px;">상품명</th>
                             <th style="width: 150px;">패키지타입</th>
@@ -1436,7 +1436,7 @@
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.reservation_number || '-', 15)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${formatDateShort(reservation.usage_date)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.korean_name || '-', 8)}</td>
-                        <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.platform_name || '-', 8)}</td>
+                        <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.platform_name || '-', 10)}</td>
                         <td>
                             <span class="badge bg-info" style="font-size: 0.2rem; padding: 1px 2px;">${truncate(reservation.assigned_to || '미지정', 5)}</span>
                         </td>
@@ -1444,9 +1444,9 @@
                         <td style="font-size: 0.7rem;">${truncate(reservation.package_type || '-', 19)}</td>
                         <td style="font-size: 0.7rem;">${truncate(reservation.vendor_name || '미지정', 10)}</td>
                         <td style="font-size: 0.65rem;">
-                            <span class="badge bg-primary" style="font-size: 0.18rem; padding: 1px 2px;">성${reservation.people_adult || 0}</span>
-                            <span class="badge bg-success" style="font-size: 0.18rem; padding: 1px 2px;">아${reservation.people_child || 0}</span>
-                            <span class="badge bg-secondary" style="font-size: 0.18rem; padding: 1px 2px;">유${reservation.people_infant || 0}</span>
+                            <span class="badge bg-primary" style="font-size: 0.18rem; padding: 1px 2px;">${reservation.people_adult || 0}</span>
+                            <span class="badge bg-success" style="font-size: 0.18rem; padding: 1px 2px;">${reservation.people_child || 0}</span>
+                            <span class="badge bg-secondary" style="font-size: 0.18rem; padding: 1px 2px;">${reservation.people_infant || 0}</span>
                         </td>
                         <td style="padding: 2px;">
                             <span class="badge bg-${bootstrapClass}" style="font-size: 0.39rem; padding: 1px 3px;">${statusText}</span>
