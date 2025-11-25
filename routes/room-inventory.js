@@ -192,13 +192,13 @@ router.post('/api/inventory/bulk', requireLogin, async (req, res) => {
         
         const result = await pool.query(`
           INSERT INTO room_availability (
-            room_type_id, availability_date, status, available_rooms, memo
+            room_type_id, availability_date, status, available_rooms, notes
           ) VALUES ($1, $2, $3, $4, $5)
           ON CONFLICT (room_type_id, availability_date)
           DO UPDATE SET
             status = EXCLUDED.status,
             available_rooms = EXCLUDED.available_rooms,
-            memo = EXCLUDED.memo,
+            notes = EXCLUDED.notes,
             updated_at = NOW()
           RETURNING *
         `, [room_type_id, dateStr, available_rooms > 0 ? 'available' : 'closed', available_rooms || 0, notes]);
