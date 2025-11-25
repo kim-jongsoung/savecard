@@ -3,7 +3,8 @@ const router = express.Router();
 
 // 로그인 체크 미들웨어
 function requireLogin(req, res, next) {
-  if (!req.session || !req.session.user) {
+  if (!req.session.adminUsername && !req.session.adminId) {
+    console.log('❌ 로그인 안됨:', req.session);
     return res.status(401).json({ error: '로그인이 필요합니다.' });
   }
   next();
@@ -48,7 +49,7 @@ router.get('/api/hotel-notices', async (req, res) => {
 router.post('/api/hotel-notices', requireLogin, async (req, res) => {
   const pool = req.app.locals.pool;
   const { hotel_id, notice_text } = req.body;
-  const created_by = req.session.user.username || req.session.user.email;
+  const created_by = req.session.adminUsername || req.session.adminId || 'admin';
   
   try {
     if (!hotel_id || !notice_text) {
