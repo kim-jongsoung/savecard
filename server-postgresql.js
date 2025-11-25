@@ -12371,18 +12371,20 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 LEFT JOIN vendors v ON a.vendor_id = v.id
                 ${whereClause}
                 ORDER BY 
-                    CASE r.payment_status
-                        WHEN 'in_revision' THEN 0  -- 수정중(예약변경) - 최상단
-                        WHEN 'pending' THEN 1      -- 신규예약
-                        WHEN 'in_progress' THEN 2  -- 수배중
-                        WHEN 'confirmed' THEN 3    -- 확정
-                        WHEN 'voucher_sent' THEN 5 -- 바우처전송
-                        ELSE 4
-                    END,
+                    -- 정산대기 (출발일 지난 확정 건) 최우선
                     CASE 
-                        WHEN r.usage_date < CURRENT_DATE THEN 0
+                        WHEN r.payment_status = 'confirmed' AND r.usage_date < CURRENT_DATE THEN 0
                         ELSE 1
-                    END DESC,
+                    END,
+                    -- 상태별 우선순위
+                    CASE r.payment_status
+                        WHEN 'in_revision' THEN 1  -- 수정중(예약변경)
+                        WHEN 'pending' THEN 2      -- 신규예약
+                        WHEN 'in_progress' THEN 3  -- 수배중
+                        WHEN 'confirmed' THEN 4    -- 확정
+                        WHEN 'voucher_sent' THEN 5 -- 바우처전송
+                        ELSE 6
+                    END,
                     r.usage_date ASC,
                     r.created_at DESC
                 LIMIT $${paramIndex + 1} OFFSET $${paramIndex + 2}
