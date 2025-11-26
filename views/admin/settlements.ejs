@@ -930,12 +930,12 @@
                 const isPaymentReceived = !!s.payment_received_date;
                 const isPaymentSent = !!s.payment_sent_date;
                 
-                // 거래액 (KRW 환산)
-                const revenueKRW = s.sale_currency === 'KRW' ? (s.net_revenue || 0) : (s.net_revenue || 0) * (s.exchange_rate || 1330);
-                // 매입액 (KRW 환산)
-                const costKRW = s.cost_krw || 0;
-                // 마진
-                const marginKRW = s.margin_krw || 0;
+                // 거래액 (KRW 환산) - 반올림 적용
+                const revenueKRW = Math.round(s.sale_currency === 'KRW' ? (s.net_revenue || 0) : (s.net_revenue || 0) * (s.exchange_rate || 1330));
+                // 매입액 (KRW 환산) - 반올림 적용
+                const costKRW = Math.round(s.cost_krw || 0);
+                // 마진 - 반올림 적용
+                const marginKRW = Math.round(s.margin_krw || 0);
                 // 부가세 = 마진*10% - 예약업체수수료*10%
                 const marginTax = Math.round(marginKRW * 0.1);  // 마진부가세
                 const commissionTax = Math.round((s.commission_amount || 0) * 0.1);  // 수수료부가세
@@ -975,7 +975,7 @@
                         <td><small class="text-primary">${s.staff_name || s.assigned_to || '-'}</small></td>
                         <td class="text-end"><strong>${revenueDisplay}</strong></td>
                         <td class="text-end text-danger"><strong>${costDisplay}</strong></td>
-                        <td class="text-end text-primary"><strong>${Math.round(marginKRW).toLocaleString()}원</strong></td>
+                        <td class="text-end text-primary"><strong>${marginKRW.toLocaleString()}원</strong></td>
                         <td class="text-end" style="background-color: #e0f7ff;"><small>${marginTax.toLocaleString()}원</small></td>
                         <td class="text-end" style="background-color: #e0ffe0;"><small>${commissionTax.toLocaleString()}원</small></td>
                         <td class="text-end" style="background-color: #ffe0cc;"><small>${tax.toLocaleString()}원</small></td>
