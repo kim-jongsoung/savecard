@@ -1231,7 +1231,8 @@ try {
     app.use('/api/hotel-assignment-management', hotelAssignmentManagementRouter);
     
     // 공개 수배서 보기 링크 지원 (/hotel-assignment/view/TOKEN)
-    app.use('/hotel-assignment/view', hotelAssignmentsRouter);
+    // hotel-assignment-management.js의 /view/:token 라우트 사용
+    app.use('/hotel-assignment', hotelAssignmentManagementRouter);
     
     console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments, Management)');
 } catch (error) {
