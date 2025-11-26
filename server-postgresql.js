@@ -1220,19 +1220,18 @@ try {
 try {
     const hotelPromotionsRoutes = require('./routes/hotel-promotions');
     const hotelReservationsRoutes = require('./routes/hotel-reservations');
-    const hotelAssignmentsRoutes = require('./routes/hotel-assignments');
+    const hotelAssignmentsRouter = require('./routes/hotel-assignments');
+    const hotelAssignmentManagementRouter = require('./routes/hotel-assignment-management');
     
     app.set('pool', pool); // 라우트에서 pool 사용 가능하도록 설정
     
     app.use('/api/hotel-promotions', hotelPromotionsRoutes);
     app.use('/api/hotel-reservations', hotelReservationsRoutes);
-    app.use('/api/hotel-assignments', hotelAssignmentsRoutes);
-    app.use('/hotel-assignment', hotelAssignmentsRoutes); // 공개 링크용 (기존)
+    app.use('/api/hotel-assignments', hotelAssignmentsRouter);
+    app.use('/api/hotel-assignment-management', hotelAssignmentManagementRouter);
     
-    // 새로운 수배서 관리 시스템
-    const hotelAssignmentManagementRoutes = require('./routes/hotel-assignment-management');
-    app.use('/api/hotel-assignment-management', hotelAssignmentManagementRoutes);
-    app.use('/hotel-assignment', hotelAssignmentManagementRoutes); // 공개 링크용 (신규)
+    // 공개 수배서 보기 링크 지원 (/hotel-assignment/view/TOKEN)
+    app.use('/hotel-assignment/view', hotelAssignmentsRouter);
     
     console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments, Management)');
 } catch (error) {

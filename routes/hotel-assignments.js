@@ -75,7 +75,7 @@ router.post('/', async (req, res) => {
             SELECT 
                 hr.*,
                 h.hotel_name,
-                h.email as hotel_email_default,
+                COALESCE(h.reservation_email, h.contact_email) as hotel_email_default,
                 ba.agency_name as booking_agency_name,
                 ba.contact_person as agency_contact_person,
                 ba.contact_email as agency_email
@@ -101,17 +101,6 @@ router.post('/', async (req, res) => {
             WHERE hrr.reservation_id = $1
             ORDER BY hrr.id
         `, [reservation_id]);
-        
-        // 3. 각 객실의 투숙객 정보 조회
-        for (let room of roomsQuery.rows) {
-            const guestsQuery = await client.query(`
-                SELECT *
-                FROM hotel_room_guests
-                WHERE room_id = $1
-                ORDER BY id
-            `, [room.id]);
-            room.guests = guestsQuery.rows;
-        }
         
         reservation.rooms = roomsQuery.rows;
         
@@ -330,17 +319,6 @@ router.get('/:token', async (req, res) => {
             WHERE hrr.reservation_id = $1
             ORDER BY hrr.id
         `, [reservation.id]);
-        
-        // 3. 투숙객 정보 조회
-        for (let room of roomsQuery.rows) {
-            const guestsQuery = await pool.query(`
-                SELECT *
-                FROM hotel_room_guests
-                WHERE room_id = $1
-                ORDER BY id
-            `, [room.id]);
-            room.guests = guestsQuery.rows;
-        }
         
         reservation.rooms = roomsQuery.rows;
         
