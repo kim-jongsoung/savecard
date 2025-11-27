@@ -1058,4 +1058,83 @@ router.post('/:id/confirm', async (req, res) => {
     }
 });
 
+/**
+ * 정산 이관 API
+ * POST /api/hotel-reservations/:id/settlement
+ */
+router.post('/:id/settlement', async (req, res) => {
+    const { id } = req.params;
+    const {
+        total_selling_price,
+        total_cost_price,
+        agency_fee,
+        exchange_rate,
+        settlement_memo
+    } = req.body;
+    
+    const pool = req.app.get('pool');
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        // 예약 존재 확인
+        const checkResult = await client.query(
+            'SELECT id, status FROM hotel_reservations WHERE id = $1',
+            [id]
+        );
+        
+        if (checkResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({
+                success: false,
+                error: '예약을 찾을 수 없습니다.'
+            });
+        }
+        
+        // grand_total 계산 (판매가 + 수배피를 원화로)
+        const grandTotal = parseFloat(total_selling_price) || 0;
+        
+        // 정산 정보 업데이트 및 상태 변경
+        await client.query(`
+            UPDATE hotel_reservations
+            SET 
+                total_selling_price = $1,
+                total_cost_price = $2,
+                agency_fee = $3,
+                exchange_rate = $4,
+                grand_total = $5,
+                settlement_memo = $6,
+                status = '정산대기',
+                updated_at = NOW()
+            WHERE id = $7
+        `, [
+            total_selling_price,
+            total_cost_price,
+            agency_fee,
+            exchange_rate,
+            grandTotal,
+            settlement_memo,
+            id
+        ]);
+        
+        await client.query('COMMIT');
+        
+        res.json({
+            success: true,
+            message: '정산으로 이관되었습니다.'
+        });
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('❌ 정산 이관 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '정산 이관 중 오류가 발생했습니다: ' + error.message
+        });
+    } finally {
+        client.release();
+    }
+});
+
 module.exports = router;
