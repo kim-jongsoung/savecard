@@ -5248,6 +5248,21 @@
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
                 const reservation = await response.json();
                 
+                // 오늘 환율 가져오기
+                let todayExchangeRate = 1300; // 기본값
+                try {
+                    const rateResponse = await fetch('/api/exchange-rates/latest/USD');
+                    if (rateResponse.ok) {
+                        const rateData = await rateResponse.json();
+                        if (rateData.success && rateData.data) {
+                            todayExchangeRate = rateData.data.rate;
+                            console.log('✅ 오늘 환율:', todayExchangeRate);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('환율 조회 실패, 기본값 사용:', error);
+                }
+                
                 // 모달에 데이터 채우기
                 document.getElementById('settlementReservationId').value = reservationId;
                 document.getElementById('settlementReservationNumber').textContent = reservation.reservation_number || 'N/A';
@@ -5256,11 +5271,21 @@
                 document.getElementById('settlementCheckOut').textContent = formatDateShort(reservation.check_out_date);
                 document.getElementById('settlementAgencyName').textContent = reservation.agency_name || 'N/A';
                 
-                // 금액 정보
-                document.getElementById('settlementSellingPrice').value = reservation.total_selling_price || 0;
-                document.getElementById('settlementCostPrice').value = reservation.total_cost_price || 0;
-                document.getElementById('settlementAgencyFee').value = reservation.agency_fee || 0;
-                document.getElementById('settlementExchangeRate').value = reservation.exchange_rate || 1300;
+                // 금액 정보 (달러로 저장된 값 사용)
+                const sellingPrice = reservation.total_selling_price || 0;
+                const costPrice = reservation.total_cost_price || 0;
+                const agencyFee = reservation.agency_fee || 0;
+                
+                document.getElementById('settlementSellingPrice').value = sellingPrice;
+                document.getElementById('settlementCostPrice').value = costPrice;
+                document.getElementById('settlementAgencyFee').value = agencyFee;
+                document.getElementById('settlementExchangeRate').value = todayExchangeRate;
+                
+                // 표시용 데이터
+                document.getElementById('settlementSellingPriceDisplay').textContent = `$${sellingPrice.toLocaleString()}`;
+                document.getElementById('settlementCostPriceDisplay').textContent = `$${costPrice.toLocaleString()}`;
+                document.getElementById('settlementAgencyFeeDisplay').textContent = `₩${agencyFee.toLocaleString()}`;
+                document.getElementById('settlementExchangeRateDisplay').textContent = `₩${todayExchangeRate.toLocaleString()}`;
                 
                 // 마진 계산
                 calculateSettlementMargin();
@@ -5296,13 +5321,20 @@
             const costPrice = parseFloat(document.getElementById('settlementCostPrice').value) || 0;
             const agencyFee = parseFloat(document.getElementById('settlementAgencyFee').value) || 0;
             const exchangeRate = parseFloat(document.getElementById('settlementExchangeRate').value) || 1300;
-            const memo = document.getElementById('settlementMemo').value || '';
             
-            if (!confirm('정산으로 이관하시겠습니까?\n\n이관 후 수배관리 목록에서 제거되고 정산관리 페이지로 이동합니다.')) {
+            if (!confirm('정산으로 이관하시겠습니까?\n\n이관 후 정산관리 페이지로 이동하며, 수배관리 목록에서는 검색 시에만 표시됩니다.')) {
                 return;
             }
             
             try {
+                console.log('📊 정산 이관 데이터:', {
+                    reservationId,
+                    sellingPrice,
+                    costPrice,
+                    agencyFee,
+                    exchangeRate
+                });
+                
                 const response = await fetch(`/api/hotel-reservations/${reservationId}/settlement`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5310,8 +5342,7 @@
                         total_selling_price: sellingPrice,
                         total_cost_price: costPrice,
                         agency_fee: agencyFee,
-                        exchange_rate: exchangeRate,
-                        settlement_memo: memo
+                        exchange_rate: exchangeRate
                     })
                 });
                 
@@ -5342,9 +5373,9 @@
     <div class="modal fade" id="settlementModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title"><i class="fas fa-dollar-sign me-2"></i>정산 이관</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>정산 이관 확인</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="settlementReservationId">
@@ -5369,73 +5400,60 @@
                         </div>
                     </div>
                     
-                    <!-- 정산 금액 -->
+                    <!-- 정산 금액 (읽기 전용) -->
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>정산 금액</h6>
+                            <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>정산 금액 정보</h6>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">거래액 (판매가 USD)</label>
-                                        <input type="number" class="form-control" id="settlementSellingPrice" 
-                                               onchange="calculateSettlementMargin()" step="0.01">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">환율 (KRW)</label>
-                                        <input type="number" class="form-control" id="settlementExchangeRate" 
-                                               onchange="calculateSettlementMargin()" step="0.01">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">매입액 (호텔 송금액 USD)</label>
-                                        <input type="number" class="form-control" id="settlementCostPrice" 
-                                               onchange="calculateSettlementMargin()" step="0.01">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">수배피 (KRW)</label>
-                                        <input type="number" class="form-control" id="settlementAgencyFee" 
-                                               onchange="calculateSettlementMargin()" step="1">
-                                    </div>
-                                </div>
-                            </div>
+                            <input type="hidden" id="settlementSellingPrice">
+                            <input type="hidden" id="settlementCostPrice">
+                            <input type="hidden" id="settlementAgencyFee">
+                            <input type="hidden" id="settlementExchangeRate">
                             
-                            <!-- 계산 결과 -->
-                            <div class="alert alert-info">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <strong>거래액(원화):</strong><br>
-                                        <span id="settlementRevenueKRW" class="fs-5">₩0</span>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong>매입액(원화):</strong><br>
-                                        <span id="settlementCostKRW" class="fs-5">₩0</span>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <strong>마진:</strong><br>
-                                        <span id="settlementMargin" class="fs-5 text-success">₩0</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">정산 메모</label>
-                                <textarea class="form-control" id="settlementMemo" rows="3" 
-                                          placeholder="정산 관련 메모를 입력하세요..."></textarea>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th width="30%">거래액 (USD)</th>
+                                        <td><span id="settlementSellingPriceDisplay"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>호텔매입액 (USD)</th>
+                                        <td><span id="settlementCostPriceDisplay"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>수배피 (KRW)</th>
+                                        <td><span id="settlementAgencyFeeDisplay"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>적용 환율</th>
+                                        <td><span id="settlementExchangeRateDisplay"></span> <small class="text-muted">(오늘 환율)</small></td>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <th>거래액 (KRW)</th>
+                                        <td><strong><span id="settlementRevenueKRW"></span></strong></td>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <th>매입액 (KRW)</th>
+                                        <td><strong><span id="settlementCostKRW"></span></strong></td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <th>마진</th>
+                                        <td><strong class="text-success"><span id="settlementMargin"></span></strong></td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>주의:</strong> 정산 이관 후 이 예약은 수배관리 목록에서 제거되고 정산관리 페이지로 이동합니다.
+                    <div class="alert alert-success">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>안내:</strong> 정산 이관 후 이 예약은 정산관리 페이지로 이동하며, 수배관리 목록에서는 검색 시에만 표시됩니다.
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                    <button type="button" class="btn btn-warning" onclick="processSettlement()">
+                    <button type="button" class="btn btn-success" onclick="processSettlement()">
                         <i class="fas fa-check me-1"></i>정산 이관
                     </button>
                 </div>
