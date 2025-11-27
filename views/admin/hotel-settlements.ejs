@@ -452,58 +452,139 @@
                 return;
             }
 
-            const html = items.map(item => `
-                <div class="col-md-6 mb-3">
-                    <div class="card settlement-card ${item.is_settled ? 'settled' : 'pending'}" onclick="openSettlementModal(${item.id})">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h6 class="mb-1">${item.hotel_name || '호텔 미정'}</h6>
-                                    <small class="text-muted">${item.reservation_number || 'N/A'}</small>
-                                </div>
-                                <span class="badge ${item.is_settled ? 'bg-success' : 'bg-warning text-dark'}">
-                                    ${item.is_settled ? '정산완료' : '미완료'}
-                                </span>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <small class="text-muted">체크인</small>
-                                    <p class="mb-1"><strong>${formatDate(item.check_in_date)}</strong></p>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted">거래처</small>
-                                    <p class="mb-1"><strong>${item.agency_name || 'N/A'}</strong></p>
-                                </div>
-                            </div>
-                            <hr class="my-2">
-                            <div class="row">
-                                <div class="col-4">
-                                    <small class="text-muted">거래액</small>
-                                    <p class="mb-0"><strong>${formatCurrency(item.total_selling_price)}</strong></p>
-                                </div>
-                                <div class="col-4">
-                                    <small class="text-muted">매입액</small>
-                                    <p class="mb-0"><strong>${formatCurrency(item.total_cost_price)}</strong></p>
-                                </div>
-                                <div class="col-4">
-                                    <small class="text-muted">마진</small>
-                                    <p class="mb-0 ${item.margin > 0 ? 'profit-positive' : 'profit-neutral'}">
-                                        <strong>${formatCurrency(item.margin)}</strong>
-                                    </p>
-                                </div>
-                            </div>
-                            ${item.is_settled ? `
-                                <div class="mt-2">
-                                    <small class="text-success">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        입금: ${formatDate(item.payment_date)} / 송금: ${formatDate(item.transfer_date)}
-                                    </small>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
+            // 합계 계산
+            let totalRevenueUSD = 0;
+            let totalRevenueKRW = 0;
+            let totalHotelCostUSD = 0;
+            let totalHotelCostKRW = 0;
+            let totalOutCostUSD = 0;
+            let totalOutCostKRW = 0;
+            let totalMargin = 0;
+            let totalTax = 0;
+
+            const rows = items.map(item => {
+                const revenueUSD = item.total_selling_price || 0;
+                const hotelCostUSD = item.total_cost_price || 0;
+                const outCostUSD = 0; // TODO: 외부 아웃호텔 매입액 필드 추가 필요
+                const exchangeRate = item.exchange_rate || 1300;
+                
+                const revenueKRW = Math.round(revenueUSD * exchangeRate);
+                const hotelCostKRW = Math.round(hotelCostUSD * exchangeRate);
+                const outCostKRW = Math.round(outCostUSD * exchangeRate);
+                
+                // 수배피(마진) = 거래액 - 호텔매입액 - 아웃호텔매입액
+                const margin = revenueKRW - hotelCostKRW - outCostKRW;
+                
+                // 부가세 = 수배피 × 10%
+                const tax = Math.round(margin * 0.1);
+
+                totalRevenueUSD += revenueUSD;
+                totalRevenueKRW += revenueKRW;
+                totalHotelCostUSD += hotelCostUSD;
+                totalHotelCostKRW += hotelCostKRW;
+                totalOutCostUSD += outCostUSD;
+                totalOutCostKRW += outCostKRW;
+                totalMargin += margin;
+                totalTax += tax;
+
+                return `
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="form-check-input settlement-checkbox" 
+                                   value="${item.id}" 
+                                   ${item.is_settled ? 'disabled' : ''}>
+                        </td>
+                        <td style="cursor: pointer;" onclick="openSettlementModal(${item.id})">${formatDate(item.check_in_date)}</td>
+                        <td style="cursor: pointer;" onclick="openSettlementModal(${item.id})">${item.reservation_number || 'N/A'}</td>
+                        <td style="cursor: pointer;" onclick="openSettlementModal(${item.id})">${item.hotel_name || '호텔 미정'}</td>
+                        <td style="cursor: pointer;" onclick="openSettlementModal(${item.id})">${item.agency_name || 'N/A'}</td>
+                        <td style="cursor: pointer;" onclick="openSettlementModal(${item.id})">${item.guest_name || 'N/A'}</td>
+                        <td class="text-end" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
+                            $${revenueUSD.toLocaleString()}<br>
+                            <small class="text-muted">₩${revenueKRW.toLocaleString()}</small>
+                        </td>
+                        <td class="text-end" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
+                            $${hotelCostUSD.toLocaleString()}<br>
+                            <small class="text-muted">₩${hotelCostKRW.toLocaleString()}</small>
+                        </td>
+                        <td class="text-end" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
+                            $${outCostUSD.toLocaleString()}<br>
+                            <small class="text-muted">₩${outCostKRW.toLocaleString()}</small>
+                        </td>
+                        <td class="text-end ${margin > 0 ? 'text-success' : 'text-muted'}" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
+                            ₩${margin.toLocaleString()}
+                        </td>
+                        <td class="text-end" style="cursor: pointer; background-color: #ffe0cc;" onclick="openSettlementModal(${item.id})">
+                            ₩${tax.toLocaleString()}
+                        </td>
+                        <td class="text-center">${item.payment_date ? formatDate(item.payment_date) : '-'}</td>
+                        <td class="text-center">${item.transfer_date ? formatDate(item.transfer_date) : '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 일괄 처리 버튼 (미완료 탭에만 표시)
+            const bulkActionButtons = !isCompleted ? `
+                <div class="mb-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" onclick="bulkPayment()">
+                        <i class="fas fa-download me-1"></i>선택 항목 입금 처리
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="bulkTransfer()">
+                        <i class="fas fa-upload me-1"></i>선택 항목 송금 처리
+                    </button>
                 </div>
-            `).join('');
+            ` : '';
+
+            const html = `
+                ${bulkActionButtons}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm" style="font-size: 0.75rem;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center">
+                                    <input type="checkbox" class="form-check-input" id="selectAll${containerId}" 
+                                           onchange="toggleSelectAll('${containerId}')" ${isCompleted ? 'style="display:none;"' : ''}>
+                                </th>
+                                <th>이용일</th>
+                                <th>예약번호</th>
+                                <th>호텔명</th>
+                                <th>예약업체</th>
+                                <th>투숙객</th>
+                                <th class="text-end">거래액<br><small>(USD / KRW)</small></th>
+                                <th class="text-end">호텔매입액<br><small>(USD / KRW)</small></th>
+                                <th class="text-end">아웃호텔매입액<br><small>(USD / KRW)</small></th>
+                                <th class="text-end">수배피(마진)</th>
+                                <th class="text-end" style="background-color: #ffe0cc;">부가세</th>
+                                <th class="text-center">입금일</th>
+                                <th class="text-center">송금일</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <th colspan="6" class="text-end">총액</th>
+                                <th class="text-end">
+                                    $${totalRevenueUSD.toLocaleString()}<br>
+                                    <small>₩${totalRevenueKRW.toLocaleString()}</small>
+                                </th>
+                                <th class="text-end text-danger">
+                                    $${totalHotelCostUSD.toLocaleString()}<br>
+                                    <small>₩${totalHotelCostKRW.toLocaleString()}</small>
+                                </th>
+                                <th class="text-end text-warning">
+                                    $${totalOutCostUSD.toLocaleString()}<br>
+                                    <small>₩${totalOutCostKRW.toLocaleString()}</small>
+                                </th>
+                                <th class="text-end text-success">₩${totalMargin.toLocaleString()}</th>
+                                <th class="text-end" style="background-color: #ffe0cc;">₩${totalTax.toLocaleString()}</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
 
             container.innerHTML = html;
         }
@@ -651,6 +732,98 @@
             }
         }
 
+        // 전체 선택/해제
+        let selectedSettlements = new Set();
+        
+        function toggleSelectAll(containerId) {
+            const selectAllCheckbox = document.getElementById('selectAll' + containerId);
+            const checkboxes = document.querySelectorAll(`#${containerId} .settlement-checkbox:not(:disabled)`);
+
+            selectedSettlements.clear();
+
+            if (selectAllCheckbox.checked) {
+                checkboxes.forEach(cb => {
+                    cb.checked = true;
+                    selectedSettlements.add(parseInt(cb.value));
+                });
+            } else {
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+
+            console.log('선택된 정산:', Array.from(selectedSettlements));
+        }
+
+        // 일괄 입금 처리
+        async function bulkPayment() {
+            const checkboxes = document.querySelectorAll('.settlement-checkbox:checked:not(:disabled)');
+            if (checkboxes.length === 0) {
+                alert('입금 처리할 항목을 선택해주세요.');
+                return;
+            }
+
+            const date = prompt('입금일을 입력하세요 (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+            if (!date) return;
+
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (!confirm(`${ids.length}건을 입금 처리하시겠습니까?`)) return;
+
+            try {
+                const response = await fetch('/api/hotel-settlements/bulk-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids, type: 'payment', date })
+                });
+
+                if (response.ok) {
+                    alert(`${ids.length}건이 입금 처리되었습니다.`);
+                    loadSettlements();
+                } else {
+                    alert('입금 처리에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('입금 처리 실패:', error);
+                alert('처리 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 일괄 송금 처리
+        async function bulkTransfer() {
+            const checkboxes = document.querySelectorAll('.settlement-checkbox:checked:not(:disabled)');
+            if (checkboxes.length === 0) {
+                alert('송금 처리할 항목을 선택해주세요.');
+                return;
+            }
+
+            const date = prompt('송금일을 입력하세요 (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+            if (!date) return;
+
+            const exchangeRate = prompt('환율을 입력하세요:', '1300');
+            if (!exchangeRate) return;
+
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+            if (!confirm(`${ids.length}건을 송금 처리하시겠습니까? (환율: ${exchangeRate})`)) return;
+
+            try {
+                const response = await fetch('/api/hotel-settlements/bulk-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids, type: 'transfer', date, exchange_rate: parseFloat(exchangeRate) })
+                });
+
+                if (response.ok) {
+                    alert(`${ids.length}건이 송금 처리되었습니다.`);
+                    loadSettlements();
+                } else {
+                    alert('송금 처리에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('송금 처리 실패:', error);
+                alert('처리 중 오류가 발생했습니다.');
+            }
+        }
+
         // 통화 포맷
         function formatCurrency(amount) {
             return '₩' + Math.round(amount).toLocaleString('ko-KR');
@@ -658,9 +831,8 @@
 
         // 날짜 포맷
         function formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ko-KR');
+            if (!dateString) return '-';
+            return dateString.split('T')[0];
         }
     </script>
 </body>
