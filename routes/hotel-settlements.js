@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
                 COALESCE(hr.agency_fee, 0) as margin
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
-            LEFT JOIN booking_agencies ba ON hr.agency_id = ba.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
             WHERE hr.status IN ('settlement', 'completed', 'voucher')
             ORDER BY hr.check_in_date DESC
         `;
@@ -78,7 +78,7 @@ router.get('/', async (req, res) => {
                 ba.agency_name,
                 COALESCE(SUM(hr.grand_total * COALESCE(hr.exchange_rate, 1300)), 0) as total
             FROM hotel_reservations hr
-            LEFT JOIN booking_agencies ba ON hr.agency_id = ba.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
             WHERE hr.status IN ('settlement', 'completed', 'voucher')
             AND hr.payment_date IS NULL
             GROUP BY ba.agency_name
@@ -176,7 +176,7 @@ router.get('/:id', async (req, res) => {
                 ) as guest_info
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
-            LEFT JOIN booking_agencies ba ON hr.agency_id = ba.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
             WHERE hr.id = $1
         `;
         
