@@ -459,24 +459,29 @@
             let totalHotelCostKRW = 0;
             let totalOutCostUSD = 0;
             let totalOutCostKRW = 0;
+            let totalAgencyFee = 0;
             let totalMargin = 0;
             let totalTax = 0;
 
             const rows = items.map(item => {
-                const revenueUSD = item.total_selling_price || 0;
-                const hotelCostUSD = item.total_cost_price || 0;
+                const revenueUSD = parseFloat(item.total_selling_price) || 0;
+                const hotelCostUSD = parseFloat(item.total_cost_price) || 0;
                 const outCostUSD = 0; // TODO: 외부 아웃호텔 매입액 필드 추가 필요
-                const exchangeRate = item.exchange_rate || 1300;
+                const exchangeRate = parseFloat(item.exchange_rate) || 1300;
+                const agencyFee = parseFloat(item.agency_fee) || 0;
                 
                 const revenueKRW = Math.round(revenueUSD * exchangeRate);
                 const hotelCostKRW = Math.round(hotelCostUSD * exchangeRate);
                 const outCostKRW = Math.round(outCostUSD * exchangeRate);
                 
-                // 수배피(마진) = 거래액 - 호텔매입액 - 아웃호텔매입액
-                const margin = revenueKRW - hotelCostKRW - outCostKRW;
+                // 수배피(마진) = 거래액(KRW) - 호텔매입액(KRW) - 아웃호텔매입액(KRW) - 수배피(KRW)
+                // 실제로는 백엔드에서 계산된 margin 사용
+                const margin = parseFloat(item.margin) || 0;
                 
-                // 부가세 = 수배피 × 10%
-                const tax = Math.round(margin * 0.1);
+                // 부가세 = 마진 × 10% - 수배피 × 10%
+                const marginTax = Math.round(margin * 0.1);
+                const agencyFeeTax = Math.round(agencyFee * 0.1);
+                const tax = marginTax - agencyFeeTax;
 
                 totalRevenueUSD += revenueUSD;
                 totalRevenueKRW += revenueKRW;
@@ -484,6 +489,7 @@
                 totalHotelCostKRW += hotelCostKRW;
                 totalOutCostUSD += outCostUSD;
                 totalOutCostKRW += outCostKRW;
+                totalAgencyFee += agencyFee;
                 totalMargin += margin;
                 totalTax += tax;
 
@@ -511,11 +517,17 @@
                             $${outCostUSD.toLocaleString()}<br>
                             <small class="text-muted">₩${outCostKRW.toLocaleString()}</small>
                         </td>
+                        <td class="text-end" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
+                            ₩${agencyFee.toLocaleString()}
+                        </td>
                         <td class="text-end ${margin > 0 ? 'text-success' : 'text-muted'}" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
                             ₩${margin.toLocaleString()}
                         </td>
                         <td class="text-end" style="cursor: pointer; background-color: #ffe0cc;" onclick="openSettlementModal(${item.id})">
                             ₩${tax.toLocaleString()}
+                        </td>
+                        <td class="text-center" style="cursor: pointer;" onclick="openSettlementModal(${item.id})">
+                            <small>₩${exchangeRate.toLocaleString()}</small>
                         </td>
                         <td class="text-center">${item.payment_date ? formatDate(item.payment_date) : '-'}</td>
                         <td class="text-center">${item.transfer_date ? formatDate(item.transfer_date) : '-'}</td>
@@ -553,8 +565,10 @@
                                 <th class="text-end">거래액<br><small>(USD / KRW)</small></th>
                                 <th class="text-end">호텔매입액<br><small>(USD / KRW)</small></th>
                                 <th class="text-end">아웃호텔매입액<br><small>(USD / KRW)</small></th>
-                                <th class="text-end">수배피(마진)</th>
+                                <th class="text-end">수배피</th>
+                                <th class="text-end">마진</th>
                                 <th class="text-end" style="background-color: #ffe0cc;">부가세</th>
+                                <th class="text-center">환율</th>
                                 <th class="text-center">입금일</th>
                                 <th class="text-center">송금일</th>
                             </tr>
@@ -577,9 +591,10 @@
                                     $${totalOutCostUSD.toLocaleString()}<br>
                                     <small>₩${totalOutCostKRW.toLocaleString()}</small>
                                 </th>
+                                <th class="text-end">₩${totalAgencyFee.toLocaleString()}</th>
                                 <th class="text-end text-success">₩${totalMargin.toLocaleString()}</th>
                                 <th class="text-end" style="background-color: #ffe0cc;">₩${totalTax.toLocaleString()}</th>
-                                <th colspan="2"></th>
+                                <th colspan="3"></th>
                             </tr>
                         </tfoot>
                     </table>
