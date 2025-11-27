@@ -604,34 +604,22 @@
             container.innerHTML = html;
         }
 
-        // 정산 상세 모달 열기
-        async function openSettlementModal(id) {
+        // 정산 리스트 클릭 시 수배관리 페이지로 이동
+        async function openSettlementModal(settlementId) {
             try {
-                const response = await fetch(`/api/hotel-settlements/${id}`);
+                // 정산 정보 조회하여 reservation_id 가져오기
+                const response = await fetch(`/api/hotel-settlements/${settlementId}`);
                 const settlement = await response.json();
-
-                document.getElementById('settlementId').value = settlement.id;
-                document.getElementById('detailReservationNumber').textContent = settlement.reservation_number || 'N/A';
-                document.getElementById('detailHotelName').textContent = settlement.hotel_name || 'N/A';
-                document.getElementById('detailAgencyName').textContent = settlement.agency_name || 'N/A';
-                document.getElementById('detailCheckIn').textContent = formatDate(settlement.check_in_date);
-                document.getElementById('detailCheckOut').textContent = formatDate(settlement.check_out_date);
-                document.getElementById('detailGuestName').textContent = settlement.guest_name || 'N/A';
-
-                document.getElementById('detailSellingPrice').value = settlement.total_selling_price || 0;
-                document.getElementById('detailCostPrice').value = settlement.total_cost_price || 0;
-                document.getElementById('detailExchangeRate').value = settlement.exchange_rate || 1300;
-                document.getElementById('detailAgencyFee').value = settlement.agency_fee || 0;
-                document.getElementById('detailPaymentDate').value = settlement.payment_date ? settlement.payment_date.split('T')[0] : '';
-                document.getElementById('detailTransferDate').value = settlement.transfer_date ? settlement.transfer_date.split('T')[0] : '';
-                document.getElementById('detailMemo').value = settlement.settlement_memo || '';
-
-                calculateProfit();
-
-                new bootstrap.Modal(document.getElementById('settlementModal')).show();
+                
+                if (settlement && settlement.reservation_id) {
+                    // 수배관리 페이지로 이동하면서 예약 ID를 쿼리 파라미터로 전달
+                    window.location.href = `/admin/hotel-assignments?reservation=${settlement.reservation_id}`;
+                } else {
+                    alert('예약 정보를 찾을 수 없습니다.');
+                }
             } catch (error) {
-                console.error('정산 상세 로드 실패:', error);
-                alert('정산 상세 정보를 불러오는데 실패했습니다.');
+                console.error('정산 정보 로드 실패:', error);
+                alert('정산 정보를 불러오는데 실패했습니다.');
             }
         }
 

@@ -1003,8 +1003,22 @@
         let currentFilter = 'all';
         
         // 페이지 로드 시
-        document.addEventListener('DOMContentLoaded', function() {
-            loadReservations();
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadReservations();
+            
+            // URL 쿼리 파라미터에서 reservation ID 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            const reservationId = urlParams.get('reservation');
+            
+            if (reservationId) {
+                console.log('🔍 정산에서 이동: 예약 ID', reservationId);
+                // 예약 목록이 로드된 후 해당 예약의 모달 열기
+                setTimeout(() => {
+                    openEditModal(parseInt(reservationId));
+                    // URL에서 쿼리 파라미터 제거 (깔끔하게)
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 500);
+            }
             
             // 모달이 닫힐 때 테이블 업데이트
             const editModal = document.getElementById('editReservationModal');
