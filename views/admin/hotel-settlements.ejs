@@ -373,17 +373,24 @@
         // 정산 데이터 불러오기
         async function loadSettlements() {
             try {
+                console.log('🔄 정산 데이터 로딩 시작...');
                 const response = await fetch('/api/hotel-settlements');
+                console.log('📡 API 응답 상태:', response.status);
+                
                 const data = await response.json();
+                console.log('📊 받은 데이터:', data);
                 
                 settlements = data.settlements || [];
                 stats = data.stats || {};
                 
+                console.log('✅ 정산 목록 개수:', settlements.length);
+                console.log('📈 통계 데이터:', stats);
+                
                 renderStats();
                 renderSettlements();
             } catch (error) {
-                console.error('정산 데이터 로드 실패:', error);
-                alert('정산 데이터를 불러오는데 실패했습니다.');
+                console.error('❌ 정산 데이터 로드 실패:', error);
+                alert('정산 데이터를 불러오는데 실패했습니다: ' + error.message);
             }
         }
 

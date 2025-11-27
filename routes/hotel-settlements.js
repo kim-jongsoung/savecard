@@ -4,7 +4,13 @@ const router = express.Router();
 // 호텔 정산 목록 및 통계 조회
 router.get('/', async (req, res) => {
     try {
+        console.log('🏨 호텔 정산 API 호출됨');
         const pool = req.app.get('pool');
+        
+        if (!pool) {
+            console.error('❌ DB Pool이 없습니다!');
+            return res.status(500).json({ error: 'Database pool not available' });
+        }
         
         // 1. 정산 목록 조회 (바우처 전송 완료 이상 상태 + 정산대기)
         const settlementsQuery = `
@@ -45,10 +51,14 @@ router.get('/', async (req, res) => {
         `;
         
         const settlementsResult = await pool.query(settlementsQuery);
+        console.log(`✅ 정산 목록 조회 완료: ${settlementsResult.rows.length}건`);
+        
         const settlements = settlementsResult.rows.map(row => ({
             ...row,
             guest_name: row.guest_info && row.guest_info.length > 0 ? row.guest_info[0].name : 'N/A'
         }));
+        
+        console.log('📋 정산 목록 샘플:', settlements.slice(0, 2));
         
         // 2. 통계 계산
         // 미입금 거래액 (payment_date가 null인 것)
@@ -121,7 +131,7 @@ router.get('/', async (req, res) => {
         const monthlyStatsResult = await pool.query(monthlyStatsQuery);
         const monthlyStats = monthlyStatsResult.rows[0];
         
-        res.json({
+        const responseData = {
             settlements,
             stats: {
                 unpaidRevenue,
@@ -132,7 +142,15 @@ router.get('/', async (req, res) => {
                 monthlyRevenue: parseFloat(monthlyStats.revenue) || 0,
                 monthlyCost: parseFloat(monthlyStats.cost) || 0
             }
+        };
+        
+        console.log('📤 응답 데이터:', {
+            settlementCount: settlements.length,
+            unpaidRevenue,
+            unpaidCost
         });
+        
+        res.json(responseData);
     } catch (error) {
         console.error('❌ 호텔 정산 목록 조회 실패:', error);
         res.status(500).json({ error: '정산 목록을 불러오는데 실패했습니다.' });
