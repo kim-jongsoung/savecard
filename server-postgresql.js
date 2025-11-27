@@ -1093,6 +1093,15 @@ app.get('/admin/hotel-assignments', requireAuth, (req, res) => {
     });
 });
 
+// 호텔 정산관리 페이지 ⭐ 신규
+app.get('/admin/hotel-settlements', requireAuth, (req, res) => {
+    res.render('admin/hotel-settlements', {
+        title: '호텔 정산관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'hotel-settlements'
+    });
+});
+
 // 임시 테스트 API (구체적인 라우트를 먼저 배치)
 app.get('/api/test', (req, res) => {
     res.json({ 
@@ -1222,6 +1231,7 @@ try {
     const hotelReservationsRoutes = require('./routes/hotel-reservations');
     const hotelAssignmentsRouter = require('./routes/hotel-assignments');
     const hotelAssignmentManagementRouter = require('./routes/hotel-assignment-management');
+    const hotelSettlementsRouter = require('./routes/hotel-settlements');
     
     app.set('pool', pool); // 라우트에서 pool 사용 가능하도록 설정
     
@@ -1229,12 +1239,13 @@ try {
     app.use('/api/hotel-reservations', hotelReservationsRoutes);
     app.use('/api/hotel-assignments', hotelAssignmentsRouter);
     app.use('/api/hotel-assignment-management', hotelAssignmentManagementRouter);
+    app.use('/api/hotel-settlements', hotelSettlementsRouter);
     
     // 공개 수배서 보기 링크 지원 (/hotel-assignment/view/TOKEN)
     // hotel-assignment-management.js의 /view/:token 라우트 사용
     app.use('/hotel-assignment', hotelAssignmentManagementRouter);
     
-    console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments, Management)');
+    console.log('✅ 호텔 API 라우트 연결 완료 (Promotions, Reservations, Assignments, Management, Settlements)');
 } catch (error) {
     console.error('❌ 호텔 API 라우트 연결 실패:', error);
     console.log('⚠️ 호텔 API를 사용할 수 없습니다.');
@@ -16609,6 +16620,37 @@ async function startServer() {
             console.log('✅ hotel_assignment_history.viewed_at 컬럼 추가 완료');
         } catch (viewedErr) {
             console.warn('⚠️  viewed_at 컬럼 추가 경고:', viewedErr.message);
+        }
+        
+        // 5. 호텔 정산 관련 컬럼 추가
+        console.log('🏨 호텔 정산 컬럼 추가 시작...');
+        const settlementColumns = [
+            { name: 'agency_fee', type: 'DECIMAL(10, 2) DEFAULT 0', comment: '수배피' },
+            { name: 'exchange_rate', type: 'DECIMAL(10, 4) DEFAULT 1300', comment: '환율' },
+            { name: 'payment_date', type: 'DATE', comment: '입금일' },
+            { name: 'transfer_date', type: 'DATE', comment: '송금일' },
+            { name: 'settlement_memo', type: 'TEXT', comment: '정산 메모' },
+            { name: 'grand_total', type: 'DECIMAL(10, 2)', comment: '총 판매가' }
+        ];
+        
+        for (const col of settlementColumns) {
+            try {
+                await pool.query(`
+                    DO $$ 
+                    BEGIN 
+                        IF NOT EXISTS (
+                            SELECT FROM information_schema.columns 
+                            WHERE table_name = 'hotel_reservations' AND column_name = '${col.name}'
+                        ) THEN
+                            ALTER TABLE hotel_reservations ADD COLUMN ${col.name} ${col.type};
+                            COMMENT ON COLUMN hotel_reservations.${col.name} IS '${col.comment}';
+                        END IF;
+                    END $$;
+                `);
+                console.log(`✅ hotel_reservations.${col.name} 컬럼 추가 완료`);
+            } catch (colErr) {
+                console.warn(`⚠️  ${col.name} 컬럼 추가 경고:`, colErr.message);
+            }
         }
         
         // 서버 먼저 시작

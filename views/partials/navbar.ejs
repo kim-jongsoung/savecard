@@ -51,7 +51,7 @@
                     <li class="nav-item"><a class="nav-link nav-link-disabled">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-inbox' ? 'active' : '' %>" href="/admin/hotel-inbox">인박스</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-assignments' ? 'active' : '' %>" href="/admin/hotel-assignments">수배관리</a></li>
-                    <li class="nav-item"><a class="nav-link nav-link-disabled">정산관리</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-settlements' ? 'active' : '' %>" href="/admin/hotel-settlements">정산관리</a></li>
                     <li class="nav-item"><span class="nav-divider">|</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotels' ? 'active' : '' %>" href="/admin/hotels">호텔관리</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'room-types' ? 'active' : '' %>" href="/admin/room-types">객실타입</a></li>
