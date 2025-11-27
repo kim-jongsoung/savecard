@@ -1035,7 +1035,7 @@
                 const data = await response.json();
                 
                 allReservations = data;
-                displayReservations(allReservations);
+                displayReservations(allReservations, false); // false = 기본 필터 적용
                 updateStats(allReservations);
                 
             } catch (error) {
@@ -1047,7 +1047,7 @@
         }
         
         // 예약 카드 표시
-        function displayReservations(reservations) {
+        function displayReservations(reservations, isSearching = false) {
             const container = document.getElementById('reservationsContainer');
             
             // 모달이 열려있으면 테이블 재생성 방지
@@ -1057,8 +1057,20 @@
                 return;
             }
             
-            // 캔슬 제외 (필터에서만 조회)
-            const activeReservations = reservations.filter(r => r.status !== 'cancelled');
+            // 기본 목록: 캔슬, 정산 이관, 완료 제외
+            // 검색 시: 모든 상태 표시 (검색 결과에 포함)
+            let activeReservations;
+            if (isSearching) {
+                // 검색 시에는 모든 상태 표시
+                activeReservations = reservations;
+            } else {
+                // 기본 목록에서는 정산 이관된 예약 제외
+                activeReservations = reservations.filter(r => 
+                    r.status !== 'cancelled' && 
+                    r.status !== 'settlement' && 
+                    r.status !== 'completed'
+                );
+            }
             
             if (activeReservations.length === 0) {
                 container.innerHTML = '';
@@ -1248,7 +1260,11 @@
                 filtered = filtered.filter(r => r.assigned_to === assignedToFilter);
             }
             
-            displayReservations(filtered);
+            // 검색어나 필터가 있으면 isSearching = true
+            const isSearching = searchTerm || currentFilter !== 'all' || startDate || endDate || 
+                               agencyFilter || countryFilter || hotelFilter || assignedToFilter;
+            
+            displayReservations(filtered, isSearching);
         }
         
         // 상세 필터 토글
