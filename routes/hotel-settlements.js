@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
             LEFT JOIN booking_agencies ba ON hr.agency_id = ba.id
-            WHERE hr.status IN ('바우처전송완료', '정산완료', '정산대기', 'voucher')
+            WHERE hr.status IN ('settlement', 'completed', 'voucher')
             ORDER BY hr.check_in_date DESC
         `;
         
@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
             SELECT 
                 COALESCE(SUM(grand_total * COALESCE(exchange_rate, 1300)), 0) as total
             FROM hotel_reservations
-            WHERE status IN ('바우처전송완료', '정산완료', '정산대기', 'voucher')
+            WHERE status IN ('settlement', 'completed', 'voucher')
             AND payment_date IS NULL
         `;
         const unpaidRevenueResult = await pool.query(unpaidRevenueQuery);
@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
                 COALESCE(SUM(hr.grand_total * COALESCE(hr.exchange_rate, 1300)), 0) as total
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.agency_id = ba.id
-            WHERE hr.status IN ('바우처전송완료', '정산완료', '정산대기', 'voucher')
+            WHERE hr.status IN ('settlement', 'completed', 'voucher')
             AND hr.payment_date IS NULL
             GROUP BY ba.agency_name
             HAVING SUM(hr.grand_total * COALESCE(hr.exchange_rate, 1300)) > 0
@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
             SELECT 
                 COALESCE(SUM(total_cost_price * COALESCE(exchange_rate, 1300)), 0) as total
             FROM hotel_reservations
-            WHERE status IN ('바우처전송완료', '정산완료', '정산대기', 'voucher')
+            WHERE status IN ('settlement', 'completed', 'voucher')
             AND transfer_date IS NULL
         `;
         const unpaidCostResult = await pool.query(unpaidCostQuery);
@@ -96,7 +96,7 @@ router.get('/', async (req, res) => {
                 COALESCE(SUM(hr.total_cost_price * COALESCE(hr.exchange_rate, 1300)), 0) as total
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id
-            WHERE hr.status IN ('바우처전송완료', '정산완료', '정산대기', 'voucher')
+            WHERE hr.status IN ('settlement', 'completed', 'voucher')
             AND hr.transfer_date IS NULL
             GROUP BY h.hotel_name
             HAVING SUM(hr.total_cost_price * COALESCE(hr.exchange_rate, 1300)) > 0
@@ -116,7 +116,7 @@ router.get('/', async (req, res) => {
             FROM hotel_reservations
             WHERE EXTRACT(YEAR FROM check_in_date) = EXTRACT(YEAR FROM CURRENT_DATE)
             AND EXTRACT(MONTH FROM check_in_date) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND status IN ('바우처전송완료', '정산완료', '정산대기', 'voucher')
+            AND status IN ('settlement', 'completed', 'voucher')
         `;
         const monthlyStatsResult = await pool.query(monthlyStatsQuery);
         const monthlyStats = monthlyStatsResult.rows[0];

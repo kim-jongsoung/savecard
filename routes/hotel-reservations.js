@@ -1105,7 +1105,7 @@ router.post('/:id/settlement', async (req, res) => {
                 exchange_rate = $4,
                 grand_total = $5,
                 settlement_memo = $6,
-                status = '정산대기',
+                status = 'settlement',
                 updated_at = NOW()
             WHERE id = $7
         `, [
