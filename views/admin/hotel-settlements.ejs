@@ -463,7 +463,12 @@
             let totalMargin = 0;
             let totalTax = 0;
 
-            const rows = items.map(item => {
+            const rows = items.map((item, index) => {
+                // 디버깅: 첫 번째 항목의 원본 데이터 확인
+                if (index === 0) {
+                    console.log('🔍 첫 번째 정산 항목 원본 데이터:', item);
+                }
+                
                 const revenueUSD = parseFloat(item.total_selling_price) || 0;
                 const hotelCostUSD = parseFloat(item.total_cost_price) || 0;
                 const outCostUSD = 0; // TODO: 외부 아웃호텔 매입액 필드 추가 필요
@@ -482,6 +487,20 @@
                 const marginTax = Math.round(margin * 0.1);
                 const agencyFeeTax = Math.round(agencyFee * 0.1);
                 const tax = marginTax - agencyFeeTax;
+                
+                // 디버깅: 첫 번째 항목의 계산된 값 확인
+                if (index === 0) {
+                    console.log('💰 계산된 값:', {
+                        revenueUSD,
+                        hotelCostUSD,
+                        exchangeRate,
+                        agencyFee,
+                        revenueKRW,
+                        hotelCostKRW,
+                        margin,
+                        tax
+                    });
+                }
 
                 totalRevenueUSD += revenueUSD;
                 totalRevenueKRW += revenueKRW;
