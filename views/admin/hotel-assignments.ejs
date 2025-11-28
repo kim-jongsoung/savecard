@@ -1023,6 +1023,7 @@
             // 모달이 닫힐 때 테이블 업데이트
             const editModal = document.getElementById('editReservationModal');
             const voucherModal = document.getElementById('voucherInvoiceModal');
+            const assignmentModal = document.getElementById('assignmentModal');
             
             if (editModal) {
                 editModal.addEventListener('hidden.bs.modal', function() {
@@ -1034,6 +1035,13 @@
             if (voucherModal) {
                 voucherModal.addEventListener('hidden.bs.modal', function() {
                     console.log('바우처 모달 닫힘 - 테이블 업데이트');
+                    displayReservations(allReservations);
+                });
+            }
+            
+            if (assignmentModal) {
+                assignmentModal.addEventListener('hidden.bs.modal', function() {
+                    console.log('수배서 모달 닫힘 - 테이블 업데이트');
                     displayReservations(allReservations);
                 });
             }
