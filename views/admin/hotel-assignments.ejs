@@ -1027,22 +1027,22 @@
             
             if (editModal) {
                 editModal.addEventListener('hidden.bs.modal', function() {
-                    console.log('예약 수정 모달 닫힘 - 테이블 업데이트');
-                    displayReservations(allReservations);
+                    console.log('예약 수정 모달 닫힘 - 서버에서 데이터 새로고침');
+                    loadReservations();
                 });
             }
             
             if (voucherModal) {
                 voucherModal.addEventListener('hidden.bs.modal', function() {
-                    console.log('바우처 모달 닫힘 - 테이블 업데이트');
-                    displayReservations(allReservations);
+                    console.log('바우처 모달 닫힘 - 서버에서 데이터 새로고침');
+                    loadReservations();
                 });
             }
             
             if (assignmentModal) {
                 assignmentModal.addEventListener('hidden.bs.modal', function() {
-                    console.log('수배서 모달 닫힘 - 테이블 업데이트');
-                    displayReservations(allReservations);
+                    console.log('수배서 모달 닫힘 - 서버에서 데이터 새로고침');
+                    loadReservations();
                 });
             }
         });
