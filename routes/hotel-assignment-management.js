@@ -242,7 +242,7 @@ router.get('/list/:reservationId', async (req, res) => {
     try {
         const query = await pool.query(`
             SELECT 
-                id, assignment_type, revision_number, assignment_token,
+                id, reservation_id, assignment_type, revision_number, assignment_token,
                 sent_to_email, sent_at, sent_by,
                 email_viewed, viewed_at, view_count,
                 changes_description, created_at
