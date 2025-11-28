@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
                 END as is_settled,
                 (hr.grand_total * COALESCE(hr.exchange_rate, 1300)) - 
                 (hr.total_cost_price * COALESCE(hr.exchange_rate, 1300)) - 
-                (COALESCE(hr.out_hotel_cost, 0) * COALESCE(hr.exchange_rate, 1300)) - 
+                (COALESCE(hr.out_hotel_cost, 0) * COALESCE(hr.exchange_rate, 1300)) + 
                 COALESCE(hr.agency_fee, 0) as margin
             FROM hotel_reservations hr
             LEFT JOIN hotels h ON hr.hotel_id = h.id

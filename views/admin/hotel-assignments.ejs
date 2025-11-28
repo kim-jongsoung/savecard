@@ -5285,17 +5285,26 @@
                 document.getElementById('settlementCheckOut').textContent = formatDateShort(reservation.check_out_date);
                 document.getElementById('settlementAgencyName').textContent = reservation.agency_name || 'N/A';
                 
-                // 금액 정보 (달러로 저장된 값 사용)
-                const sellingPrice = reservation.total_selling_price || reservation.grand_total || 0;
-                const costPrice = reservation.total_cost_price || 0;
-                const outHotelCost = reservation.out_hotel_cost || 0;
-                const agencyFee = reservation.agency_fee || 0;
+                // 금액 정보 (grand_total에서 디폴트값 가져오기)
+                const sellingPrice = reservation.grand_total || 0;  // 인보이스 총액
+                const costPrice = reservation.total_cost_price || 0;  // 호텔 매입액
+                const outHotelCost = reservation.out_hotel_cost || 0;  // 아웃호텔 매입액
+                const agencyFee = reservation.agency_fee || 0;  // 수배피
+                const exchangeRate = reservation.exchange_rate || todayExchangeRate;  // 환율
+                
+                console.log('📊 정산 이관 디폴트값:', {
+                    sellingPrice,
+                    costPrice,
+                    outHotelCost,
+                    agencyFee,
+                    exchangeRate
+                });
                 
                 document.getElementById('settlementSellingPrice').value = sellingPrice;
                 document.getElementById('settlementCostPrice').value = costPrice;
                 document.getElementById('settlementOutHotelCost').value = outHotelCost;
                 document.getElementById('settlementAgencyFee').value = agencyFee;
-                document.getElementById('settlementExchangeRate').value = todayExchangeRate;
+                document.getElementById('settlementExchangeRate').value = exchangeRate;
                 
                 // 마진 계산 (입력 필드가 채워진 후)
                 calculateSettlementMargin();
@@ -5319,8 +5328,21 @@
             const revenueKRW = Math.round(sellingPrice * exchangeRate);
             const costKRW = Math.round(costPrice * exchangeRate);
             const outHotelCostKRW = Math.round(outHotelCost * exchangeRate);
-            const margin = revenueKRW - costKRW - outHotelCostKRW - agencyFee;
-            const tax = Math.round(margin * 0.1) - Math.round(agencyFee * 0.1);
+            
+            // 마진 = 거래액(KRW) - 호텔매입액(KRW) - 아웃호텔매입액(KRW) + 수배피(KRW)
+            const margin = revenueKRW - costKRW - outHotelCostKRW + agencyFee;
+            
+            // 부가세 = 마진의 10%
+            const tax = Math.round(margin * 0.1);
+            
+            console.log('💰 마진 계산:', {
+                revenueKRW,
+                costKRW,
+                outHotelCostKRW,
+                agencyFee,
+                margin,
+                tax
+            });
             
             document.getElementById('settlementRevenueKRW').value = formatCurrency(revenueKRW);
             document.getElementById('settlementCostKRW').value = formatCurrency(costKRW);
@@ -5492,8 +5514,8 @@
                             <div class="alert alert-info mb-0">
                                 <small>
                                     <strong>💡 계산 공식:</strong><br>
-                                    마진 = 거래액(KRW) - 호텔매입액(KRW) - 아웃호텔매입액(KRW) - 수배피(KRW)<br>
-                                    부가세 = (마진 × 10%) - (수배피 × 10%)
+                                    마진 = 거래액(KRW) - 호텔매입액(KRW) - 아웃호텔매입액(KRW) + 수배피(KRW)<br>
+                                    부가세 = 마진 × 10%
                                 </small>
                             </div>
                         </div>
