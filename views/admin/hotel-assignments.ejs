@@ -3590,7 +3590,17 @@
                     alert('수배서 이력을 불러올 수 없습니다.');
                     return;
                 }
-                const history = await historyResponse.json();
+                const historyData = await historyResponse.json();
+                
+                console.log('📋 수배서 이력 응답:', historyData);
+                
+                // history 배열 추출
+                const history = historyData.history || historyData;
+                if (!Array.isArray(history)) {
+                    console.error('❌ history가 배열이 아닙니다:', history);
+                    alert('수배서 이력 형식이 올바르지 않습니다.');
+                    return;
+                }
                 
                 // 특정 수배서 찾기
                 const assignment = history.find(h => h.id === parseInt(assignmentId));
