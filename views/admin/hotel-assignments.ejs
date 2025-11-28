@@ -5347,6 +5347,8 @@
                 const response = await fetch(`/api/hotel-reservations/${reservationId}`);
                 const reservation = await response.json();
                 
+                console.log('📋 정산 이관 예약 정보:', reservation);
+                
                 // 오늘 환율 가져오기
                 let todayExchangeRate = 1300; // 기본값
                 try {
@@ -5362,13 +5364,62 @@
                     console.warn('환율 조회 실패, 기본값 사용:', error);
                 }
                 
-                // 모달에 데이터 채우기
+                // 기본 예약 정보
                 document.getElementById('settlementReservationId').value = reservationId;
                 document.getElementById('settlementReservationNumber').textContent = reservation.reservation_number || 'N/A';
+                document.getElementById('settlementAgencyName').textContent = reservation.booking_agency_name || reservation.agency_name || 'N/A';
+                document.getElementById('settlementGuestName').textContent = reservation.guest_name || 'N/A';
                 document.getElementById('settlementHotelName').textContent = reservation.hotel_name || 'N/A';
+                
+                // 룸타입 (rooms 배열에서 가져오기)
+                const rooms = reservation.rooms || [];
+                const roomTypes = rooms.map(r => r.hotel_room_name || r.room_type_name || 'N/A').join(', ');
+                document.getElementById('settlementRoomType').textContent = roomTypes || 'N/A';
+                
+                // 체크인/체크아웃/박수
                 document.getElementById('settlementCheckIn').textContent = formatDateShort(reservation.check_in_date);
                 document.getElementById('settlementCheckOut').textContent = formatDateShort(reservation.check_out_date);
-                document.getElementById('settlementAgencyName').textContent = reservation.agency_name || 'N/A';
+                
+                // 박수 계산
+                const checkIn = new Date(reservation.check_in_date);
+                const checkOut = new Date(reservation.check_out_date);
+                const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                document.getElementById('settlementNights').textContent = nights || 'N/A';
+                
+                // 프로모션
+                document.getElementById('settlementPromotion').textContent = reservation.promotion_name || '없음';
+                
+                // 거래액 상세 내역
+                document.getElementById('settlementDetailHotelCost').textContent = (reservation.hotel_cost || 0).toFixed(2);
+                document.getElementById('settlementDetailBreakfastCost').textContent = (reservation.breakfast_cost || 0).toFixed(2);
+                document.getElementById('settlementDetailInHotelExtra').textContent = (reservation.in_hotel_extra_cost || 0).toFixed(2);
+                document.getElementById('settlementDetailOutHotelExtra').textContent = (reservation.out_hotel_extra_cost || 0).toFixed(2);
+                
+                // 추가비 항목 상세 표시
+                const extraDetails = document.getElementById('settlementExtraDetails');
+                let extraHTML = '';
+                
+                // 인호텔 추가비 항목
+                if (reservation.in_hotel_extras && reservation.in_hotel_extras.length > 0) {
+                    extraHTML += '<div class="alert alert-info py-2 px-3 small mb-2">';
+                    extraHTML += '<strong>🏨 인호텔 추가비 항목:</strong><br>';
+                    reservation.in_hotel_extras.forEach(extra => {
+                        extraHTML += `• ${extra.item_name}: $${(extra.unit_price || 0).toFixed(2)} × ${extra.quantity || 1} = $${(extra.total_price || 0).toFixed(2)}<br>`;
+                    });
+                    extraHTML += '</div>';
+                }
+                
+                // 아웃호텔 추가비 항목
+                if (reservation.out_hotel_extras && reservation.out_hotel_extras.length > 0) {
+                    extraHTML += '<div class="alert alert-warning py-2 px-3 small mb-2">';
+                    extraHTML += '<strong>🏢 아웃호텔 추가비 항목:</strong><br>';
+                    reservation.out_hotel_extras.forEach(extra => {
+                        extraHTML += `• ${extra.item_name}: $${(extra.unit_price || 0).toFixed(2)} × ${extra.quantity || 1} = $${(extra.total_price || 0).toFixed(2)}<br>`;
+                    });
+                    extraHTML += '</div>';
+                }
+                
+                extraDetails.innerHTML = extraHTML || '<p class="text-muted small mb-0">추가비 항목 없음</p>';
                 
                 // 금액 정보 (grand_total에서 디폴트값 가져오기)
                 const sellingPrice = reservation.grand_total || 0;  // 인보이스 총액
@@ -5512,17 +5563,66 @@
                             <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>예약 정보</h6>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="mb-2"><strong>예약번호:</strong> <span id="settlementReservationNumber"></span></p>
-                                    <p class="mb-2"><strong>호텔명:</strong> <span id="settlementHotelName"></span></p>
-                                    <p class="mb-2"><strong>거래처:</strong> <span id="settlementAgencyName"></span></p>
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>예약번호:</strong> <span id="settlementReservationNumber"></span></p>
                                 </div>
-                                <div class="col-md-6">
-                                    <p class="mb-2"><strong>체크인:</strong> <span id="settlementCheckIn"></span></p>
-                                    <p class="mb-2"><strong>체크아웃:</strong> <span id="settlementCheckOut"></span></p>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>거래처명:</strong> <span id="settlementAgencyName" class="text-primary"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>고객명:</strong> <span id="settlementGuestName"></span></p>
                                 </div>
                             </div>
+                            
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>호텔명:</strong> <span id="settlementHotelName" class="text-info"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>룸타입:</strong> <span id="settlementRoomType"></span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>체크인:</strong> <span id="settlementCheckIn"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>체크아웃:</strong> <span id="settlementCheckOut"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="mb-1"><strong>박수:</strong> <span id="settlementNights"></span>박</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-2">
+                                <div class="col-md-12">
+                                    <p class="mb-1"><strong>프로모션:</strong> <span id="settlementPromotion" class="text-success"></span></p>
+                                </div>
+                            </div>
+                            
+                            <hr class="my-2">
+                            
+                            <!-- 거래액 상세 내역 -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <p class="mb-2"><strong class="text-primary">💰 실제 거래액 내역:</strong></p>
+                                </div>
+                            </div>
+                            <div class="row small">
+                                <div class="col-md-6">
+                                    <p class="mb-1">• 호텔비: $<span id="settlementDetailHotelCost"></span></p>
+                                    <p class="mb-1">• 조식비: $<span id="settlementDetailBreakfastCost"></span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1">• 인호텔 추가비: $<span id="settlementDetailInHotelExtra"></span></p>
+                                    <p class="mb-1">• 아웃호텔 추가비: $<span id="settlementDetailOutHotelExtra"></span></p>
+                                </div>
+                            </div>
+                            
+                            <!-- 추가비 항목 상세 -->
+                            <div id="settlementExtraDetails" class="mt-2"></div>
                         </div>
                     </div>
                     
