@@ -1067,6 +1067,7 @@ router.post('/:id/settlement', async (req, res) => {
     const {
         total_selling_price,
         total_cost_price,
+        out_hotel_cost,
         agency_fee,
         exchange_rate,
         settlement_memo
@@ -1092,8 +1093,18 @@ router.post('/:id/settlement', async (req, res) => {
             });
         }
         
-        // grand_total 계산 (판매가 + 수배피를 원화로)
+        // grand_total 계산 (판매가)
         const grandTotal = parseFloat(total_selling_price) || 0;
+        
+        console.log('📊 정산 이관 데이터:', {
+            id,
+            total_selling_price,
+            total_cost_price,
+            out_hotel_cost,
+            agency_fee,
+            exchange_rate,
+            settlement_memo
+        });
         
         // 정산 정보 업데이트 및 상태 변경
         await client.query(`
@@ -1101,16 +1112,18 @@ router.post('/:id/settlement', async (req, res) => {
             SET 
                 total_selling_price = $1,
                 total_cost_price = $2,
-                agency_fee = $3,
-                exchange_rate = $4,
-                grand_total = $5,
-                settlement_memo = $6,
+                out_hotel_cost = $3,
+                agency_fee = $4,
+                exchange_rate = $5,
+                grand_total = $6,
+                settlement_memo = $7,
                 status = 'settlement',
                 updated_at = NOW()
-            WHERE id = $7
+            WHERE id = $8
         `, [
             total_selling_price,
             total_cost_price,
+            out_hotel_cost || 0,
             agency_fee,
             exchange_rate,
             grandTotal,

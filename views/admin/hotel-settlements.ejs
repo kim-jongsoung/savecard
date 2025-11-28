@@ -471,7 +471,7 @@
                 
                 const revenueUSD = parseFloat(item.total_selling_price) || 0;
                 const hotelCostUSD = parseFloat(item.total_cost_price) || 0;
-                const outCostUSD = 0; // TODO: 외부 아웃호텔 매입액 필드 추가 필요
+                const outCostUSD = parseFloat(item.out_hotel_cost) || 0;
                 const exchangeRate = parseFloat(item.exchange_rate) || 1300;
                 const agencyFee = parseFloat(item.agency_fee) || 0;
                 

@@ -16799,6 +16799,20 @@ async function startServer() {
                 } catch (closedErr) {
                     console.warn('⚠️ 마감날짜 테이블 생성 경고:', closedErr.message);
                 }
+                
+                // 호텔 정산 - 아웃호텔 매입액 컬럼 추가
+                try {
+                    await pool.query(`
+                        ALTER TABLE hotel_reservations 
+                        ADD COLUMN IF NOT EXISTS out_hotel_cost DECIMAL(10,2) DEFAULT 0
+                    `);
+                    await pool.query(`
+                        COMMENT ON COLUMN hotel_reservations.out_hotel_cost IS '외부 아웃호텔 매입액 (USD)'
+                    `);
+                    console.log('✅ hotel_reservations.out_hotel_cost 컬럼 추가 완료');
+                } catch (outHotelErr) {
+                    console.warn('⚠️ out_hotel_cost 컬럼 추가 경고:', outHotelErr.message);
+                }
             } catch (error) {
                 console.error('⚠️ 데이터베이스 초기화 실패 (서버는 계속 실행):', error.message);
             }

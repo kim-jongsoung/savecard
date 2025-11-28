@@ -5316,16 +5316,21 @@
         function calculateSettlementMargin() {
             const sellingPrice = parseFloat(document.getElementById('settlementSellingPrice').value) || 0;
             const costPrice = parseFloat(document.getElementById('settlementCostPrice').value) || 0;
+            const outHotelCost = parseFloat(document.getElementById('settlementOutHotelCost').value) || 0;
             const agencyFee = parseFloat(document.getElementById('settlementAgencyFee').value) || 0;
             const exchangeRate = parseFloat(document.getElementById('settlementExchangeRate').value) || 1300;
             
             const revenueKRW = Math.round(sellingPrice * exchangeRate);
             const costKRW = Math.round(costPrice * exchangeRate);
-            const margin = revenueKRW - costKRW - agencyFee;
+            const outHotelCostKRW = Math.round(outHotelCost * exchangeRate);
+            const margin = revenueKRW - costKRW - outHotelCostKRW - agencyFee;
+            const tax = Math.round(margin * 0.1) - Math.round(agencyFee * 0.1);
             
-            document.getElementById('settlementRevenueKRW').textContent = formatCurrency(revenueKRW);
-            document.getElementById('settlementCostKRW').textContent = formatCurrency(costKRW);
+            document.getElementById('settlementRevenueKRW').value = formatCurrency(revenueKRW);
+            document.getElementById('settlementCostKRW').value = formatCurrency(costKRW);
+            document.getElementById('settlementOutHotelCostKRW').value = formatCurrency(outHotelCostKRW);
             document.getElementById('settlementMargin').textContent = formatCurrency(margin);
+            document.getElementById('settlementTax').textContent = formatCurrency(tax);
         }
         
         // 정산 이관 처리
@@ -5333,8 +5338,10 @@
             const reservationId = document.getElementById('settlementReservationId').value;
             const sellingPrice = parseFloat(document.getElementById('settlementSellingPrice').value) || 0;
             const costPrice = parseFloat(document.getElementById('settlementCostPrice').value) || 0;
+            const outHotelCost = parseFloat(document.getElementById('settlementOutHotelCost').value) || 0;
             const agencyFee = parseFloat(document.getElementById('settlementAgencyFee').value) || 0;
             const exchangeRate = parseFloat(document.getElementById('settlementExchangeRate').value) || 1300;
+            const memo = document.getElementById('settlementMemo').value || '';
             
             if (!confirm('정산으로 이관하시겠습니까?\n\n이관 후 정산관리 페이지로 이동하며, 수배관리 목록에서는 검색 시에만 표시됩니다.')) {
                 return;
@@ -5355,8 +5362,10 @@
                     body: JSON.stringify({
                         total_selling_price: sellingPrice,
                         total_cost_price: costPrice,
+                        out_hotel_cost: outHotelCost,
                         agency_fee: agencyFee,
-                        exchange_rate: exchangeRate
+                        exchange_rate: exchangeRate,
+                        settlement_memo: memo
                     })
                 });
                 
@@ -5414,50 +5423,90 @@
                         </div>
                     </div>
                     
-                    <!-- 정산 금액 (읽기 전용) -->
+                    <!-- 정산 금액 (수정 가능) -->
                     <div class="card mb-3">
                         <div class="card-header bg-light">
-                            <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>정산 금액 정보</h6>
+                            <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>정산 금액 정보 <small class="text-muted">(수정 가능)</small></h6>
                         </div>
                         <div class="card-body">
-                            <input type="hidden" id="settlementSellingPrice">
-                            <input type="hidden" id="settlementCostPrice">
-                            <input type="hidden" id="settlementAgencyFee">
-                            <input type="hidden" id="settlementExchangeRate">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>거래액 (USD)</strong></label>
+                                    <input type="number" class="form-control" id="settlementSellingPrice" step="0.01" onchange="calculateSettlementMargin()">
+                                    <small class="text-muted">인보이스 총액</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>거래액 (KRW)</strong></label>
+                                    <input type="text" class="form-control" id="settlementRevenueKRW" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>호텔매입액 (USD)</strong></label>
+                                    <input type="number" class="form-control" id="settlementCostPrice" step="0.01" onchange="calculateSettlementMargin()">
+                                    <small class="text-muted">호텔 인보이스 금액</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>호텔매입액 (KRW)</strong></label>
+                                    <input type="text" class="form-control" id="settlementCostKRW" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>아웃호텔 매입액 (USD)</strong></label>
+                                    <input type="number" class="form-control" id="settlementOutHotelCost" step="0.01" value="0" onchange="calculateSettlementMargin()">
+                                    <small class="text-muted">외부 호텔 비용</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>아웃호텔 매입액 (KRW)</strong></label>
+                                    <input type="text" class="form-control" id="settlementOutHotelCostKRW" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>수배피 (KRW)</strong></label>
+                                    <input type="number" class="form-control" id="settlementAgencyFee" step="1" onchange="calculateSettlementMargin()">
+                                    <small class="text-muted">수배 수수료</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>적용 환율</strong></label>
+                                    <input type="number" class="form-control" id="settlementExchangeRate" step="0.01" onchange="calculateSettlementMargin()">
+                                    <small class="text-muted">오늘 환율 자동 적용</small>
+                                </div>
+                            </div>
+                            
+                            <hr>
                             
                             <div class="table-responsive">
                                 <table class="table table-sm">
-                                    <tr>
-                                        <th width="30%">거래액 (USD)</th>
-                                        <td><span id="settlementSellingPriceDisplay"></span></td>
-                                    </tr>
-                                    <tr>
-                                        <th>호텔매입액 (USD)</th>
-                                        <td><span id="settlementCostPriceDisplay"></span></td>
-                                    </tr>
-                                    <tr>
-                                        <th>수배피 (KRW)</th>
-                                        <td><span id="settlementAgencyFeeDisplay"></span></td>
-                                    </tr>
-                                    <tr>
-                                        <th>적용 환율</th>
-                                        <td><span id="settlementExchangeRateDisplay"></span> <small class="text-muted">(오늘 환율)</small></td>
-                                    </tr>
-                                    <tr class="table-light">
-                                        <th>거래액 (KRW)</th>
-                                        <td><strong><span id="settlementRevenueKRW"></span></strong></td>
-                                    </tr>
-                                    <tr class="table-light">
-                                        <th>매입액 (KRW)</th>
-                                        <td><strong><span id="settlementCostKRW"></span></strong></td>
-                                    </tr>
                                     <tr class="table-success">
-                                        <th>마진</th>
-                                        <td><strong class="text-success"><span id="settlementMargin"></span></strong></td>
+                                        <th width="50%">마진 (KRW)</th>
+                                        <td><strong><span id="settlementMargin"></span></strong></td>
+                                    </tr>
+                                    <tr class="table-info">
+                                        <th>부가세 (10%)</th>
+                                        <td><strong><span id="settlementTax"></span></strong></td>
                                     </tr>
                                 </table>
                             </div>
+                            
+                            <div class="alert alert-info mb-0">
+                                <small>
+                                    <strong>💡 계산 공식:</strong><br>
+                                    마진 = 거래액(KRW) - 호텔매입액(KRW) - 아웃호텔매입액(KRW) - 수배피(KRW)<br>
+                                    부가세 = (마진 × 10%) - (수배피 × 10%)
+                                </small>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <!-- 메모 -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>정산 메모</strong></label>
+                        <textarea class="form-control" id="settlementMemo" rows="2" placeholder="정산 관련 메모를 입력하세요"></textarea>
                     </div>
                     
                     <div class="alert alert-success">
