@@ -3568,33 +3568,58 @@
         // 수배서 미리보기 (열람 상태 변경 없이)
         async function previewAssignment(assignmentId) {
             try {
-                // 수배서 데이터 조회
-                const response = await fetch(`/api/hotel-assignments/${assignmentId}`);
-                if (!response.ok) {
-                    alert('수배서 정보를 불러올 수 없습니다.');
+                console.log('📄 수배서 미리보기 시작:', assignmentId);
+                
+                // 현재 예약 ID가 있는지 확인
+                if (!window.currentAssignmentReservationId) {
+                    alert('예약 정보를 찾을 수 없습니다.');
                     return;
                 }
-                const assignment = await response.json();
+                
+                // 수배서 이력 조회
+                const historyResponse = await fetch(`/api/hotel-assignments/${window.currentAssignmentReservationId}/history`);
+                if (!historyResponse.ok) {
+                    alert('수배서 이력을 불러올 수 없습니다.');
+                    return;
+                }
+                const history = await historyResponse.json();
+                
+                // 특정 수배서 찾기
+                const assignment = history.find(h => h.id === parseInt(assignmentId));
+                if (!assignment) {
+                    alert('해당 수배서를 찾을 수 없습니다.');
+                    return;
+                }
+                
+                console.log('✅ 수배서 데이터:', assignment);
                 
                 // 예약 정보 조회
-                const resResponse = await fetch(`/api/hotel-reservations/${assignment.reservation_id}`);
+                const resResponse = await fetch(`/api/hotel-reservations/${window.currentAssignmentReservationId}`);
                 if (!resResponse.ok) {
                     alert('예약 정보를 불러올 수 없습니다.');
                     return;
                 }
                 const reservation = await resResponse.json();
                 
+                console.log('✅ 예약 데이터:', reservation);
+                
                 // 수배서 HTML 생성
                 const assignmentHTML = generateA4AssignmentPreview(reservation, [assignment]);
                 
                 // 새 창에서 미리보기
                 const previewWindow = window.open('', '_blank');
+                if (!previewWindow) {
+                    alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.');
+                    return;
+                }
                 previewWindow.document.write(assignmentHTML);
                 previewWindow.document.close();
                 
+                console.log('✅ 미리보기 완료');
+                
             } catch (error) {
-                console.error('미리보기 오류:', error);
-                alert('❌ 미리보기를 여는 중 오류가 발생했습니다.');
+                console.error('❌ 미리보기 오류:', error);
+                alert('❌ 미리보기를 여는 중 오류가 발생했습니다: ' + error.message);
             }
         }
         
