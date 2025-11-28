@@ -5377,11 +5377,20 @@
                 document.getElementById('settlementReservationId').value = reservationId;
                 document.getElementById('settlementReservationNumber').textContent = reservation.reservation_number || 'N/A';
                 document.getElementById('settlementAgencyName').textContent = reservation.booking_agency_name || reservation.agency_name || 'N/A';
-                document.getElementById('settlementGuestName').textContent = reservation.guest_name || 'N/A';
+                
+                // 고객명 (rooms 배열의 첫번째 투숙객 이름)
+                const rooms = reservation.rooms || [];
+                let guestName = 'N/A';
+                if (rooms.length > 0 && rooms[0].guests && rooms[0].guests.length > 0) {
+                    const firstGuest = rooms[0].guests[0];
+                    guestName = `${firstGuest.english_first_name || ''} ${firstGuest.english_last_name || ''}`.trim() || 
+                                firstGuest.korean_name || 'N/A';
+                }
+                document.getElementById('settlementGuestName').textContent = guestName;
+                
                 document.getElementById('settlementHotelName').textContent = reservation.hotel_name || 'N/A';
                 
                 // 룸타입 (rooms 배열에서 가져오기)
-                const rooms = reservation.rooms || [];
                 const roomTypes = rooms.map(r => r.hotel_room_name || r.room_type_name || 'N/A').join(', ');
                 document.getElementById('settlementRoomType').textContent = roomTypes || 'N/A';
                 
@@ -5395,8 +5404,14 @@
                 const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
                 document.getElementById('settlementNights').textContent = nights || 'N/A';
                 
-                // 프로모션
-                document.getElementById('settlementPromotion').textContent = reservation.promotion_name || '없음';
+                // 프로모션 (rate_condition 테이블 조인 필요 - 일단 예약 데이터에서)
+                let promotionName = '없음';
+                if (reservation.promotion_code) {
+                    promotionName = reservation.promotion_code;
+                } else if (reservation.rate_condition_name) {
+                    promotionName = reservation.rate_condition_name;
+                }
+                document.getElementById('settlementPromotion').textContent = promotionName;
                 
                 // 거래액 상세 내역 (예약 데이터에서 가져오기)
                 const hotelCost = parseFloat(reservation.total_room_rate || 0);
