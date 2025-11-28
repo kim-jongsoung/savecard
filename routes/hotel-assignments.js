@@ -261,10 +261,14 @@ router.get('/:reservationId/history', async (req, res) => {
     
     try {
         const result = await pool.query(`
-            SELECT *
-            FROM hotel_assignment_history
+            SELECT 
+                id, reservation_id, assignment_type, revision_number, assignment_token,
+                sent_to_email, sent_at, sent_by,
+                email_viewed, viewed_at, view_count,
+                changes_description, created_at
+            FROM hotel_assignments
             WHERE reservation_id = $1
-            ORDER BY sent_at DESC
+            ORDER BY created_at DESC
         `, [reservationId]);
         
         res.json({
