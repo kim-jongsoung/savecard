@@ -3501,7 +3501,7 @@
                     ` : ''}
 
                     <div class="btn-group btn-group-sm w-100 mb-2" role="group">
-                        <button class="btn btn-outline-secondary" onclick="previewAssignment('${assignment.id}')">
+                        <button class="btn btn-outline-secondary" onclick="previewAssignment('${assignment.id}', '${assignment.reservation_id}')">
                             <i class="fas fa-eye me-1"></i>미리보기
                         </button>
                         <button class="btn btn-outline-primary" onclick="sendAssignmentEmailById('${assignment.id}', '${assignment.assignment_token}')">
@@ -3574,18 +3574,23 @@
         }
         
         // 수배서 미리보기 (열람 상태 변경 없이)
-        async function previewAssignment(assignmentId) {
+        async function previewAssignment(assignmentId, reservationId) {
             try {
-                console.log('📄 수배서 미리보기 시작:', assignmentId);
+                console.log('📄 수배서 미리보기 시작:', { assignmentId, reservationId });
                 
-                // 현재 예약 ID가 있는지 확인
-                if (!window.currentAssignmentReservationId) {
+                // 예약 ID 확인 (파라미터 또는 전역 변수)
+                const targetReservationId = reservationId || window.currentAssignmentReservationId;
+                
+                if (!targetReservationId) {
+                    console.error('❌ 예약 ID를 찾을 수 없습니다');
                     alert('예약 정보를 찾을 수 없습니다.');
                     return;
                 }
                 
+                console.log('✅ 사용할 예약 ID:', targetReservationId);
+                
                 // 수배서 이력 조회
-                const historyResponse = await fetch(`/api/hotel-assignments/${window.currentAssignmentReservationId}/history`);
+                const historyResponse = await fetch(`/api/hotel-assignments/${targetReservationId}/history`);
                 if (!historyResponse.ok) {
                     alert('수배서 이력을 불러올 수 없습니다.');
                     return;
@@ -3605,6 +3610,7 @@
                 // 특정 수배서 찾기
                 const assignment = history.find(h => h.id === parseInt(assignmentId));
                 if (!assignment) {
+                    console.error('❌ 수배서를 찾을 수 없습니다. assignmentId:', assignmentId, 'history:', history);
                     alert('해당 수배서를 찾을 수 없습니다.');
                     return;
                 }
@@ -3612,7 +3618,7 @@
                 console.log('✅ 수배서 데이터:', assignment);
                 
                 // 예약 정보 조회
-                const resResponse = await fetch(`/api/hotel-reservations/${window.currentAssignmentReservationId}`);
+                const resResponse = await fetch(`/api/hotel-reservations/${targetReservationId}`);
                 if (!resResponse.ok) {
                     alert('예약 정보를 불러올 수 없습니다.');
                     return;
