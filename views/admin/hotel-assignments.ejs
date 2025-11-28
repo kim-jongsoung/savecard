@@ -5286,22 +5286,18 @@
                 document.getElementById('settlementAgencyName').textContent = reservation.agency_name || 'N/A';
                 
                 // 금액 정보 (달러로 저장된 값 사용)
-                const sellingPrice = reservation.total_selling_price || 0;
+                const sellingPrice = reservation.total_selling_price || reservation.grand_total || 0;
                 const costPrice = reservation.total_cost_price || 0;
+                const outHotelCost = reservation.out_hotel_cost || 0;
                 const agencyFee = reservation.agency_fee || 0;
                 
                 document.getElementById('settlementSellingPrice').value = sellingPrice;
                 document.getElementById('settlementCostPrice').value = costPrice;
+                document.getElementById('settlementOutHotelCost').value = outHotelCost;
                 document.getElementById('settlementAgencyFee').value = agencyFee;
                 document.getElementById('settlementExchangeRate').value = todayExchangeRate;
                 
-                // 표시용 데이터
-                document.getElementById('settlementSellingPriceDisplay').textContent = `$${sellingPrice.toLocaleString()}`;
-                document.getElementById('settlementCostPriceDisplay').textContent = `$${costPrice.toLocaleString()}`;
-                document.getElementById('settlementAgencyFeeDisplay').textContent = `₩${agencyFee.toLocaleString()}`;
-                document.getElementById('settlementExchangeRateDisplay').textContent = `₩${todayExchangeRate.toLocaleString()}`;
-                
-                // 마진 계산
+                // 마진 계산 (입력 필드가 채워진 후)
                 calculateSettlementMargin();
                 
                 // 모달 열기

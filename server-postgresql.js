@@ -17431,6 +17431,48 @@ async function startServer() {
 
         // ==================== 환율 관리 API ====================
         
+        // 최신 환율 조회 API (오늘 또는 가장 최근)
+        app.get('/api/exchange-rates/latest/:currency', requireAuth, async (req, res) => {
+            try {
+                const { currency } = req.params;
+                
+                // 오늘 날짜
+                const today = new Date().toISOString().split('T')[0];
+                
+                // 오늘 또는 가장 최근 환율 조회
+                const result = await pool.query(`
+                    SELECT * FROM exchange_rates
+                    WHERE currency_code = $1
+                    AND rate_date <= $2
+                    ORDER BY rate_date DESC, rate_time DESC
+                    LIMIT 1
+                `, [currency, today]);
+                
+                if (result.rows.length === 0) {
+                    return res.json({
+                        success: false,
+                        message: `${currency} 환율 정보가 없습니다.`
+                    });
+                }
+                
+                res.json({
+                    success: true,
+                    data: {
+                        rate: parseFloat(result.rows[0].rate),
+                        date: result.rows[0].rate_date,
+                        time: result.rows[0].rate_time
+                    }
+                });
+                
+            } catch (error) {
+                console.error('최신 환율 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '환율 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // 환율 조회 API (특정 날짜의 환율)
         app.get('/api/exchange-rates/:currency/:date', requireAuth, async (req, res) => {
             try {
