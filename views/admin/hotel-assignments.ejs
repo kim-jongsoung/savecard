@@ -5389,31 +5389,45 @@
                 // 프로모션
                 document.getElementById('settlementPromotion').textContent = reservation.promotion_name || '없음';
                 
-                // 거래액 상세 내역
-                document.getElementById('settlementDetailHotelCost').textContent = (reservation.hotel_cost || 0).toFixed(2);
-                document.getElementById('settlementDetailBreakfastCost').textContent = (reservation.breakfast_cost || 0).toFixed(2);
-                document.getElementById('settlementDetailInHotelExtra').textContent = (reservation.in_hotel_extra_cost || 0).toFixed(2);
-                document.getElementById('settlementDetailOutHotelExtra').textContent = (reservation.out_hotel_extra_cost || 0).toFixed(2);
+                // 거래액 상세 내역 (올바른 필드 사용)
+                const hotelCost = parseFloat(reservation.total_room_rate || 0);
+                const breakfastCost = parseFloat(reservation.breakfast_amount || 0);
+                const totalExtrasCost = parseFloat(reservation.total_extras_rate || 0);
+                
+                document.getElementById('settlementDetailHotelCost').textContent = hotelCost.toFixed(2);
+                document.getElementById('settlementDetailBreakfastCost').textContent = breakfastCost.toFixed(2);
                 
                 // 추가비 항목 상세 표시
                 const extraDetails = document.getElementById('settlementExtraDetails');
                 let extraHTML = '';
                 
+                // extras 배열에서 인호텔/아웃호텔 구분
+                const extras = reservation.extras || [];
+                const inHotelExtras = extras.filter(e => e.extra_type === 'in_hotel');
+                const outHotelExtras = extras.filter(e => e.extra_type === 'out_hotel');
+                
+                // 인호텔 추가비 합계 계산
+                const inHotelTotal = inHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_price || 0), 0);
+                const outHotelTotal = outHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_price || 0), 0);
+                
+                document.getElementById('settlementDetailInHotelExtra').textContent = inHotelTotal.toFixed(2);
+                document.getElementById('settlementDetailOutHotelExtra').textContent = outHotelTotal.toFixed(2);
+                
                 // 인호텔 추가비 항목
-                if (reservation.in_hotel_extras && reservation.in_hotel_extras.length > 0) {
+                if (inHotelExtras.length > 0) {
                     extraHTML += '<div class="alert alert-info py-2 px-3 small mb-2">';
                     extraHTML += '<strong>🏨 인호텔 추가비 항목:</strong><br>';
-                    reservation.in_hotel_extras.forEach(extra => {
+                    inHotelExtras.forEach(extra => {
                         extraHTML += `• ${extra.item_name}: $${(extra.unit_price || 0).toFixed(2)} × ${extra.quantity || 1} = $${(extra.total_price || 0).toFixed(2)}<br>`;
                     });
                     extraHTML += '</div>';
                 }
                 
                 // 아웃호텔 추가비 항목
-                if (reservation.out_hotel_extras && reservation.out_hotel_extras.length > 0) {
+                if (outHotelExtras.length > 0) {
                     extraHTML += '<div class="alert alert-warning py-2 px-3 small mb-2">';
                     extraHTML += '<strong>🏢 아웃호텔 추가비 항목:</strong><br>';
-                    reservation.out_hotel_extras.forEach(extra => {
+                    outHotelExtras.forEach(extra => {
                         extraHTML += `• ${extra.item_name}: $${(extra.unit_price || 0).toFixed(2)} × ${extra.quantity || 1} = $${(extra.total_price || 0).toFixed(2)}<br>`;
                     });
                     extraHTML += '</div>';
