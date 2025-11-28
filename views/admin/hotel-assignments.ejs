@@ -3493,7 +3493,7 @@
                     ` : ''}
 
                     <div class="btn-group btn-group-sm w-100 mb-2" role="group">
-                        <button class="btn btn-outline-secondary" onclick="window.open('${assignmentLink}', '_blank')">
+                        <button class="btn btn-outline-secondary" onclick="previewAssignment('${assignment.id}')">
                             <i class="fas fa-eye me-1"></i>미리보기
                         </button>
                         <button class="btn btn-outline-primary" onclick="sendAssignmentEmailById('${assignment.id}', '${assignment.assignment_token}')">
@@ -3562,6 +3562,39 @@
             } catch (error) {
                 console.error('❌ 이메일 전송 오류:', error);
                 alert('❌ 오류가 발생했습니다: ' + error.message);
+            }
+        }
+        
+        // 수배서 미리보기 (열람 상태 변경 없이)
+        async function previewAssignment(assignmentId) {
+            try {
+                // 수배서 데이터 조회
+                const response = await fetch(`/api/hotel-assignments/${assignmentId}`);
+                if (!response.ok) {
+                    alert('수배서 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                const assignment = await response.json();
+                
+                // 예약 정보 조회
+                const resResponse = await fetch(`/api/hotel-reservations/${assignment.reservation_id}`);
+                if (!resResponse.ok) {
+                    alert('예약 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                const reservation = await resResponse.json();
+                
+                // 수배서 HTML 생성
+                const assignmentHTML = generateA4AssignmentPreview(reservation, [assignment]);
+                
+                // 새 창에서 미리보기
+                const previewWindow = window.open('', '_blank');
+                previewWindow.document.write(assignmentHTML);
+                previewWindow.document.close();
+                
+            } catch (error) {
+                console.error('미리보기 오류:', error);
+                alert('❌ 미리보기를 여는 중 오류가 발생했습니다.');
             }
         }
         
@@ -3893,12 +3926,15 @@
                     <!-- Hotel Confirmation Section -->
                     <div style="margin-top: 30px; padding: 20px; border: 2px solid #2c3e50; background: #f8f9fa; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                         
-                        ${rooms.map((room, idx) => `
+                        ${rooms.map((room, idx) => {
+                            const confirmNum = room.confirmation_number || '';
+                            return `
                             <div style="margin-bottom: 12px; font-size: 14px;">
                                 <strong>Room ${idx + 1} Confirmation Number:</strong>
-                                <span style="display: inline-block; border-bottom: 1px solid #000; width: 250px; margin-left: 10px;"></span>
+                                <span style="display: inline-block; border-bottom: 1px solid #000; min-width: 250px; margin-left: 10px; padding: 0 5px; font-weight: bold; color: #e74c3c;">${confirmNum || '(To be confirmed)'}</span>
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                         
                         <div style="margin-top: 20px; font-size: 14px;">
                             <strong>Hotel Notes/Comments:</strong><br>
