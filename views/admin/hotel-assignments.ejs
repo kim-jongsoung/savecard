@@ -5398,22 +5398,12 @@
                 // 프로모션
                 document.getElementById('settlementPromotion').textContent = reservation.promotion_name || '없음';
                 
-                // 거래액 상세 내역 (바우처 인보이스 우선)
-                let hotelCost, breakfastCost, totalExtrasCost;
+                // 거래액 상세 내역 (예약 데이터에서 가져오기)
+                const hotelCost = parseFloat(reservation.total_room_rate || 0);
+                const breakfastCost = parseFloat(reservation.breakfast_amount || 0);
+                const totalExtrasCost = parseFloat(reservation.total_extras_rate || 0);
                 
-                if (latestInvoice) {
-                    // ✅ 바우처 인보이스에서 상세 내역 가져오기
-                    hotelCost = parseFloat(latestInvoice.room_charges || 0);
-                    breakfastCost = parseFloat(latestInvoice.breakfast_charges || 0);
-                    totalExtrasCost = parseFloat(latestInvoice.extra_charges || 0);
-                    console.log('💰 바우처 상세 내역:', { hotelCost, breakfastCost, totalExtrasCost });
-                } else {
-                    // ❌ 바우처 없으면 예약 데이터 사용
-                    hotelCost = parseFloat(reservation.total_room_rate || 0);
-                    breakfastCost = parseFloat(reservation.breakfast_amount || 0);
-                    totalExtrasCost = parseFloat(reservation.total_extras_rate || 0);
-                    console.log('⚠️ 예약 상세 내역:', { hotelCost, breakfastCost, totalExtrasCost });
-                }
+                console.log('💰 거래액 상세 내역:', { hotelCost, breakfastCost, totalExtrasCost });
                 
                 document.getElementById('settlementDetailHotelCost').textContent = hotelCost.toFixed(2);
                 document.getElementById('settlementDetailBreakfastCost').textContent = breakfastCost.toFixed(2);
@@ -5461,12 +5451,18 @@
                 
                 if (latestInvoice) {
                     // ✅ 바우처 인보이스에서 데이터 가져오기
-                    console.log('💰 바우처 인보이스 데이터 사용');
-                    sellingPrice = parseFloat(latestInvoice.total_amount || 0);  // 인보이스 총액
-                    costPrice = parseFloat(latestInvoice.hotel_cost_price || 0);  // 호텔 매입액
-                    outHotelCost = parseFloat(latestInvoice.out_hotel_cost || 0);  // 아웃호텔 매입액
-                    agencyFee = parseFloat(latestInvoice.agency_fee || 0);  // 수배피
-                    exchangeRate = parseFloat(latestInvoice.fx_rate || todayExchangeRate);  // 환율
+                    console.log('💰 바우처 인보이스 데이터 사용:', latestInvoice);
+                    
+                    // 바우처 인보이스의 total_amount 사용
+                    sellingPrice = parseFloat(latestInvoice.total_amount || 0);
+                    
+                    // 환율은 바우처의 fx_rate 사용
+                    exchangeRate = parseFloat(latestInvoice.fx_rate || todayExchangeRate);
+                    
+                    // 매입액과 수배피는 예약 데이터에서 가져오기 (바우처에는 없음)
+                    costPrice = parseFloat(reservation.total_cost_price || 0);
+                    outHotelCost = parseFloat(reservation.out_hotel_cost || 0);
+                    agencyFee = parseFloat(reservation.agency_fee || 0);
                 } else {
                     // ❌ 바우처 없으면 예약 데이터 사용 (기존 방식)
                     console.log('⚠️ 바우처 인보이스 없음, 예약 데이터 사용');
