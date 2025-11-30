@@ -5590,31 +5590,41 @@
                 document.getElementById('settlementFxRateLabel').textContent = `환율: 1 USD = ${fxRate.toLocaleString('ko-KR')} KRW`;
                 document.getElementById('settlementDetailTotalKRW').textContent = `₩${totalKRW.toLocaleString('ko-KR')}`;
                 
-                // 금액 정보 (바우처 인보이스 우선, 없으면 예약 데이터 사용)
-                let sellingPrice, costPrice, agencyFee, exchangeRate;
-                // ✅ outHotelCost는 위에서 이미 계산됨 (중복 선언 제거)
+                // ✅ 정산 이관 디폴트값 계산 (상단에서 계산한 데이터 사용)
+                // outHotelCost는 위에서 이미 계산됨
                 
-                if (latestInvoice) {
-                    // ✅ 바우처 인보이스에서 데이터 가져오기
-                    console.log('💰 바우처 인보이스 데이터 사용:', latestInvoice);
-                    
-                    // 바우처 인보이스의 total_amount 사용
-                    sellingPrice = parseFloat(latestInvoice.total_amount || 0);
-                    
-                    // 환율은 바우처의 fx_rate 사용
-                    exchangeRate = parseFloat(latestInvoice.fx_rate || todayExchangeRate);
-                    
-                    // 매입액과 수배피는 예약 데이터에서 가져오기 (바우처에는 없음)
-                    costPrice = parseFloat(reservation.total_cost_price || 0);
-                    agencyFee = parseFloat(reservation.agency_fee || 0);
-                } else {
-                    // ❌ 바우처 없으면 예약 데이터 사용 (기존 방식)
-                    console.log('⚠️ 바우처 인보이스 없음, 예약 데이터 사용');
-                    sellingPrice = parseFloat(reservation.grand_total || 0);
-                    costPrice = parseFloat(reservation.total_cost_price || 0);
-                    agencyFee = parseFloat(reservation.agency_fee || 0);
-                    exchangeRate = parseFloat(reservation.exchange_rate || todayExchangeRate);
-                }
+                // 1. 거래액 = 객실료 + 조식 + 인호텔 + 아웃호텔 + 수배피
+                const inHotelSellingPrice = inHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_selling_price || 0), 0);
+                const outHotelSellingPrice = outHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_selling_price || 0), 0);
+                const sellingPrice = hotelCost + breakfastCost + inHotelSellingPrice + outHotelSellingPrice + agencyFeeAmount;
+                
+                console.log('💵 거래액 계산:', {
+                    hotelCost,
+                    breakfastCost,
+                    inHotelSellingPrice,
+                    outHotelSellingPrice,
+                    agencyFeeAmount,
+                    total: sellingPrice
+                });
+                
+                // 2. 호텔 매입액 = 객실료 + 조식 + 인호텔 추가항목
+                const costPrice = hotelCost + breakfastCost + inHotelCost;
+                
+                console.log('💵 호텔 매입액 계산:', {
+                    hotelCost,
+                    breakfastCost,
+                    inHotelCost,
+                    total: costPrice
+                });
+                
+                // 3. 아웃호텔 매입액 = 아웃호텔 추가항목 (이미 계산됨)
+                console.log('💵 아웃호텔 매입액:', outHotelCost);
+                
+                // 4. 수배피 = 수배피 항목 (이미 계산됨)
+                const agencyFee = agencyFeeAmount;
+                
+                // 5. 환율
+                const exchangeRate = latestInvoice ? parseFloat(latestInvoice.fx_rate || todayExchangeRate) : todayExchangeRate;
                 
                 console.log('📊 정산 이관 디폴트값:', {
                     sellingPrice,
@@ -5652,11 +5662,13 @@
             const revenueKRW = Math.round(sellingPrice * exchangeRate);
             const costKRW = Math.round(costPrice * exchangeRate);
             const outHotelCostKRW = Math.round(outHotelCost * exchangeRate);
+            const agencyFeeKRW = Math.round(agencyFee * exchangeRate);
             
-            // 마진 = 거래액(KRW) - 호텔매입액(KRW) - 아웃호텔매입액(KRW) + 수배피(KRW)
-            const margin = revenueKRW - costKRW - outHotelCostKRW + agencyFee;
+            // ✅ 마진 = 총거래액 - 호텔매입액 - 아웃호텔매입액
+            // (수배피는 이미 거래액에 포함되어 있음)
+            const margin = revenueKRW - costKRW - outHotelCostKRW;
             
-            // 부가세 = 마진의 10%
+            // ✅ 부가세 = 마진의 10%
             const tax = Math.round(margin * 0.1);
             
             console.log('💰 마진 계산:', {
