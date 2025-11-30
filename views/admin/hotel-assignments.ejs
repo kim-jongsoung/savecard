@@ -5505,31 +5505,70 @@
                     breakfastDetailContainer.innerHTML = '<div class="text-muted">조식 미포함</div>';
                 }
                 
-                // 3. 추가 항목 및 상세
+                // 3. 추가 항목 및 상세 (IN_HOTEL / OUT_HOTEL 구분)
                 document.getElementById('settlementDetailExtrasCost').textContent = `$${totalExtrasCost.toFixed(2)}`;
                 const extrasDetailContainer = document.getElementById('settlementExtrasDetailContainer');
                 const extras = reservation.extras || [];
                 
+                // ✅ IN_HOTEL / OUT_HOTEL 구분
+                const inHotelExtras = extras.filter(e => e.notes === 'IN_HOTEL');
+                const outHotelExtras = extras.filter(e => e.notes === 'OUT_HOTEL');
+                
+                // 인호텔/아웃호텔 매입액 계산
+                const inHotelCost = inHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_cost_price || 0), 0);
+                const outHotelCost = outHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_cost_price || 0), 0);
+                
                 console.log('➕ 추가 항목 정보:', {
                     totalExtrasCost,
                     extrasCount: extras.length,
+                    inHotelCount: inHotelExtras.length,
+                    outHotelCount: outHotelExtras.length,
+                    inHotelCost,
+                    outHotelCost,
                     extras: extras
                 });
                 
                 if (extras.length > 0) {
                     let extrasHTML = '';
-                    extras.forEach((extra, idx) => {
-                        console.log(`➕ Extra ${idx}:`, extra);
-                        
-                        const itemName = extra.item_name || extra.service_name || extra.extra_name || '추가항목';
-                        const charge = parseFloat(extra.total_price || extra.charge || extra.total_selling_price || 0);
-                        const quantity = parseInt(extra.quantity || 1);
-                        
-                        extrasHTML += `<div class="text-muted mb-1">`;
-                        extrasHTML += `${itemName}: $${charge.toFixed(2)}`;
-                        if (quantity > 1) extrasHTML += ` (수량: ${quantity})`;
+                    
+                    // 인호텔 추가비
+                    if (inHotelExtras.length > 0) {
+                        extrasHTML += `<div class="mb-2">`;
+                        extrasHTML += `<strong class="text-info">🏨 인호텔 추가비:</strong>`;
+                        inHotelExtras.forEach((extra, idx) => {
+                            const itemName = extra.item_name || extra.service_name || extra.extra_name || '추가항목';
+                            const charge = parseFloat(extra.total_selling_price || extra.total_price || extra.charge || 0);
+                            const costPrice = parseFloat(extra.total_cost_price || 0);
+                            const quantity = parseInt(extra.quantity || 1);
+                            
+                            extrasHTML += `<div class="text-muted ms-3 mb-1">`;
+                            extrasHTML += `• ${itemName}: $${charge.toFixed(2)}`;
+                            if (costPrice > 0) extrasHTML += ` <span class="badge bg-secondary" style="font-size:0.7rem;">매입 $${costPrice.toFixed(2)}</span>`;
+                            if (quantity > 1) extrasHTML += ` (수량: ${quantity})`;
+                            extrasHTML += `</div>`;
+                        });
                         extrasHTML += `</div>`;
-                    });
+                    }
+                    
+                    // 아웃호텔 추가비
+                    if (outHotelExtras.length > 0) {
+                        extrasHTML += `<div class="mb-2">`;
+                        extrasHTML += `<strong class="text-warning">🏢 아웃호텔 추가비:</strong>`;
+                        outHotelExtras.forEach((extra, idx) => {
+                            const itemName = extra.item_name || extra.service_name || extra.extra_name || '추가항목';
+                            const charge = parseFloat(extra.total_selling_price || extra.total_price || extra.charge || 0);
+                            const costPrice = parseFloat(extra.total_cost_price || 0);
+                            const quantity = parseInt(extra.quantity || 1);
+                            
+                            extrasHTML += `<div class="text-muted ms-3 mb-1">`;
+                            extrasHTML += `• ${itemName}: $${charge.toFixed(2)}`;
+                            if (costPrice > 0) extrasHTML += ` <span class="badge bg-secondary" style="font-size:0.7rem;">매입 $${costPrice.toFixed(2)}</span>`;
+                            if (quantity > 1) extrasHTML += ` (수량: ${quantity})`;
+                            extrasHTML += `</div>`;
+                        });
+                        extrasHTML += `</div>`;
+                    }
+                    
                     console.log('➕ 추가 항목 HTML:', extrasHTML);
                     extrasDetailContainer.innerHTML = extrasHTML;
                 } else {
@@ -5566,14 +5605,20 @@
                     
                     // 매입액과 수배피는 예약 데이터에서 가져오기 (바우처에는 없음)
                     costPrice = parseFloat(reservation.total_cost_price || 0);
-                    outHotelCost = parseFloat(reservation.out_hotel_cost || 0);
+                    
+                    // ✅ 아웃호텔 매입액은 extras에서 계산한 값 사용
+                    outHotelCost = outHotelCost;  // 위에서 계산된 값
+                    
                     agencyFee = parseFloat(reservation.agency_fee || 0);
                 } else {
                     // ❌ 바우처 없으면 예약 데이터 사용 (기존 방식)
                     console.log('⚠️ 바우처 인보이스 없음, 예약 데이터 사용');
                     sellingPrice = parseFloat(reservation.grand_total || 0);
                     costPrice = parseFloat(reservation.total_cost_price || 0);
-                    outHotelCost = parseFloat(reservation.out_hotel_cost || 0);
+                    
+                    // ✅ 아웃호텔 매입액은 extras에서 계산한 값 사용
+                    outHotelCost = outHotelCost;  // 위에서 계산된 값
+                    
                     agencyFee = parseFloat(reservation.agency_fee || 0);
                     exchangeRate = parseFloat(reservation.exchange_rate || todayExchangeRate);
                 }
