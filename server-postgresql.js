@@ -18185,7 +18185,7 @@ async function startServer() {
         // ==================== 호텔 정산관리 API ====================
         
         // 호텔 정산 목록 조회
-        app.get('/api/hotel-settlements/list', requireAuth, async (req, res) => {
+        app.get('/api/hotel-settlements-list', requireAuth, async (req, res) => {
             try {
                 const { status, start_date, end_date, agency, hotel, guest } = req.query;
                 console.log('💰 호텔 정산 목록 조회:', { status, start_date, end_date, agency, hotel, guest });

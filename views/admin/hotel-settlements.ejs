@@ -282,7 +282,7 @@
             if (guest) params.append('guest', guest);
 
             try {
-                const response = await fetch(`/api/hotel-settlements/list?${params}`);
+                const response = await fetch(`/api/hotel-settlements-list?${params}`);
                 const data = await response.json();
 
                 if (data.success) {
