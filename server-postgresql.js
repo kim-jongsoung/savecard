@@ -18182,6 +18182,107 @@ async function startServer() {
             }
         });
         
+        // ==================== 호텔 정산관리 API ====================
+        
+        // 호텔 정산 목록 조회
+        app.get('/api/hotel-settlements/list', requireAuth, async (req, res) => {
+            try {
+                const { status, start_date, end_date, agency, hotel, guest } = req.query;
+                console.log('💰 호텔 정산 목록 조회:', { status, start_date, end_date, agency, hotel, guest });
+                
+                let query = `
+                    SELECT 
+                        hr.id,
+                        hr.reservation_number,
+                        hr.check_in_date,
+                        hr.check_out_date,
+                        h.hotel_name,
+                        ba.agency_name as booking_agency_name,
+                        hr.grand_total as total_selling_price,
+                        hr.total_cost_price,
+                        hr.out_hotel_cost,
+                        hr.agency_fee,
+                        hr.exchange_rate,
+                        hr.remittance_rate,
+                        hr.payment_received_date,
+                        hr.payment_sent_date,
+                        hr.settlement_memo,
+                        (SELECT guest_name_ko FROM hotel_reservation_guests hrg 
+                         INNER JOIN hotel_reservation_rooms hrm ON hrg.reservation_room_id = hrm.id 
+                         WHERE hrm.reservation_id = hr.id LIMIT 1) as guest_name
+                    FROM hotel_reservations hr
+                    LEFT JOIN hotels h ON hr.hotel_id = h.id
+                    LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+                    WHERE hr.status = 'settlement'
+                `;
+                
+                const params = [];
+                
+                if (status === 'incomplete') {
+                    query += ' AND (hr.payment_received_date IS NULL OR hr.payment_sent_date IS NULL)';
+                } else if (status === 'completed') {
+                    query += ' AND hr.payment_received_date IS NOT NULL AND hr.payment_sent_date IS NOT NULL';
+                }
+                
+                if (start_date) {
+                    params.push(start_date);
+                    query += ` AND hr.check_in_date >= $${params.length}`;
+                }
+                if (end_date) {
+                    params.push(end_date);
+                    query += ` AND hr.check_in_date <= $${params.length}`;
+                }
+                
+                if (agency) {
+                    params.push(agency);
+                    query += ` AND ba.agency_name = $${params.length}`;
+                }
+                
+                if (hotel) {
+                    params.push(hotel);
+                    query += ` AND h.hotel_name = $${params.length}`;
+                }
+                
+                if (guest) {
+                    params.push(`%${guest}%`);
+                    query += ` AND EXISTS (
+                        SELECT 1 FROM hotel_reservation_guests hrg
+                        INNER JOIN hotel_reservation_rooms hrm ON hrg.reservation_room_id = hrm.id
+                        WHERE hrm.reservation_id = hr.id 
+                        AND hrg.guest_name_ko ILIKE $${params.length}
+                    )`;
+                }
+                
+                query += ' ORDER BY hr.check_in_date DESC, hr.created_at DESC';
+                
+                const result = await pool.query(query, params);
+                
+                const countQuery = `
+                    SELECT 
+                        COUNT(*) FILTER (WHERE payment_received_date IS NULL OR payment_sent_date IS NULL) as incomplete,
+                        COUNT(*) FILTER (WHERE payment_received_date IS NOT NULL AND payment_sent_date IS NOT NULL) as completed
+                    FROM hotel_reservations
+                    WHERE status = 'settlement'
+                `;
+                const countResult = await pool.query(countQuery);
+                
+                res.json({
+                    success: true,
+                    data: result.rows,
+                    counts: {
+                        incomplete: parseInt(countResult.rows[0].incomplete),
+                        completed: parseInt(countResult.rows[0].completed)
+                    }
+                });
+            } catch (error) {
+                console.error('❌ 호텔 정산 목록 조회 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '호텔 정산 목록 조회 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // ==================== 정산관리 목록 및 처리 API ====================
         
         // 정산 목록 조회 (상태별)
