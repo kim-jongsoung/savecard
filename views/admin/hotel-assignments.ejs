@@ -5435,53 +5435,78 @@
                 console.log('✅ 최종 프로모션명:', promotionName);
                 document.getElementById('settlementPromotion').textContent = promotionName;
                 
-                // 거래액 상세 내역 (예약 데이터에서 가져오기)
+                // 💰 거래액 상세 내역 (바우처 인보이스와 동일한 형식으로 표시)
                 const hotelCost = parseFloat(reservation.total_room_rate || 0);
                 const breakfastCost = parseFloat(reservation.breakfast_amount || 0);
                 const totalExtrasCost = parseFloat(reservation.total_extras_rate || 0);
                 
                 console.log('💰 거래액 상세 내역:', { hotelCost, breakfastCost, totalExtrasCost });
                 
-                document.getElementById('settlementDetailHotelCost').textContent = hotelCost.toFixed(2);
-                document.getElementById('settlementDetailBreakfastCost').textContent = breakfastCost.toFixed(2);
+                // 1. 총 객실 요금
+                document.getElementById('settlementDetailHotelCost').textContent = `$${hotelCost.toFixed(2)}`;
                 
-                // 추가비 항목 상세 표시
-                const extraDetails = document.getElementById('settlementExtraDetails');
-                let extraHTML = '';
+                // 2. 조식 요금 및 상세
+                document.getElementById('settlementDetailBreakfastCost').textContent = `$${breakfastCost.toFixed(2)}`;
+                const breakfastDetailContainer = document.getElementById('settlementBreakfastDetailContainer');
+                if (breakfastCost > 0 && rooms.length > 0) {
+                    let breakfastHTML = '';
+                    rooms.forEach((room, idx) => {
+                        if (room.breakfast_included) {
+                            const adultCount = parseInt(room.breakfast_adult_count || 0);
+                            const childCount = parseInt(room.breakfast_child_count || 0);
+                            const adultPrice = parseFloat(room.breakfast_adult_price || 0);
+                            const childPrice = parseFloat(room.breakfast_child_price || 0);
+                            const days = parseInt(room.breakfast_days || nights);
+                            
+                            if (adultCount > 0 || childCount > 0) {
+                                breakfastHTML += `<div class="text-muted mb-1">`;
+                                if (adultCount > 0) breakfastHTML += `성인 ${adultCount}명 × $${adultPrice} × ${days}일 `;
+                                if (childCount > 0) breakfastHTML += `소아 ${childCount}명 × $${childPrice} × ${days}일`;
+                                breakfastHTML += `</div>`;
+                            }
+                        }
+                    });
+                    breakfastDetailContainer.innerHTML = breakfastHTML || '<div class="text-muted">조식 포함</div>';
+                } else {
+                    breakfastDetailContainer.innerHTML = '<div class="text-muted">조식 미포함</div>';
+                }
                 
-                // extras 배열에서 인호텔/아웃호텔 구분
+                // 3. 추가 항목 및 상세
+                document.getElementById('settlementDetailExtrasCost').textContent = `$${totalExtrasCost.toFixed(2)}`;
+                const extrasDetailContainer = document.getElementById('settlementExtrasDetailContainer');
                 const extras = reservation.extras || [];
-                const inHotelExtras = extras.filter(e => e.extra_type === 'in_hotel');
-                const outHotelExtras = extras.filter(e => e.extra_type === 'out_hotel');
                 
-                // 인호텔 추가비 합계 계산
-                const inHotelTotal = inHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_price || 0), 0);
-                const outHotelTotal = outHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_price || 0), 0);
-                
-                document.getElementById('settlementDetailInHotelExtra').textContent = inHotelTotal.toFixed(2);
-                document.getElementById('settlementDetailOutHotelExtra').textContent = outHotelTotal.toFixed(2);
-                
-                // 인호텔 추가비 항목
-                if (inHotelExtras.length > 0) {
-                    extraHTML += '<div class="alert alert-info py-2 px-3 small mb-2">';
-                    extraHTML += '<strong>🏨 인호텔 추가비 항목:</strong><br>';
-                    inHotelExtras.forEach(extra => {
-                        extraHTML += `• ${extra.item_name}: $${(extra.unit_price || 0).toFixed(2)} × ${extra.quantity || 1} = $${(extra.total_price || 0).toFixed(2)}<br>`;
+                if (extras.length > 0) {
+                    let extrasHTML = '';
+                    extras.forEach(extra => {
+                        const itemName = extra.item_name || extra.service_name || '추가항목';
+                        const charge = parseFloat(extra.total_price || extra.charge || 0);
+                        const quantity = parseInt(extra.quantity || 1);
+                        
+                        extrasHTML += `<div class="text-muted mb-1">`;
+                        extrasHTML += `${itemName}: $${charge.toFixed(2)}`;
+                        if (quantity > 1) extrasHTML += ` (수량: ${quantity})`;
+                        extrasHTML += `</div>`;
                     });
-                    extraHTML += '</div>';
+                    extrasDetailContainer.innerHTML = extrasHTML;
+                } else {
+                    extrasDetailContainer.innerHTML = '<div class="text-muted">추가 항목 없음</div>';
                 }
                 
-                // 아웃호텔 추가비 항목
-                if (outHotelExtras.length > 0) {
-                    extraHTML += '<div class="alert alert-warning py-2 px-3 small mb-2">';
-                    extraHTML += '<strong>🏢 아웃호텔 추가비 항목:</strong><br>';
-                    outHotelExtras.forEach(extra => {
-                        extraHTML += `• ${extra.item_name}: $${(extra.unit_price || 0).toFixed(2)} × ${extra.quantity || 1} = $${(extra.total_price || 0).toFixed(2)}<br>`;
-                    });
-                    extraHTML += '</div>';
-                }
+                // 4. 수배피
+                const agencyFeeAmount = parseFloat(reservation.agency_fee || 0);
+                document.getElementById('settlementDetailAgencyFee').textContent = `$${agencyFeeAmount.toFixed(2)}`;
+                document.getElementById('settlementAgencyNameBadge').textContent = reservation.booking_agency_name || '-';
                 
-                extraDetails.innerHTML = extraHTML || '<p class="text-muted small mb-0">추가비 항목 없음</p>';
+                // 5. 합계 (USD)
+                const totalUSD = hotelCost + breakfastCost + totalExtrasCost + agencyFeeAmount;
+                document.getElementById('settlementDetailTotalUSD').textContent = `$${totalUSD.toFixed(2)}`;
+                
+                // 6. 환율 및 합계 (KRW)
+                const fxRate = latestInvoice ? parseFloat(latestInvoice.fx_rate || todayExchangeRate) : todayExchangeRate;
+                const totalKRW = Math.round(totalUSD * fxRate);
+                document.getElementById('settlementFxRateLabel').textContent = `환율: 1 USD = ${fxRate.toLocaleString('ko-KR')} KRW`;
+                document.getElementById('settlementDetailTotalKRW').textContent = `₩${totalKRW.toLocaleString('ko-KR')}`;
                 
                 // 금액 정보 (바우처 인보이스 우선, 없으면 예약 데이터 사용)
                 let sellingPrice, costPrice, outHotelCost, agencyFee, exchangeRate;
@@ -5686,25 +5711,62 @@
                             
                             <hr class="my-2">
                             
-                            <!-- 거래액 상세 내역 -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <p class="mb-2"><strong class="text-primary">💰 실제 거래액 내역:</strong></p>
+                            <!-- 💰 실제 거래액 내역 (바우처 인보이스와 동일한 형식) -->
+                            <div class="mb-3 p-3" style="background: #f8f9fa; border-radius: 8px;">
+                                <h6 class="mb-3 text-primary"><i class="fas fa-list-ul me-2"></i>💰 실제 거래액 내역</h6>
+                                
+                                <!-- 총 객실 요금 -->
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><i class="fas fa-bed me-2 text-info"></i>총 객실 요금</span>
+                                    <strong id="settlementDetailHotelCost">$0.00</strong>
+                                </div>
+                                
+                                <!-- 조식 요금 -->
+                                <div class="mb-3" id="settlementBreakfastSection">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span><i class="fas fa-utensils me-2 text-warning"></i><strong>조식 요금</strong></span>
+                                        <strong id="settlementDetailBreakfastCost" class="text-warning">$0.00</strong>
+                                    </div>
+                                    <div class="ms-4" id="settlementBreakfastDetailContainer" style="font-size: 0.85rem;">
+                                        <!-- 조식 상세 내역이 여기에 표시됩니다 -->
+                                    </div>
+                                </div>
+                                
+                                <!-- 추가 항목 요금 -->
+                                <div class="mb-3" id="settlementExtrasSection">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span><i class="fas fa-plus-circle me-2 text-success"></i><strong>추가 항목</strong></span>
+                                        <strong id="settlementDetailExtrasCost" class="text-success">$0.00</strong>
+                                    </div>
+                                    <div class="ms-4" id="settlementExtrasDetailContainer" style="font-size: 0.85rem;">
+                                        <!-- 추가 항목 상세 내역이 여기에 표시됩니다 -->
+                                    </div>
+                                </div>
+                                
+                                <!-- 수배피 -->
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><i class="fas fa-handshake me-2 text-danger"></i>수배피 <span id="settlementAgencyNameBadge" class="badge bg-secondary ms-1" style="font-size: 0.7rem;">-</span></span>
+                                    <strong id="settlementDetailAgencyFee">$0.00</strong>
+                                </div>
+                                
+                                <hr class="my-2">
+                                
+                                <!-- 합계 -->
+                                <div class="d-flex justify-content-between mb-3">
+                                    <strong class="text-success"><i class="fas fa-equals me-2"></i>합계 (USD)</strong>
+                                    <h5 class="mb-0 text-success" id="settlementDetailTotalUSD">$0.00</h5>
+                                </div>
+                                
+                                <!-- 환율 적용 원화 -->
+                                <div class="d-flex justify-content-between align-items-center p-2" style="background: white; border-radius: 6px;">
+                                    <div>
+                                        <strong class="text-primary"><i class="fas fa-won-sign me-2"></i>합계 (KRW)</strong>
+                                        <br>
+                                        <small class="text-muted" id="settlementFxRateLabel">환율 정보 로딩 중...</small>
+                                    </div>
+                                    <h5 class="mb-0 text-primary" id="settlementDetailTotalKRW">₩0</h5>
                                 </div>
                             </div>
-                            <div class="row small">
-                                <div class="col-md-6">
-                                    <p class="mb-1">• 호텔비: $<span id="settlementDetailHotelCost"></span></p>
-                                    <p class="mb-1">• 조식비: $<span id="settlementDetailBreakfastCost"></span></p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="mb-1">• 인호텔 추가비: $<span id="settlementDetailInHotelExtra"></span></p>
-                                    <p class="mb-1">• 아웃호텔 추가비: $<span id="settlementDetailOutHotelExtra"></span></p>
-                                </div>
-                            </div>
-                            
-                            <!-- 추가비 항목 상세 -->
-                            <div id="settlementExtraDetails" class="mt-2"></div>
                         </div>
                     </div>
                     
