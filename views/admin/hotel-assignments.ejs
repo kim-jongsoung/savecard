@@ -5348,6 +5348,8 @@
                 const reservation = await response.json();
                 
                 console.log('📋 정산 이관 예약 정보:', reservation);
+                console.log('📋 예약 rooms 배열:', reservation.rooms);
+                console.log('📋 예약 extras 배열:', reservation.extras);
                 
                 // 2. 최신 바우처 인보이스 조회
                 const invoiceResponse = await fetch(`/api/hotel-assignments/${reservationId}/invoices`);
@@ -5357,6 +5359,7 @@
                     : null;
                 
                 console.log('📋 최신 바우처 인보이스:', latestInvoice);
+                console.log('📋 바우처 데이터 사용 여부:', !!latestInvoice);
                 
                 // 오늘 환율 가져오기
                 let todayExchangeRate = 1300; // 기본값
@@ -5381,11 +5384,23 @@
                 // 고객명 (rooms 배열의 첫번째 투숙객 이름)
                 const rooms = reservation.rooms || [];
                 let guestName = 'N/A';
-                if (rooms.length > 0 && rooms[0].guests && rooms[0].guests.length > 0) {
-                    const firstGuest = rooms[0].guests[0];
-                    guestName = `${firstGuest.english_first_name || ''} ${firstGuest.english_last_name || ''}`.trim() || 
-                                firstGuest.korean_name || 'N/A';
+                
+                console.log('🔍 고객명 찾기 - rooms 개수:', rooms.length);
+                if (rooms.length > 0) {
+                    console.log('🔍 첫번째 room:', rooms[0]);
+                    console.log('🔍 첫번째 room.guests:', rooms[0].guests);
+                    
+                    if (rooms[0].guests && rooms[0].guests.length > 0) {
+                        const firstGuest = rooms[0].guests[0];
+                        console.log('🔍 첫번째 guest:', firstGuest);
+                        
+                        // 영문명 우선, 없으면 한글명
+                        const englishName = `${firstGuest.english_first_name || ''} ${firstGuest.english_last_name || ''}`.trim();
+                        guestName = englishName || firstGuest.korean_name || 'N/A';
+                    }
                 }
+                
+                console.log('✅ 최종 고객명:', guestName);
                 document.getElementById('settlementGuestName').textContent = guestName;
                 
                 document.getElementById('settlementHotelName').textContent = reservation.hotel_name || 'N/A';
@@ -5406,11 +5421,19 @@
                 
                 // 프로모션 (rate_condition 테이블 조인 필요 - 일단 예약 데이터에서)
                 let promotionName = '없음';
+                console.log('🔍 프로모션 찾기 - promotion_code:', reservation.promotion_code);
+                console.log('🔍 프로모션 찾기 - rate_condition_name:', reservation.rate_condition_name);
+                console.log('🔍 프로모션 찾기 - rate_condition_id:', reservation.rate_condition_id);
+                
                 if (reservation.promotion_code) {
                     promotionName = reservation.promotion_code;
                 } else if (reservation.rate_condition_name) {
                     promotionName = reservation.rate_condition_name;
+                } else if (reservation.rate_condition_id) {
+                    promotionName = `프로모션 ID: ${reservation.rate_condition_id}`;
                 }
+                
+                console.log('✅ 최종 프로모션명:', promotionName);
                 document.getElementById('settlementPromotion').textContent = promotionName;
                 
                 // 거래액 상세 내역 (예약 데이터에서 가져오기)
