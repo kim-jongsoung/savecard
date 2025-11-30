@@ -5394,9 +5394,8 @@
                         const firstGuest = rooms[0].guests[0];
                         console.log('🔍 첫번째 guest:', firstGuest);
                         
-                        // 영문명 우선, 없으면 한글명
-                        const englishName = `${firstGuest.english_first_name || ''} ${firstGuest.english_last_name || ''}`.trim();
-                        guestName = englishName || firstGuest.korean_name || 'N/A';
+                        // ✅ 실제 필드명: guest_name_en, guest_name_ko
+                        guestName = firstGuest.guest_name_en || firstGuest.guest_name_ko || 'N/A';
                     }
                 }
                 
@@ -5419,18 +5418,18 @@
                 const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
                 document.getElementById('settlementNights').textContent = nights || 'N/A';
                 
-                // 프로모션 (rate_condition 테이블 조인 필요 - 일단 예약 데이터에서)
+                // 프로모션 (rooms[0].promotion_code에서 가져오기)
                 let promotionName = '없음';
-                console.log('🔍 프로모션 찾기 - promotion_code:', reservation.promotion_code);
-                console.log('🔍 프로모션 찾기 - rate_condition_name:', reservation.rate_condition_name);
-                console.log('🔍 프로모션 찾기 - rate_condition_id:', reservation.rate_condition_id);
+                console.log('🔍 프로모션 찾기 - reservation.promotion_code:', reservation.promotion_code);
+                console.log('🔍 프로모션 찾기 - rooms[0].promotion_code:', rooms.length > 0 ? rooms[0].promotion_code : 'N/A');
                 
-                if (reservation.promotion_code) {
+                // ✅ rooms[0].promotion_code 우선 사용
+                if (rooms.length > 0 && rooms[0].promotion_code) {
+                    promotionName = rooms[0].promotion_code;
+                } else if (reservation.promotion_code) {
                     promotionName = reservation.promotion_code;
                 } else if (reservation.rate_condition_name) {
                     promotionName = reservation.rate_condition_name;
-                } else if (reservation.rate_condition_id) {
-                    promotionName = `프로모션 ID: ${reservation.rate_condition_id}`;
                 }
                 
                 console.log('✅ 최종 프로모션명:', promotionName);
