@@ -5448,9 +5448,25 @@
                 // 2. 조식 요금 및 상세
                 document.getElementById('settlementDetailBreakfastCost').textContent = `$${breakfastCost.toFixed(2)}`;
                 const breakfastDetailContainer = document.getElementById('settlementBreakfastDetailContainer');
+                
+                console.log('🍽️ 조식 정보:', {
+                    breakfastCost,
+                    roomsCount: rooms.length,
+                    firstRoom: rooms[0]
+                });
+                
                 if (breakfastCost > 0 && rooms.length > 0) {
                     let breakfastHTML = '';
                     rooms.forEach((room, idx) => {
+                        console.log(`🍽️ Room ${idx} 조식:`, {
+                            breakfast_included: room.breakfast_included,
+                            breakfast_adult_count: room.breakfast_adult_count,
+                            breakfast_child_count: room.breakfast_child_count,
+                            breakfast_adult_price: room.breakfast_adult_price,
+                            breakfast_child_price: room.breakfast_child_price,
+                            breakfast_days: room.breakfast_days
+                        });
+                        
                         if (room.breakfast_included) {
                             const adultCount = parseInt(room.breakfast_adult_count || 0);
                             const childCount = parseInt(room.breakfast_child_count || 0);
@@ -5460,12 +5476,13 @@
                             
                             if (adultCount > 0 || childCount > 0) {
                                 breakfastHTML += `<div class="text-muted mb-1">`;
-                                if (adultCount > 0) breakfastHTML += `성인 ${adultCount}명 × $${adultPrice} × ${days}일 `;
-                                if (childCount > 0) breakfastHTML += `소아 ${childCount}명 × $${childPrice} × ${days}일`;
+                                if (adultCount > 0) breakfastHTML += `성인 ${adultCount}명 × $${adultPrice.toFixed(2)} × ${days}일 `;
+                                if (childCount > 0) breakfastHTML += `소아 ${childCount}명 × $${childPrice.toFixed(2)} × ${days}일`;
                                 breakfastHTML += `</div>`;
                             }
                         }
                     });
+                    console.log('🍽️ 조식 HTML:', breakfastHTML);
                     breakfastDetailContainer.innerHTML = breakfastHTML || '<div class="text-muted">조식 포함</div>';
                 } else {
                     breakfastDetailContainer.innerHTML = '<div class="text-muted">조식 미포함</div>';
@@ -5476,11 +5493,19 @@
                 const extrasDetailContainer = document.getElementById('settlementExtrasDetailContainer');
                 const extras = reservation.extras || [];
                 
+                console.log('➕ 추가 항목 정보:', {
+                    totalExtrasCost,
+                    extrasCount: extras.length,
+                    extras: extras
+                });
+                
                 if (extras.length > 0) {
                     let extrasHTML = '';
-                    extras.forEach(extra => {
-                        const itemName = extra.item_name || extra.service_name || '추가항목';
-                        const charge = parseFloat(extra.total_price || extra.charge || 0);
+                    extras.forEach((extra, idx) => {
+                        console.log(`➕ Extra ${idx}:`, extra);
+                        
+                        const itemName = extra.item_name || extra.service_name || extra.extra_name || '추가항목';
+                        const charge = parseFloat(extra.total_price || extra.charge || extra.total_selling_price || 0);
                         const quantity = parseInt(extra.quantity || 1);
                         
                         extrasHTML += `<div class="text-muted mb-1">`;
@@ -5488,6 +5513,7 @@
                         if (quantity > 1) extrasHTML += ` (수량: ${quantity})`;
                         extrasHTML += `</div>`;
                     });
+                    console.log('➕ 추가 항목 HTML:', extrasHTML);
                     extrasDetailContainer.innerHTML = extrasHTML;
                 } else {
                     extrasDetailContainer.innerHTML = '<div class="text-muted">추가 항목 없음</div>';
