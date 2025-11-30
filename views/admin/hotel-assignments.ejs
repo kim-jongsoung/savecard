@@ -5437,7 +5437,21 @@
                 
                 // 💰 거래액 상세 내역 (바우처 인보이스와 동일한 형식으로 표시)
                 const hotelCost = parseFloat(reservation.total_room_rate || 0);
-                const breakfastCost = parseFloat(reservation.breakfast_amount || 0);
+                
+                // ✅ 조식 비용 직접 계산 (rooms 배열에서)
+                let breakfastCost = 0;
+                rooms.forEach(room => {
+                    if (room.breakfast_included) {
+                        const adultCount = parseInt(room.breakfast_adult_count || 0);
+                        const childCount = parseInt(room.breakfast_child_count || 0);
+                        const adultPrice = parseFloat(room.breakfast_adult_price || 0);
+                        const childPrice = parseFloat(room.breakfast_child_price || 0);
+                        const days = parseInt(room.breakfast_days || nights);
+                        
+                        breakfastCost += (adultCount * adultPrice * days) + (childCount * childPrice * days);
+                    }
+                });
+                
                 const totalExtrasCost = parseFloat(reservation.total_extras_rate || 0);
                 
                 console.log('💰 거래액 상세 내역:', { hotelCost, breakfastCost, totalExtrasCost });
@@ -5455,7 +5469,10 @@
                     firstRoom: rooms[0]
                 });
                 
-                if (breakfastCost > 0 && rooms.length > 0) {
+                // ✅ 조식 포함 여부로 판단 (금액이 0이어도 표시)
+                const hasBreakfast = rooms.some(r => r.breakfast_included);
+                
+                if (hasBreakfast && rooms.length > 0) {
                     let breakfastHTML = '';
                     rooms.forEach((room, idx) => {
                         console.log(`🍽️ Room ${idx} 조식:`, {
