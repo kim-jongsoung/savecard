@@ -18203,7 +18203,6 @@ async function startServer() {
                         hr.out_hotel_cost,
                         hr.agency_fee,
                         hr.exchange_rate,
-                        hr.remittance_rate,
                         hr.payment_received_date,
                         hr.payment_sent_date,
                         hr.settlement_memo,
