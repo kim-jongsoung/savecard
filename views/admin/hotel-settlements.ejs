@@ -409,6 +409,14 @@
             } else {
                 selectedIds.add(id);
             }
+            
+            // 선택된 항목이 있으면 일괄 처리 버튼 표시
+            const bulkActions = document.getElementById('bulkActions');
+            if (selectedIds.size > 0) {
+                bulkActions.style.display = 'block';
+            } else {
+                bulkActions.style.display = 'none';
+            }
         }
 
         // 전체 선택
@@ -425,6 +433,10 @@
                     selectedIds.delete(id);
                 }
             });
+            
+            // 일괄 처리 버튼 표시/숨김
+            const bulkActions = document.getElementById('bulkActions');
+            bulkActions.style.display = selectedIds.size > 0 ? 'block' : 'none';
         }
 
         // 선택 해제
@@ -432,6 +444,7 @@
             selectedIds.clear();
             document.getElementById('selectAll').checked = false;
             document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.getElementById('bulkActions').style.display = 'none';
         }
 
         // 일괄 입금/송금 처리
