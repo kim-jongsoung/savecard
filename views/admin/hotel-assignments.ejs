@@ -5518,6 +5518,8 @@
                 console.log('🔍 아웃호텔 추가항목:', outHotelExtras);
                 
                 // 인호텔/아웃호텔 매입액 계산
+                // ✅ 아웃호텔만 매입액(total_cost_price) 사용
+                // ✅ 인호텔은 판매가(total_selling_price) 사용 (호텔에 지불하는 금액)
                 const inHotelCost = inHotelExtras.reduce((sum, e) => {
                     const cost = parseFloat(e.total_cost_price || 0);
                     console.log(`  인호텔 ${e.item_name}: 매입액 $${cost}`);
@@ -5525,7 +5527,8 @@
                 }, 0);
                 
                 const outHotelCost = outHotelExtras.reduce((sum, e) => {
-                    const cost = parseFloat(e.total_cost_price || 0);
+                    // ✅ 아웃호텔은 판매가를 매입액으로 사용 (외부 업체에 지불)
+                    const cost = parseFloat(e.total_selling_price || e.total_cost_price || 0);
                     console.log(`  아웃호텔 ${e.item_name}: 매입액 $${cost}`);
                     return sum + cost;
                 }, 0);
@@ -5619,13 +5622,14 @@
                     total: sellingPrice
                 });
                 
-                // 2. 호텔 매입액 = 객실료 + 조식 + 인호텔 추가항목
-                const costPrice = hotelCost + breakfastCost + inHotelCost;
+                // 2. 호텔 매입액 = 객실료 + 조식 + 인호텔 추가항목 (판매가)
+                // ✅ 인호텔은 판매가를 사용 (호텔에 지불하는 금액)
+                const costPrice = hotelCost + breakfastCost + inHotelSellingPrice;
                 
                 console.log('💵 호텔 매입액 계산:', {
                     hotelCost,
                     breakfastCost,
-                    inHotelCost,
+                    inHotelSellingPrice,
                     total: costPrice
                 });
                 
