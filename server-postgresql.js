@@ -18203,6 +18203,7 @@ async function startServer() {
                         hr.out_hotel_cost,
                         hr.agency_fee,
                         hr.exchange_rate,
+                        COALESCE(hr.remittance_rate, hr.exchange_rate) as remittance_rate,
                         hr.payment_received_date,
                         hr.payment_sent_date,
                         hr.settlement_memo,
