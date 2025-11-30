@@ -5514,9 +5514,21 @@
                 const inHotelExtras = extras.filter(e => e.notes === 'IN_HOTEL');
                 const outHotelExtras = extras.filter(e => e.notes === 'OUT_HOTEL');
                 
+                console.log('🔍 인호텔 추가항목:', inHotelExtras);
+                console.log('🔍 아웃호텔 추가항목:', outHotelExtras);
+                
                 // 인호텔/아웃호텔 매입액 계산
-                const inHotelCost = inHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_cost_price || 0), 0);
-                const outHotelCost = outHotelExtras.reduce((sum, e) => sum + parseFloat(e.total_cost_price || 0), 0);
+                const inHotelCost = inHotelExtras.reduce((sum, e) => {
+                    const cost = parseFloat(e.total_cost_price || 0);
+                    console.log(`  인호텔 ${e.item_name}: 매입액 $${cost}`);
+                    return sum + cost;
+                }, 0);
+                
+                const outHotelCost = outHotelExtras.reduce((sum, e) => {
+                    const cost = parseFloat(e.total_cost_price || 0);
+                    console.log(`  아웃호텔 ${e.item_name}: 매입액 $${cost}`);
+                    return sum + cost;
+                }, 0);
                 
                 console.log('➕ 추가 항목 정보:', {
                     totalExtrasCost,
