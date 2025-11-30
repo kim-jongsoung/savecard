@@ -5591,7 +5591,8 @@
                 document.getElementById('settlementDetailTotalKRW').textContent = `₩${totalKRW.toLocaleString('ko-KR')}`;
                 
                 // 금액 정보 (바우처 인보이스 우선, 없으면 예약 데이터 사용)
-                let sellingPrice, costPrice, outHotelCost, agencyFee, exchangeRate;
+                let sellingPrice, costPrice, agencyFee, exchangeRate;
+                // ✅ outHotelCost는 위에서 이미 계산됨 (중복 선언 제거)
                 
                 if (latestInvoice) {
                     // ✅ 바우처 인보이스에서 데이터 가져오기
@@ -5605,20 +5606,12 @@
                     
                     // 매입액과 수배피는 예약 데이터에서 가져오기 (바우처에는 없음)
                     costPrice = parseFloat(reservation.total_cost_price || 0);
-                    
-                    // ✅ 아웃호텔 매입액은 extras에서 계산한 값 사용
-                    outHotelCost = outHotelCost;  // 위에서 계산된 값
-                    
                     agencyFee = parseFloat(reservation.agency_fee || 0);
                 } else {
                     // ❌ 바우처 없으면 예약 데이터 사용 (기존 방식)
                     console.log('⚠️ 바우처 인보이스 없음, 예약 데이터 사용');
                     sellingPrice = parseFloat(reservation.grand_total || 0);
                     costPrice = parseFloat(reservation.total_cost_price || 0);
-                    
-                    // ✅ 아웃호텔 매입액은 extras에서 계산한 값 사용
-                    outHotelCost = outHotelCost;  // 위에서 계산된 값
-                    
                     agencyFee = parseFloat(reservation.agency_fee || 0);
                     exchangeRate = parseFloat(reservation.exchange_rate || todayExchangeRate);
                 }
