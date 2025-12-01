@@ -1235,6 +1235,41 @@ try {
     
     app.set('pool', pool); // 라우트에서 pool 사용 가능하도록 설정
     
+    // 호텔 정산 필터 옵션 API (라우터보다 먼저 등록)
+    app.get('/api/hotel-settlements/agencies', requireAuth, async (req, res) => {
+        try {
+            const result = await pool.query(`
+                SELECT DISTINCT ba.agency_name
+                FROM hotel_reservations hr
+                LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+                WHERE ba.agency_name IS NOT NULL
+                AND hr.status = 'settlement'
+                ORDER BY ba.agency_name
+            `);
+            res.json(result.rows);
+        } catch (error) {
+            console.error('❌ 예약업체 목록 조회 실패:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    });
+    
+    app.get('/api/hotel-settlements/hotels', requireAuth, async (req, res) => {
+        try {
+            const result = await pool.query(`
+                SELECT DISTINCT h.hotel_name
+                FROM hotel_reservations hr
+                LEFT JOIN hotels h ON hr.hotel_id = h.id
+                WHERE h.hotel_name IS NOT NULL
+                AND hr.status = 'settlement'
+                ORDER BY h.hotel_name
+            `);
+            res.json(result.rows);
+        } catch (error) {
+            console.error('❌ 호텔 목록 조회 실패:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    });
+    
     app.use('/api/hotel-promotions', hotelPromotionsRoutes);
     app.use('/api/hotel-reservations', hotelReservationsRoutes);
     app.use('/api/hotel-assignments', hotelAssignmentsRouter);
@@ -18183,42 +18218,6 @@ async function startServer() {
         });
         
         // ==================== 호텔 정산관리 API ====================
-        
-        // 예약업체 목록 조회 (호텔 정산용)
-        app.get('/api/hotel-settlements/agencies', requireAuth, async (req, res) => {
-            try {
-                const result = await pool.query(`
-                    SELECT DISTINCT ba.agency_name
-                    FROM hotel_reservations hr
-                    LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
-                    WHERE ba.agency_name IS NOT NULL
-                    AND hr.status = 'settlement'
-                    ORDER BY ba.agency_name
-                `);
-                res.json(result.rows);
-            } catch (error) {
-                console.error('❌ 예약업체 목록 조회 실패:', error);
-                res.status(500).json({ success: false, message: error.message });
-            }
-        });
-        
-        // 호텔 목록 조회 (호텔 정산용)
-        app.get('/api/hotel-settlements/hotels', requireAuth, async (req, res) => {
-            try {
-                const result = await pool.query(`
-                    SELECT DISTINCT h.hotel_name
-                    FROM hotel_reservations hr
-                    LEFT JOIN hotels h ON hr.hotel_id = h.id
-                    WHERE h.hotel_name IS NOT NULL
-                    AND hr.status = 'settlement'
-                    ORDER BY h.hotel_name
-                `);
-                res.json(result.rows);
-            } catch (error) {
-                console.error('❌ 호텔 목록 조회 실패:', error);
-                res.status(500).json({ success: false, message: error.message });
-            }
-        });
         
         // 호텔 정산 목록 조회
         app.get('/api/hotel-settlements-list', requireAuth, async (req, res) => {

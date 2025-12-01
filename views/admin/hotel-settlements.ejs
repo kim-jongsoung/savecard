@@ -227,20 +227,25 @@
         async function loadFilterOptions() {
             try {
                 // 예약업체 목록
+                console.log('🔍 예약업체 목록 API 호출...');
                 const agencyRes = await fetch('/api/hotel-settlements/agencies');
+                console.log('📡 예약업체 응답 상태:', agencyRes.status);
                 if (!agencyRes.ok) {
-                    console.error('예약업체 목록 로드 실패:', agencyRes.status);
-                    return;
-                }
-                const agencies = await agencyRes.json();
-                const agencySelect = document.getElementById('filterAgency');
-                if (Array.isArray(agencies)) {
-                    agencies.forEach(agency => {
-                        const option = document.createElement('option');
-                        option.value = agency.agency_name;
-                        option.textContent = agency.agency_name;
-                        agencySelect.appendChild(option);
-                    });
+                    const errorText = await agencyRes.text();
+                    console.error('❌ 예약업체 목록 로드 실패:', agencyRes.status, errorText);
+                    // 실패해도 계속 진행
+                } else {
+                    const agencies = await agencyRes.json();
+                    console.log('📦 예약업체 데이터:', agencies);
+                    const agencySelect = document.getElementById('filterAgency');
+                    if (Array.isArray(agencies)) {
+                        agencies.forEach(agency => {
+                            const option = document.createElement('option');
+                            option.value = agency.agency_name;
+                            option.textContent = agency.agency_name;
+                            agencySelect.appendChild(option);
+                        });
+                    }
                 }
 
                 // 호텔 목록
