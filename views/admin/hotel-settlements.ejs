@@ -227,7 +227,7 @@
         async function loadFilterOptions() {
             try {
                 // 예약업체 목록
-                const agencyRes = await fetch('/api/hotel-reservations/agencies');
+                const agencyRes = await fetch('/api/hotel-settlements/agencies');
                 if (!agencyRes.ok) {
                     console.error('예약업체 목록 로드 실패:', agencyRes.status);
                     return;
@@ -244,7 +244,7 @@
                 }
 
                 // 호텔 목록
-                const hotelRes = await fetch('/api/hotel-reservations/hotels');
+                const hotelRes = await fetch('/api/hotel-settlements/hotels');
                 if (!hotelRes.ok) {
                     console.error('호텔 목록 로드 실패:', hotelRes.status);
                     return;

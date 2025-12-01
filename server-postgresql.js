@@ -18184,6 +18184,42 @@ async function startServer() {
         
         // ==================== 호텔 정산관리 API ====================
         
+        // 예약업체 목록 조회 (호텔 정산용)
+        app.get('/api/hotel-settlements/agencies', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT ba.agency_name
+                    FROM hotel_reservations hr
+                    LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+                    WHERE ba.agency_name IS NOT NULL
+                    AND hr.status = 'settlement'
+                    ORDER BY ba.agency_name
+                `);
+                res.json(result.rows);
+            } catch (error) {
+                console.error('❌ 예약업체 목록 조회 실패:', error);
+                res.status(500).json({ success: false, message: error.message });
+            }
+        });
+        
+        // 호텔 목록 조회 (호텔 정산용)
+        app.get('/api/hotel-settlements/hotels', requireAuth, async (req, res) => {
+            try {
+                const result = await pool.query(`
+                    SELECT DISTINCT h.hotel_name
+                    FROM hotel_reservations hr
+                    LEFT JOIN hotels h ON hr.hotel_id = h.id
+                    WHERE h.hotel_name IS NOT NULL
+                    AND hr.status = 'settlement'
+                    ORDER BY h.hotel_name
+                `);
+                res.json(result.rows);
+            } catch (error) {
+                console.error('❌ 호텔 목록 조회 실패:', error);
+                res.status(500).json({ success: false, message: error.message });
+            }
+        });
+        
         // 호텔 정산 목록 조회
         app.get('/api/hotel-settlements-list', requireAuth, async (req, res) => {
             try {
