@@ -391,8 +391,16 @@
                             <td class="text-end">₩${agencyFeeKRW.toLocaleString()}<br><small class="text-muted">(×${settlementRate.toFixed(2)})</small></td>
                             <td class="text-end ${marginKRW >= 0 ? 'text-primary' : 'text-danger'}">₩${marginKRW.toLocaleString()}</td>
                             <td class="text-end">₩${tax.toLocaleString()}</td>
-                            <td class="text-center">${s.payment_received_date ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-muted"></i>'}</td>
-                            <td class="text-center">${s.payment_sent_date ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-muted"></i>'}</td>
+                            <td class="text-center">
+                                ${s.payment_received_date 
+                                    ? `<i class="fas fa-check text-success"></i><br><small class="text-muted">${paymentReceivedDate}</small>` 
+                                    : '<i class="fas fa-times text-muted"></i>'}
+                            </td>
+                            <td class="text-center">
+                                ${s.payment_sent_date 
+                                    ? `<i class="fas fa-check text-success"></i><br><small class="text-muted">${paymentSentDate}</small>` 
+                                    : '<i class="fas fa-times text-muted"></i>'}
+                            </td>
                         </tr>
                     `;
                 } else {
