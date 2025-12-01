@@ -18334,6 +18334,88 @@ async function startServer() {
             }
         });
         
+        // 호텔 정산 일괄 입금/송금 처리
+        app.post('/api/hotel-settlements/bulk-payment', requireAuth, async (req, res) => {
+            try {
+                const { reservation_ids, type, date, exchange_rate } = req.body;
+                
+                console.log('💰 호텔 정산 일괄 처리:', { reservation_ids, type, date, exchange_rate });
+                
+                if (!reservation_ids || !Array.isArray(reservation_ids) || reservation_ids.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '처리할 예약을 선택해주세요.'
+                    });
+                }
+                
+                if (!type || !['received', 'sent'].includes(type)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '처리 유형이 올바르지 않습니다.'
+                    });
+                }
+                
+                const client = await pool.connect();
+                
+                try {
+                    await client.query('BEGIN');
+                    
+                    let updateQuery;
+                    let params;
+                    
+                    if (type === 'received') {
+                        // 입금 처리
+                        updateQuery = `
+                            UPDATE hotel_reservations
+                            SET payment_received_date = $1,
+                                updated_at = NOW()
+                            WHERE id = ANY($2)
+                            AND status = 'settlement'
+                        `;
+                        params = [date, reservation_ids];
+                    } else {
+                        // 송금 처리 (송금환율 저장)
+                        updateQuery = `
+                            UPDATE hotel_reservations
+                            SET payment_sent_date = $1,
+                                updated_at = NOW()
+                            WHERE id = ANY($2)
+                            AND status = 'settlement'
+                        `;
+                        params = [date, reservation_ids];
+                        
+                        // 송금환율은 별도로 저장하지 않음 (필요시 컬럼 추가 필요)
+                        console.log('📝 송금환율:', exchange_rate);
+                    }
+                    
+                    const result = await client.query(updateQuery, params);
+                    
+                    await client.query('COMMIT');
+                    
+                    console.log(`✅ ${result.rowCount}개 호텔 정산 ${type === 'received' ? '입금' : '송금'} 처리 완료`);
+                    
+                    res.json({
+                        success: true,
+                        message: `${result.rowCount}개 항목이 처리되었습니다.`,
+                        count: result.rowCount
+                    });
+                    
+                } catch (error) {
+                    await client.query('ROLLBACK');
+                    throw error;
+                } finally {
+                    client.release();
+                }
+                
+            } catch (error) {
+                console.error('❌ 호텔 정산 일괄 처리 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '일괄 처리 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // ==================== 정산관리 목록 및 처리 API ====================
         
         // 정산 목록 조회 (상태별)

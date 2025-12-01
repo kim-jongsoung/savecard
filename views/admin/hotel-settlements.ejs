@@ -508,11 +508,11 @@
             }
 
             try {
-                const response = await fetch('/api/settlements/bulk-payment', {
+                const response = await fetch('/api/hotel-settlements/bulk-payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        settlement_ids: Array.from(selectedIds),
+                        reservation_ids: Array.from(selectedIds),
                         type: type,
                         date: date,
                         exchange_rate: exchangeRate
