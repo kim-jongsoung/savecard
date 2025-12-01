@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .container-fluid { max-width: 1200px; margin: 0 auto; }
-        .table td { vertical-align: middle; }
+        .table td { vertical-align: middle; border-right: 1px solid #dee2e6; }
+        .table th { border-right: 1px solid #dee2e6; }
+        .table td:last-child, .table th:last-child { border-right: none; }
         .clickable-row { cursor: pointer; }
         .clickable-row:hover { background-color: #f8f9fa; }
         .filter-section { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
@@ -50,10 +52,26 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">고객명</label>
+                    <label class="form-label">투숙객명</label>
                     <input type="text" class="form-control form-control-sm" id="filterGuest" placeholder="고객명 검색">
                 </div>
-                <div class="col-md-3 d-flex align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">입금</label>
+                    <select class="form-select form-select-sm" id="filterPaymentReceived">
+                        <option value="">전체</option>
+                        <option value="completed">완료</option>
+                        <option value="incomplete">미완료</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">송금</label>
+                    <select class="form-select form-select-sm" id="filterPaymentSent">
+                        <option value="">전체</option>
+                        <option value="completed">완료</option>
+                        <option value="incomplete">미완료</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
                     <button class="btn btn-primary btn-sm me-2" onclick="loadSettlements()">
                         <i class="fas fa-search me-1"></i>검색
                     </button>
@@ -276,6 +294,8 @@
             const agency = document.getElementById('filterAgency').value;
             const hotel = document.getElementById('filterHotel').value;
             const guest = document.getElementById('filterGuest').value;
+            const paymentReceived = document.getElementById('filterPaymentReceived').value;
+            const paymentSent = document.getElementById('filterPaymentSent').value;
 
             const params = new URLSearchParams({
                 status: currentTab === 'incomplete' ? 'incomplete' : 'completed',
@@ -286,6 +306,8 @@
             if (agency) params.append('agency', agency);
             if (hotel) params.append('hotel', hotel);
             if (guest) params.append('guest', guest);
+            if (paymentReceived) params.append('payment_received', paymentReceived);
+            if (paymentSent) params.append('payment_sent', paymentSent);
 
             try {
                 console.log('🔍 API 호출:', `/api/hotel-settlements-list?${params}`);
@@ -515,12 +537,14 @@
         // 필터 초기화
         function resetFilters() {
             const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            document.getElementById('startDate').valueAsDate = firstDay;
+            const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+            document.getElementById('startDate').valueAsDate = threeMonthsAgo;
             document.getElementById('endDate').valueAsDate = today;
             document.getElementById('filterAgency').value = '';
             document.getElementById('filterHotel').value = '';
             document.getElementById('filterGuest').value = '';
+            document.getElementById('filterPaymentReceived').value = '';
+            document.getElementById('filterPaymentSent').value = '';
             loadSettlements();
         }
 

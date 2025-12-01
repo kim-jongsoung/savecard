@@ -18222,8 +18222,8 @@ async function startServer() {
         // 호텔 정산 목록 조회
         app.get('/api/hotel-settlements-list', requireAuth, async (req, res) => {
             try {
-                const { status, start_date, end_date, agency, hotel, guest } = req.query;
-                console.log('💰 호텔 정산 목록 조회:', { status, start_date, end_date, agency, hotel, guest });
+                const { status, start_date, end_date, agency, hotel, guest, payment_received, payment_sent } = req.query;
+                console.log('💰 호텔 정산 목록 조회:', { status, start_date, end_date, agency, hotel, guest, payment_received, payment_sent });
                 
                 let query = `
                     SELECT 
@@ -18285,6 +18285,20 @@ async function startServer() {
                         WHERE hrm.reservation_id = hr.id 
                         AND hrg.guest_name_ko ILIKE $${params.length}
                     )`;
+                }
+                
+                // 입금 필터
+                if (payment_received === 'completed') {
+                    query += ` AND hr.payment_received_date IS NOT NULL`;
+                } else if (payment_received === 'incomplete') {
+                    query += ` AND hr.payment_received_date IS NULL`;
+                }
+                
+                // 송금 필터
+                if (payment_sent === 'completed') {
+                    query += ` AND hr.payment_sent_date IS NOT NULL`;
+                } else if (payment_sent === 'incomplete') {
+                    query += ` AND hr.payment_sent_date IS NULL`;
                 }
                 
                 query += ' ORDER BY hr.check_in_date DESC, hr.created_at DESC';
