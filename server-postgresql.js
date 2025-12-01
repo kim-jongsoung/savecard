@@ -18289,7 +18289,10 @@ async function startServer() {
                 
                 query += ' ORDER BY hr.check_in_date DESC, hr.created_at DESC';
                 
+                console.log('🔍 실행 쿼리:', query);
+                console.log('🔍 쿼리 파라미터:', params);
                 const result = await pool.query(query, params);
+                console.log('✅ 조회 결과:', result.rows.length, '개');
                 
                 const countQuery = `
                     SELECT 
