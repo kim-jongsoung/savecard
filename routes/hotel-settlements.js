@@ -288,50 +288,50 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// 일괄 입출금 처리
-router.post('/bulk-payment', async (req, res) => {
-    try {
-        const pool = req.app.get('pool');
-        const { type, date } = req.body;
-        
-        let query;
-        if (type === 'payment') {
-            // 입금 처리
-            query = `
-                UPDATE hotel_reservations
-                SET 
-                    payment_date = $1,
-                    status = CASE 
-                        WHEN transfer_date IS NOT NULL THEN '정산완료'
-                        ELSE status
-                    END,
-                    updated_at = NOW()
-                WHERE status IN ('바우처전송완료', '정산완료')
-                AND payment_date IS NULL
-            `;
-        } else {
-            // 송금 처리
-            query = `
-                UPDATE hotel_reservations
-                SET 
-                    transfer_date = $1,
-                    status = CASE 
-                        WHEN payment_date IS NOT NULL THEN '정산완료'
-                        ELSE status
-                    END,
-                    updated_at = NOW()
-                WHERE status IN ('바우처전송완료', '정산완료')
-                AND transfer_date IS NULL
-            `;
-        }
-        
-        const result = await pool.query(query, [date]);
-        
-        res.json({ success: true, count: result.rowCount });
-    } catch (error) {
-        console.error('❌ 일괄 입출금 처리 실패:', error);
-        res.status(500).json({ error: '일괄 처리에 실패했습니다.' });
-    }
-});
+// 일괄 입출금 처리 - 주석 처리 (server-postgresql.js의 올바른 버전 사용)
+// router.post('/bulk-payment', async (req, res) => {
+//     try {
+//         const pool = req.app.get('pool');
+//         const { type, date } = req.body;
+//         
+//         let query;
+//         if (type === 'payment') {
+//             // 입금 처리
+//             query = `
+//                 UPDATE hotel_reservations
+//                 SET 
+//                     payment_date = $1,
+//                     status = CASE 
+//                         WHEN transfer_date IS NOT NULL THEN '정산완료'
+//                         ELSE status
+//                     END,
+//                     updated_at = NOW()
+//                 WHERE status IN ('바우처전송완료', '정산완료')
+//                 AND payment_date IS NULL
+//             `;
+//         } else {
+//             // 송금 처리
+//             query = `
+//                 UPDATE hotel_reservations
+//                 SET 
+//                     transfer_date = $1,
+//                     status = CASE 
+//                         WHEN payment_date IS NOT NULL THEN '정산완료'
+//                         ELSE status
+//                     END,
+//                     updated_at = NOW()
+//                 WHERE status IN ('바우처전송완료', '정산완료')
+//                 AND transfer_date IS NULL
+//             `;
+//         }
+//         
+//         const result = await pool.query(query, [date]);
+//         
+//         res.json({ success: true, count: result.rowCount });
+//     } catch (error) {
+//         console.error('❌ 일괄 입출금 처리 실패:', error);
+//         res.status(500).json({ error: '일괄 처리에 실패했습니다.' });
+//     }
+// });
 
 module.exports = router;
