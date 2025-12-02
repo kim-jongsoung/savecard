@@ -18247,7 +18247,7 @@ async function startServer() {
                     FROM hotel_reservations hr
                     LEFT JOIN hotels h ON hr.hotel_id = h.id
                     LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
-                    WHERE hr.status = 'settlement'
+                    WHERE hr.status IN ('settlement', 'completed')
                 `;
                 
                 const params = [];
@@ -18370,6 +18370,10 @@ async function startServer() {
                         updateQuery = `
                             UPDATE hotel_reservations
                             SET payment_received_date = $1,
+                                status = CASE 
+                                    WHEN payment_sent_date IS NOT NULL THEN 'completed'
+                                    ELSE status
+                                END,
                                 updated_at = NOW()
                             WHERE id IN (${placeholders})
                         `;
@@ -18382,6 +18386,10 @@ async function startServer() {
                             UPDATE hotel_reservations
                             SET payment_sent_date = $1,
                                 remittance_rate = $2,
+                                status = CASE 
+                                    WHEN payment_received_date IS NOT NULL THEN 'completed'
+                                    ELSE status
+                                END,
                                 updated_at = NOW()
                             WHERE id IN (${placeholders})
                         `;
