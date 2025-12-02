@@ -18388,7 +18388,10 @@ async function startServer() {
                         console.log('📝 송금환율:', exchange_rate);
                     }
                     
+                    console.log('🔍 실행 쿼리:', updateQuery);
+                    console.log('🔍 쿼리 파라미터:', params);
                     const result = await client.query(updateQuery, params);
+                    console.log('📊 영향받은 행 수:', result.rowCount);
                     
                     await client.query('COMMIT');
                     

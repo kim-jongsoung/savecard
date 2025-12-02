@@ -528,11 +528,14 @@
                 });
 
                 const result = await response.json();
+                console.log('💰 일괄 처리 결과:', result);
 
                 if (result.success) {
-                    alert(`✅ ${selectedIds.size}개 항목의 ${typeText} 처리가 완료되었습니다.`);
+                    alert(`✅ ${result.count || selectedIds.size}개 항목의 ${typeText} 처리가 완료되었습니다.\n\n처리된 날짜가 표시됩니다.`);
                     clearSelection();
-                    loadSettlements();
+                    // 강제 새로고침으로 최신 데이터 로드
+                    await loadSettlements();
+                    console.log('🔄 데이터 새로고침 완료');
                 } else {
                     alert(`❌ ${typeText} 처리 실패: ` + result.message);
                 }
