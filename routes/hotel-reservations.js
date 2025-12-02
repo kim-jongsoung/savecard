@@ -592,7 +592,24 @@ router.put('/:id', async (req, res) => {
             }
         }
         
-        // 2. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
+        // 2. 수배서 확정번호 백업 (예약 수정 시 보존용)
+        const assignmentRoomsBackup = await client.query(
+            `SELECT har.room_number, har.confirmation_number 
+             FROM hotel_assignment_rooms har
+             JOIN hotel_assignments ha ON har.assignment_id = ha.id
+             WHERE ha.reservation_id = $1 
+             ORDER BY ha.created_at DESC, har.room_number`,
+            [id]
+        );
+        const confirmationBackup = {};
+        assignmentRoomsBackup.rows.forEach(row => {
+            if (row.confirmation_number) {
+                confirmationBackup[row.room_number] = row.confirmation_number;
+            }
+        });
+        console.log('💾 확정번호 백업:', confirmationBackup);
+        
+        // 3. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
         await client.query('DELETE FROM hotel_reservation_guests WHERE reservation_room_id IN (SELECT id FROM hotel_reservation_rooms WHERE reservation_id = $1)', [id]);
         await client.query('DELETE FROM hotel_reservation_rooms WHERE reservation_id = $1', [id]);
         await client.query('DELETE FROM hotel_reservation_extras WHERE reservation_id = $1', [id]);
@@ -861,6 +878,28 @@ router.put('/:id', async (req, res) => {
             total_selling_price || 0,
             id
         ]);
+        
+        // 7. 수배서 확정번호 복원
+        if (Object.keys(confirmationBackup).length > 0) {
+            const latestAssignment = await client.query(
+                'SELECT id FROM hotel_assignments WHERE reservation_id = $1 ORDER BY created_at DESC LIMIT 1',
+                [id]
+            );
+            
+            if (latestAssignment.rows.length > 0) {
+                const assignmentId = latestAssignment.rows[0].id;
+                
+                for (const [roomNumber, confirmationNumber] of Object.entries(confirmationBackup)) {
+                    await client.query(
+                        `UPDATE hotel_assignment_rooms 
+                         SET confirmation_number = $1 
+                         WHERE assignment_id = $2 AND room_number = $3`,
+                        [confirmationNumber, assignmentId, parseInt(roomNumber)]
+                    );
+                    console.log(`✅ Room ${roomNumber} 확정번호 복원: ${confirmationNumber}`);
+                }
+            }
+        }
         
         await client.query('COMMIT');
         
