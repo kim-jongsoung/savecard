@@ -862,6 +862,148 @@ router.put('/:id', async (req, res) => {
             id
         ]);
         
+        // 7. 수배서가 있으면 확정번호 보존하면서 객실/투숙객 정보 업데이트
+        const assignmentCheck = await client.query(
+            'SELECT id FROM hotel_assignments WHERE reservation_id = $1 ORDER BY created_at DESC LIMIT 1',
+            [id]
+        );
+        
+        if (assignmentCheck.rows.length > 0) {
+            const assignmentId = assignmentCheck.rows[0].id;
+            
+            console.log(`🔄 수배서 업데이트: Assignment ID ${assignmentId}`);
+            
+            // 7-1. 기존 확정번호 조회 (객실별로)
+            const existingRoomsQuery = await client.query(
+                'SELECT room_number, confirmation_number FROM hotel_assignment_rooms WHERE assignment_id = $1 ORDER BY room_number',
+                [assignmentId]
+            );
+            const existingConfirmations = {};
+            existingRoomsQuery.rows.forEach(row => {
+                if (row.confirmation_number) {
+                    existingConfirmations[row.room_number] = row.confirmation_number;
+                }
+            });
+            
+            console.log('💾 기존 확정번호:', existingConfirmations);
+            
+            // 7-2. 수배서 기본 정보 업데이트
+            await client.query(`
+                UPDATE hotel_assignments
+                SET 
+                    check_in_date = $1,
+                    check_out_date = $2,
+                    nights = $3,
+                    arrival_flight = $4,
+                    departure_flight = $5,
+                    special_requests = $6,
+                    internal_memo = $7,
+                    updated_at = NOW()
+                WHERE id = $8
+            `, [
+                check_in_date,
+                check_out_date,
+                nights,
+                arrival_flight || null,
+                departure_flight || null,
+                special_requests || null,
+                internal_memo || null,
+                assignmentId
+            ]);
+            
+            // 7-3. 수배서 객실 및 투숙객 정보 재생성 (확정번호 보존)
+            await client.query('DELETE FROM hotel_assignment_guests WHERE assignment_room_id IN (SELECT id FROM hotel_assignment_rooms WHERE assignment_id = $1)', [assignmentId]);
+            await client.query('DELETE FROM hotel_assignment_rooms WHERE assignment_id = $1', [assignmentId]);
+            
+            // 7-4. 새로운 객실 정보 복사 (확정번호 유지)
+            if (rooms && rooms.length > 0) {
+                for (let i = 0; i < rooms.length; i++) {
+                    const room = rooms[i];
+                    const roomNumber = i + 1;
+                    
+                    // ⭐ 기존 확정번호 가져오기
+                    const preservedConfirmation = existingConfirmations[roomNumber] || null;
+                    
+                    const assignmentRoomResult = await client.query(`
+                        INSERT INTO hotel_assignment_rooms (
+                            assignment_id,
+                            room_number,
+                            room_type_id,
+                            room_type_name,
+                            promotion_code,
+                            rate_condition_id,
+                            room_rate,
+                            total_selling_price,
+                            breakfast_included,
+                            breakfast_adult_count,
+                            breakfast_child_count,
+                            breakfast_adult_price,
+                            breakfast_child_price,
+                            confirmation_number,
+                            created_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+                        RETURNING id
+                    `, [
+                        assignmentId,
+                        roomNumber,
+                        room.room_type_id,
+                        room.room_type_name || '',
+                        room.promotion_code || null,
+                        room.rate_condition_id || null,
+                        room.room_rate || 0,
+                        room.total_selling_price || 0,
+                        room.breakfast_included || false,
+                        room.breakfast_adult_count || 0,
+                        room.breakfast_child_count || 0,
+                        room.breakfast_adult_price || 0,
+                        room.breakfast_child_price || 0,
+                        preservedConfirmation  // ⭐ 확정번호 보존
+                    ]);
+                    
+                    const assignmentRoomId = assignmentRoomResult.rows[0].id;
+                    
+                    // 7-5. 투숙객 정보 복사
+                    if (room.guests && room.guests.length > 0) {
+                        for (let j = 0; j < room.guests.length; j++) {
+                            const guest = room.guests[j];
+                            const isAdult = guest.age_category === 'adult';
+                            const isChild = guest.age_category === 'child';
+                            const isInfant = guest.age_category === 'infant';
+                            
+                            await client.query(`
+                                INSERT INTO hotel_assignment_guests (
+                                    assignment_room_id,
+                                    guest_number,
+                                    guest_name_ko,
+                                    guest_name_en,
+                                    birth_date,
+                                    is_adult,
+                                    is_child,
+                                    is_infant,
+                                    created_at
+                                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                            `, [
+                                assignmentRoomId,
+                                j + 1,
+                                guest.guest_name_ko || null,
+                                guest.guest_name_en || null,
+                                guest.date_of_birth || null,
+                                isAdult,
+                                isChild,
+                                isInfant
+                            ]);
+                        }
+                    }
+                    
+                    if (preservedConfirmation) {
+                        console.log(`✅ Room ${roomNumber} 확정번호 보존: ${preservedConfirmation}`);
+                    }
+                }
+            }
+            
+            console.log(`✅ 수배서 업데이트 완료 (확정번호 보존)`);
+        }
+        
         await client.query('COMMIT');
         
         res.json({
