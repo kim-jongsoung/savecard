@@ -18365,23 +18365,27 @@ async function startServer() {
                     
                     if (type === 'received') {
                         // 입금 처리
+                        // PostgreSQL ANY 대신 IN 절 사용
+                        const placeholders = reservation_ids.map((_, i) => `$${i + 2}`).join(',');
                         updateQuery = `
                             UPDATE hotel_reservations
                             SET payment_received_date = $1,
                                 updated_at = NOW()
-                            WHERE id = ANY($2)
+                            WHERE id IN (${placeholders})
                         `;
-                        params = [date, reservation_ids];
+                        params = [date, ...reservation_ids];
                     } else {
                         // 송금 처리 (송금환율 저장)
+                        // PostgreSQL ANY 대신 IN 절 사용
+                        const placeholders = reservation_ids.map((_, i) => `$${i + 3}`).join(',');
                         updateQuery = `
                             UPDATE hotel_reservations
                             SET payment_sent_date = $1,
                                 remittance_rate = $2,
                                 updated_at = NOW()
-                            WHERE id = ANY($3)
+                            WHERE id IN (${placeholders})
                         `;
-                        params = [date, exchange_rate, reservation_ids];
+                        params = [date, exchange_rate, ...reservation_ids];
                         
                         console.log('📝 송금환율:', exchange_rate);
                     }
@@ -18397,8 +18401,9 @@ async function startServer() {
                     if (result.rowCount === 0) {
                         console.warn('⚠️ 업데이트된 행이 없습니다! 예약 ID를 확인하세요.');
                         // 해당 예약들이 실제로 존재하는지 확인
-                        const checkQuery = `SELECT id, reservation_number, status FROM hotel_reservations WHERE id = ANY($1)`;
-                        const checkResult = await client.query(checkQuery, [reservation_ids]);
+                        const checkPlaceholders = reservation_ids.map((_, i) => `$${i + 1}`).join(',');
+                        const checkQuery = `SELECT id, reservation_number, status FROM hotel_reservations WHERE id IN (${checkPlaceholders})`;
+                        const checkResult = await client.query(checkQuery, reservation_ids);
                         console.log('🔍 DB에 존재하는 예약:', checkResult.rows);
                     }
                     
