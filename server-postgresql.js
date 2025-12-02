@@ -18370,7 +18370,6 @@ async function startServer() {
                             SET payment_received_date = $1,
                                 updated_at = NOW()
                             WHERE id = ANY($2)
-                            AND status = 'settlement'
                         `;
                         params = [date, reservation_ids];
                     } else {
@@ -18378,13 +18377,12 @@ async function startServer() {
                         updateQuery = `
                             UPDATE hotel_reservations
                             SET payment_sent_date = $1,
+                                remittance_rate = $2,
                                 updated_at = NOW()
-                            WHERE id = ANY($2)
-                            AND status = 'settlement'
+                            WHERE id = ANY($3)
                         `;
-                        params = [date, reservation_ids];
+                        params = [date, exchange_rate, reservation_ids];
                         
-                        // 송금환율은 별도로 저장하지 않음 (필요시 컬럼 추가 필요)
                         console.log('📝 송금환율:', exchange_rate);
                     }
                     
