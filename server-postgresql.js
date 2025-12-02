@@ -18379,13 +18379,14 @@ async function startServer() {
                         `;
                         params = [date, ...reservation_ids];
                     } else {
-                        // 송금 처리 (송금환율 저장)
+                        // 송금 처리 (송금환율 저장 및 적용)
                         // PostgreSQL ANY 대신 IN 절 사용
                         const placeholders = reservation_ids.map((_, i) => `$${i + 3}`).join(',');
                         updateQuery = `
                             UPDATE hotel_reservations
                             SET payment_sent_date = $1,
                                 remittance_rate = $2,
+                                exchange_rate = $2,
                                 status = CASE 
                                     WHEN payment_received_date IS NOT NULL THEN 'completed'
                                     ELSE status
@@ -18396,6 +18397,7 @@ async function startServer() {
                         params = [date, exchange_rate, ...reservation_ids];
                         
                         console.log('📝 송금환율:', exchange_rate);
+                        console.log('💱 환율 업데이트: exchange_rate = remittance_rate');
                     }
                     
                     console.log('🔍 실행 쿼리:', updateQuery);
