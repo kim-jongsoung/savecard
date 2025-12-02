@@ -455,11 +455,17 @@
 
         // 체크박스 선택
         function toggleSelection(id) {
+            console.log('✅ 체크박스 토글:', id, typeof id);
+            
             if (selectedIds.has(id)) {
                 selectedIds.delete(id);
+                console.log('➖ 선택 해제:', id);
             } else {
                 selectedIds.add(id);
+                console.log('➕ 선택 추가:', id);
             }
+            
+            console.log('📋 현재 선택된 ID 목록:', Array.from(selectedIds));
             
             // 선택된 항목이 있으면 일괄 처리 버튼 표시
             const bulkActions = document.getElementById('bulkActions');
@@ -526,12 +532,16 @@
                 return;
             }
 
+            const reservationIds = Array.from(selectedIds);
+            console.log('🔍 선택된 예약 ID 목록:', reservationIds);
+            console.log('🔍 전송할 데이터:', { reservation_ids: reservationIds, type, date, exchange_rate: exchangeRate });
+
             try {
                 const response = await fetch('/api/hotel-settlements/bulk-payment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        reservation_ids: Array.from(selectedIds),
+                        reservation_ids: reservationIds,
                         type: type,
                         date: date,
                         exchange_rate: exchangeRate

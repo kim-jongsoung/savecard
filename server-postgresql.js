@@ -18388,8 +18388,19 @@ async function startServer() {
                     
                     console.log('🔍 실행 쿼리:', updateQuery);
                     console.log('🔍 쿼리 파라미터:', params);
+                    console.log('🔍 예약 ID 배열:', reservation_ids);
+                    console.log('🔍 날짜:', date);
+                    
                     const result = await client.query(updateQuery, params);
                     console.log('📊 영향받은 행 수:', result.rowCount);
+                    
+                    if (result.rowCount === 0) {
+                        console.warn('⚠️ 업데이트된 행이 없습니다! 예약 ID를 확인하세요.');
+                        // 해당 예약들이 실제로 존재하는지 확인
+                        const checkQuery = `SELECT id, reservation_number, status FROM hotel_reservations WHERE id = ANY($1)`;
+                        const checkResult = await client.query(checkQuery, [reservation_ids]);
+                        console.log('🔍 DB에 존재하는 예약:', checkResult.rows);
+                    }
                     
                     await client.query('COMMIT');
                     
