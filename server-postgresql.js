@@ -18247,7 +18247,7 @@ async function startServer() {
                     FROM hotel_reservations hr
                     LEFT JOIN hotels h ON hr.hotel_id = h.id
                     LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
-                    WHERE hr.status IN ('settlement', 'voucher', 'confirmed')
+                    WHERE hr.status = 'settlement'
                 `;
                 
                 const params = [];
