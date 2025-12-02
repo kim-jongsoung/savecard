@@ -369,6 +369,17 @@
                 const checkInDate = s.check_in_date ? new Date(s.check_in_date).toLocaleDateString('ko-KR') : '-';
                 const paymentReceivedDate = s.payment_received_date ? new Date(s.payment_received_date).toLocaleDateString('ko-KR') : '-';
                 const paymentSentDate = s.payment_sent_date ? new Date(s.payment_sent_date).toLocaleDateString('ko-KR') : '-';
+                
+                // 디버깅: 날짜 데이터 확인
+                if (s.payment_received_date || s.payment_sent_date) {
+                    console.log('📅 날짜 데이터:', {
+                        id: s.id,
+                        payment_received_date: s.payment_received_date,
+                        payment_sent_date: s.payment_sent_date,
+                        paymentReceivedDate,
+                        paymentSentDate
+                    });
+                }
 
                 if (currentTab === 'incomplete') {
                     return `
@@ -393,12 +404,12 @@
                             <td class="text-end">₩${tax.toLocaleString()}</td>
                             <td class="text-center">
                                 ${s.payment_received_date 
-                                    ? `<i class="fas fa-check text-success"></i><br><small class="text-muted">${paymentReceivedDate}</small>` 
+                                    ? `<div><i class="fas fa-check text-success"></i></div><div style="font-size: 0.85rem; margin-top: 2px;">${paymentReceivedDate}</div>` 
                                     : '<i class="fas fa-times text-muted"></i>'}
                             </td>
                             <td class="text-center">
                                 ${s.payment_sent_date 
-                                    ? `<i class="fas fa-check text-success"></i><br><small class="text-muted">${paymentSentDate}</small>` 
+                                    ? `<div><i class="fas fa-check text-success"></i></div><div style="font-size: 0.85rem; margin-top: 2px;">${paymentSentDate}</div>` 
                                     : '<i class="fas fa-times text-muted"></i>'}
                             </td>
                         </tr>
