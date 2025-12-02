@@ -34,3 +34,8 @@ qrcodes/
 
 # Misc
 *.local
+
+# Test/Debug scripts
+delete-test-reservations.js
+check-*.js
+add-*.js

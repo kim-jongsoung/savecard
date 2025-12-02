@@ -73,9 +73,16 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         const guests = room.guests || [];
         let guestRowsHTML = '';
         guests.forEach((guest, guestIdx) => {
-            // age_category 필드 사용 (adult, child, infant)
-            const ageCategory = guest.age_category || 'adult';
-            const paxType = ageCategory === 'adult' ? 'Adult' : (ageCategory === 'child' ? 'Child' : 'Infant');
+            // is_adult, is_child, is_infant 필드로 Pax Type 판단
+            let paxType = 'Adult'; // 기본값
+            if (guest.is_infant || guest.age_category === 'infant') {
+                paxType = 'Infant';
+            } else if (guest.is_child || guest.age_category === 'child') {
+                paxType = 'Child';
+            } else if (guest.is_adult || guest.age_category === 'adult') {
+                paxType = 'Adult';
+            }
+            
             const guestNameEn = guest.english_name || guest.guest_name_en || '';
             const birthRaw = guest.birth_date || guest.date_of_birth || '';
             const birthFormatted = formatBirthDate(birthRaw);
