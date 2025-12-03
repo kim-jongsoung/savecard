@@ -451,23 +451,29 @@ router.post('/:assignmentId/send', async (req, res) => {
         const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - ${leadGuestName} - LUXFIND`;
         const senderName = assignment.sent_by || assignment.agency_contact_person || 'LUXFIND';
         
-        // ⭐ 직원 이메일 조회 (sent_by 이름으로 admin_users 테이블 검색)
+        // ⭐ 로그인한 직원의 이메일 조회 (세션의 username 사용)
         let senderEmail = process.env.SMTP_USER; // 기본값
-        if (assignment.sent_by) {
+        const currentUsername = req.session?.adminUsername;
+        
+        if (currentUsername) {
             try {
                 const staffQuery = await pool.query(`
-                    SELECT email FROM admin_users 
-                    WHERE full_name = $1 AND is_active = true
+                    SELECT email, full_name FROM admin_users 
+                    WHERE username = $1 AND is_active = true
                     LIMIT 1
-                `, [assignment.sent_by]);
+                `, [currentUsername]);
                 
                 if (staffQuery.rows.length > 0 && staffQuery.rows[0].email) {
                     senderEmail = staffQuery.rows[0].email;
-                    console.log(`✅ 직원 이메일 사용: ${senderEmail} (${assignment.sent_by})`);
+                    console.log(`✅ 로그인 직원 이메일 사용: ${senderEmail} (${staffQuery.rows[0].full_name})`);
+                } else {
+                    console.log(`⚠️ 직원 이메일 없음, 기본 이메일 사용: ${currentUsername}`);
                 }
             } catch (error) {
                 console.error('⚠️ 직원 이메일 조회 실패, 기본 이메일 사용:', error.message);
             }
+        } else {
+            console.log('⚠️ 세션 정보 없음, 기본 이메일 사용');
         }
         
         // 9. 이메일 전송
