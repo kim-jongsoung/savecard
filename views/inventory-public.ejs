@@ -5,12 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>객실 재고 현황 - 럭스파인드</title>
   
-  <!-- Open Graph / 카카오톡 미리보기 -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="럭스파인드 - 객실 재고 현황">
-  <meta property="og:description" content="실시간 호텔 객실 재고를 확인하세요">
-  <meta property="og:site_name" content="럭스파인드">
-  
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { 
@@ -33,18 +27,42 @@
       font-weight: bold;
       margin: 0;
     }
-    .content-wrapper {
-      display: block;
-      width: 100%;
-    }
-    .calendar-section {
+    
+    /* 탭 스타일 */
+    .nav-tabs {
+      border-bottom: 2px solid #667eea;
+      margin-bottom: 0;
       background: white;
-      border-radius: 15px;
+      border-radius: 15px 15px 0 0;
+      padding: 15px 15px 0 15px;
+    }
+    .nav-tabs .nav-link {
+      color: #666;
+      font-weight: 600;
+      padding: 12px 25px;
+      border: none;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+      background: transparent;
+    }
+    .nav-tabs .nav-link:hover {
+      color: #667eea;
+      border-bottom-color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+    .nav-tabs .nav-link.active {
+      color: #667eea;
+      background: transparent;
+      border-bottom: 3px solid #667eea;
+      font-weight: bold;
+    }
+    .tab-content {
+      background: white;
+      border-radius: 0 0 15px 15px;
       padding: 30px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-      max-width: 1400px;
-      margin: 0 auto;
     }
+    
     .month-section {
       margin-bottom: 30px;
     }
@@ -92,7 +110,58 @@
     .cell-limited { background: #fff3cd; color: #856404; font-weight: bold; }
     .cell-highlighted { background: #ffeb3b !important; font-weight: 700; }
     
-    /* 모바일 카드 뷰 스타일 */
+    /* 가격 조회 스타일 */
+    .price-calculator {
+      background: transparent;
+      padding: 0;
+    }
+    .calc-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 15px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .calc-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    .price-result {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      border-left: 4px solid #667eea;
+    }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .price-row:last-child {
+      border-bottom: none;
+      font-weight: bold;
+      font-size: 1.2em;
+      color: #667eea;
+      padding-top: 15px;
+      margin-top: 10px;
+      border-top: 2px solid #667eea;
+    }
+    .price-label {
+      color: #666;
+    }
+    .price-value {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    /* 모바일 뷰 */
     .mobile-view {
       display: none;
     }
@@ -151,72 +220,6 @@
       font-size: 14px;
     }
     
-    /* 가격 조회 섹션 스타일 */
-    .price-calculator {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border-radius: 15px;
-      padding: 25px;
-      margin-bottom: 30px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-    }
-    .price-calculator h5 {
-      color: #667eea;
-      font-weight: bold;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .price-result {
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      margin-top: 20px;
-      border-left: 4px solid #667eea;
-    }
-    .price-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #e9ecef;
-    }
-    .price-row:last-child {
-      border-bottom: none;
-      font-weight: bold;
-      font-size: 1.2em;
-      color: #667eea;
-      padding-top: 15px;
-      margin-top: 10px;
-      border-top: 2px solid #667eea;
-    }
-    .price-label {
-      color: #666;
-    }
-    .price-value {
-      font-weight: 600;
-      color: #333;
-    }
-    .calc-btn {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      border-radius: 8px;
-      font-weight: bold;
-      width: 100%;
-      margin-top: 15px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .calc-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-    }
-    .calc-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
     @media (max-width: 768px) {
       body {
         padding: 10px 0;
@@ -239,7 +242,7 @@
         flex-direction: column;
         text-align: center;
       }
-      .calendar-section {
+      .tab-content {
         padding: 15px;
         border-radius: 10px;
       }
@@ -271,72 +274,24 @@
       </div>
     </div>
 
-    <div class="content-wrapper">
-      <!-- 가격 조회 섹션 -->
-      <div class="calendar-section price-calculator">
-        <h5>💰 가격 조회</h5>
-        
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="form-label fw-bold">호텔 선택</label>
-            <select id="priceHotelSelect" class="form-select" onchange="loadPriceRoomTypes()">
-              <option value="">호텔 선택...</option>
-            </select>
-          </div>
-          
-          <div class="col-md-3 mb-3">
-            <label class="form-label fw-bold">체크인</label>
-            <input type="date" id="priceCheckIn" class="form-control" onchange="calculatePrice()">
-          </div>
-          
-          <div class="col-md-3 mb-3">
-            <label class="form-label fw-bold">체크아웃</label>
-            <input type="date" id="priceCheckOut" class="form-control" onchange="calculatePrice()">
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="form-label fw-bold">객실 타입</label>
-            <select id="priceRoomType" class="form-select" onchange="loadPromotions()">
-              <option value="">먼저 호텔을 선택하세요</option>
-            </select>
-          </div>
-          
-          <div class="col-md-6 mb-3">
-            <label class="form-label fw-bold">프로모션</label>
-            <select id="pricePromotion" class="form-select" onchange="calculatePrice()">
-              <option value="">프로모션 선택 (선택사항)</option>
-            </select>
-          </div>
-        </div>
-        
-        <button class="calc-btn" onclick="calculatePrice()" id="calcButton">
-          💵 가격 계산하기
+    <!-- 탭 네비게이션 -->
+    <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button" role="tab">
+          📊 재고 현황
         </button>
-        
-        <div id="priceResult" style="display: none;" class="price-result">
-          <div class="price-row">
-            <span class="price-label">숙박 기간</span>
-            <span class="price-value" id="resultNights">-</span>
-          </div>
-          <div class="price-row">
-            <span class="price-label">객실 요금</span>
-            <span class="price-value" id="resultRoomRate">-</span>
-          </div>
-          <div class="price-row">
-            <span class="price-label">수배피 ($10 × 박수)</span>
-            <span class="price-value" id="resultAgencyFee">-</span>
-          </div>
-          <div class="price-row">
-            <span class="price-label">총 금액</span>
-            <span class="price-value" id="resultTotal">-</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 달력 섹션 -->
-      <div class="calendar-section">
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="price-tab" data-bs-toggle="tab" data-bs-target="#price" type="button" role="tab">
+          💰 가격 조회
+        </button>
+      </li>
+    </ul>
+
+    <!-- 탭 컨텐츠 -->
+    <div class="tab-content" id="mainTabContent">
+      <!-- 재고 현황 탭 -->
+      <div class="tab-pane fade show active" id="inventory" role="tabpanel">
         <div class="mb-3">
           <label class="form-label fw-bold">호텔 선택</label>
           <select id="hotelSelect" class="form-select" onchange="loadData()">
@@ -349,12 +304,10 @@
           <input type="month" id="startMonth" class="form-control" onchange="loadData()">
         </div>
 
-        <!-- 마지막 업데이트 시간 표시 -->
         <div id="lastUpdateInfo" class="alert alert-info" style="display: none; padding: 10px; margin-bottom: 15px; border-left: 4px solid #667eea;">
           <strong>📅 재고 현황 업데이트:</strong> <span id="lastUpdateTime"></span>
         </div>
         
-        <!-- 호텔 공지사항 -->
         <div id="noticesSection" style="display: none; margin-bottom: 20px;">
           <div class="alert alert-warning" style="border-left: 4px solid #ffc107;">
             <h6 class="fw-bold mb-2">📢 호텔 공지사항</h6>
@@ -362,22 +315,83 @@
           </div>
         </div>
 
-        <!-- 데스크톱 뷰 -->
         <div id="inventoryContainer" class="desktop-view"></div>
-        
-        <!-- 모바일 뷰 -->
         <div id="mobileInventoryContainer" class="mobile-view"></div>
+      </div>
+
+      <!-- 가격 조회 탭 -->
+      <div class="tab-pane fade" id="price" role="tabpanel">
+        <div class="price-calculator">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">호텔 선택</label>
+              <select id="priceHotelSelect" class="form-select" onchange="loadPriceRoomTypes()">
+                <option value="">호텔 선택...</option>
+              </select>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+              <label class="form-label fw-bold">체크인</label>
+              <input type="date" id="priceCheckIn" class="form-control" onchange="calculatePrice()">
+            </div>
+            
+            <div class="col-md-3 mb-3">
+              <label class="form-label fw-bold">체크아웃</label>
+              <input type="date" id="priceCheckOut" class="form-control" onchange="calculatePrice()">
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">객실 타입</label>
+              <select id="priceRoomType" class="form-select" onchange="loadPromotions()">
+                <option value="">먼저 호텔을 선택하세요</option>
+              </select>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-bold">프로모션</label>
+              <select id="pricePromotion" class="form-select" onchange="calculatePrice()">
+                <option value="">프로모션 선택 (선택사항)</option>
+              </select>
+            </div>
+          </div>
+          
+          <button class="calc-btn" onclick="calculatePrice()">
+            💵 가격 계산하기
+          </button>
+          
+          <div id="priceResult" style="display: none;" class="price-result">
+            <div class="price-row">
+              <span class="price-label">숙박 기간</span>
+              <span class="price-value" id="resultNights">-</span>
+            </div>
+            <div class="price-row">
+              <span class="price-label">객실 요금</span>
+              <span class="price-value" id="resultRoomRate">-</span>
+            </div>
+            <div class="price-row">
+              <span class="price-label">수배피 ($10 × 박수)</span>
+              <span class="price-value" id="resultAgencyFee">-</span>
+            </div>
+            <div class="price-row">
+              <span class="price-label">총 금액</span>
+              <span class="price-value" id="resultTotal">-</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let hotels = [];
     let roomTypes = [];
     let inventory = {};
     let highlighted = new Set();
     let currentHotel = null;
-    let currentWeekStart = 0; // 모바일용 주간 시작 인덱스
+    let currentWeekStart = 0;
     let priceRoomTypes = [];
     let promotions = [];
 
@@ -385,33 +399,27 @@
       const res = await fetch('/api/hotels?is_active=true');
       hotels = await res.json();
       
-      // 재고 달력용 호텔 선택
       const select = document.getElementById('hotelSelect');
-      hotels.forEach(h => {
-        const opt = document.createElement('option');
-        opt.value = h.id;
-        opt.textContent = h.hotel_name;
-        select.appendChild(opt);
-      });
-      
-      // 가격 조회용 호텔 선택
       const priceSelect = document.getElementById('priceHotelSelect');
+      
       hotels.forEach(h => {
-        const opt = document.createElement('option');
-        opt.value = h.id;
-        opt.textContent = h.hotel_name;
-        priceSelect.appendChild(opt);
+        const opt1 = document.createElement('option');
+        opt1.value = h.id;
+        opt1.textContent = h.hotel_name;
+        select.appendChild(opt1);
+        
+        const opt2 = document.createElement('option');
+        opt2.value = h.id;
+        opt2.textContent = h.hotel_name;
+        priceSelect.appendChild(opt2);
       });
 
-      // 기본 시작월 설정 (현재 월)
       const now = new Date();
       document.getElementById('startMonth').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       
-      // 체크인 날짜 기본값 (오늘)
       const today = new Date();
       document.getElementById('priceCheckIn').value = today.toISOString().split('T')[0];
       
-      // 체크아웃 날짜 기본값 (내일)
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       document.getElementById('priceCheckOut').value = tomorrow.toISOString().split('T')[0];
@@ -422,15 +430,11 @@
       if (!hid) return;
 
       currentHotel = hotels.find(h => h.id == hid);
-      
-      // 공지사항 로드
       loadNotices();
       
-      // 객실 타입 로드 (공개 인벤토리 노출 설정된 것만)
       const rtRes = await fetch(`/api/room-types?hotel_id=${hid}&is_active=true&visible_in_inventory=true`);
       roomTypes = await rtRes.json();
 
-      // 재고 로드 (6개월)
       const start = document.getElementById('startMonth').value.split('-');
       const year = parseInt(start[0]), month = parseInt(start[1]);
       inventory = {};
@@ -441,27 +445,15 @@
         const mo = month + m > 12 ? month + m - 12 : month + m;
         const res = await fetch(`/api/inventory/public?hotel_id=${hid}&year=${y}&month=${mo}`);
         
-        // HTTP 상태 체크
         if (!res.ok) {
-          console.error(`❌ ${y}-${mo} HTTP 에러: ${res.status} ${res.statusText}`);
-          const errorText = await res.text();
-          console.error('에러 응답:', errorText);
-          alert(`재고 데이터 로드 실패 (${res.status}): ${errorText.substring(0, 200)}`);
+          console.error(`HTTP error: ${res.status}`);
           return;
         }
         
         const data = await res.json();
         
-        // 에러 응답 체크
-        if (data.error) {
-          console.error(`❌ ${y}-${mo} 데이터 로드 실패:`, data);
-          alert(`재고 데이터 로드 실패: ${data.error}\n\n${data.details || ''}`);
-          return;
-        }
-        
-        if (!Array.isArray(data)) {
-          console.error(`❌ ${y}-${mo} 데이터가 배열이 아닙니다:`, typeof data, data);
-          alert(`재고 데이터 형식 오류: 배열이 아닌 ${typeof data} 타입입니다.`);
+        if (data.error || !Array.isArray(data)) {
+          console.error('Data error:', data);
           return;
         }
         
@@ -475,12 +467,10 @@
             inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
           }
           
-          // 노란색 표시 로드 (notes='HIGHLIGHT')
           if (inv.notes === 'HIGHLIGHT') {
             highlighted.add(key);
           }
           
-          // 가장 최근 업데이트 시간 추적
           if (inv.updated_at) {
             const updateTime = new Date(inv.updated_at);
             if (!latestUpdate || updateTime > latestUpdate) {
@@ -490,7 +480,6 @@
         });
       }
       
-      // 마지막 업데이트 시간 표시
       if (latestUpdate) {
         const year = latestUpdate.getFullYear();
         const month = String(latestUpdate.getMonth() + 1).padStart(2, '0');
@@ -560,7 +549,6 @@
               }
             }
             
-            // 노란색 표시 추가
             if (highlighted.has(key)) {
               cellClass += ' cell-highlighted';
             }
@@ -576,11 +564,8 @@
       container.innerHTML = html;
     }
     
-    // 모바일 뷰 렌더링 (주간 단위)
     function renderMobileInventory(year, month) {
       const container = document.getElementById('mobileInventoryContainer');
-      
-      // 현재 날짜부터 4주간 데이터 생성
       const today = new Date();
       const startDate = new Date(today);
       startDate.setDate(startDate.getDate() + (currentWeekStart * 7));
@@ -593,10 +578,8 @@
         </div>
       `;
       
-      // 요일 헤더
       const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
       
-      // 각 객실 타입별 카드
       roomTypes.forEach(rt => {
         html += `
           <div class="room-card">
@@ -604,14 +587,12 @@
             <div class="date-grid">
         `;
         
-        // 요일 헤더
         for (let i = 0; i < 7; i++) {
           const d = new Date(startDate);
           d.setDate(d.getDate() + i);
           html += `<div class="date-cell-header">${weekDays[d.getDay()]}</div>`;
         }
         
-        // 날짜 및 재고 상태
         for (let i = 0; i < 7; i++) {
           const d = new Date(startDate);
           d.setDate(d.getDate() + i);
@@ -667,7 +648,6 @@
       container.innerHTML = html;
     }
     
-    // 주간 변경
     function changeWeek(direction) {
       currentWeekStart += direction;
       const start = document.getElementById('startMonth').value.split('-');
@@ -675,7 +655,6 @@
       renderMobileInventory(year, month);
     }
     
-    // 공지사항 로드
     async function loadNotices() {
       const hid = document.getElementById('hotelSelect').value;
       if (!hid) {
@@ -709,11 +688,10 @@
           }).join('');
         }
       } catch (error) {
-        console.error('❌ 공지사항 로드 오류:', error);
+        console.error('Notice load error:', error);
       }
     }
 
-    // 가격 조회용 객실 타입 로드
     async function loadPriceRoomTypes() {
       const hotelId = document.getElementById('priceHotelSelect').value;
       const roomTypeSelect = document.getElementById('priceRoomType');
@@ -735,15 +713,12 @@
           roomTypeSelect.appendChild(opt);
         });
       } catch (error) {
-        console.error('❌ 객실 타입 로드 오류:', error);
-        alert('객실 타입을 불러오는데 실패했습니다.');
+        console.error('Room type load error:', error);
       }
     }
     
-    // 프로모션 로드
     async function loadPromotions() {
       const hotelId = document.getElementById('priceHotelSelect').value;
-      const roomTypeId = document.getElementById('priceRoomType').value;
       const promoSelect = document.getElementById('pricePromotion');
       
       promoSelect.innerHTML = '<option value="">프로모션 선택 (선택사항)</option>';
@@ -761,11 +736,10 @@
           promoSelect.appendChild(opt);
         });
       } catch (error) {
-        console.error('❌ 프로모션 로드 오류:', error);
+        console.error('Promotion load error:', error);
       }
     }
     
-    // 가격 계산
     async function calculatePrice() {
       const hotelId = document.getElementById('priceHotelSelect').value;
       const roomTypeId = document.getElementById('priceRoomType').value;
@@ -773,13 +747,11 @@
       const checkOut = document.getElementById('priceCheckOut').value;
       const promoId = document.getElementById('pricePromotion').value;
       
-      // 필수 입력 체크
       if (!hotelId || !roomTypeId || !checkIn || !checkOut) {
         document.getElementById('priceResult').style.display = 'none';
         return;
       }
       
-      // 날짜 유효성 체크
       const checkInDate = new Date(checkIn);
       const checkOutDate = new Date(checkOut);
       
@@ -788,11 +760,9 @@
         return;
       }
       
-      // 박수 계산
       const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
       
       try {
-        // API 호출
         let url = `/api/price-calculator/public?hotel_id=${hotelId}&room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`;
         if (promoId) {
           url += `&promo_id=${promoId}`;
@@ -806,11 +776,9 @@
           return;
         }
         
-        // 수배피 계산 ($10 × 박수)
         const agencyFee = nights * 10;
         const totalAmount = data.total_room_rate + agencyFee;
         
-        // 결과 표시
         document.getElementById('resultNights').textContent = `${nights}박`;
         document.getElementById('resultRoomRate').textContent = `$${data.total_room_rate.toFixed(2)}`;
         document.getElementById('resultAgencyFee').textContent = `$${agencyFee.toFixed(2)}`;
@@ -818,12 +786,11 @@
         document.getElementById('priceResult').style.display = 'block';
         
       } catch (error) {
-        console.error('❌ 가격 계산 오류:', error);
+        console.error('Price calculation error:', error);
         alert('가격을 계산하는데 실패했습니다.');
       }
     }
     
-    // 페이지 로드 시 호텔 목록 로드
     loadHotels();
   </script>
 </body>
