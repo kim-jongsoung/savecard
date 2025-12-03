@@ -31,21 +31,21 @@
         <!-- 필터링 섹션 -->
         <div class="filter-section">
             <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">기간</label>
+                <div class="col-md-3" id="dateFilterSection" style="display: none;">
+                    <label class="form-label">기간 (완료 탭 전용)</label>
                     <div class="input-group input-group-sm">
                         <input type="date" class="form-control" id="startDate">
                         <span class="input-group-text">~</span>
                         <input type="date" class="form-control" id="endDate">
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label">예약업체</label>
                     <select class="form-select form-select-sm" id="filterAgency">
                         <option value="">전체</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label">호텔</label>
                     <select class="form-select form-select-sm" id="filterHotel">
                         <option value="">전체</option>
@@ -55,23 +55,7 @@
                     <label class="form-label">투숙객명</label>
                     <input type="text" class="form-control form-control-sm" id="filterGuest" placeholder="고객명 검색">
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">입금</label>
-                    <select class="form-select form-select-sm" id="filterPaymentReceived">
-                        <option value="">전체</option>
-                        <option value="completed">완료</option>
-                        <option value="incomplete">미완료</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">송금</label>
-                    <select class="form-select form-select-sm" id="filterPaymentSent">
-                        <option value="">전체</option>
-                        <option value="completed">완료</option>
-                        <option value="incomplete">미완료</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
+                <div class="col-md-1 d-flex align-items-end">
                     <button class="btn btn-primary btn-sm me-2" onclick="loadSettlements()">
                         <i class="fas fa-search me-1"></i>검색
                     </button>
@@ -233,11 +217,11 @@
             const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
             document.getElementById('startDate').valueAsDate = threeMonthsAgo;
             document.getElementById('endDate').valueAsDate = today;
-
+            
             // 필터 옵션 로드
             loadFilterOptions();
             
-            // 정산 목록 로드
+            // 정산 목록 로드 (미완료 탭은 전체, 완료 탭은 기간 필터)
             loadSettlements();
         });
 
@@ -289,25 +273,25 @@
 
         // 정산 목록 로드
         async function loadSettlements() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
             const agency = document.getElementById('filterAgency').value;
             const hotel = document.getElementById('filterHotel').value;
             const guest = document.getElementById('filterGuest').value;
-            const paymentReceived = document.getElementById('filterPaymentReceived').value;
-            const paymentSent = document.getElementById('filterPaymentSent').value;
 
             const params = new URLSearchParams({
-                status: currentTab === 'incomplete' ? 'incomplete' : 'completed',
-                start_date: startDate,
-                end_date: endDate
+                status: currentTab === 'incomplete' ? 'incomplete' : 'completed'
             });
+
+            // 완료 탭일 때만 기간 필터 적용
+            if (currentTab === 'completed') {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+            }
 
             if (agency) params.append('agency', agency);
             if (hotel) params.append('hotel', hotel);
             if (guest) params.append('guest', guest);
-            if (paymentReceived) params.append('payment_received', paymentReceived);
-            if (paymentSent) params.append('payment_sent', paymentSent);
 
             try {
                 console.log('🔍 API 호출:', `/api/hotel-settlements-list?${params}`);
@@ -357,6 +341,17 @@
                 
                 const isPaymentSent = !!s.payment_sent_date;
                 const displayRate = isPaymentSent ? remittanceRate : settlementRate;
+                
+                // 디버깅: 환율 정보 확인
+                if (isPaymentSent) {
+                    console.log('💱 송금 완료 건 환율:', {
+                        id: s.id,
+                        settlementRate,
+                        remittanceRate,
+                        displayRate,
+                        isPaymentSent
+                    });
+                }
                 
                 const sellingPriceKRW = Math.round(sellingPriceUSD * settlementRate);
                 const costPriceKRW = Math.round(costPriceUSD * displayRate);
@@ -448,6 +443,15 @@
         // 탭 전환
         function switchTab(tab) {
             currentTab = tab;
+            
+            // 완료 탭일 때만 기간 필터 표시
+            const dateFilterSection = document.getElementById('dateFilterSection');
+            if (tab === 'completed') {
+                dateFilterSection.style.display = 'block';
+            } else {
+                dateFilterSection.style.display = 'none';
+            }
+            
             document.getElementById('bulkActions').style.display = tab === 'incomplete' ? 'block' : 'none';
             clearSelection();
             loadSettlements();
@@ -568,15 +572,16 @@
 
         // 필터 초기화
         function resetFilters() {
-            const today = new Date();
-            const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-            document.getElementById('startDate').valueAsDate = threeMonthsAgo;
-            document.getElementById('endDate').valueAsDate = today;
+            // 완료 탭일 때만 기간 초기화
+            if (currentTab === 'completed') {
+                const today = new Date();
+                const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+                document.getElementById('startDate').valueAsDate = threeMonthsAgo;
+                document.getElementById('endDate').valueAsDate = today;
+            }
             document.getElementById('filterAgency').value = '';
             document.getElementById('filterHotel').value = '';
             document.getElementById('filterGuest').value = '';
-            document.getElementById('filterPaymentReceived').value = '';
-            document.getElementById('filterPaymentSent').value = '';
             loadSettlements();
         }
 

@@ -18222,8 +18222,8 @@ async function startServer() {
         // 호텔 정산 목록 조회
         app.get('/api/hotel-settlements-list', requireAuth, async (req, res) => {
             try {
-                const { status, start_date, end_date, agency, hotel, guest, payment_received, payment_sent } = req.query;
-                console.log('💰 호텔 정산 목록 조회:', { status, start_date, end_date, agency, hotel, guest, payment_received, payment_sent });
+                const { status, agency, hotel, guest } = req.query;
+                console.log('💰 호텔 정산 목록 조회:', { status, agency, hotel, guest });
                 
                 let query = `
                     SELECT 
@@ -18238,6 +18238,7 @@ async function startServer() {
                         hr.out_hotel_cost,
                         hr.agency_fee,
                         hr.exchange_rate,
+                        hr.remittance_rate,
                         hr.payment_received_date,
                         hr.payment_sent_date,
                         hr.settlement_memo,
@@ -18252,19 +18253,25 @@ async function startServer() {
                 
                 const params = [];
                 
+                // 미완료: 입금 또는 송금이 하나라도 미완료된 건
                 if (status === 'incomplete') {
                     query += ' AND (hr.payment_received_date IS NULL OR hr.payment_sent_date IS NULL)';
                 } else if (status === 'completed') {
+                    // 완료: 입금과 송금이 모두 완료된 건
                     query += ' AND hr.payment_received_date IS NOT NULL AND hr.payment_sent_date IS NOT NULL';
                 }
                 
-                if (start_date) {
-                    params.push(start_date);
-                    query += ` AND hr.check_in_date >= $${params.length}`;
-                }
-                if (end_date) {
-                    params.push(end_date);
-                    query += ` AND hr.check_in_date <= $${params.length}`;
+                // 완료 탭일 때만 기간 필터 적용
+                if (status === 'completed') {
+                    const { start_date, end_date } = req.query;
+                    if (start_date) {
+                        params.push(start_date);
+                        query += ` AND hr.check_in_date >= $${params.length}`;
+                    }
+                    if (end_date) {
+                        params.push(end_date);
+                        query += ` AND hr.check_in_date <= $${params.length}`;
+                    }
                 }
                 
                 if (agency) {
@@ -18285,20 +18292,6 @@ async function startServer() {
                         WHERE hrm.reservation_id = hr.id 
                         AND hrg.guest_name_ko ILIKE $${params.length}
                     )`;
-                }
-                
-                // 입금 필터
-                if (payment_received === 'completed') {
-                    query += ` AND hr.payment_received_date IS NOT NULL`;
-                } else if (payment_received === 'incomplete') {
-                    query += ` AND hr.payment_received_date IS NULL`;
-                }
-                
-                // 송금 필터
-                if (payment_sent === 'completed') {
-                    query += ` AND hr.payment_sent_date IS NOT NULL`;
-                } else if (payment_sent === 'incomplete') {
-                    query += ` AND hr.payment_sent_date IS NULL`;
                 }
                 
                 query += ' ORDER BY hr.check_in_date DESC, hr.created_at DESC';
