@@ -135,6 +135,9 @@ router.post('/create', async (req, res) => {
                 roomRate = parseFloat(room.total_selling_price) / nights;
             }
             
+            // ⭐ 예약 테이블의 확정번호 우선 사용 (한번 부여되면 모든 수배서/바우처에 동일하게 표시)
+            const confirmationNumber = reservation.confirmation_number || room.confirmation_number || null;
+            
             const roomQuery = await client.query(`
                 INSERT INTO hotel_assignment_rooms (
                     assignment_id, room_number, room_type_id, room_type_name,
@@ -145,7 +148,7 @@ router.post('/create', async (req, res) => {
                 RETURNING id
             `, [
                 assignmentId, i + 1, room.room_type_id, room.hotel_room_name || room.room_type_name,
-                roomRate, room.promotion_code, room.confirmation_number,
+                roomRate, room.promotion_code, confirmationNumber,
                 room.breakfast_included, room.breakfast_adult_count, room.breakfast_adult_price,
                 room.breakfast_child_count, room.breakfast_child_price
             ]);
