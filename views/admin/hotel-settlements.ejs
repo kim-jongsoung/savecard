@@ -354,7 +354,6 @@
 
                 if (data.success) {
                     renderSettlements(data.data);
-                    updateCounts(data.counts);
                 } else {
                     console.error('❌ 데이터 로드 실패:', data.message);
                     alert('데이터 로드 실패: ' + data.message);
@@ -558,12 +557,6 @@
                 document.getElementById('sentOnlyTotal').textContent = '₩' + Math.round(sentOnlyTotal).toLocaleString();
                 document.getElementById('sentOnlyCount').textContent = sentOnlyCount + '건';
             }
-        }
-
-        // 카운트 업데이트
-        function updateCounts(counts) {
-            document.getElementById('incompleteCount').textContent = counts.incomplete || 0;
-            document.getElementById('completeCount').textContent = counts.completed || 0;
         }
 
         // 탭 전환
