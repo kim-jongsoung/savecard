@@ -449,10 +449,10 @@ router.post('/:assignmentId/send', async (req, res) => {
 
         // 제목: [타입] Check-in 날짜 - 게스트이름 - LUXFIND
         const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - ${leadGuestName} - LUXFIND`;
-        const senderName = assignment.sent_by || assignment.agency_contact_person || 'LUXFIND';
         
-        // ⭐ 로그인한 직원의 이메일 조회 (세션의 username 사용)
+        // ⭐ 로그인한 직원의 이름과 이메일 조회 (세션의 username 사용)
         let senderEmail = process.env.SMTP_USER; // 기본값
+        let senderName = 'LUXFIND'; // 기본값
         const currentUsername = req.session?.adminUsername;
         
         console.log('🔍 [수배서 발송] 세션 정보:', {
@@ -474,22 +474,36 @@ router.post('/:assignmentId/send', async (req, res) => {
                     data: staffQuery.rows[0]
                 });
                 
-                if (staffQuery.rows.length > 0 && staffQuery.rows[0].email) {
-                    senderEmail = staffQuery.rows[0].email;
-                    console.log(`✅ 로그인 직원 이메일 사용: ${senderEmail} (${staffQuery.rows[0].full_name})`);
+                if (staffQuery.rows.length > 0) {
+                    const staff = staffQuery.rows[0];
+                    
+                    // 직원 이름 설정
+                    if (staff.full_name) {
+                        senderName = staff.full_name;
+                    }
+                    
+                    // 직원 이메일 설정
+                    if (staff.email) {
+                        senderEmail = staff.email;
+                        console.log(`✅ 로그인 직원 정보 사용: ${senderName} <${senderEmail}>`);
+                    } else {
+                        console.log(`⚠️ 직원 이메일 없음, 기본 이메일 사용: ${currentUsername}`);
+                    }
                 } else {
-                    console.log(`⚠️ 직원 이메일 없음, 기본 이메일 사용: ${currentUsername}`);
+                    console.log(`⚠️ 직원 정보 없음, 기본값 사용: ${currentUsername}`);
                 }
             } catch (error) {
-                console.error('⚠️ 직원 이메일 조회 실패, 기본 이메일 사용:', error.message);
+                console.error('⚠️ 직원 정보 조회 실패, 기본값 사용:', error.message);
             }
         } else {
-            console.log('⚠️ 세션 정보 없음, 기본 이메일 사용');
+            console.log('⚠️ 세션 정보 없음, 기본값 사용');
         }
+        
+        console.log(`📧 [최종 발신자 정보] 이름: ${senderName}, 이메일: ${senderEmail}`);
         
         // 9. 이메일 전송
         const info = await transporter.sendMail({
-            from: `"${senderName} (LUXFIND)" <${senderEmail}>`,
+            from: `"${senderName}" <${senderEmail}>`,
             replyTo: senderEmail,
             to: toEmail,
             subject: mailSubject,
