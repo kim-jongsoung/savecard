@@ -11,8 +11,6 @@
         .table td { vertical-align: middle; border-right: 1px solid #dee2e6; }
         .table th { border-right: 1px solid #dee2e6; }
         .table td:last-child, .table th:last-child { border-right: none; }
-        .clickable-row { cursor: pointer; }
-        .clickable-row:hover { background-color: #f8f9fa; }
         .filter-section { background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
         .status-badge { font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 4px; }
         .status-complete { background: #28a745; color: white; }
@@ -30,22 +28,22 @@
 
         <!-- 필터링 섹션 -->
         <div class="filter-section">
-            <div class="row g-3">
-                <div class="col-md-3" id="dateFilterSection" style="display: none;">
-                    <label class="form-label">기간 (완료 탭 전용)</label>
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label class="form-label">기간</label>
                     <div class="input-group input-group-sm">
                         <input type="date" class="form-control" id="startDate">
                         <span class="input-group-text">~</span>
                         <input type="date" class="form-control" id="endDate">
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">예약업체</label>
                     <select class="form-select form-select-sm" id="filterAgency">
                         <option value="">전체</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">호텔</label>
                     <select class="form-select form-select-sm" id="filterHotel">
                         <option value="">전체</option>
@@ -55,10 +53,30 @@
                     <label class="form-label">투숙객명</label>
                     <input type="text" class="form-control form-control-sm" id="filterGuest" placeholder="고객명 검색">
                 </div>
+                <div class="col-md-1">
+                    <label class="form-label">입금</label>
+                    <select class="form-select form-select-sm" id="filterPaymentReceived">
+                        <option value="">전체</option>
+                        <option value="completed">완료</option>
+                        <option value="incomplete">미완료</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">송금</label>
+                    <select class="form-select form-select-sm" id="filterPaymentSent">
+                        <option value="">전체</option>
+                        <option value="completed">완료</option>
+                        <option value="incomplete">미완료</option>
+                    </select>
+                </div>
                 <div class="col-md-1 d-flex align-items-end">
-                    <button class="btn btn-primary btn-sm me-2" onclick="loadSettlements()">
-                        <i class="fas fa-search me-1"></i>검색
+                    <button class="btn btn-primary btn-sm w-100" onclick="loadSettlements()">
+                        <i class="fas fa-search"></i>
                     </button>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-12 text-end">
                     <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
                         <i class="fas fa-redo me-1"></i>초기화
                     </button>
@@ -273,25 +291,27 @@
 
         // 정산 목록 로드
         async function loadSettlements() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
             const agency = document.getElementById('filterAgency').value;
             const hotel = document.getElementById('filterHotel').value;
             const guest = document.getElementById('filterGuest').value;
+            const paymentReceived = document.getElementById('filterPaymentReceived').value;
+            const paymentSent = document.getElementById('filterPaymentSent').value;
 
             const params = new URLSearchParams({
                 status: currentTab === 'incomplete' ? 'incomplete' : 'completed'
             });
 
-            // 완료 탭일 때만 기간 필터 적용
-            if (currentTab === 'completed') {
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-                if (startDate) params.append('start_date', startDate);
-                if (endDate) params.append('end_date', endDate);
-            }
+            // 기간 필터 (항상 적용)
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
 
             if (agency) params.append('agency', agency);
             if (hotel) params.append('hotel', hotel);
             if (guest) params.append('guest', guest);
+            if (paymentReceived) params.append('payment_received', paymentReceived);
+            if (paymentSent) params.append('payment_sent', paymentSent);
 
             try {
                 console.log('🔍 API 호출:', `/api/hotel-settlements-list?${params}`);
@@ -330,7 +350,14 @@
                 return;
             }
 
-            tbody.innerHTML = settlements.map(s => {
+            // 합계 계산용 변수
+            let totalSellingUSD = 0, totalSellingKRW = 0;
+            let totalCostUSD = 0, totalCostKRW = 0;
+            let totalOutHotelUSD = 0, totalOutHotelKRW = 0;
+            let totalAgencyFeeUSD = 0, totalAgencyFeeKRW = 0;
+            let totalMarginKRW = 0, totalTax = 0;
+
+            const rows = settlements.map(s => {
                 const sellingPriceUSD = parseFloat(s.total_selling_price || 0);
                 const costPriceUSD = parseFloat(s.total_cost_price || 0);
                 const outHotelCostUSD = parseFloat(s.out_hotel_cost || 0);
@@ -361,25 +388,26 @@
                 const marginKRW = sellingPriceKRW - costPriceKRW - outHotelCostKRW;
                 const tax = Math.round(marginKRW * 0.1);
 
+                // 합계 누적
+                totalSellingUSD += sellingPriceUSD;
+                totalSellingKRW += sellingPriceKRW;
+                totalCostUSD += costPriceUSD;
+                totalCostKRW += costPriceKRW;
+                totalOutHotelUSD += outHotelCostUSD;
+                totalOutHotelKRW += outHotelCostKRW;
+                totalAgencyFeeUSD += agencyFeeUSD;
+                totalAgencyFeeKRW += agencyFeeKRW;
+                totalMarginKRW += marginKRW;
+                totalTax += tax;
+
                 const checkInDate = s.check_in_date ? new Date(s.check_in_date).toLocaleDateString('ko-KR') : '-';
                 const paymentReceivedDate = s.payment_received_date ? new Date(s.payment_received_date).toLocaleDateString('ko-KR') : '-';
                 const paymentSentDate = s.payment_sent_date ? new Date(s.payment_sent_date).toLocaleDateString('ko-KR') : '-';
-                
-                // 디버깅: 날짜 데이터 확인
-                if (s.payment_received_date || s.payment_sent_date) {
-                    console.log('📅 날짜 데이터:', {
-                        id: s.id,
-                        payment_received_date: s.payment_received_date,
-                        payment_sent_date: s.payment_sent_date,
-                        paymentReceivedDate,
-                        paymentSentDate
-                    });
-                }
 
                 if (currentTab === 'incomplete') {
                     return `
-                        <tr class="clickable-row" onclick="openReservationModal(${s.id})">
-                            <td onclick="event.stopPropagation()">
+                        <tr>
+                            <td>
                                 <input type="checkbox" class="form-check-input" value="${s.id}" 
                                        onchange="toggleSelection(${s.id})">
                             </td>
@@ -411,7 +439,7 @@
                     `;
                 } else {
                     return `
-                        <tr class="clickable-row" onclick="openReservationModal(${s.id})">
+                        <tr>
                             <td>${checkInDate}</td>
                             <td>${s.hotel_name || '-'}</td>
                             <td>${s.booking_agency_name || '-'}</td>
@@ -432,6 +460,44 @@
                     `;
                 }
             }).join('');
+
+            // 합계 행 추가
+            const totalRow = currentTab === 'incomplete' ? `
+                <tr style="background-color: #fff3cd; font-weight: bold; border-top: 3px solid #ffc107;">
+                    <td></td>
+                    <td colspan="4" class="text-center">합계 (${settlements.length}건)</td>
+                    <td class="text-end">$${totalSellingUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalSellingKRW).toLocaleString()}</td>
+                    <td class="text-end">$${totalCostUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalCostKRW).toLocaleString()}</td>
+                    <td class="text-end">$${totalOutHotelUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalOutHotelKRW).toLocaleString()}</td>
+                    <td class="text-end">$${totalAgencyFeeUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalAgencyFeeKRW).toLocaleString()}</td>
+                    <td class="text-end ${totalMarginKRW >= 0 ? 'text-primary' : 'text-danger'}">₩${Math.round(totalMarginKRW).toLocaleString()}</td>
+                    <td class="text-end">₩${Math.round(totalTax).toLocaleString()}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            ` : `
+                <tr style="background-color: #d1ecf1; font-weight: bold; border-top: 3px solid #0dcaf0;">
+                    <td colspan="4" class="text-center">합계 (${settlements.length}건)</td>
+                    <td class="text-end">$${totalSellingUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalSellingKRW).toLocaleString()}</td>
+                    <td class="text-end">$${totalCostUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalCostKRW).toLocaleString()}</td>
+                    <td class="text-end">$${totalOutHotelUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalOutHotelKRW).toLocaleString()}</td>
+                    <td class="text-end">$${totalAgencyFeeUSD.toFixed(2)}</td>
+                    <td class="text-end">₩${Math.round(totalAgencyFeeKRW).toLocaleString()}</td>
+                    <td class="text-end ${totalMarginKRW >= 0 ? 'text-primary' : 'text-danger'}">₩${Math.round(totalMarginKRW).toLocaleString()}</td>
+                    <td class="text-end">₩${Math.round(totalTax).toLocaleString()}</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            `;
+
+            tbody.innerHTML = rows + totalRow;
         }
 
         // 카운트 업데이트
@@ -444,14 +510,7 @@
         function switchTab(tab) {
             currentTab = tab;
             
-            // 완료 탭일 때만 기간 필터 표시
-            const dateFilterSection = document.getElementById('dateFilterSection');
-            if (tab === 'completed') {
-                dateFilterSection.style.display = 'block';
-            } else {
-                dateFilterSection.style.display = 'none';
-            }
-            
+            // 일괄 처리 버튼은 미완료 탭에서만 표시
             document.getElementById('bulkActions').style.display = tab === 'incomplete' ? 'block' : 'none';
             clearSelection();
             loadSettlements();
@@ -572,16 +631,17 @@
 
         // 필터 초기화
         function resetFilters() {
-            // 완료 탭일 때만 기간 초기화
-            if (currentTab === 'completed') {
-                const today = new Date();
-                const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-                document.getElementById('startDate').valueAsDate = threeMonthsAgo;
-                document.getElementById('endDate').valueAsDate = today;
-            }
+            // 기간 초기화 (최근 3개월)
+            const today = new Date();
+            const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+            document.getElementById('startDate').valueAsDate = threeMonthsAgo;
+            document.getElementById('endDate').valueAsDate = today;
+            
             document.getElementById('filterAgency').value = '';
             document.getElementById('filterHotel').value = '';
             document.getElementById('filterGuest').value = '';
+            document.getElementById('filterPaymentReceived').value = '';
+            document.getElementById('filterPaymentSent').value = '';
             loadSettlements();
         }
 
