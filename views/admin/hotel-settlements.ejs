@@ -89,13 +89,13 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="incomplete-tab" data-bs-toggle="tab" data-bs-target="#incomplete" 
                         type="button" role="tab" onclick="switchTab('incomplete')">
-                    미완료 <span class="badge bg-warning text-dark" id="incompleteCount">0</span>
+                    미완료
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="complete-tab" data-bs-toggle="tab" data-bs-target="#complete" 
                         type="button" role="tab" onclick="switchTab('complete')">
-                    완료 <span class="badge bg-success" id="completeCount">0</span>
+                    완료
                 </button>
             </li>
         </ul>
@@ -196,6 +196,12 @@
 
             <!-- 완료 탭 -->
             <div class="tab-pane fade" id="complete" role="tabpanel">
+                <!-- 엑셀 다운로드 버튼 -->
+                <div class="mb-3 text-end">
+                    <button class="btn btn-success btn-sm" onclick="downloadExcel()">
+                        <i class="fas fa-file-excel me-1"></i>엑셀 다운로드
+                    </button>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover table-sm">
                         <thead class="table-light">
@@ -249,6 +255,7 @@
     <!-- 모달은 수배관리 페이지에서 사용 -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script>
         let currentTab = 'incomplete';
         let selectedIds = new Set();
@@ -709,6 +716,124 @@
         function openReservationModal(reservationId) {
             // 수배관리 페이지로 이동하면서 자동으로 모달 열기
             window.location.href = `/admin/hotel-assignments?open=${reservationId}`;
+        }
+
+        // 엑셀 다운로드
+        async function downloadExcel() {
+            try {
+                // 현재 필터 조건으로 완료 데이터 가져오기
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                const agency = document.getElementById('filterAgency').value;
+                const hotel = document.getElementById('filterHotel').value;
+                const guest = document.getElementById('filterGuest').value;
+                const paymentReceived = document.getElementById('filterPaymentReceived').value;
+                const paymentSent = document.getElementById('filterPaymentSent').value;
+
+                const params = new URLSearchParams({
+                    status: 'completed'
+                });
+
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+                if (agency) params.append('agency', agency);
+                if (hotel) params.append('hotel', hotel);
+                if (guest) params.append('guest', guest);
+                if (paymentReceived) params.append('payment_received', paymentReceived);
+                if (paymentSent) params.append('payment_sent', paymentSent);
+
+                const response = await fetch(`/api/hotel-settlements-list?${params}`);
+                const data = await response.json();
+
+                if (!data.success || !data.data || data.data.length === 0) {
+                    alert('다운로드할 데이터가 없습니다.');
+                    return;
+                }
+
+                // 엑셀 데이터 생성
+                const excelData = data.data.map(s => {
+                    const sellingPriceUSD = parseFloat(s.total_selling_price || 0);
+                    const costPriceUSD = parseFloat(s.total_cost_price || 0);
+                    const outHotelCostUSD = parseFloat(s.out_hotel_cost || 0);
+                    const agencyFeeUSD = parseFloat(s.agency_fee || 0);
+                    
+                    const settlementRate = parseFloat(s.exchange_rate || 1470);
+                    const remittanceRate = parseFloat(s.remittance_rate || settlementRate);
+                    const displayRate = remittanceRate;
+                    
+                    const sellingPriceKRW = Math.round(sellingPriceUSD * settlementRate);
+                    const costPriceKRW = Math.round(costPriceUSD * displayRate);
+                    const outHotelCostKRW = Math.round(outHotelCostUSD * displayRate);
+                    const agencyFeeKRW = Math.round(agencyFeeUSD * settlementRate);
+                    const marginKRW = sellingPriceKRW - costPriceKRW - outHotelCostKRW;
+                    const tax = Math.round(marginKRW * 0.1);
+
+                    const checkInDate = s.check_in_date ? new Date(s.check_in_date).toLocaleDateString('ko-KR') : '';
+                    const paymentReceivedDate = s.payment_received_date ? new Date(s.payment_received_date).toLocaleDateString('ko-KR') : '';
+                    const paymentSentDate = s.payment_sent_date ? new Date(s.payment_sent_date).toLocaleDateString('ko-KR') : '';
+
+                    return {
+                        '체크인일': checkInDate,
+                        '호텔명': s.hotel_name || '',
+                        '예약업체': s.booking_agency_name || '',
+                        '투숙객명': s.guest_name || '',
+                        '거래액(USD)': sellingPriceUSD.toFixed(2),
+                        '거래액(KRW)': sellingPriceKRW,
+                        '정산환율': settlementRate.toFixed(2),
+                        '호텔매입(USD)': costPriceUSD.toFixed(2),
+                        '호텔매입(KRW)': costPriceKRW,
+                        '송금환율': displayRate.toFixed(2),
+                        '아웃호텔(USD)': outHotelCostUSD.toFixed(2),
+                        '아웃호텔(KRW)': outHotelCostKRW,
+                        '수배피(USD)': agencyFeeUSD.toFixed(2),
+                        '수배피(KRW)': agencyFeeKRW,
+                        '마진(KRW)': marginKRW,
+                        '부가세(KRW)': tax,
+                        '입금일': paymentReceivedDate,
+                        '송금일': paymentSentDate
+                    };
+                });
+
+                // 워크북 생성
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(excelData);
+
+                // 컬럼 너비 설정
+                ws['!cols'] = [
+                    { wch: 12 }, // 체크인일
+                    { wch: 20 }, // 호텔명
+                    { wch: 15 }, // 예약업체
+                    { wch: 12 }, // 투숙객명
+                    { wch: 12 }, // 거래액(USD)
+                    { wch: 15 }, // 거래액(KRW)
+                    { wch: 10 }, // 정산환율
+                    { wch: 12 }, // 호텔매입(USD)
+                    { wch: 15 }, // 호텔매입(KRW)
+                    { wch: 10 }, // 송금환율
+                    { wch: 12 }, // 아웃호텔(USD)
+                    { wch: 15 }, // 아웃호텔(KRW)
+                    { wch: 12 }, // 수배피(USD)
+                    { wch: 15 }, // 수배피(KRW)
+                    { wch: 15 }, // 마진(KRW)
+                    { wch: 15 }, // 부가세(KRW)
+                    { wch: 12 }, // 입금일
+                    { wch: 12 }  // 송금일
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, '호텔정산');
+
+                // 파일명 생성 (날짜 포함)
+                const today = new Date();
+                const fileName = `호텔정산_${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}.xlsx`;
+
+                // 다운로드
+                XLSX.writeFile(wb, fileName);
+
+                alert(`엑셀 파일이 다운로드되었습니다.\n파일명: ${fileName}`);
+            } catch (error) {
+                console.error('엑셀 다운로드 실패:', error);
+                alert('엑셀 다운로드 중 오류가 발생했습니다.');
+            }
         }
     </script>
 </body>
