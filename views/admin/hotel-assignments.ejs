@@ -2002,11 +2002,10 @@
                             promotionSelect.appendChild(option);
                         });
                         
-                        // 첫 번째 프로모션 자동 선택
-                        promotionSelect.selectedIndex = 1;
-                        await onPromotionChange(roomNum);
+                        // ⭐ 자동 선택 제거 - 사용자가 직접 선택하도록
+                        console.log(`✅ 객실 ${roomNum} 프로모션 ${promotions.length}개 로드 완료`);
                     } else {
-                        document.getElementById(`room_${roomNum}_rate`).value = '0.00';
+                        console.log(`⚠️ 객실 ${roomNum} 사용 가능한 프로모션 없음`);
                     }
                 }
                 
@@ -2850,44 +2849,57 @@
                                     }
                                 }, 150);
                                 
-                                // ⭐ 프로모션 정보 표시 (새로 조회하지 않고 저장된 정보 표시)
-                                if (room.promotion_code) {
-                                    // roomPromotions에 저장
-                                    roomPromotions[currentRoomNum] = {
-                                        promotion: { promo_code: room.promotion_code },
-                                        rate_condition_id: room.rate_condition_id,
-                                        total_room_rate: room.total_selling_price
-                                    };
+                                // ⭐ 프로모션 드롭다운 채우기 및 기존 값 선택
+                                setTimeout(async () => {
+                                    const hotelId = document.getElementById('hotel_id').value;
+                                    const checkIn = document.getElementById('check_in_date').value;
+                                    const checkOut = document.getElementById('check_out_date').value;
                                     
-                                    // 프로모션 정보 UI에 직접 표시
-                                    setTimeout(() => {
-                                        const roomCard = document.querySelector(`[data-room-id="${currentRoomNum}"]`);
-                                        if (roomCard) {
-                                            // 프로모션 표시 영역 찾기 또는 생성
-                                            let promoDisplayArea = roomCard.querySelector('.room-promo-display');
-                                            if (!promoDisplayArea) {
-                                                const roomTypeSelect = roomCard.querySelector(`[data-room="${currentRoomNum}"]`)?.parentElement;
-                                                if (roomTypeSelect) {
-                                                    promoDisplayArea = document.createElement('div');
-                                                    promoDisplayArea.className = 'room-promo-display mt-2';
-                                                    roomTypeSelect.after(promoDisplayArea);
+                                    if (room.room_type_id && hotelId && checkIn && checkOut) {
+                                        try {
+                                            // 프로모션 드롭다운 채우기
+                                            const promotionSelect = document.getElementById(`room_${currentRoomNum}_promotion`);
+                                            if (promotionSelect) {
+                                                promotionSelect.innerHTML = '<option value="">프로모션 선택</option>';
+                                                
+                                                // 해당 룸타입의 모든 프로모션 조회
+                                                const response = await fetch(`/api/promotions/search?hotel_id=${hotelId}&room_type_id=${room.room_type_id}&check_in=${checkIn}&check_out=${checkOut}`);
+                                                const promotions = await response.json();
+                                                
+                                                if (promotions && promotions.length > 0) {
+                                                    promotions.forEach(promo => {
+                                                        const option = document.createElement('option');
+                                                        option.value = promo.promotion.id;
+                                                        option.textContent = `${promo.promotion.promo_code} - $${promo.total_room_rate.toFixed(2)}`;
+                                                        option.dataset.rate = promo.total_room_rate;
+                                                        option.dataset.promoCode = promo.promotion.promo_code;
+                                                        option.dataset.rateConditionId = promo.rate_condition_id;
+                                                        
+                                                        // ⭐ 기존 프로모션과 일치하면 선택
+                                                        if (room.promotion_code && promo.promotion.promo_code === room.promotion_code) {
+                                                            option.selected = true;
+                                                        }
+                                                        
+                                                        promotionSelect.appendChild(option);
+                                                    });
+                                                    
+                                                    // roomPromotions에 저장
+                                                    if (room.promotion_code) {
+                                                        roomPromotions[currentRoomNum] = {
+                                                            promotion: { promo_code: room.promotion_code },
+                                                            rate_condition_id: room.rate_condition_id,
+                                                            total_room_rate: room.total_selling_price
+                                                        };
+                                                    }
+                                                    
+                                                    console.log(`✅ 객실 ${currentRoomNum} 프로모션 드롭다운 설정: ${room.promotion_code || '없음'}`);
                                                 }
                                             }
-                                            
-                                            if (promoDisplayArea) {
-                                                promoDisplayArea.innerHTML = `
-                                                    <div class="alert alert-info py-2 mb-2">
-                                                        <i class="fas fa-tag me-2"></i>
-                                                        <strong>프로모션:</strong> <code class="bg-light px-2 py-1">${room.promotion_code}</code>
-                                                        ${room.rate_condition_id ? `<br><small class="text-muted">Rate ID: ${room.rate_condition_id}</small>` : ''}
-                                                        <br><small class="text-muted">객실 요금: <strong>$${parseFloat(room.total_selling_price).toFixed(2)}</strong></small>
-                                                    </div>
-                                                `;
-                                                console.log(`📌 객실 ${currentRoomNum} 프로모션 표시: ${room.promotion_code} ($${room.total_selling_price})`);
-                                            }
+                                        } catch (error) {
+                                            console.error('프로모션 드롭다운 설정 오류:', error);
                                         }
-                                    }, 200);
-                                }
+                                    }
+                                }, 250);
                             }, 100 * i);
                         }
                     } else {
