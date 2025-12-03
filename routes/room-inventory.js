@@ -12,10 +12,11 @@ function requireLogin(req, res, next) {
 }
 
 // ==========================================
-// 월별 재고 조회 (공개 - 로그인 불필요)
+// 월별 재고 조회 (공개 - 로그인 불필요) ⭐ 완전 공개
 // GET /api/inventory/public?hotel_id=&room_type_id=&year=&month=
 // ==========================================
 router.get('/api/inventory/public', async (req, res) => {
+  console.log('🌐 공개 재고 API 호출 - 로그인 체크 없음');
   const pool = req.app.locals.pool;
   const { hotel_id, room_type_id, year, month } = req.query;
   
