@@ -17,6 +17,8 @@ router.post('/', async (req, res) => {
         status,
         promotion_id,
         promo_code,
+        arrival_flight,  // ⭐ 항공편 정보
+        departure_flight,  // ⭐ 항공편 정보
         special_requests,
         internal_memo,
         total_room_rate,
@@ -62,6 +64,8 @@ router.post('/', async (req, res) => {
                 check_out_date,
                 nights,
                 status,
+                arrival_flight,
+                departure_flight,
                 special_requests,
                 internal_memo,
                 total_room_rate,
@@ -70,7 +74,7 @@ router.post('/', async (req, res) => {
                 grand_total,
                 assigned_to,
                 created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
             RETURNING id
         `, [
             reservation_number,
@@ -81,6 +85,8 @@ router.post('/', async (req, res) => {
             check_out_date,
             nights,
             status || 'pending',
+            arrival_flight || null,
+            departure_flight || null,
             special_requests || null,
             internal_memo || null,
             total_room_rate || 0,
