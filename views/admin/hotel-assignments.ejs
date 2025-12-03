@@ -1982,16 +1982,32 @@
                     displayBreakfastInfo(roomNum, roomType);
                 }
                 
-                // 해당 룸타입의 최적 프로모션 찾기
-                const bestPromotion = await findBestPromotionForRoom(hotelId, roomTypeId, checkIn, checkOut);
-                
-                if (bestPromotion) {
-                    roomPromotions[roomNum] = bestPromotion;
-                    document.getElementById(`room_${roomNum}_rate`).value = bestPromotion.total_room_rate.toFixed(2);
-                    console.log(`✅ 객실 ${roomNum} 프로모션 적용:`, bestPromotion.promotion.promo_code);
-                } else {
-                    roomPromotions[roomNum] = null;
-                    document.getElementById(`room_${roomNum}_rate`).value = '0.00';
+                // ⭐ 프로모션 드롭다운 채우기
+                const promotionSelect = document.getElementById(`room_${roomNum}_promotion`);
+                if (promotionSelect) {
+                    promotionSelect.innerHTML = '<option value="">프로모션 선택</option>';
+                    
+                    // 해당 룸타입의 모든 프로모션 조회
+                    const response = await fetch(`/api/promotions/search?hotel_id=${hotelId}&room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`);
+                    const promotions = await response.json();
+                    
+                    if (promotions && promotions.length > 0) {
+                        promotions.forEach(promo => {
+                            const option = document.createElement('option');
+                            option.value = promo.promotion.id;
+                            option.textContent = `${promo.promotion.promo_code} - $${promo.total_room_rate.toFixed(2)}`;
+                            option.dataset.rate = promo.total_room_rate;
+                            option.dataset.promoCode = promo.promotion.promo_code;
+                            option.dataset.rateConditionId = promo.rate_condition_id;
+                            promotionSelect.appendChild(option);
+                        });
+                        
+                        // 첫 번째 프로모션 자동 선택
+                        promotionSelect.selectedIndex = 1;
+                        await onPromotionChange(roomNum);
+                    } else {
+                        document.getElementById(`room_${roomNum}_rate`).value = '0.00';
+                    }
                 }
                 
                 // 전체 객실 요금 합산
@@ -1999,6 +2015,35 @@
             } catch (error) {
                 console.error('룸타입 프로모션 조회 오류:', error);
             }
+        }
+        
+        // 프로모션 선택 시 요금 적용
+        async function onPromotionChange(roomNum) {
+            const promotionSelect = document.getElementById(`room_${roomNum}_promotion`);
+            const selectedOption = promotionSelect.options[promotionSelect.selectedIndex];
+            
+            if (selectedOption && selectedOption.value) {
+                const rate = parseFloat(selectedOption.dataset.rate || 0);
+                const promoCode = selectedOption.dataset.promoCode;
+                const rateConditionId = selectedOption.dataset.rateConditionId;
+                
+                document.getElementById(`room_${roomNum}_rate`).value = rate.toFixed(2);
+                
+                // 프로모션 정보 저장
+                roomPromotions[roomNum] = {
+                    promotion: { promo_code: promoCode },
+                    rate_condition_id: rateConditionId,
+                    total_room_rate: rate
+                };
+                
+                console.log(`✅ 객실 ${roomNum} 프로모션 선택:`, promoCode, rate);
+            } else {
+                document.getElementById(`room_${roomNum}_rate`).value = '0.00';
+                roomPromotions[roomNum] = null;
+            }
+            
+            // 전체 객실 요금 합산
+            await updateRoomCharges();
         }
         
         // ⭐ 조식 포함/불포함 상태만 표시 (단순화)
@@ -2165,7 +2210,14 @@
                         <select class="form-control form-control-sm room-type-select" data-room="${roomCounter}" onchange="onRoomTypeChange(${roomCounter})" style="flex: 1;">
                             <option value="">객실 타입 선택</option>
                         </select>
-                        <label class="form-label mb-0 ms-1" style="min-width: 95px;">총 객실요금(자동)</label>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-1 mb-2">
+                        <label class="form-label mb-0" style="min-width: 70px;">프로모션</label>
+                        <select class="form-control form-control-sm" id="room_${roomCounter}_promotion" onchange="onPromotionChange(${roomCounter})" style="flex: 1;">
+                            <option value="">프로모션 선택</option>
+                        </select>
+                        <label class="form-label mb-0 ms-1" style="min-width: 95px;">총 객실요금</label>
                         <input type="text" class="form-control form-control-sm" id="room_${roomCounter}_rate" oninput="calculateTotal()" style="flex: 1;">
                     </div>
                     
