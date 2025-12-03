@@ -1610,6 +1610,105 @@
             calculateTotal();
         }
         
+        // ⭐ 객실 재고 체크 함수
+        async function checkRoomAvailability(roomNum, roomTypeId, checkIn, checkOut) {
+            try {
+                console.log(`🔍 객실 ${roomNum} 재고 체크 시작:`, { roomTypeId, checkIn, checkOut });
+                
+                // 체크인/체크아웃 날짜로 기간 계산
+                const startDate = new Date(checkIn);
+                const endDate = new Date(checkOut);
+                const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                
+                // 재고 API 호출 (공개 API 사용)
+                const response = await fetch(
+                    `/api/inventory/public?room_type_id=${roomTypeId}&` +
+                    `year=${startDate.getFullYear()}&month=${startDate.getMonth() + 1}`
+                );
+                
+                if (!response.ok) {
+                    console.error(`❌ 재고 조회 실패:`, response.status);
+                    return;
+                }
+                
+                const inventoryData = await response.json();
+                console.log(`📦 재고 데이터:`, inventoryData);
+                
+                // 체크인~체크아웃 기간의 재고 확인
+                let minAvailable = Infinity;
+                let unavailableDates = [];
+                
+                for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0];
+                    const inventory = inventoryData.find(inv => inv.availability_date.startsWith(dateStr));
+                    
+                    if (inventory) {
+                        const available = parseInt(inventory.available_rooms || 0);
+                        minAvailable = Math.min(minAvailable, available);
+                        
+                        if (available <= 0) {
+                            unavailableDates.push(dateStr);
+                        }
+                    } else {
+                        // 재고 정보가 없으면 예약 불가로 간주
+                        unavailableDates.push(dateStr);
+                        minAvailable = 0;
+                    }
+                }
+                
+                // 재고 상태 표시
+                const roomCard = document.querySelector(`#room_${roomNum}`);
+                if (!roomCard) return;
+                
+                // 기존 알림 제거
+                const existingAlert = roomCard.querySelector('.availability-alert');
+                if (existingAlert) existingAlert.remove();
+                
+                // 재고 알림 생성
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'availability-alert mt-2';
+                
+                if (unavailableDates.length > 0) {
+                    // 재고 없음
+                    alertDiv.innerHTML = `
+                        <div class="alert alert-danger py-2 mb-0" style="font-size: 0.7rem;">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>예약 불가</strong> - 선택한 기간에 재고가 없습니다.
+                            <br><small>불가 날짜: ${unavailableDates.join(', ')}</small>
+                        </div>
+                    `;
+                    console.log(`❌ 객실 ${roomNum} 재고 없음:`, unavailableDates);
+                } else if (minAvailable <= 3) {
+                    // 재고 부족 경고
+                    alertDiv.innerHTML = `
+                        <div class="alert alert-warning py-2 mb-0" style="font-size: 0.7rem;">
+                            <i class="fas fa-exclamation-circle me-1"></i>
+                            <strong>재고 부족</strong> - 최소 ${minAvailable}개 객실만 가능합니다.
+                        </div>
+                    `;
+                    console.log(`⚠️ 객실 ${roomNum} 재고 부족: ${minAvailable}개`);
+                } else {
+                    // 재고 충분
+                    alertDiv.innerHTML = `
+                        <div class="alert alert-success py-2 mb-0" style="font-size: 0.7rem;">
+                            <i class="fas fa-check-circle me-1"></i>
+                            <strong>예약 가능</strong> - ${minAvailable}개 객실 가능
+                        </div>
+                    `;
+                    console.log(`✅ 객실 ${roomNum} 예약 가능: ${minAvailable}개`);
+                }
+                
+                // 룸타입 선택 필드 다음에 알림 추가
+                const roomTypeSelect = roomCard.querySelector('.room-type-select');
+                if (roomTypeSelect && roomTypeSelect.parentElement) {
+                    roomTypeSelect.parentElement.after(alertDiv);
+                }
+                
+            } catch (error) {
+                console.error(`❌ 재고 체크 오류 (객실 ${roomNum}):`, error);
+            }
+        }
+        
         // 조식 요금 라벨 업데이트 (포함/불포함 동적 표시)
         function updateBreakfastLabel() {
             const label = document.getElementById('breakfastChargeLabel');
@@ -1676,6 +1775,9 @@
                     // ⭐ 조식 정보를 객실 카드에 표시
                     displayBreakfastInfo(roomNum, roomType);
                 }
+                
+                // ⭐ 객실 재고 체크
+                await checkRoomAvailability(roomNum, roomTypeId, checkIn, checkOut);
                 
                 // 적용 가능한 프로모션 목록 조회
                 console.log(`💰 객실 ${roomNum} 프로모션 목록 조회 시작...`);
