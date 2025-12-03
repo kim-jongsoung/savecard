@@ -58,10 +58,17 @@
       text-align: center;
       margin-bottom: 15px;
     }
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -15px;
+      padding: 0 15px;
+    }
     .avail-table {
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
+      min-width: 800px;
     }
     .avail-table th, .avail-table td {
       border: 1px solid #e0e0e0;
@@ -85,12 +92,88 @@
     .cell-limited { background: #fff3cd; color: #856404; font-weight: bold; }
     .cell-highlighted { background: #ffeb3b !important; font-weight: 700; }
     
+    /* 모바일 카드 뷰 스타일 */
+    .mobile-view {
+      display: none;
+    }
+    .room-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+    .room-card-header {
+      font-weight: bold;
+      font-size: 14px;
+      color: #667eea;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #667eea;
+    }
+    .date-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .date-cell {
+      text-align: center;
+      padding: 8px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .date-cell-header {
+      font-weight: bold;
+      font-size: 10px;
+      color: #666;
+      padding: 4px;
+    }
+    .week-selector {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .week-selector button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .week-selector span {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
     @media (max-width: 768px) {
+      body {
+        padding: 10px 0;
+      }
+      .header {
+        padding: 20px 15px;
+        margin-bottom: 15px;
+      }
+      .header h1 {
+        font-size: 1.3rem;
+      }
+      .header p {
+        font-size: 0.9rem;
+      }
       .calendar-section {
         padding: 15px;
+        border-radius: 10px;
       }
-      .avail-table {
-        font-size: 11px;
+      .desktop-view {
+        display: none !important;
+      }
+      .mobile-view {
+        display: block !important;
       }
     }
   </style>
@@ -130,7 +213,11 @@
           </div>
         </div>
 
-        <div id="inventoryContainer"></div>
+        <!-- 데스크톱 뷰 -->
+        <div id="inventoryContainer" class="desktop-view"></div>
+        
+        <!-- 모바일 뷰 -->
+        <div id="mobileInventoryContainer" class="mobile-view"></div>
       </div>
     </div>
   </div>
@@ -141,6 +228,7 @@
     let inventory = {};
     let highlighted = new Set();
     let currentHotel = null;
+    let currentWeekStart = 0; // 모바일용 주간 시작 인덱스
 
     async function loadHotels() {
       const res = await fetch('/api/hotels?is_active=true');
@@ -246,6 +334,7 @@
       }
       
       renderInventory(year, month);
+      renderMobileInventory(year, month);
     }
 
     function renderInventory(year, month) {
@@ -314,6 +403,105 @@
       }
       
       container.innerHTML = html;
+    }
+    
+    // 모바일 뷰 렌더링 (주간 단위)
+    function renderMobileInventory(year, month) {
+      const container = document.getElementById('mobileInventoryContainer');
+      
+      // 현재 날짜부터 4주간 데이터 생성
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() + (currentWeekStart * 7));
+      
+      let html = `
+        <div class="week-selector">
+          <button onclick="changeWeek(-1)" ${currentWeekStart <= 0 ? 'disabled' : ''}>◀ 이전</button>
+          <span>${startDate.getMonth() + 1}월 ${startDate.getDate()}일 주간</span>
+          <button onclick="changeWeek(1)">다음 ▶</button>
+        </div>
+      `;
+      
+      // 요일 헤더
+      const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+      
+      // 각 객실 타입별 카드
+      roomTypes.forEach(rt => {
+        html += `
+          <div class="room-card">
+            <div class="room-card-header">${rt.room_type_name}</div>
+            <div class="date-grid">
+        `;
+        
+        // 요일 헤더
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + i);
+          html += `<div class="date-cell-header">${weekDays[d.getDay()]}</div>`;
+        }
+        
+        // 날짜 및 재고 상태
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + i);
+          const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+          const key = `${rt.id}-${dateStr}`;
+          const val = inventory[key] || '';
+          
+          let cellClass = '';
+          let display = '-';
+          
+          if (val) {
+            if (currentHotel.inventory_type === 'count') {
+              const num = parseInt(val);
+              if (num >= 5) {
+                cellClass = 'cell-available';
+                display = num;
+              } else if (num > 0) {
+                cellClass = 'cell-limited';
+                display = num;
+              } else {
+                cellClass = 'cell-closed';
+                display = 'X';
+              }
+            } else {
+              if (val === 'O') {
+                cellClass = 'cell-available';
+                display = 'O';
+              } else if (val === 'X') {
+                cellClass = 'cell-closed';
+                display = 'X';
+              }
+            }
+          }
+          
+          if (highlighted.has(key)) {
+            cellClass += ' cell-highlighted';
+          }
+          
+          html += `
+            <div class="date-cell ${cellClass}">
+              <div style="font-size: 10px; color: #666;">${d.getDate()}</div>
+              <div style="font-weight: bold;">${display}</div>
+            </div>
+          `;
+        }
+        
+        html += `
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+    
+    // 주간 변경
+    function changeWeek(direction) {
+      currentWeekStart += direction;
+      const start = document.getElementById('startMonth').value.split('-');
+      const year = parseInt(start[0]), month = parseInt(start[1]);
+      renderMobileInventory(year, month);
     }
     
     // 공지사항 로드
