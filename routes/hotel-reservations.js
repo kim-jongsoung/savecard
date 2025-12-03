@@ -641,6 +641,12 @@ router.put('/:id', async (req, res) => {
                 // 4-1. 객실 레코드 저장 (프로모션 정보 + 확정번호 보존)
                 const preservedConfirmation = confirmationMap[totalRooms] || null;
                 
+                // ⭐ rate_condition_id 문자열 "null" 처리
+                let rateConditionId = room.rate_condition_id;
+                if (rateConditionId === "null" || rateConditionId === "undefined" || rateConditionId === "") {
+                    rateConditionId = null;
+                }
+                
                 const roomResult = await client.query(`
                     INSERT INTO hotel_reservation_rooms (
                         reservation_id,
@@ -670,7 +676,7 @@ router.put('/:id', async (req, res) => {
                     0,
                     0,
                     room.promotion_code || null,
-                    room.rate_condition_id || null,
+                    rateConditionId,
                     room.total_selling_price || 0,
                     room.breakfast_included || false,
                     room.breakfast_days || 0,
