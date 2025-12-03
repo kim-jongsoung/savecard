@@ -592,7 +592,23 @@ router.put('/:id', async (req, res) => {
             }
         }
         
-        // 2. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
+        // 2. 객실별 확정번호 백업 (예약 수정 시 보존용)
+        const roomConfirmationBackup = await client.query(
+            `SELECT room_number, confirmation_number 
+             FROM hotel_reservation_rooms 
+             WHERE reservation_id = $1 
+             ORDER BY room_number`,
+            [id]
+        );
+        const confirmationMap = {};
+        roomConfirmationBackup.rows.forEach(row => {
+            if (row.confirmation_number) {
+                confirmationMap[row.room_number] = row.confirmation_number;
+            }
+        });
+        console.log('💾 객실별 확정번호 백업:', confirmationMap);
+        
+        // 3. 기존 데이터 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
         await client.query('DELETE FROM hotel_reservation_guests WHERE reservation_room_id IN (SELECT id FROM hotel_reservation_rooms WHERE reservation_id = $1)', [id]);
         await client.query('DELETE FROM hotel_reservation_rooms WHERE reservation_id = $1', [id]);
         await client.query('DELETE FROM hotel_reservation_extras WHERE reservation_id = $1', [id]);
@@ -616,7 +632,9 @@ router.put('/:id', async (req, res) => {
             for (const room of rooms) {
                 totalRooms++;
                 
-                // 4-1. 객실 레코드 저장 (프로모션 정보 포함)
+                // 4-1. 객실 레코드 저장 (프로모션 정보 + 확정번호 보존)
+                const preservedConfirmation = confirmationMap[totalRooms] || null;
+                
                 const roomResult = await client.query(`
                     INSERT INTO hotel_reservation_rooms (
                         reservation_id,
@@ -633,8 +651,9 @@ router.put('/:id', async (req, res) => {
                         breakfast_days,
                         breakfast_adult_price,
                         breakfast_child_price,
+                        confirmation_number,
                         created_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
                     RETURNING id
                 `, [
                     id,
@@ -650,8 +669,13 @@ router.put('/:id', async (req, res) => {
                     room.breakfast_included || false,
                     room.breakfast_days || 0,
                     room.breakfast_adult_price || 0,
-                    room.breakfast_child_price || 0
+                    room.breakfast_child_price || 0,
+                    preservedConfirmation
                 ]);
+                
+                if (preservedConfirmation) {
+                    console.log(`✅ Room ${totalRooms} 확정번호 복원: ${preservedConfirmation}`);
+                }
                 
                 const roomId = roomResult.rows[0].id;
                 
