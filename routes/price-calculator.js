@@ -45,10 +45,12 @@ router.get('/api/price-calculator/public', async (req, res) => {
     
     // 프로모션 사용 여부
     if (promo_id) {
-      // 프로모션 요금 조회
+      // 프로모션 요금 조회 (연박 조건 포함)
       const promoQuery = `
         SELECT 
           pdr.stay_date,
+          pdr.min_nights,
+          pdr.max_nights,
           pdr.rate_per_night,
           pdr.currency,
           p.promo_code,
@@ -60,36 +62,60 @@ router.get('/api/price-calculator/public', async (req, res) => {
           AND pdr.stay_date >= $3
           AND pdr.stay_date < $4
           AND p.is_active = true
+          AND $5 >= pdr.min_nights
+          AND (pdr.max_nights IS NULL OR $5 <= pdr.max_nights)
         ORDER BY pdr.stay_date
       `;
       
-      const promoResult = await pool.query(promoQuery, [promo_id, room_type_id, check_in, check_out]);
+      const promoResult = await pool.query(promoQuery, [promo_id, room_type_id, check_in, check_out, nights]);
+      
+      console.log('🔍 프로모션 쿼리 결과:', {
+        promo_id,
+        room_type_id,
+        check_in,
+        check_out,
+        nights,
+        found_rows: promoResult.rows.length
+      });
       
       if (promoResult.rows.length === 0) {
         return res.status(404).json({ 
-          error: '선택한 프로모션의 요금 정보를 찾을 수 없습니다.' 
+          error: `선택한 프로모션의 요금 정보를 찾을 수 없습니다. (${nights}박 조건에 맞는 요금 없음)` 
         });
       }
       
       // 모든 날짜에 대한 요금이 있는지 확인
       if (promoResult.rows.length < nights) {
+        console.log('⚠️ 일부 날짜 요금 누락:', {
+          expected: nights,
+          found: promoResult.rows.length,
+          dates: promoResult.rows.map(r => r.stay_date)
+        });
+        
         return res.status(400).json({ 
-          error: `선택한 기간의 일부 날짜에 프로모션 요금이 설정되지 않았습니다. (${promoResult.rows.length}/${nights}일)` 
+          error: `선택한 기간의 일부 날짜에 프로모션 요금이 설정되지 않았습니다. (${promoResult.rows.length}/${nights}일)`,
+          details: `체크인: ${check_in}, 체크아웃: ${check_out}, 박수: ${nights}박`
         });
       }
       
       // 총 요금 계산
       promoResult.rows.forEach(row => {
-        totalRoomRate += parseFloat(row.rate_per_night);
+        const rate = parseFloat(row.rate_per_night);
+        totalRoomRate += rate;
         dailyRates.push({
           date: row.stay_date,
-          rate: parseFloat(row.rate_per_night),
-          currency: row.currency
+          rate: rate,
+          currency: row.currency,
+          min_nights: row.min_nights,
+          max_nights: row.max_nights
         });
       });
       
       console.log('✅ 프로모션 요금 계산 완료:', { 
         promo_code: promoResult.rows[0].promo_code,
+        promo_name: promoResult.rows[0].promo_name,
+        nights: nights,
+        daily_rates: dailyRates.map(d => d.rate),
         total: totalRoomRate 
       });
       
