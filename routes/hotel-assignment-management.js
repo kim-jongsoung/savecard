@@ -451,10 +451,29 @@ router.post('/:assignmentId/send', async (req, res) => {
         const mailSubject = `[${typeLabel}] Check-in ${checkInDateLabel} - ${leadGuestName} - LUXFIND`;
         const senderName = assignment.sent_by || assignment.agency_contact_person || 'LUXFIND';
         
+        // ⭐ 직원 이메일 조회 (sent_by 이름으로 admin_users 테이블 검색)
+        let senderEmail = process.env.SMTP_USER; // 기본값
+        if (assignment.sent_by) {
+            try {
+                const staffQuery = await pool.query(`
+                    SELECT email FROM admin_users 
+                    WHERE full_name = $1 AND is_active = true
+                    LIMIT 1
+                `, [assignment.sent_by]);
+                
+                if (staffQuery.rows.length > 0 && staffQuery.rows[0].email) {
+                    senderEmail = staffQuery.rows[0].email;
+                    console.log(`✅ 직원 이메일 사용: ${senderEmail} (${assignment.sent_by})`);
+                }
+            } catch (error) {
+                console.error('⚠️ 직원 이메일 조회 실패, 기본 이메일 사용:', error.message);
+            }
+        }
+        
         // 9. 이메일 전송
         const info = await transporter.sendMail({
-            from: `"${senderName} (LUXFIND)" <${process.env.SMTP_USER}>`,
-            replyTo: process.env.SMTP_USER,
+            from: `"${senderName} (LUXFIND)" <${senderEmail}>`,
+            replyTo: senderEmail,
             to: toEmail,
             subject: mailSubject,
             html: emailHTML,
