@@ -117,6 +117,31 @@
         <div class="tab-content" id="settlementTabContent">
             <!-- 미완료 탭 -->
             <div class="tab-pane fade show active" id="incomplete" role="tabpanel">
+                <!-- 미완료 통계 -->
+                <div class="row mb-3" id="incompleteStats">
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-body py-2">
+                                <h6 class="card-title mb-1">
+                                    <i class="fas fa-arrow-down text-success"></i> 입금완료 / 송금미완료
+                                </h6>
+                                <h4 class="mb-0 text-warning" id="receivedOnlyTotal">₩0</h4>
+                                <small class="text-muted" id="receivedOnlyCount">0건</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-danger">
+                            <div class="card-body py-2">
+                                <h6 class="card-title mb-1">
+                                    <i class="fas fa-arrow-up text-danger"></i> 송금완료 / 입금미완료
+                                </h6>
+                                <h4 class="mb-0 text-danger" id="sentOnlyTotal">₩0</h4>
+                                <small class="text-muted" id="sentOnlyCount">0건</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover table-sm">
                         <thead class="table-light">
@@ -356,6 +381,10 @@
             let totalOutHotelUSD = 0, totalOutHotelKRW = 0;
             let totalAgencyFeeUSD = 0, totalAgencyFeeKRW = 0;
             let totalMarginKRW = 0, totalTax = 0;
+            
+            // 미완료 탭 통계용 변수
+            let receivedOnlyTotal = 0, receivedOnlyCount = 0;
+            let sentOnlyTotal = 0, sentOnlyCount = 0;
 
             const rows = settlements.map(s => {
                 const sellingPriceUSD = parseFloat(s.total_selling_price || 0);
@@ -399,6 +428,22 @@
                 totalAgencyFeeKRW += agencyFeeKRW;
                 totalMarginKRW += marginKRW;
                 totalTax += tax;
+                
+                // 미완료 탭 통계 계산 (거래액 기준)
+                if (currentTab === 'incomplete') {
+                    const hasReceived = !!s.payment_received_date;
+                    const hasSent = !!s.payment_sent_date;
+                    
+                    if (hasReceived && !hasSent) {
+                        // 입금완료, 송금미완료
+                        receivedOnlyTotal += sellingPriceKRW;
+                        receivedOnlyCount++;
+                    } else if (!hasReceived && hasSent) {
+                        // 송금완료, 입금미완료
+                        sentOnlyTotal += sellingPriceKRW;
+                        sentOnlyCount++;
+                    }
+                }
 
                 const checkInDate = s.check_in_date ? new Date(s.check_in_date).toLocaleDateString('ko-KR') : '-';
                 const paymentReceivedDate = s.payment_received_date ? new Date(s.payment_received_date).toLocaleDateString('ko-KR') : '-';
@@ -498,6 +543,14 @@
             `;
 
             tbody.innerHTML = rows + totalRow;
+            
+            // 미완료 탭 통계 업데이트
+            if (currentTab === 'incomplete') {
+                document.getElementById('receivedOnlyTotal').textContent = '₩' + Math.round(receivedOnlyTotal).toLocaleString();
+                document.getElementById('receivedOnlyCount').textContent = receivedOnlyCount + '건';
+                document.getElementById('sentOnlyTotal').textContent = '₩' + Math.round(sentOnlyTotal).toLocaleString();
+                document.getElementById('sentOnlyCount').textContent = sentOnlyCount + '건';
+            }
         }
 
         // 카운트 업데이트
@@ -512,6 +565,13 @@
             
             // 일괄 처리 버튼은 미완료 탭에서만 표시
             document.getElementById('bulkActions').style.display = tab === 'incomplete' ? 'block' : 'none';
+            
+            // 미완료 통계는 미완료 탭에서만 표시
+            const incompleteStats = document.getElementById('incompleteStats');
+            if (incompleteStats) {
+                incompleteStats.style.display = tab === 'incomplete' ? 'flex' : 'none';
+            }
+            
             clearSelection();
             loadSettlements();
         }
