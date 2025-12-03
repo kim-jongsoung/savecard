@@ -938,6 +938,15 @@ try {
     console.error('⚠️ 재고 챗봇 라우트 연결 실패:', error.message);
 }
 
+// 가격 계산 API 라우트 연결 ⭐ 신규 (공개)
+try {
+    const priceCalculatorRouter = require('./routes/price-calculator');
+    app.use('/', priceCalculatorRouter);
+    console.log('✅ 가격 계산 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 가격 계산 라우트 연결 실패:', error.message);
+}
+
 // 공개 재고 현황 페이지 (로그인 불필요) ⭐ 신규
 app.get('/inventory/view', (req, res) => {
     res.render('inventory-public', {

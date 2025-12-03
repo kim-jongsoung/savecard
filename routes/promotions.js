@@ -28,7 +28,53 @@ function requireLogin(req, res, next) {
 }
 
 // ==========================================
-// 프로모션 목록 조회
+// 프로모션 목록 조회 (공개 - 로그인 불필요) ⭐ 신규
+// GET /api/promotions/public?hotel_id=&is_active=true
+// ==========================================
+router.get('/api/promotions/public', async (req, res) => {
+  console.log('🌐 공개 프로모션 API 호출 - 로그인 체크 없음');
+  const pool = req.app.locals.pool;
+  const { hotel_id, is_active } = req.query;
+  
+  try {
+    let query = `
+      SELECT 
+        p.id,
+        p.promo_code,
+        p.promo_name,
+        p.hotel_id,
+        p.booking_start_date,
+        p.booking_end_date,
+        p.stay_start_date,
+        p.stay_end_date,
+        p.is_active,
+        h.hotel_name
+      FROM promotions p
+      JOIN hotels h ON p.hotel_id = h.id
+      WHERE p.is_active = true
+    `;
+    const params = [];
+    let paramIndex = 1;
+    
+    if (hotel_id) {
+      query += ` AND p.hotel_id = $${paramIndex}`;
+      params.push(hotel_id);
+      paramIndex++;
+    }
+    
+    query += ` ORDER BY p.promo_code`;
+    
+    const result = await pool.query(query, params);
+    console.log(`✅ 공개 프로모션 조회 결과: ${result.rows.length}개`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('❌ 공개 프로모션 조회 오류:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// 프로모션 목록 조회 (관리자)
 // GET /api/promotions
 // ==========================================
 router.get('/api/promotions', requireLogin, async (req, res) => {
