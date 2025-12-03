@@ -231,6 +231,14 @@
       .header p {
         font-size: 0.9rem;
       }
+      .header .alert {
+        font-size: 0.85rem;
+        padding: 10px;
+      }
+      .header .alert > div {
+        flex-direction: column;
+        text-align: center;
+      }
       .calendar-section {
         padding: 15px;
         border-radius: 10px;
@@ -248,7 +256,19 @@
   <div class="container">
     <div class="header">
       <h1>🏨 객실 재고 현황</h1>
-      <p class="text-muted mb-0">실시간 객실 가능 여부를 확인하세요</p>
+      <p class="text-muted mb-3">럭스파인드 고객사 객실재고 및 요금 확인</p>
+      <div class="alert alert-info mb-0" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: none; border-left: 4px solid #2196f3;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+          <span style="font-size: 1.5rem;">📧</span>
+          <div>
+            <strong>예약 요청</strong>: 네이트온 
+            <a href="mailto:plokijm24@nate.com" style="color: #1976d2; font-weight: bold; text-decoration: none;">
+              plokijm24@nate.com
+            </a>
+            에서 가능
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="content-wrapper">
