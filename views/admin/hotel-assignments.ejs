@@ -1987,11 +1987,11 @@
                 
                 if (bestPromotion) {
                     roomPromotions[roomNum] = bestPromotion;
-                    document.getElementById(`room_${roomNum}_rate`).value = `$${bestPromotion.total_room_rate.toFixed(2)} (프로모션)`;
+                    document.getElementById(`room_${roomNum}_rate`).value = bestPromotion.total_room_rate.toFixed(2);
                     console.log(`✅ 객실 ${roomNum} 프로모션 적용:`, bestPromotion.promotion.promo_code);
                 } else {
                     roomPromotions[roomNum] = null;
-                    document.getElementById(`room_${roomNum}_rate`).value = '프로모션 없음';
+                    document.getElementById(`room_${roomNum}_rate`).value = '0.00';
                 }
                 
                 // 전체 객실 요금 합산
