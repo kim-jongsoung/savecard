@@ -1982,30 +1982,67 @@
                     displayBreakfastInfo(roomNum, roomType);
                 }
                 
-                // ⭐ 프로모션 드롭다운 채우기
+                // ⭐ 프로모션 드롭다운 채우기 (인박스와 동일한 방식)
                 const promotionSelect = document.getElementById(`room_${roomNum}_promotion`);
                 if (promotionSelect) {
                     promotionSelect.innerHTML = '<option value="">프로모션 선택</option>';
                     
-                    // 해당 룸타입의 모든 프로모션 조회
-                    const response = await fetch(`/api/promotions/search?hotel_id=${hotelId}&room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`);
-                    const promotions = await response.json();
-                    
-                    if (promotions && promotions.length > 0) {
-                        promotions.forEach(promo => {
-                            const option = document.createElement('option');
-                            option.value = promo.promotion.id;
-                            option.textContent = `${promo.promotion.promo_code} - $${promo.total_room_rate.toFixed(2)}`;
-                            option.dataset.rate = promo.total_room_rate;
-                            option.dataset.promoCode = promo.promotion.promo_code;
-                            option.dataset.rateConditionId = promo.rate_condition_id;
-                            promotionSelect.appendChild(option);
-                        });
+                    try {
+                        // 1. 모든 활성 프로모션 조회
+                        const response = await fetch(`/api/hotel-promotions/list?hotel_id=${hotelId}&is_active=true`);
+                        const promotions = await response.json();
                         
-                        // ⭐ 자동 선택 제거 - 사용자가 직접 선택하도록
-                        console.log(`✅ 객실 ${roomNum} 프로모션 ${promotions.length}개 로드 완료`);
-                    } else {
-                        console.log(`⚠️ 객실 ${roomNum} 사용 가능한 프로모션 없음`);
+                        if (!promotions || promotions.length === 0) {
+                            console.log(`⚠️ 객실 ${roomNum} 활성 프로모션 없음`);
+                            return;
+                        }
+                        
+                        // 2. 각 프로모션의 요금 확인
+                        const validPromotions = [];
+                        for (const promo of promotions) {
+                            const rateResponse = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    promo_code: promo.promo_code,
+                                    hotel_id: parseInt(hotelId),
+                                    room_type_id: parseInt(roomTypeId),
+                                    check_in_date: checkIn,
+                                    check_out_date: checkOut,
+                                    booking_date: new Date().toISOString().split('T')[0]
+                                })
+                            });
+                            
+                            const result = await rateResponse.json();
+                            
+                            if (result.valid) {
+                                validPromotions.push({
+                                    promo_code: promo.promo_code,
+                                    promo_id: promo.id,
+                                    total_room_rate: result.total_room_rate,
+                                    rate_condition_id: result.rate_condition_id
+                                });
+                            }
+                        }
+                        
+                        // 3. 드롭다운에 추가
+                        if (validPromotions.length > 0) {
+                            validPromotions.forEach(promo => {
+                                const option = document.createElement('option');
+                                option.value = promo.promo_id;
+                                option.textContent = `${promo.promo_code} - $${promo.total_room_rate.toFixed(2)}`;
+                                option.dataset.rate = promo.total_room_rate;
+                                option.dataset.promoCode = promo.promo_code;
+                                option.dataset.rateConditionId = promo.rate_condition_id;
+                                promotionSelect.appendChild(option);
+                            });
+                            
+                            console.log(`✅ 객실 ${roomNum} 프로모션 ${validPromotions.length}개 로드 완료`);
+                        } else {
+                            console.log(`⚠️ 객실 ${roomNum} 사용 가능한 프로모션 없음`);
+                        }
+                    } catch (error) {
+                        console.error(`프로모션 조회 오류 (객실 ${roomNum}):`, error);
                     }
                 }
                 
@@ -2849,7 +2886,7 @@
                                     }
                                 }, 150);
                                 
-                                // ⭐ 프로모션 드롭다운 채우기 및 기존 값 선택
+                                // ⭐ 프로모션 드롭다운 채우기 및 기존 값 선택 (인박스와 동일한 방식)
                                 setTimeout(async () => {
                                     const hotelId = document.getElementById('hotel_id').value;
                                     const checkIn = document.getElementById('check_in_date').value;
@@ -2857,26 +2894,59 @@
                                     
                                     if (room.room_type_id && hotelId && checkIn && checkOut) {
                                         try {
-                                            // 프로모션 드롭다운 채우기
                                             const promotionSelect = document.getElementById(`room_${currentRoomNum}_promotion`);
                                             if (promotionSelect) {
                                                 promotionSelect.innerHTML = '<option value="">프로모션 선택</option>';
                                                 
-                                                // 해당 룸타입의 모든 프로모션 조회
-                                                const response = await fetch(`/api/promotions/search?hotel_id=${hotelId}&room_type_id=${room.room_type_id}&check_in=${checkIn}&check_out=${checkOut}`);
+                                                // 1. 모든 활성 프로모션 조회
+                                                const response = await fetch(`/api/hotel-promotions/list?hotel_id=${hotelId}&is_active=true`);
                                                 const promotions = await response.json();
                                                 
-                                                if (promotions && promotions.length > 0) {
-                                                    promotions.forEach(promo => {
+                                                if (!promotions || promotions.length === 0) {
+                                                    console.log(`⚠️ 객실 ${currentRoomNum} 활성 프로모션 없음`);
+                                                    return;
+                                                }
+                                                
+                                                // 2. 각 프로모션의 요금 확인
+                                                const validPromotions = [];
+                                                for (const promo of promotions) {
+                                                    const rateResponse = await fetch('/api/hotel-promotions/check-and-get-rates', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            promo_code: promo.promo_code,
+                                                            hotel_id: parseInt(hotelId),
+                                                            room_type_id: parseInt(room.room_type_id),
+                                                            check_in_date: checkIn,
+                                                            check_out_date: checkOut,
+                                                            booking_date: new Date().toISOString().split('T')[0]
+                                                        })
+                                                    });
+                                                    
+                                                    const result = await rateResponse.json();
+                                                    
+                                                    if (result.valid) {
+                                                        validPromotions.push({
+                                                            promo_code: promo.promo_code,
+                                                            promo_id: promo.id,
+                                                            total_room_rate: result.total_room_rate,
+                                                            rate_condition_id: result.rate_condition_id
+                                                        });
+                                                    }
+                                                }
+                                                
+                                                // 3. 드롭다운에 추가
+                                                if (validPromotions.length > 0) {
+                                                    validPromotions.forEach(promo => {
                                                         const option = document.createElement('option');
-                                                        option.value = promo.promotion.id;
-                                                        option.textContent = `${promo.promotion.promo_code} - $${promo.total_room_rate.toFixed(2)}`;
+                                                        option.value = promo.promo_id;
+                                                        option.textContent = `${promo.promo_code} - $${promo.total_room_rate.toFixed(2)}`;
                                                         option.dataset.rate = promo.total_room_rate;
-                                                        option.dataset.promoCode = promo.promotion.promo_code;
+                                                        option.dataset.promoCode = promo.promo_code;
                                                         option.dataset.rateConditionId = promo.rate_condition_id;
                                                         
                                                         // ⭐ 기존 프로모션과 일치하면 선택
-                                                        if (room.promotion_code && promo.promotion.promo_code === room.promotion_code) {
+                                                        if (room.promotion_code && promo.promo_code === room.promotion_code) {
                                                             option.selected = true;
                                                         }
                                                         
@@ -2892,11 +2962,13 @@
                                                         };
                                                     }
                                                     
-                                                    console.log(`✅ 객실 ${currentRoomNum} 프로모션 드롭다운 설정: ${room.promotion_code || '없음'}`);
+                                                    console.log(`✅ 객실 ${currentRoomNum} 프로모션 ${validPromotions.length}개 로드 완료 (선택: ${room.promotion_code || '없음'})`);
+                                                } else {
+                                                    console.log(`⚠️ 객실 ${currentRoomNum} 사용 가능한 프로모션 없음`);
                                                 }
                                             }
                                         } catch (error) {
-                                            console.error('프로모션 드롭다운 설정 오류:', error);
+                                            console.error(`프로모션 드롭다운 설정 오류 (객실 ${currentRoomNum}):`, error);
                                         }
                                     }
                                 }, 250);
