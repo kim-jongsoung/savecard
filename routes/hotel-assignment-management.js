@@ -455,13 +455,24 @@ router.post('/:assignmentId/send', async (req, res) => {
         let senderEmail = process.env.SMTP_USER; // 기본값
         const currentUsername = req.session?.adminUsername;
         
+        console.log('🔍 [수배서 발송] 세션 정보:', {
+            adminUsername: currentUsername,
+            adminId: req.session?.adminId,
+            sessionExists: !!req.session
+        });
+        
         if (currentUsername) {
             try {
                 const staffQuery = await pool.query(`
-                    SELECT email, full_name FROM admin_users 
+                    SELECT email, full_name, username FROM admin_users 
                     WHERE username = $1 AND is_active = true
                     LIMIT 1
                 `, [currentUsername]);
+                
+                console.log('🔍 [수배서 발송] DB 조회 결과:', {
+                    found: staffQuery.rows.length > 0,
+                    data: staffQuery.rows[0]
+                });
                 
                 if (staffQuery.rows.length > 0 && staffQuery.rows[0].email) {
                     senderEmail = staffQuery.rows[0].email;
