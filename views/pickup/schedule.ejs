@@ -522,63 +522,51 @@
       </div>
       
       <div id="manualTab" class="tab-content active">
-        <div class="manual-form">
-          <div class="form-group">
-            <label>Pickup Date *</label>
-            <input type="date" id="manualDate" required>
-          </div>
-          <div class="form-group">
-            <label>Pickup Time *</label>
-            <input type="time" id="manualTime" required>
-          </div>
-          <div class="form-group">
-            <label>Hotel Name</label>
-            <input type="text" id="manualHotel" placeholder="Hilton">
-          </div>
-          <div class="form-group">
-            <label>Customer Name (한글) *</label>
-            <input type="text" id="manualName" required placeholder="김철수">
-          </div>
-          <div class="form-group">
-            <label>English Name (자동생성/수정가능)</label>
-            <input type="text" id="manualEngName" placeholder="KIM CHEOLSU" style="background: #e8f4f8;">
-          </div>
-          <div class="form-group">
-            <label>Passengers</label>
-            <input type="number" id="manualPerson" placeholder="3">
-          </div>
-          <div class="form-group">
-            <label>Vehicle</label>
-            <input type="text" id="manualVehicle" placeholder="K5">
-          </div>
-          <div class="form-group">
-            <label>Vehicle Number</label>
-            <input type="text" id="manualNumber" placeholder="12가3456">
-          </div>
-          <div class="form-group">
-            <label>Rental Duration</label>
-            <input type="text" id="manualDuration" placeholder="3 hours">
-          </div>
-          <div class="form-group">
-            <label>Flight</label>
-            <input type="text" id="manualFlight" placeholder="KE111">
-          </div>
-          <div class="form-group">
-            <label>Contact</label>
-            <input type="text" id="manualPhone" placeholder="010-1234-5678">
-          </div>
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label>Remark</label>
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <input type="text" id="manualRemark" placeholder="Special request" style="flex: 1;">
-              <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; margin: 0;">
-                <input type="checkbox" id="privateTaxiCheck" onchange="togglePrivateTaxi()" style="cursor: pointer;">
-                <span style="font-size: 12px;">단독택시로 신청</span>
-              </label>
-            </div>
-          </div>
+        <div style="overflow-x: auto; background: white; border-radius: 5px; padding: 10px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+            <thead>
+              <tr style="background: #6B8E23; color: white;">
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">DATE</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">TIME</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">Pickup Loc</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">PERSON</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">DER</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">VEHICLE</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">NUM</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">NAME</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">ENG NAME</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">CONTACT</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">FLIGHT</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">REMARK</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 4px;"><input type="date" id="manualDate" required style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="time" id="manualTime" required style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualHotel" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="number" id="manualPerson" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualDuration" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualVehicle" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualNumber" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualName" required style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualEngName" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px; background: #e8f4f8;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualPhone" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualFlight" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;">
+                  <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="text" id="manualRemark" style="flex: 1; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;">
+                    <label style="display: flex; align-items: center; gap: 2px; white-space: nowrap; cursor: pointer; margin: 0; font-size: 10px;">
+                      <input type="checkbox" id="privateTaxiCheck" onchange="togglePrivateTaxi()" style="cursor: pointer;">
+                      🚕
+                    </label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <button class="btn-primary" onclick="addManualPickup()">➕ Add Manual Pickup</button>
+        <button class="btn-primary" onclick="addManualPickup()" style="margin-top: 10px;">➕ Add Manual Pickup</button>
       </div>
     </div>
     
