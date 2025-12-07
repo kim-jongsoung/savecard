@@ -1036,10 +1036,14 @@
           const textColor = isDeparture ? '#1565c0' : '#c62828';
           const icon = isDeparture ? '✈️' : '🛬';
           
+          // 단독택시 뱃지
+          const hasPrivateTaxi = p.memo && p.memo.includes('단독택시로 신청');
+          const taxiBadge = hasPrivateTaxi ? ' <span style="background: #FFD700; color: #000; padding: 1px 4px; border-radius: 2px; font-size: 9px; font-weight: bold; margin-left: 2px;">🚕단독</span>' : '';
+          
           html += `
             <div class="pickup-item" style="background: ${bgColor}; border-left-color: ${borderColor}; color: ${textColor}; cursor: pointer;" onclick="showPickupDetail(${p.id})">
               <div style="font-weight: bold;">${icon} ${flightNum} ${time}</div>
-              <div style="font-size: 0.85em;">${p.customer_name} (${p.passenger_count}명)</div>
+              <div style="font-size: 0.85em;">${p.customer_name} (${p.passenger_count}명)${taxiBadge}</div>
             </div>
           `;
         });

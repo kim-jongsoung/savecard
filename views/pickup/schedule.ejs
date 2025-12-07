@@ -1168,14 +1168,7 @@
         const adultCount = pickup.adult_count || 0;
         const childCount = pickup.child_count || 0;
         const infantCount = pickup.infant_count || 0;
-        
-        // "단독택시로 신청" 문구가 있을 때 뱃지 추가
-        const hasPrivateTaxi = pickup.remark && pickup.remark.includes('단독택시로 신청');
-        if (hasPrivateTaxi) {
-          console.log('🚕 단독택시 발견:', pickup.id, pickup.customer_name, pickup.remark);
-        }
-        const taxiBadge = hasPrivateTaxi ? ' <span style="background: #FFD700; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 4px;">🚕단독</span>' : '';
-        const personDisplay = `${adultCount}+${childCount}+${infantCount}${taxiBadge}`;
+        const personDisplay = `${adultCount}+${childCount}+${infantCount}`;
         
         // Pickup Loc 컬럼
         let pickupLocation = '-';
