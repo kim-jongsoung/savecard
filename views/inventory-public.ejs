@@ -361,6 +361,7 @@
           </button>
           
           <div id="priceResult" style="display: none;" class="price-result">
+            <div id="availabilityStatus" style="margin-bottom: 15px; padding: 15px; border-radius: 8px;"></div>
             <div class="price-row">
               <span class="price-label">숙박 기간</span>
               <span class="price-value" id="resultNights">-</span>
@@ -760,6 +761,55 @@
       }
       
       const nights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+      
+      // 날짜별 재고 체크
+      const hotel = hotels.find(h => h.id == hotelId);
+      const unavailableDates = [];
+      let allAvailable = true;
+      
+      for (let i = 0; i < nights; i++) {
+        const currentDate = new Date(checkInDate);
+        currentDate.setDate(currentDate.getDate() + i);
+        const dateStr = currentDate.toISOString().split('T')[0];
+        const key = `${roomTypeId}-${dateStr}`;
+        const val = inventory[key];
+        
+        let isAvailable = false;
+        if (val) {
+          if (hotel && hotel.inventory_type === 'count') {
+            isAvailable = parseInt(val) > 0;
+          } else {
+            isAvailable = val === 'O';
+          }
+        }
+        
+        if (!isAvailable) {
+          allAvailable = false;
+          const month = currentDate.getMonth() + 1;
+          const day = currentDate.getDate();
+          unavailableDates.push(`${month}/${day}`);
+        }
+      }
+      
+      // 재고 상태 표시
+      const availabilityDiv = document.getElementById('availabilityStatus');
+      if (allAvailable) {
+        availabilityDiv.innerHTML = `
+          <div style="background: #d4edda; border: 2px solid #28a745; padding: 12px; border-radius: 8px;">
+            <strong style="color: #155724; font-size: 16px;">✅ 예약 가능</strong>
+            <div style="color: #155724; margin-top: 5px;">선택하신 기간 동안 모든 날짜 예약 가능합니다.</div>
+          </div>
+        `;
+      } else {
+        availabilityDiv.innerHTML = `
+          <div style="background: #f8d7da; border: 2px solid #dc3545; padding: 12px; border-radius: 8px;">
+            <strong style="color: #721c24; font-size: 16px;">❌ 예약 불가능</strong>
+            <div style="color: #721c24; margin-top: 8px;">
+              <strong>불가능 날짜:</strong> ${unavailableDates.join(', ')}
+            </div>
+          </div>
+        `;
+      }
       
       try {
         let url = `/api/price-calculator/public?hotel_id=${hotelId}&room_type_id=${roomTypeId}&check_in=${checkIn}&check_out=${checkOut}`;
