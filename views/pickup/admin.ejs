@@ -615,16 +615,35 @@
       
       // 날짜 포맷팅 함수
       const formatDate = (dateStr) => {
-        if (!dateStr) return '';
-        const d = new Date(dateStr + 'T00:00:00Z');
-        const year = d.getUTCFullYear();
-        const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(d.getUTCDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        if (!dateStr) return '-';
+        try {
+          // 이미 YYYY-MM-DD 형식이면 그대로 반환
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+          }
+          // ISO 형식이면 파싱
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return '-';
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch (e) {
+          console.error('날짜 포맷 에러:', dateStr, e);
+          return '-';
+        }
       };
       
-      const depDate = formatDate(pickup.departure_date);
-      const arrDate = formatDate(pickup.arrival_date);
+      console.log('📅 Pickup 날짜 데이터:', {
+        id: pickup.id,
+        departure_date: pickup.departure_date,
+        arrival_date: pickup.arrival_date,
+        flight_date: pickup.flight_date,
+        pickup_date: pickup.pickup_date
+      });
+      
+      const depDate = formatDate(pickup.departure_date || pickup.flight_date || pickup.pickup_date);
+      const arrDate = formatDate(pickup.arrival_date || pickup.flight_date || pickup.pickup_date);
       
       // 항공편 마스터 데이터에서 시간 가져오기
       const flight = FLIGHTS[flightNum];
