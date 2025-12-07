@@ -2258,7 +2258,7 @@ router.get('/api/schedule/:date', async (req, res) => {
         ap.passenger_count, ap.adult_count, ap.child_count, ap.infant_count, ap.luggage_count,
         ap.hotel_name, ap.agency_id,
         ap.contact_status, ap.driver_name, ap.driver_vehicle,
-        ap.payment_status, ap.special_request, ap.remark,
+        ap.payment_status, ap.special_request, ap.memo as remark,
         ap.rental_vehicle, ap.rental_number, ap.rental_duration,
         ap.status, ap.created_at,
         pa.agency_name
