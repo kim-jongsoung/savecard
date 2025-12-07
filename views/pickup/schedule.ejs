@@ -567,9 +567,15 @@
             <label>Contact</label>
             <input type="text" id="manualPhone" placeholder="010-1234-5678">
           </div>
-          <div class="form-group">
+          <div class="form-group" style="grid-column: 1 / -1;">
             <label>Remark</label>
-            <input type="text" id="manualRemark" placeholder="Special request">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" id="manualRemark" placeholder="Special request" style="flex: 1;">
+              <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap; cursor: pointer; margin: 0;">
+                <input type="checkbox" id="privateTaxiCheck" onchange="togglePrivateTaxi()" style="cursor: pointer;">
+                <span style="font-size: 12px;">단독택시로 신청</span>
+              </label>
+            </div>
           </div>
         </div>
         <button class="btn-primary" onclick="addManualPickup()">➕ Add Manual Pickup</button>
@@ -1620,6 +1626,30 @@
       } catch (error) {
         console.error('Excel parsing error:', error);
         showToast('Failed to process Excel data', 'error');
+      }
+    }
+    
+    // 단독택시 체크박스 토글
+    function togglePrivateTaxi() {
+      const checkbox = document.getElementById('privateTaxiCheck');
+      const remarkField = document.getElementById('manualRemark');
+      const privateTaxiText = '단독택시로 신청';
+      
+      if (checkbox.checked) {
+        // 체크된 경우: 기존 내용에 추가
+        const currentValue = remarkField.value.trim();
+        if (currentValue && !currentValue.includes(privateTaxiText)) {
+          remarkField.value = currentValue + ' / ' + privateTaxiText;
+        } else if (!currentValue) {
+          remarkField.value = privateTaxiText;
+        }
+      } else {
+        // 체크 해제된 경우: 해당 문구 제거
+        let currentValue = remarkField.value;
+        currentValue = currentValue.replace(' / ' + privateTaxiText, '');
+        currentValue = currentValue.replace(privateTaxiText + ' / ', '');
+        currentValue = currentValue.replace(privateTaxiText, '');
+        remarkField.value = currentValue.trim();
       }
     }
     
