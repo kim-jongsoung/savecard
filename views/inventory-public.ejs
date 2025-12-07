@@ -703,6 +703,10 @@
       if (!hotelId) return;
       
       try {
+        // 호텔 정보 로드
+        currentHotel = hotels.find(h => h.id == hotelId);
+        
+        // 객실 타입 로드
         const res = await fetch(`/api/room-types?hotel_id=${hotelId}&is_active=true`);
         priceRoomTypes = await res.json();
         
@@ -712,6 +716,34 @@
           opt.textContent = rt.room_type_name;
           roomTypeSelect.appendChild(opt);
         });
+        
+        // 재고 데이터 로드 (6개월치)
+        inventory = {};
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        
+        for (let m = 0; m < 6; m++) {
+          const y = month + m > 12 ? year + 1 : year;
+          const mo = month + m > 12 ? month + m - 12 : month + m;
+          const invRes = await fetch(`/api/inventory/public?hotel_id=${hotelId}&year=${y}&month=${mo}`);
+          
+          if (invRes.ok) {
+            const data = await invRes.json();
+            if (Array.isArray(data)) {
+              data.forEach(inv => {
+                const dateOnly = inv.availability_date.split('T')[0];
+                const key = `${inv.room_type_id}-${dateOnly}`;
+                
+                if (currentHotel.inventory_type === 'count') {
+                  inventory[key] = inv.available_rooms;
+                } else {
+                  inventory[key] = inv.available_rooms === 0 ? 'X' : (inv.available_rooms > 0 ? 'O' : '');
+                }
+              });
+            }
+          }
+        }
       } catch (error) {
         console.error('Room type load error:', error);
       }
