@@ -16360,7 +16360,7 @@ async function startServer() {
         console.log('🔧 픽업 테이블 마이그레이션 확인 중...');
         try {
             const columns = ['record_type', 'display_date', 'display_time', 'departure_date', 'departure_time', 
-                           'departure_airport', 'arrival_date', 'arrival_time', 'arrival_airport', 'linked_id', 'flight_number'];
+                           'departure_airport', 'arrival_date', 'arrival_time', 'arrival_airport', 'linked_id', 'flight_number', 'settlement_amount'];
             
             for (const col of columns) {
                 await pool.query(`
@@ -16375,6 +16375,7 @@ async function startServer() {
                                 col === 'display_date' || col === 'departure_date' || col === 'arrival_date' ? 'DATE' :
                                 col === 'display_time' || col === 'departure_time' || col === 'arrival_time' ? 'TIME' :
                                 col === 'linked_id' ? 'INTEGER' :
+                                col === 'settlement_amount' ? 'DECIMAL(10,2) DEFAULT 0' :
                                 'VARCHAR(20)'
                             };
                         END IF;

@@ -176,6 +176,7 @@
     let pendingPickups = [];
     let completedPickups = [];
     let selectedIds = new Set();
+    let settlementAmounts = {}; // 정산 금액 저장 (pickup_id: amount)
 
     let allPendingPickups = []; // 전체 데이터
     let allCompletedPickups = []; // 전체 데이터
@@ -272,6 +273,7 @@
       let html = '';
       pendingPickups.forEach(p => {
         const isSelected = selectedIds.has(p.id);
+        const currentAmount = settlementAmounts[p.id] || p.settlement_amount || '';
         html += `
           <div class="settlement-card ${isSelected ? 'selected' : ''}" id="card-${p.id}">
             <div class="form-check">
@@ -279,7 +281,7 @@
                      id="check-${p.id}" onchange="toggleSelect(${p.id})" ${isSelected ? 'checked' : ''}>
               <label class="form-check-label w-100" for="check-${p.id}">
                 <div class="row">
-                  <div class="col-md-6">
+                  <div class="col-md-5">
                     <strong>${p.flight_number || '-'}</strong> 
                     <span class="badge bg-primary">출발</span>
                     <span class="badge bg-info">${p.passenger_count}명</span>
@@ -289,7 +291,7 @@
                       ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
                     </small>
                   </div>
-                  <div class="col-md-4">
+                  <div class="col-md-3">
                     <small>
                       👤 ${p.customer_name}<br>
                       🏨 ${p.hotel_name}<br>
@@ -302,6 +304,17 @@
                       소아: ${p.child_count || 0}<br>
                       유아: ${p.infant_count || 0}
                     </small>
+                  </div>
+                  <div class="col-md-2">
+                    <div class="input-group input-group-sm" onclick="event.stopPropagation()">
+                      <span class="input-group-text">$</span>
+                      <input type="number" class="form-control" id="amount-${p.id}" 
+                             value="${currentAmount}" placeholder="0" min="0" step="0.01"
+                             onchange="saveAmount(${p.id})" style="font-size: 12px;">
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary mt-1 w-100" onclick="saveAmount(${p.id}); event.stopPropagation();" style="font-size: 11px;">
+                      <i class="bi bi-save"></i> 저장
+                    </button>
                   </div>
                 </div>
                 ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
@@ -324,12 +337,15 @@
       const totalChildren = pickups.reduce((sum, p) => sum + (p.child_count || 0), 0);
       const totalInfants = pickups.reduce((sum, p) => sum + (p.infant_count || 0), 0);
       
+      const totalAmount = pickups.reduce((sum, p) => sum + (parseFloat(settlementAmounts[p.id] || p.settlement_amount || 0)), 0);
+      
       document.getElementById('pendingStats').innerHTML = `
         <span class="badge bg-primary me-2">총 건수: ${totalCount}건</span>
         <span class="badge bg-info me-2">총 인원: ${totalPax}명</span>
         <span class="badge bg-success me-2">성인: ${totalAdults}명</span>
         <span class="badge bg-warning me-2">소아: ${totalChildren}명</span>
-        <span class="badge bg-secondary">유아: ${totalInfants}명</span>
+        <span class="badge bg-secondary me-2">유아: ${totalInfants}명</span>
+        <span class="badge bg-danger">💰 총 금액: $${totalAmount.toFixed(2)}</span>
       `;
     }
 
@@ -398,10 +414,11 @@
       let html = '';
       completedPickups.forEach(p => {
         const settlementDate = p.settlement_date ? new Date(p.settlement_date).toLocaleDateString('ko-KR') : '-';
+        const amount = p.settlement_amount ? `$${parseFloat(p.settlement_amount).toFixed(2)}` : '-';
         html += `
           <div class="settlement-card">
             <div class="row">
-              <div class="col-md-5">
+              <div class="col-md-4">
                 <strong>${p.flight_number || '-'}</strong>
                 <span class="badge bg-primary">출발</span>
                 <span class="badge bg-info">${p.passenger_count}명</span>
@@ -411,19 +428,22 @@
                   ${p.display_date?.split('T')[0]} ${p.display_time?.substring(0,5)}
                 </small>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <small>
                   👤 ${p.customer_name}<br>
                   🏨 ${p.hotel_name}<br>
                   ${p.agency_name ? `🏢 ${p.agency_name}` : ''}
                 </small>
               </div>
-              <div class="col-md-3 text-end">
-                <span class="badge bg-success">✅ 정산 완료</span><br>
-                <small class="text-muted">${settlementDate}</small><br>
+              <div class="col-md-2 text-center">
+                <span class="badge bg-danger" style="font-size: 14px;">💰 ${amount}</span><br>
                 <small class="text-muted">
                   성인: ${p.adult_count || 0} | 소아: ${p.child_count || 0} | 유아: ${p.infant_count || 0}
                 </small>
+              </div>
+              <div class="col-md-3 text-end">
+                <span class="badge bg-success">✅ 정산 완료</span><br>
+                <small class="text-muted">${settlementDate}</small>
               </div>
             </div>
             ${p.memo ? `<div class="mt-2 p-2 bg-light rounded"><small>📝 ${p.memo}</small></div>` : ''}
@@ -443,12 +463,15 @@
       const totalChildren = pickups.reduce((sum, p) => sum + (p.child_count || 0), 0);
       const totalInfants = pickups.reduce((sum, p) => sum + (p.infant_count || 0), 0);
       
+      const totalAmount = pickups.reduce((sum, p) => sum + (parseFloat(p.settlement_amount || 0)), 0);
+      
       document.getElementById('completedStats').innerHTML = `
         <span class="badge bg-primary me-2">총 건수: ${totalCount}건</span>
         <span class="badge bg-info me-2">총 인원: ${totalPax}명</span>
         <span class="badge bg-success me-2">성인: ${totalAdults}명</span>
         <span class="badge bg-warning me-2">소아: ${totalChildren}명</span>
-        <span class="badge bg-secondary">유아: ${totalInfants}명</span>
+        <span class="badge bg-secondary me-2">유아: ${totalInfants}명</span>
+        <span class="badge bg-danger">💰 총 금액: $${totalAmount.toFixed(2)}</span>
       `;
     }
 
@@ -517,6 +540,37 @@
       document.getElementById('completeBtn').disabled = selectedIds.size === 0;
     }
 
+    // 정산 금액 저장
+    async function saveAmount(pickupId) {
+      const amountInput = document.getElementById(`amount-${pickupId}`);
+      const amount = parseFloat(amountInput.value) || 0;
+      
+      try {
+        const res = await fetch(`/pickup/api/settlement/${pickupId}/amount`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount })
+        });
+        
+        if (res.ok) {
+          settlementAmounts[pickupId] = amount;
+          // 통계 업데이트
+          updatePendingStats(pendingPickups);
+          // 성공 피드백
+          amountInput.style.borderColor = '#28a745';
+          setTimeout(() => {
+            amountInput.style.borderColor = '';
+          }, 1000);
+        } else {
+          throw new Error('저장 실패');
+        }
+      } catch (error) {
+        console.error('❌ 금액 저장 실패:', error);
+        alert('❌ 금액 저장 실패: ' + error.message);
+        amountInput.style.borderColor = '#dc3545';
+      }
+    }
+
     // 정산 완료 처리
     async function completeSettlement() {
       if (selectedIds.size === 0) {
@@ -524,21 +578,41 @@
         return;
       }
 
+      // 선택된 픽업건의 금액 확인
+      const pickupsWithoutAmount = Array.from(selectedIds).filter(id => {
+        const pickup = pendingPickups.find(p => p.id === id);
+        const amount = settlementAmounts[id] || pickup?.settlement_amount;
+        return !amount || parseFloat(amount) === 0;
+      });
+
+      if (pickupsWithoutAmount.length > 0) {
+        if (!confirm(`${pickupsWithoutAmount.length}건의 금액이 입력되지 않았습니다. 계속하시겠습니까?`)) {
+          return;
+        }
+      }
+
       if (!confirm(`선택한 ${selectedIds.size}건을 정산 완료 처리하시겠습니까?`)) {
         return;
       }
 
       try {
+        // 금액 정보 포함하여 전송
+        const pickupsData = Array.from(selectedIds).map(id => ({
+          id,
+          amount: settlementAmounts[id] || pendingPickups.find(p => p.id === id)?.settlement_amount || 0
+        }));
+
         const res = await fetch('/pickup/api/settlement/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: Array.from(selectedIds) })
+          body: JSON.stringify({ pickups: pickupsData })
         });
 
         if (res.ok) {
           const result = await res.json();
           alert(`✅ ${result.count}건 정산 완료 처리되었습니다`);
           selectedIds.clear();
+          settlementAmounts = {};
           // 검색 재실행
           searchPending();
         } else {

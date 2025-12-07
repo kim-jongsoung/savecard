@@ -1450,32 +1450,53 @@ router.get('/api/settlement/completed', async (req, res) => {
   }
 });
 
+// API: 정산 금액 저장
+router.put('/api/settlement/:id/amount', async (req, res) => {
+  const pool = req.app.locals.pool;
+  const { id } = req.params;
+  const { amount } = req.body;
+  
+  try {
+    await pool.query(
+      'UPDATE airport_pickups SET settlement_amount = $1 WHERE id = $2',
+      [amount, id]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ 금액 저장 실패:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API: 정산 완료 처리
 router.post('/api/settlement/complete', async (req, res) => {
   const pool = req.app.locals.pool;
-  const { ids } = req.body;
+  const { pickups } = req.body; // [{ id, amount }, ...]
   
-  if (!ids || ids.length === 0) {
+  if (!pickups || pickups.length === 0) {
     return res.status(400).json({ error: '정산할 픽업건을 선택해주세요' });
   }
   
   try {
     const now = new Date().toISOString();
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
     
-    const result = await pool.query(`
-      UPDATE airport_pickups
-      SET settlement_date = $${ids.length + 1},
-          settlement_status = 'completed'
-      WHERE id IN (${placeholders})
-        AND settlement_date IS NULL
-      RETURNING id
-    `, [...ids, now]);
+    // 각 픽업건의 금액을 업데이트하고 정산 완료 처리
+    for (const pickup of pickups) {
+      await pool.query(`
+        UPDATE airport_pickups
+        SET settlement_date = $1,
+            settlement_status = 'completed',
+            settlement_amount = $2
+        WHERE id = $3
+          AND settlement_date IS NULL
+      `, [now, pickup.amount, pickup.id]);
+    }
     
     res.json({ 
       success: true, 
-      count: result.rowCount,
-      message: `${result.rowCount}건 정산 완료 처리되었습니다`
+      count: pickups.length,
+      message: `${pickups.length}건 정산 완료 처리되었습니다`
     });
   } catch (error) {
     console.error('❌ 정산 처리 실패:', error);
