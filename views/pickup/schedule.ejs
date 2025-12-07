@@ -1199,18 +1199,18 @@
           <td class="time-col editable" data-field="actual_pickup_time">${timeDisplay.substring(0, 5)}</td>
           <td class="editable" data-field="hotel_name">${pickupLocation}</td>
           <td>${personDisplay}</td>
-          <td ${memoStyle} class="editable" data-field="rental_duration">${rentalDuration}</td>
-          <td ${memoStyle} class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
-          <td ${memoStyle} class="editable" data-field="rental_number">${rentalNumber}</td>
-          <td ${memoStyle} class="editable" data-field="customer_name">${pickup.customer_name || '-'}</td>
-          <td ${memoStyle} class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
-          <td ${memoStyle} class="editable" data-field="phone">${pickup.phone || '-'}</td>
-          <td ${memoStyle}>${flightNumber}</td>
-          <td ${memoStyle}>${pickup.agency_name || (pickup.agency_id === null ? '고객직접예약' : '-')}</td>
-          <td ${memoStyle} class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
-          <td ${memoStyle}>${pickup.special_request || '-'}</td>
-          <td ${memoStyle} class="editable" data-field="remark">${pickup.remark || ''}</td>
-          <td ${memoStyle}>
+          <td class="editable" data-field="rental_duration">${rentalDuration}</td>
+          <td class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
+          <td class="editable" data-field="rental_number">${rentalNumber}</td>
+          <td class="editable" data-field="customer_name">${pickup.customer_name || '-'}</td>
+          <td class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
+          <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
+          <td>${flightNumber}</td>
+          <td>${pickup.agency_name || (pickup.agency_id === null ? '고객직접예약' : '-')}</td>
+          <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
+          <td>${pickup.special_request || '-'}</td>
+          <td class="editable" data-field="remark">${pickup.remark || ''}</td>
+          <td>
             ${canDelete ? `<button class="delete-btn" onclick="deletePickup(${pickup.id})" title="Delete">🗑️</button>` : ''}
           </td>
         `;
