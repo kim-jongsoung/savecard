@@ -51,7 +51,7 @@ router.get('/api/promotions/public', async (req, res) => {
         h.hotel_name
       FROM promotions p
       JOIN hotels h ON p.hotel_id = h.id
-      WHERE p.is_active = true
+      WHERE p.is_active = true AND p.visible_in_public = true
     `;
     const params = [];
     let paramIndex = 1;
@@ -235,14 +235,14 @@ router.post('/api/promotions', requireLogin, async (req, res) => {
         hotel_id, promo_code, promo_name,
         booking_start_date, booking_end_date,
         stay_start_date, stay_end_date,
-        description, terms_and_conditions, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        description, terms_and_conditions, is_active, visible_in_public
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *`,
       [
         hotel_id, promo_code, promo_name,
         booking_start_date, booking_end_date,
         stay_start_date, stay_end_date,
-        description, terms_and_conditions, is_active !== false
+        description, terms_and_conditions, is_active !== false, visible_in_public !== false
       ]
     );
     
@@ -275,7 +275,8 @@ router.put('/api/promotions/:id', requireLogin, async (req, res) => {
     stay_end_date,
     description,
     terms_and_conditions,
-    is_active
+    is_active,
+    visible_in_public
   } = req.body;
   
   const client = await pool.connect();
@@ -321,14 +322,15 @@ router.put('/api/promotions/:id', requireLogin, async (req, res) => {
         description = $8,
         terms_and_conditions = $9,
         is_active = $10,
+        visible_in_public = $11,
         updated_at = NOW()
-      WHERE id = $11
+      WHERE id = $12
       RETURNING *`,
       [
         hotel_id, promo_code, promo_name,
         booking_start_date, booking_end_date,
         stay_start_date, stay_end_date,
-        description, terms_and_conditions, is_active !== false,
+        description, terms_and_conditions, is_active !== false, visible_in_public !== false,
         id
       ]
     );

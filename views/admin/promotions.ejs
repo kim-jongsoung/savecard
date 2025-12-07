@@ -200,9 +200,13 @@
               <label class="form-label">설명</label>
               <textarea class="form-control" id="description" rows="3"></textarea>
             </div>
-            <div class="form-check">
+            <div class="form-check mb-2">
               <input class="form-check-input" type="checkbox" id="isActive" checked>
               <label class="form-check-label">활성화</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="visibleInPublic" checked>
+              <label class="form-check-label">공개 페이지 표시 <small class="text-muted">(제휴사 페이지 프로모션 선택에 표시)</small></label>
             </div>
           </div>
           
@@ -380,6 +384,7 @@
       document.getElementById('stayEndDate').value = formatDate(promo.stay_end_date);
       document.getElementById('description').value = promo.description || '';
       document.getElementById('isActive').checked = promo.is_active;
+      document.getElementById('visibleInPublic').checked = promo.visible_in_public !== false;
       
       // 호텔 선택 시 객실 타입 로드 (Step 2를 위해)
       if (promo.hotel_id) {
@@ -477,7 +482,8 @@
         stay_start_date: document.getElementById('stayStartDate').value,
         stay_end_date: document.getElementById('stayEndDate').value,
         description: document.getElementById('description').value,
-        is_active: document.getElementById('isActive').checked
+        is_active: document.getElementById('isActive').checked,
+        visible_in_public: document.getElementById('visibleInPublic').checked
       };
       
       if (!data.hotel_id || !data.promo_code || !data.promo_name) {

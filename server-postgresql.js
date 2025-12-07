@@ -16697,6 +16697,25 @@ async function startServer() {
             }
         }
         
+        // promotions 테이블에 visible_in_public 컬럼 추가
+        try {
+            await pool.query(`
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'promotions' AND column_name = 'visible_in_public'
+                    ) THEN
+                        ALTER TABLE promotions ADD COLUMN visible_in_public BOOLEAN DEFAULT true;
+                        COMMENT ON COLUMN promotions.visible_in_public IS '공개 페이지 표시 여부';
+                    END IF;
+                END $$;
+            `);
+            console.log('✅ promotions.visible_in_public 컬럼 확인/추가 완료');
+        } catch (colErr) {
+            console.warn('⚠️  visible_in_public 컬럼 추가 경고:', colErr.message);
+        }
+        
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
             console.log('✅ 서버 초기화 및 시작 완료');
