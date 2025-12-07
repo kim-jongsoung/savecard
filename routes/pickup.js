@@ -2362,7 +2362,7 @@ router.post('/api/manual-pickup', async (req, res) => {
         passenger_count, adult_count, child_count, infant_count, luggage_count,
         driver_name, driver_vehicle, flight_number,
         rental_vehicle, rental_number, rental_duration,
-        hotel_name, remark,
+        hotel_name, memo,
         contact_status, status, parsed_by,
         record_type
       ) VALUES (
@@ -2410,6 +2410,9 @@ router.put('/api/:id/update-field', async (req, res) => {
     return res.status(400).json({ error: '허용되지 않은 필드입니다' });
   }
   
+  // remark 필드는 데이터베이스에서 memo로 저장됨
+  const dbField = field === 'remark' ? 'memo' : field;
+  
   try {
     // linked_id가 있으면 함께 업데이트
     const linkedResult = await pool.query(
@@ -2417,7 +2420,7 @@ router.put('/api/:id/update-field', async (req, res) => {
       [id]
     );
     
-    const query = `UPDATE airport_pickups SET ${field} = $1, updated_at = NOW() WHERE id = $2`;
+    const query = `UPDATE airport_pickups SET ${dbField} = $1, updated_at = NOW() WHERE id = $2`;
     await pool.query(query, [value, id]);
     
     // 연결된 레코드도 업데이트
