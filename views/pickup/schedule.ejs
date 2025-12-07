@@ -1193,7 +1193,7 @@
         
         // "단독택시로 신청" 문구가 있을 때만 노란색 테두리 (배경색은 유지)
         const hasPrivateTaxi = pickup.remark && pickup.remark.includes('단독택시로 신청');
-        const memoStyle = hasPrivateTaxi ? 'style="border: 3px solid #FFD700;"' : '';
+        const memoStyle = hasPrivateTaxi ? 'style="border: 3px solid #FFD700 !important; box-shadow: 0 0 8px rgba(255, 215, 0, 0.6) !important;"' : '';
         
         row.innerHTML = `
           <td ${memoStyle}>${dateDisplay}</td>
