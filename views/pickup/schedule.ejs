@@ -1168,7 +1168,11 @@
         const adultCount = pickup.adult_count || 0;
         const childCount = pickup.child_count || 0;
         const infantCount = pickup.infant_count || 0;
-        const personDisplay = `${adultCount}+${childCount}+${infantCount}`;
+        
+        // "단독택시로 신청" 문구가 있을 때 뱃지 추가
+        const hasPrivateTaxi = pickup.remark && pickup.remark.includes('단독택시로 신청');
+        const taxiBadge = hasPrivateTaxi ? ' <span style="background: #FFD700; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 4px;">🚕단독</span>' : '';
+        const personDisplay = `${adultCount}+${childCount}+${infantCount}${taxiBadge}`;
         
         // Pickup Loc 컬럼
         let pickupLocation = '-';
@@ -1191,18 +1195,14 @@
         const dateObj = new Date(pickupDate);
         const dateDisplay = `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
         
-        // "단독택시로 신청" 문구가 있을 때만 노란색 테두리 (배경색은 유지)
-        const hasPrivateTaxi = pickup.remark && pickup.remark.includes('단독택시로 신청');
-        const memoStyle = hasPrivateTaxi ? 'style="border: 3px solid #FFD700 !important; box-shadow: 0 0 8px rgba(255, 215, 0, 0.6) !important;"' : '';
-        
         row.innerHTML = `
-          <td ${memoStyle}>${dateDisplay}</td>
-          <td ${memoStyle} onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">
+          <td>${dateDisplay}</td>
+          <td onclick="toggleStatus(${pickup.id}, '${pickup.contact_status}')">
             <span class="status-badge ${statusClass}">${statusText}</span>
           </td>
-          <td ${memoStyle} class="time-col editable" data-field="actual_pickup_time">${timeDisplay.substring(0, 5)}</td>
-          <td ${memoStyle} class="editable" data-field="hotel_name">${pickupLocation}</td>
-          <td ${memoStyle}>${personDisplay}</td>
+          <td class="time-col editable" data-field="actual_pickup_time">${timeDisplay.substring(0, 5)}</td>
+          <td class="editable" data-field="hotel_name">${pickupLocation}</td>
+          <td>${personDisplay}</td>
           <td ${memoStyle} class="editable" data-field="rental_duration">${rentalDuration}</td>
           <td ${memoStyle} class="editable" data-field="rental_vehicle">${vehicleWithRoute}</td>
           <td ${memoStyle} class="editable" data-field="rental_number">${rentalNumber}</td>
