@@ -1193,6 +1193,9 @@
         
         // 단독택시 체크
         const hasPrivateTaxi = pickup.remark && pickup.remark.includes('단독택시로 신청');
+        if (pickup.remark) {
+          console.log('📝 REMARK (render3DaysTable):', pickup.id, pickup.customer_name, pickup.remark, hasPrivateTaxi);
+        }
         const remarkBgStyle = hasPrivateTaxi ? 'style="background-color: #FFF9C4 !important;"' : '';
         const taxiBadge = hasPrivateTaxi ? '<span style="background: #FFD700; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 4px;">🚕단독</span>' : '';
         const remarkContent = `${pickup.remark || ''}${taxiBadge}`;
@@ -1419,6 +1422,9 @@
         
         // 단독택시 체크
         const hasPrivateTaxi = pickup.remark && pickup.remark.includes('단독택시로 신청');
+        if (pickup.remark) {
+          console.log('📝 REMARK (renderPickupsToTbody):', pickup.id, pickup.customer_name, pickup.remark, hasPrivateTaxi);
+        }
         const remarkBgStyle = hasPrivateTaxi ? 'style="background-color: #FFF9C4 !important;"' : '';
         const taxiBadge = hasPrivateTaxi ? '<span style="background: #FFD700; color: #000; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; margin-left: 4px;">🚕단독</span>' : '';
         const remarkContent = `${pickup.remark || ''}${taxiBadge}`;
