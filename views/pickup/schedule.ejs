@@ -471,19 +471,17 @@
     <div class="header">
       <h1>🚗 GUAM MATE Pickup Schedule Management</h1>
       <div class="date-display" id="dateDisplay">Loading...</div>
-      <div class="nav-buttons">
+      <div class="nav-buttons" style="gap: 8px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
         <button onclick="changeDate(-1)">◀</button>
         <button onclick="loadSingleDate()">📆 단일날짜</button>
         <button onclick="changeDate(1)">▶</button>
-      </div>
-      <div class="nav-buttons" style="margin-top: 3px;">
+        <span style="color: rgba(255,255,255,0.5); margin: 0 5px;">|</span>
         <button onclick="load3Days()" style="background: #FF9800; border-color: #FF9800;">📅 3 Days (어제-오늘-내일)</button>
-      </div>
-      <div class="nav-buttons" style="margin-top: 3px; gap: 5px; display: flex; align-items: center; justify-content: center;">
-        <label style="color: white; font-size: 14px;">📆 기간 선택:</label>
-        <input type="date" id="dateRangeStart" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        <span style="color: rgba(255,255,255,0.5); margin: 0 5px;">|</span>
+        <label style="color: white; font-size: 13px; margin: 0;">📆 기간 선택:</label>
+        <input type="date" id="dateRangeStart" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px;">
         <span style="color: white;">~</span>
-        <input type="date" id="dateRangeEnd" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+        <input type="date" id="dateRangeEnd" style="padding: 4px 6px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px;">
         <button onclick="loadDateRange()" style="background: #8B5CF6; border-color: #8B5CF6;">조회</button>
       </div>
       <div class="nav-buttons" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px;">
