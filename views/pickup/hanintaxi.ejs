@@ -515,9 +515,19 @@
       // 왕복 전용 지역 체크
       const isRoundtripOnly = roundtripOnlyLocations.includes(origin) || roundtripOnlyLocations.includes(destination);
       
+      // 왕복 전용 지역이면 체크박스 자동 체크 및 비활성화
+      if (isRoundtripOnly) {
+        document.getElementById('isRoundtrip').checked = true;
+        document.getElementById('isRoundtrip').disabled = true;
+        document.getElementById('roundtripNotice').classList.add('show');
+      } else {
+        document.getElementById('isRoundtrip').disabled = false;
+        document.getElementById('roundtripNotice').classList.remove('show');
+      }
+      
       // 왕복 요금 계산
       // 차모로 야시장/사랑의절벽은 요금표 금액이 이미 왕복 기준
-      if (!isRoundtripOnly && isRoundtrip) {
+      if (!isRoundtripOnly && document.getElementById('isRoundtrip').checked) {
         baseFare = baseFare * 2;
       }
       
@@ -546,16 +556,6 @@
       
       // 요금 라벨 업데이트
       document.querySelector('.result-item:first-child span:first-child').textContent = fareLabel;
-      
-      // 왕복 전용 안내 표시
-      if (isRoundtripOnly) {
-        document.getElementById('roundtripNotice').classList.add('show');
-        document.getElementById('isRoundtrip').checked = true;
-        document.getElementById('isRoundtrip').disabled = true;
-      } else {
-        document.getElementById('roundtripNotice').classList.remove('show');
-        document.getElementById('isRoundtrip').disabled = false;
-      }
     }
   </script>
 </body>
