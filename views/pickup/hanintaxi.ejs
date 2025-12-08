@@ -486,14 +486,15 @@
         return;
       }
       
-      // 기본 요금 조회 (편도)
+      // 기본 요금 조회
       let baseFare = fareData[origin]?.[destination] || 0;
       
       // 왕복 전용 지역 체크
       const isRoundtripOnly = roundtripOnlyLocations.includes(origin) || roundtripOnlyLocations.includes(destination);
       
       // 왕복 요금 계산
-      if (isRoundtrip || isRoundtripOnly) {
+      // 차모로 야시장/사랑의절벽은 요금표 금액이 이미 왕복 기준
+      if (!isRoundtripOnly && isRoundtrip) {
         baseFare = baseFare * 2;
       }
       
