@@ -53,7 +53,7 @@
     }
     
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
     
     .form-group label {
@@ -82,24 +82,80 @@
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
     
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    
+    .control-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .control-row > * {
+      flex: 1;
+      min-width: 150px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .checkbox-group:hover {
+      background: #e9ecef;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    
     .swap-btn {
-      width: 100%;
-      padding: 12px;
+      padding: 12px 20px;
       background: #f0f0f0;
       border: 2px dashed #ccc;
       border-radius: 10px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       color: #666;
       transition: all 0.3s;
-      margin: 15px 0;
+      white-space: nowrap;
     }
     
     .swap-btn:hover {
       background: #667eea;
       border-color: #667eea;
       color: white;
+    }
+    
+    .passenger-select {
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      background: white;
+      cursor: pointer;
     }
     
     .result-box {
@@ -237,6 +293,18 @@
       .content {
         padding: 20px 15px;
       }
+      
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .control-row {
+        flex-direction: column;
+      }
+      
+      .control-row > * {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -248,46 +316,54 @@
     </div>
     
     <div class="content">
-      <div class="form-group">
-        <label>📍 출발지</label>
-        <select id="origin" onchange="calculateFare()">
-          <option value="">출발지를 선택하세요</option>
-          <option value="투몬베이">투몬베이</option>
-          <option value="타무닝">타무닝</option>
-          <option value="괌프리미엄아울렛">괌프리미엄아울렛</option>
-          <option value="아가나쇼핑센터/차모로빌리지">아가나쇼핑센터/차모로빌리지</option>
-          <option value="호텔/리조트/쇼핑센터/기타">호텔/리조트/쇼핑센터/기타</option>
-          <option value="K마트">K마트</option>
-          <option value="마이크로네시아몰/괌대학교">마이크로네시아몰/괌대학교</option>
-          <option value="스페인광장/아가냐대성당">스페인광장/아가냐대성당</option>
-          <option value="전쟁역사박물관">전쟁역사박물관</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group">
+          <label>🏨 출발지 (호텔)</label>
+          <select id="origin" onchange="calculateFare()">
+            <option value="">출발 호텔을 선택하세요</option>
+            <option value="PIC 리조트">PIC 리조트</option>
+            <option value="힐튼 리조트">힐튼 리조트</option>
+            <option value="두짓타니 리조트">두짓타니 리조트</option>
+            <option value="괌프리미엄아울렛">괌프리미엄아울렛</option>
+            <option value="아가나쇼핑센터/차모로빌리지">아가나쇼핑센터/차모로빌리지</option>
+            <option value="호텔/리조트/쇼핑센터/기타">호텔/리조트/쇼핑센터/기타</option>
+            <option value="K마트">K마트</option>
+            <option value="마이크로네시아몰/괌대학교">마이크로네시아몰/괌대학교</option>
+            <option value="스페인광장/아가냐대성당">스페인광장/아가냐대성당</option>
+            <option value="전쟁역사박물관">전쟁역사박물관</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>📍 목적지</label>
+          <select id="destination" onchange="calculateFare()">
+            <option value="">목적지를 선택하세요</option>
+            <option value="GUM공항">GUM 공항</option>
+            <option value="투몬">투몬</option>
+            <option value="타무닝">타무닝</option>
+            <option value="괌프리미엄아울렛">괌프리미엄아울렛</option>
+            <option value="아가나쇼핑센터">아가나쇼핑센터</option>
+            <option value="호텔/리조트">호텔/리조트</option>
+            <option value="K마트">K마트</option>
+            <option value="마이크로네시아몰">마이크로네시아몰</option>
+            <option value="스페인광장">스페인광장</option>
+            <option value="전쟁역사박물관">전쟁역사박물관</option>
+          </select>
+        </div>
       </div>
       
-      <button class="swap-btn" onclick="swapLocations()">🔄 출발지 ↔ 목적지 바꾸기</button>
-      
-      <div class="form-group">
-        <label>📍 목적지</label>
-        <select id="destination" onchange="calculateFare()">
-          <option value="">목적지를 선택하세요</option>
-          <option value="투몬베이">투몬베이</option>
-          <option value="타무닝">타무닝</option>
-          <option value="괌프리미엄아울렛">괌프리미엄아울렛</option>
-          <option value="아가나쇼핑센터/차모로빌리지">아가나쇼핑센터/차모로빌리지</option>
-          <option value="호텔/리조트/쇼핑센터/기타">호텔/리조트/쇼핑센터/기타</option>
-          <option value="K마트">K마트</option>
-          <option value="마이크로네시아몰/괌대학교">마이크로네시아몰/괌대학교</option>
-          <option value="스페인광장/아가냐대성당">스페인광장/아가냐대성당</option>
-          <option value="전쟁역사박물관">전쟁역사박물관</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label>👥 인원수 (최대 6인)</label>
-        <select id="passengers" onchange="calculateFare()">
-          <option value="4">4명 (기본)</option>
-          <option value="5">5명</option>
-          <option value="6">6명</option>
+      <div class="control-row">
+        <button class="swap-btn" onclick="swapLocations()">🔄 출발지↔목적지 바꾸기</button>
+        
+        <div class="checkbox-group" onclick="toggleRoundtrip()">
+          <input type="checkbox" id="isRoundtrip" onchange="calculateFare()">
+          <label for="isRoundtrip">↩️ 왕복 요금</label>
+        </div>
+        
+        <select id="passengers" class="passenger-select" onchange="calculateFare()">
+          <option value="4">👥 4명 (기본)</option>
+          <option value="5">👥 5명</option>
+          <option value="6">👥 6명</option>
         </select>
       </div>
       
@@ -323,9 +399,9 @@
       </div>
       
       <div class="booking-box">
-        <h4>🎫 택시 예약하기</h4>
+        <h4>🚕 택시 호출하기</h4>
         <a href="https://pf.kakao.com/_DxnxodT" target="_blank" class="kakao-btn">
-          💬 카카오톡으로 예약하기
+          💬 카카오톡으로 호출하기
         </a>
         <div class="payment-info">
           <strong>💵 결제 방법</strong><br>
@@ -336,111 +412,73 @@
   </div>
   
   <script>
-    // 요금표 데이터 (엑셀 기준)
+    // 요금표 데이터 (엑셀 기준 - 세로: 출발지(호텔), 가로: 목적지)
     const fareData = {
-      '투몬베이': {
-        '투몬베이': 5,
-        '타무닝': 10,
-        '괌프리미엄아울렛': 9,
-        '아가나쇼핑센터/차모로빌리지': 12,
-        '호텔/리조트/쇼핑센터/기타': 10,
-        'K마트': 10,
-        '마이크로네시아몰/괌대학교': 12,
-        '스페인광장/아가냐대성당': 12,
-        '전쟁역사박물관': 12
+      'GUM공항': {
+        'GUM공항': 0, '투몬': 17, '타무닝': 17, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 12, '호텔/리조트': 17, 'K마트': 17,
+        '마이크로네시아몰': 9, '스페인광장': 12, '전쟁역사박물관': 12
       },
-      '타무닝': {
-        '투몬베이': 10,
-        '타무닝': 5,
-        '괌프리미엄아울렛': 9,
-        '아가나쇼핑센터/차모로빌리지': 12,
-        '호텔/리조트/쇼핑센터/기타': 10,
-        'K마트': 10,
-        '마이크로네시아몰/괌대학교': 12,
-        '스페인광장/아가냐대성당': 12,
-        '전쟁역사박물관': 12
+      'PIC 리조트': {
+        'GUM공항': 17, '투몬': 10, '타무닝': 9, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 12, '호텔/리조트': 10, 'K마트': 10,
+        '마이크로네시아몰': 12, '스페인광장': 12, '전쟁역사박물관': 12
+      },
+      '힐튼 리조트': {
+        'GUM공항': 17, '투몬': 10, '타무닝': 9, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 12, '호텔/리조트': 10, 'K마트': 10,
+        '마이크로네시아몰': 12, '스페인광장': 12, '전쟁역사박물관': 12
+      },
+      '두짓타니 리조트': {
+        'GUM공항': 17, '투몬': 10, '타무닝': 9, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 12, '호텔/리조트': 10, 'K마트': 10,
+        '마이크로네시아몰': 12, '스페인광장': 12, '전쟁역사박물관': 12
       },
       '괌프리미엄아울렛': {
-        '투몬베이': 12,
-        '타무닝': 11,
-        '괌프리미엄아울렛': 5,
-        '아가나쇼핑센터/차모로빌리지': 17,
-        '호텔/리조트/쇼핑센터/기타': 12,
-        'K마트': 10,
-        '마이크로네시아몰/괌대학교': 9,
-        '스페인광장/아가냐대성당': 17,
-        '전쟁역사박물관': 17
+        'GUM공항': 12, '투몬': 11, '타무닝': 9, '괌프리미엄아울렛': 0,
+        '아가나쇼핑센터': 17, '호텔/리조트': 12, 'K마트': 10,
+        '마이크로네시아몰': 9, '스페인광장': 17, '전쟁역사박물관': 17
       },
       '아가나쇼핑센터/차모로빌리지': {
-        '투몬베이': 12,
-        '타무닝': 12,
-        '괌프리미엄아울렛': 17,
-        '아가나쇼핑센터/차모로빌리지': 5,
-        '호텔/리조트/쇼핑센터/기타': 12,
-        'K마트': 12,
-        '마이크로네시아몰/괌대학교': 9,
-        '스페인광장/아가냐대성당': 5,
-        '전쟁역사박물관': 5
+        'GUM공항': 12, '투몬': 12, '타무닝': 12, '괌프리미엄아울렛': 17,
+        '아가나쇼핑센터': 0, '호텔/리조트': 12, 'K마트': 12,
+        '마이크로네시아몰': 9, '스페인광장': 5, '전쟁역사박물관': 5
       },
       '호텔/리조트/쇼핑센터/기타': {
-        '투몬베이': 12,
-        '타무닝': 11,
-        '괌프리미엄아울렛': 9,
-        '아가나쇼핑센터/차모로빌리지': 12,
-        '호텔/리조트/쇼핑센터/기타': 5,
-        'K마트': 10,
-        '마이크로네시아몰/괌대학교': 9,
-        '스페인광장/아가냐대성당': 12,
-        '전쟁역사박물관': 12
+        'GUM공항': 12, '투몬': 11, '타무닝': 9, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 12, '호텔/리조트': 0, 'K마트': 10,
+        '마이크로네시아몰': 9, '스페인광장': 12, '전쟁역사박물관': 12
       },
       'K마트': {
-        '투몬베이': 12,
-        '타무닝': 11,
-        '괌프리미엄아울렛': 9,
-        '아가나쇼핑센터/차모로빌리지': 12,
-        '호텔/리조트/쇼핑센터/기타': 10,
-        'K마트': 5,
-        '마이크로네시아몰/괌대학교': 9,
-        '스페인광장/아가냐대성당': 12,
-        '전쟁역사박물관': 12
+        'GUM공항': 12, '투몬': 11, '타무닝': 9, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 12, '호텔/리조트': 10, 'K마트': 0,
+        '마이크로네시아몰': 9, '스페인광장': 12, '전쟁역사박물관': 12
       },
       '마이크로네시아몰/괌대학교': {
-        '투몬베이': 17,
-        '타무닝': 15,
-        '괌프리미엄아울렛': 9,
-        '아가나쇼핑센터/차모로빌리지': 11,
-        '호텔/리조트/쇼핑센터/기타': 15,
-        'K마트': 10,
-        '마이크로네시아몰/괌대학교': 5,
-        '스페인광장/아가냐대성당': 11,
-        '전쟁역사박물관': 11
+        'GUM공항': 17, '투몬': 15, '타무닝': 12, '괌프리미엄아울렛': 9,
+        '아가나쇼핑센터': 11, '호텔/리조트': 15, 'K마트': 10,
+        '마이크로네시아몰': 0, '스페인광장': 11, '전쟁역사박물관': 11
       },
       '스페인광장/아가냐대성당': {
-        '투몬베이': 12,
-        '타무닝': 12,
-        '괌프리미엄아울렛': 17,
-        '아가나쇼핑센터/차모로빌리지': 5,
-        '호텔/리조트/쇼핑센터/기타': 12,
-        'K마트': 12,
-        '마이크로네시아몰/괌대학교': 9,
-        '스페인광장/아가냐대성당': 5,
-        '전쟁역사박물관': 5
+        'GUM공항': 12, '투몬': 12, '타무닝': 12, '괌프리미엄아울렛': 17,
+        '아가나쇼핑센터': 5, '호텔/리조트': 12, 'K마트': 12,
+        '마이크로네시아몰': 9, '스페인광장': 0, '전쟁역사박물관': 5
       },
       '전쟁역사박물관': {
-        '투몬베이': 12,
-        '타무닝': 12,
-        '괌프리미엄아울렛': 17,
-        '아가나쇼핑센터/차모로빌리지': 5,
-        '호텔/리조트/쇼핑센터/기타': 12,
-        'K마트': 12,
-        '마이크로네시아몰/괌대학교': 9,
-        '스페인광장/아가냐대성당': 5,
-        '전쟁역사박물관': 5
+        'GUM공항': 12, '투몬': 12, '타무닝': 12, '괌프리미엄아울렛': 17,
+        '아가나쇼핑센터': 5, '호텔/리조트': 12, 'K마트': 12,
+        '마이크로네시아몰': 9, '스페인광장': 5, '전쟁역사박물관': 0
       }
     };
     
     // 왕복 전용 지역 (차모로야시장, 사랑의절벽 포함된 경로)
     const roundtripOnlyLocations = ['아가나쇼핑센터/차모로빌리지'];
+    
+    function toggleRoundtrip() {
+      const checkbox = document.getElementById('isRoundtrip');
+      checkbox.checked = !checkbox.checked;
+      calculateFare();
+    }
     
     function swapLocations() {
       const origin = document.getElementById('origin');
@@ -457,6 +495,7 @@
       const origin = document.getElementById('origin').value;
       const destination = document.getElementById('destination').value;
       const passengers = parseInt(document.getElementById('passengers').value);
+      const isRoundtrip = document.getElementById('isRoundtrip').checked;
       
       if (!origin || !destination) {
         document.getElementById('resultBox').classList.remove('show');
@@ -471,22 +510,27 @@
         return;
       }
       
-      // 기본 요금 조회
+      // 기본 요금 조회 (편도)
       let baseFare = fareData[origin]?.[destination] || 0;
       
       // 왕복 전용 지역 체크
       const isRoundtripOnly = roundtripOnlyLocations.includes(origin) || roundtripOnlyLocations.includes(destination);
+      
+      // 왕복 요금 계산
+      if (isRoundtrip || isRoundtripOnly) {
+        baseFare = baseFare * 2;
+      }
       
       // 추가 인원 요금 계산
       let extraPassengers = passengers - 4;
       let extraFare = 0;
       
       if (extraPassengers > 0) {
-        if (isRoundtripOnly) {
-          // 왕복 전용: 1인당 $5
+        if (isRoundtripOnly || isRoundtrip) {
+          // 왕복: 1인당 $5
           extraFare = extraPassengers * 5;
         } else {
-          // 일반 시내: 1인당 $2
+          // 편도: 1인당 $2
           extraFare = extraPassengers * 2;
         }
       }
@@ -494,16 +538,23 @@
       const totalFare = baseFare + extraFare;
       
       // 결과 표시
+      const fareLabel = (isRoundtrip || isRoundtripOnly) ? '기본 요금 (4인 왕복)' : '기본 요금 (4인 편도)';
       document.getElementById('baseFare').textContent = '$' + baseFare;
       document.getElementById('extraFare').textContent = '$' + extraFare;
       document.getElementById('totalFare').textContent = '$' + totalFare;
       document.getElementById('resultBox').classList.add('show');
       
+      // 요금 라벨 업데이트
+      document.querySelector('.result-item:first-child span:first-child').textContent = fareLabel;
+      
       // 왕복 전용 안내 표시
       if (isRoundtripOnly) {
         document.getElementById('roundtripNotice').classList.add('show');
+        document.getElementById('isRoundtrip').checked = true;
+        document.getElementById('isRoundtrip').disabled = true;
       } else {
         document.getElementById('roundtripNotice').classList.remove('show');
+        document.getElementById('isRoundtrip').disabled = false;
       }
     }
   </script>
