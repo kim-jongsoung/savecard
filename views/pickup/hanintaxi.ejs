@@ -456,13 +456,36 @@
       calculateFare();
     }
     
+    let isSwapped = false;
+    
     function swapLocations() {
-      const origin = document.getElementById('origin');
-      const destination = document.getElementById('destination');
+      const originSelect = document.getElementById('origin');
+      const destinationSelect = document.getElementById('destination');
       
-      const temp = origin.value;
-      origin.value = destination.value;
-      destination.value = temp;
+      // 현재 선택된 값 저장
+      const originValue = originSelect.value;
+      const destinationValue = destinationSelect.value;
+      
+      // 옵션 리스트 통째로 교환
+      const tempHTML = originSelect.innerHTML;
+      originSelect.innerHTML = destinationSelect.innerHTML;
+      destinationSelect.innerHTML = tempHTML;
+      
+      // 라벨도 교환
+      const labels = document.querySelectorAll('.form-group label');
+      if (isSwapped) {
+        labels[0].innerHTML = '🏨 출발지 (호텔)';
+        labels[1].innerHTML = '📍 목적지';
+      } else {
+        labels[0].innerHTML = '📍 출발지';
+        labels[1].innerHTML = '🏨 목적지 (호텔)';
+      }
+      
+      isSwapped = !isSwapped;
+      
+      // 이전 선택값 복원 시도
+      originSelect.value = destinationValue || '';
+      destinationSelect.value = originValue || '';
       
       calculateFare();
     }
