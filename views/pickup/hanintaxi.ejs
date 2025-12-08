@@ -509,8 +509,8 @@
         return;
       }
       
-      // 기본 요금 조회
-      let baseFare = fareData[origin]?.[destination] || 0;
+      // 기본 요금 조회 (양방향)
+      let baseFare = fareData[origin]?.[destination] || fareData[destination]?.[origin] || 0;
       
       // 왕복 전용 지역 체크
       const isRoundtripOnly = roundtripOnlyLocations.includes(origin) || roundtripOnlyLocations.includes(destination);
