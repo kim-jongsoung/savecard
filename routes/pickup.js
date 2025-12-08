@@ -1330,6 +1330,11 @@ router.get('/booking', (req, res) => {
   res.render('pickup/customer-booking');
 });
 
+// 괌한인택시 요금 조회 페이지 (공개 - 로그인 불필요)
+router.get('/hanintaxi', (req, res) => {
+  res.render('pickup/hanintaxi');
+});
+
 // 정산 관리 화면 (로그인 필요 - ERP 관리자 또는 픽업 관리자)
 router.get('/settlement', (req, res) => {
   // ERP 관리자 세션 또는 픽업 전용 세션 체크
