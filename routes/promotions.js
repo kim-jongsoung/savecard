@@ -197,7 +197,8 @@ router.post('/api/promotions', requireLogin, async (req, res) => {
     stay_end_date,
     description,
     terms_and_conditions,
-    is_active
+    is_active,
+    visible_in_public
   } = req.body;
   
   const client = await pool.connect();
