@@ -353,8 +353,8 @@
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;">📅 이번달 신규예약:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
-                        <span id="stat-month-new-count">0</span>개 / 
-                        <span id="stat-month-new-rooms">0</span>실 / 
+                        <span id="stat-month-new-count">0</span>건 / 
+                        <span id="stat-month-new-rooms">0</span>룸 / 
                         <span id="stat-month-new-nights">0</span>박
                     </span>
                 </div>
@@ -362,8 +362,8 @@
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;">📅 이번달 출발일:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
-                        <span id="stat-month-checkin-count">0</span>개 / 
-                        <span id="stat-month-checkin-rooms">0</span>실 / 
+                        <span id="stat-month-checkin-count">0</span>건 / 
+                        <span id="stat-month-checkin-rooms">0</span>룸 / 
                         <span id="stat-month-checkin-nights">0</span>박
                     </span>
                 </div>
@@ -371,8 +371,8 @@
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 오늘 신규예약:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
-                        <span id="stat-today-new-count">0</span>개 / 
-                        <span id="stat-today-new-rooms">0</span>실 / 
+                        <span id="stat-today-new-count">0</span>건 / 
+                        <span id="stat-today-new-rooms">0</span>룸 / 
                         <span id="stat-today-new-nights">0</span>박
                     </span>
                 </div>
@@ -380,8 +380,8 @@
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 오늘 출발일:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
-                        <span id="stat-today-checkin-count">0</span>개 / 
-                        <span id="stat-today-checkin-rooms">0</span>실 / 
+                        <span id="stat-today-checkin-count">0</span>건 / 
+                        <span id="stat-today-checkin-rooms">0</span>룸 / 
                         <span id="stat-today-checkin-nights">0</span>박
                     </span>
                 </div>
@@ -1256,9 +1256,11 @@
         
         // 통계 업데이트
         function updateStats(reservations) {
+            console.log('📊 통계 업데이트 - 전체 예약 수:', reservations.length);
             const now = new Date();
             const today = now.toISOString().split('T')[0];
             const thisMonth = now.toISOString().slice(0, 7); // YYYY-MM
+            console.log('📅 오늘:', today, '이번달:', thisMonth);
             
             // 이번달 신규예약 (예약일 기준)
             const monthNewReservations = reservations.filter(r => {
@@ -1294,9 +1296,14 @@
             
             // 오늘 신규예약 (예약일 기준)
             const todayNewReservations = reservations.filter(r => {
-                return r.reservation_date && r.reservation_date === today;
+                const match = r.reservation_date && r.reservation_date === today;
+                if (match) {
+                    console.log('✅ 오늘 신규예약 발견:', r.id, r.reservation_date, r.representative_name);
+                }
+                return match;
             });
             const todayNewCount = todayNewReservations.length;
+            console.log('📆 오늘 신규예약:', todayNewCount, '건');
             const todayNewRooms = todayNewReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
             const todayNewNights = todayNewReservations.reduce((sum, r) => {
                 if (r.check_in_date && r.check_out_date) {
