@@ -1440,10 +1440,12 @@
                 const customerDisplay = `고객:${truncate(reservation.korean_name || '-', 3)}`;
                 
                 return `
-                    <tr class="${revisionClass} ${passedClass}" data-reservation-id="${reservation.id}">
+                    <tr class="${revisionClass} ${passedClass}" data-reservation-id="${reservation.id}" data-reservation-number="${reservation.reservation_number || ''}">
                         <td>${index + 1}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${formatDateShort(reservation.created_at)}</td>
-                        <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.reservation_number || '-', 15)}</td>
+                        <td style="font-size: 0.7rem; font-weight: 600;" title="${reservation.reservation_number || '-'}">
+                            ${reservation.reservation_number && reservation.reservation_number.length > 8 ? '...' + reservation.reservation_number.slice(-8) : (reservation.reservation_number || '-')}
+                        </td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${formatDateShort(reservation.usage_date)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.korean_name || '-', 8)}</td>
                         <td style="font-size: 0.7rem; font-weight: 600;">${truncate(reservation.platform_name || '-', 10)}</td>
