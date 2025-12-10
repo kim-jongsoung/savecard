@@ -281,7 +281,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     }
     
     // 호텔 컨펌 섹션 (컴팩트 버전) -> 스타일 대폭 수정 (LUXFIND)
-    const contactPerson = reservation.reservation_created_by || reservation.agency_contact_person || 'LUXFIND Staff';
+    const contactPerson = 'LUXFIND Staff';
     const agencyName = 'LUXFIND';
     const changeReason = reservation.changes_description || '';
     const reasonText = (assignmentType === 'REVISE' || assignmentType === 'CANCEL') && changeReason
