@@ -1155,10 +1155,12 @@
                             }
                             
                             return `
-                            <tr data-reservation-id="${res.id}" data-status="${res.status}" style="${rowStyle}">
+                            <tr data-reservation-id="${res.id}" data-status="${res.status}" data-reservation-number="${res.reservation_number}" style="${rowStyle}">
                                 <td>${index + 1}</td>
                                 <td>${formatDateShort(res.reservation_date)}</td>
-                                <td style="font-weight: 600; color: #2c3e50;">${res.reservation_number}</td>
+                                <td style="font-weight: 600; color: #2c3e50;" title="${res.reservation_number}">
+                                    ${res.reservation_number ? (res.reservation_number.length > 6 ? '...' + res.reservation_number.slice(-6) : res.reservation_number) : '-'}
+                                </td>
                                 <td>${formatDateShort(res.check_in_date)}</td>
                                 <td style="font-size: 0.7rem;">${res.agency_name || '-'}</td>
                                 <td>
