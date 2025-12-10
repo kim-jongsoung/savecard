@@ -18,11 +18,18 @@ body {
 }
 
 /* ============ 레이아웃 통일 ============ */
-.container-fluid {
-    max-width: 1200px !important;
+.container-fluid,
+.container {
+    max-width: 1300px !important;
     margin: 0 auto !important;
     padding-left: 15px !important;
     padding-right: 15px !important;
+}
+
+/* 네비게이션도 1300px로 통일 */
+.nav-container-fixed {
+    width: 1300px !important;
+    max-width: 1300px !important;
 }
 
 /* ============ 타이포그래피 ============ */
