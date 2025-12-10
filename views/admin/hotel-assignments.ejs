@@ -1550,7 +1550,7 @@
                 const textColor = isCompleted || isCurrent ? 'white' : '#6c757d';
                 const fontWeight = isCurrent ? 'bold' : 'normal';
                 
-                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 1px 2px; font-weight: ${fontWeight};">${step.label}</span>`;
+                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 0; font-weight: ${fontWeight};">${step.label}</span>`;
             }).join('');
         }
         
