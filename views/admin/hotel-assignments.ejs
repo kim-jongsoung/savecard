@@ -1264,7 +1264,9 @@
             
             // 이번달 신규예약 (예약일 기준)
             const monthNewReservations = reservations.filter(r => {
-                return r.reservation_date && r.reservation_date.startsWith(thisMonth);
+                if (!r.reservation_date) return false;
+                const reservationDate = r.reservation_date.split('T')[0];
+                return reservationDate.startsWith(thisMonth);
             });
             const monthNewCount = monthNewReservations.length;
             const monthNewRooms = monthNewReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
@@ -1280,7 +1282,9 @@
             
             // 이번달 출발일 (체크인 기준)
             const monthCheckinReservations = reservations.filter(r => {
-                return r.check_in_date && r.check_in_date.startsWith(thisMonth);
+                if (!r.check_in_date) return false;
+                const checkInDate = r.check_in_date.split('T')[0];
+                return checkInDate.startsWith(thisMonth);
             });
             const monthCheckinCount = monthCheckinReservations.length;
             const monthCheckinRooms = monthCheckinReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
@@ -1295,10 +1299,17 @@
             }, 0);
             
             // 오늘 신규예약 (예약일 기준)
+            console.log('🔍 예약 데이터 샘플:', reservations[0]?.reservation_date);
             const todayNewReservations = reservations.filter(r => {
-                const match = r.reservation_date && r.reservation_date === today;
+                if (!r.reservation_date) return false;
+                // 날짜 부분만 추출 (YYYY-MM-DD)
+                const reservationDate = r.reservation_date.split('T')[0];
+                const match = reservationDate === today;
+                if (r.reservation_date) {
+                    console.log('예약일 비교:', reservationDate, '===', today, '→', match);
+                }
                 if (match) {
-                    console.log('✅ 오늘 신규예약 발견:', r.id, r.reservation_date, r.representative_name);
+                    console.log('✅ 오늘 신규예약 발견:', r.id, reservationDate, r.representative_name);
                 }
                 return match;
             });
@@ -1317,7 +1328,9 @@
             
             // 오늘 출발일 (체크인 기준)
             const todayCheckinReservations = reservations.filter(r => {
-                return r.check_in_date && r.check_in_date === today;
+                if (!r.check_in_date) return false;
+                const checkInDate = r.check_in_date.split('T')[0];
+                return checkInDate === today;
             });
             const todayCheckinCount = todayCheckinReservations.length;
             const todayCheckinRooms = todayCheckinReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
