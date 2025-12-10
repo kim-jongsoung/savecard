@@ -2,10 +2,8 @@
 <nav class="navbar navbar-expand-lg navbar-light border-bottom" style="background-color: #ffffff !important;">
     <div class="nav-container-fixed">
         <div class="d-flex flex-column w-100">
-            <!-- 상단: 로고 + SaveCard 메뉴 + 사용자 -->
+            <!-- 상단: SaveCard 메뉴 + 사용자 -->
             <div class="d-flex align-items-center" style="border-bottom: 3px solid #03a9f4;">
-                <a class="navbar-brand fw-bold mb-0" href="/admin" style="width: 120px; flex-shrink: 0;">Save ERP</a>
-                
                 <ul class="navbar-nav flex-row flex-grow-1">
                     <li class="nav-item"><span class="nav-section-label nav-section-savecard">괌세이브 ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'savecard-dashboard' ? 'active' : '' %>" href="/admin/savecard-dashboard">대시보드</a></li>
@@ -26,7 +24,6 @@
             
             <!-- 중간: 즐길거리 ERP 메뉴 (구분선 포함) -->
             <div class="d-flex align-items-center" style="border-bottom: 3px solid #4caf50;">
-                <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
                     <li class="nav-item"><span class="nav-section-label nav-section-activity">즐길거리 ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">대시보드</a></li>
@@ -45,7 +42,6 @@
             
             <!-- 하단: 호텔 ERP 메뉴 (구분선 포함) -->
             <div class="d-flex align-items-center" style="border-top: 3px solid #ff9800;">
-                <div style="width: 120px; flex-shrink: 0;"></div>
                 <ul class="navbar-nav flex-row">
                     <li class="nav-item"><span class="nav-section-label nav-section-hotel">호텔예약 ERP</span></li>
                     <li class="nav-item"><a class="nav-link nav-link-disabled">대시보드</a></li>
@@ -122,11 +118,11 @@ small, .small {
 
 /* 섹션 라벨 (SaveCard, 즐길거리, 호텔) - 컴팩트 */
 .nav-section-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #495057;
     background: #f8f9fa;
-    padding: 0.2rem 0.35rem;
+    padding: 0.15rem 0.3rem;
     border-radius: 3px;
     margin-right: 0.25rem;
     text-transform: uppercase;
@@ -162,9 +158,9 @@ small, .small {
 /* 메뉴 링크 - 컴팩트하고 클릭하기 쉽게 */
 .navbar-nav .nav-link {
     color: #212529 !important;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 400;
-    padding: 0.3rem 0.5rem !important;
+    padding: 0.25rem 0.45rem !important;
     transition: all 0.15s;
     border-radius: 3px;
     min-width: auto;
