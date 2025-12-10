@@ -349,54 +349,55 @@
 
         <!-- 통계 카드 -->
         <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card stats-card bg-warning text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div style="font-size: 0.7rem; opacity: 0.9; color: white !important;">대기중</div>
-                                <div style="font-size: 1.8rem; font-weight: bold; color: white !important;" id="stat-pending">0</div>
+            <!-- 이번달 통계 -->
+            <div class="col-md-6">
+                <div class="card stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="card-body text-white">
+                        <h6 class="mb-3" style="font-size: 0.85rem; opacity: 0.9;"><i class="fas fa-calendar-alt me-2"></i>이번달</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div style="font-size: 0.65rem; opacity: 0.8;">신규예약</div>
+                                <div style="font-size: 0.75rem;">
+                                    <span id="stat-month-new-count">0</span>개 / 
+                                    <span id="stat-month-new-rooms">0</span>실 / 
+                                    <span id="stat-month-new-nights">0</span>박
+                                </div>
                             </div>
-                            <i class="fas fa-clock" style="font-size: 2.5rem; opacity: 0.3;"></i>
+                            <div class="col-6">
+                                <div style="font-size: 0.65rem; opacity: 0.8;">출발일(투숙일)</div>
+                                <div style="font-size: 0.75rem;">
+                                    <span id="stat-month-checkin-count">0</span>개 / 
+                                    <span id="stat-month-checkin-rooms">0</span>실 / 
+                                    <span id="stat-month-checkin-nights">0</span>박
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stats-card bg-info text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div style="font-size: 0.7rem; opacity: 0.9; color: white !important;">수배중</div>
-                                <div style="font-size: 1.8rem; font-weight: bold; color: white !important;" id="stat-processing">0</div>
+            
+            <!-- 오늘 통계 -->
+            <div class="col-md-6">
+                <div class="card stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="card-body text-white">
+                        <h6 class="mb-3" style="font-size: 0.85rem; opacity: 0.9;"><i class="fas fa-calendar-day me-2"></i>오늘</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div style="font-size: 0.65rem; opacity: 0.8;">신규예약</div>
+                                <div style="font-size: 0.75rem;">
+                                    <span id="stat-today-new-count">0</span>개 / 
+                                    <span id="stat-today-new-rooms">0</span>실 / 
+                                    <span id="stat-today-new-nights">0</span>박
+                                </div>
                             </div>
-                            <i class="fas fa-paper-plane" style="font-size: 2.5rem; opacity: 0.3;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stats-card bg-success text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div style="font-size: 0.7rem; opacity: 0.9; color: white !important;">확정</div>
-                                <div style="font-size: 1.8rem; font-weight: bold; color: white !important;" id="stat-confirmed">0</div>
+                            <div class="col-6">
+                                <div style="font-size: 0.65rem; opacity: 0.8;">출발일(투숙일)</div>
+                                <div style="font-size: 0.75rem;">
+                                    <span id="stat-today-checkin-count">0</span>개 / 
+                                    <span id="stat-today-checkin-rooms">0</span>실 / 
+                                    <span id="stat-today-checkin-nights">0</span>박
+                                </div>
                             </div>
-                            <i class="fas fa-check-circle" style="font-size: 2.5rem; opacity: 0.3;"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card stats-card bg-secondary text-white">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <div style="font-size: 0.7rem; opacity: 0.9; color: white !important;">전체</div>
-                                <div style="font-size: 1.8rem; font-weight: bold; color: white !important;" id="stat-total">0</div>
-                            </div>
-                            <i class="fas fa-list" style="font-size: 2.5rem; opacity: 0.3;"></i>
                         </div>
                     </div>
                 </div>
@@ -1271,14 +1272,88 @@
         
         // 통계 업데이트
         function updateStats(reservations) {
-            const pending = reservations.filter(r => r.status === 'pending').length;
-            const processing = reservations.filter(r => r.status === 'processing').length;
-            const confirmed = reservations.filter(r => r.status === 'confirmed').length;
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const thisMonth = now.toISOString().slice(0, 7); // YYYY-MM
             
-            document.getElementById('stat-pending').textContent = pending;
-            document.getElementById('stat-processing').textContent = processing;
-            document.getElementById('stat-confirmed').textContent = confirmed;
-            document.getElementById('stat-total').textContent = reservations.length;
+            // 이번달 신규예약 (예약일 기준)
+            const monthNewReservations = reservations.filter(r => {
+                return r.reservation_date && r.reservation_date.startsWith(thisMonth);
+            });
+            const monthNewCount = monthNewReservations.length;
+            const monthNewRooms = monthNewReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const monthNewNights = monthNewReservations.reduce((sum, r) => {
+                if (r.check_in_date && r.check_out_date) {
+                    const checkIn = new Date(r.check_in_date);
+                    const checkOut = new Date(r.check_out_date);
+                    const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                    return sum + nights;
+                }
+                return sum;
+            }, 0);
+            
+            // 이번달 출발일 (체크인 기준)
+            const monthCheckinReservations = reservations.filter(r => {
+                return r.check_in_date && r.check_in_date.startsWith(thisMonth);
+            });
+            const monthCheckinCount = monthCheckinReservations.length;
+            const monthCheckinRooms = monthCheckinReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const monthCheckinNights = monthCheckinReservations.reduce((sum, r) => {
+                if (r.check_in_date && r.check_out_date) {
+                    const checkIn = new Date(r.check_in_date);
+                    const checkOut = new Date(r.check_out_date);
+                    const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                    return sum + nights;
+                }
+                return sum;
+            }, 0);
+            
+            // 오늘 신규예약 (예약일 기준)
+            const todayNewReservations = reservations.filter(r => {
+                return r.reservation_date && r.reservation_date === today;
+            });
+            const todayNewCount = todayNewReservations.length;
+            const todayNewRooms = todayNewReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const todayNewNights = todayNewReservations.reduce((sum, r) => {
+                if (r.check_in_date && r.check_out_date) {
+                    const checkIn = new Date(r.check_in_date);
+                    const checkOut = new Date(r.check_out_date);
+                    const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                    return sum + nights;
+                }
+                return sum;
+            }, 0);
+            
+            // 오늘 출발일 (체크인 기준)
+            const todayCheckinReservations = reservations.filter(r => {
+                return r.check_in_date && r.check_in_date === today;
+            });
+            const todayCheckinCount = todayCheckinReservations.length;
+            const todayCheckinRooms = todayCheckinReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const todayCheckinNights = todayCheckinReservations.reduce((sum, r) => {
+                if (r.check_in_date && r.check_out_date) {
+                    const checkIn = new Date(r.check_in_date);
+                    const checkOut = new Date(r.check_out_date);
+                    const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                    return sum + nights;
+                }
+                return sum;
+            }, 0);
+            
+            // DOM 업데이트
+            document.getElementById('stat-month-new-count').textContent = monthNewCount;
+            document.getElementById('stat-month-new-rooms').textContent = monthNewRooms;
+            document.getElementById('stat-month-new-nights').textContent = monthNewNights;
+            document.getElementById('stat-month-checkin-count').textContent = monthCheckinCount;
+            document.getElementById('stat-month-checkin-rooms').textContent = monthCheckinRooms;
+            document.getElementById('stat-month-checkin-nights').textContent = monthCheckinNights;
+            
+            document.getElementById('stat-today-new-count').textContent = todayNewCount;
+            document.getElementById('stat-today-new-rooms').textContent = todayNewRooms;
+            document.getElementById('stat-today-new-nights').textContent = todayNewNights;
+            document.getElementById('stat-today-checkin-count').textContent = todayCheckinCount;
+            document.getElementById('stat-today-checkin-rooms').textContent = todayCheckinRooms;
+            document.getElementById('stat-today-checkin-nights').textContent = todayCheckinNights;
         }
         
         // 상태별 필터링
