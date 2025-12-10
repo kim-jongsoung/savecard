@@ -482,7 +482,10 @@
                         <i class="fas fa-list me-1"></i>전체
                     </button>
                     <button class="filter-btn" data-status="pending" onclick="filterByStatus('pending')">
-                        <i class="fas fa-clock me-1"></i>대기중
+                        <i class="fas fa-clock me-1"></i>신규
+                    </button>
+                    <button class="filter-btn" data-status="modifying" onclick="filterByStatus('modifying')">
+                        <i class="fas fa-edit me-1"></i>수정중
                     </button>
                     <button class="filter-btn" data-status="processing" onclick="filterByStatus('processing')">
                         <i class="fas fa-paper-plane me-1"></i>수배중
@@ -490,8 +493,11 @@
                     <button class="filter-btn" data-status="confirmed" onclick="filterByStatus('confirmed')">
                         <i class="fas fa-check me-1"></i>확정
                     </button>
-                    <button class="filter-btn" data-status="modifying" onclick="filterByStatus('modifying')">
-                        <i class="fas fa-edit me-1"></i>수정중
+                    <button class="filter-btn" data-status="voucher" onclick="filterByStatus('voucher')">
+                        <i class="fas fa-ticket-alt me-1"></i>바우처
+                    </button>
+                    <button class="filter-btn" data-status="settlement" onclick="filterByStatus('settlement')">
+                        <i class="fas fa-dollar-sign me-1"></i>정산
                     </button>
                     <button class="filter-btn" data-status="cancelled" onclick="filterByStatus('cancelled')">
                         <i class="fas fa-times me-1"></i>취소
