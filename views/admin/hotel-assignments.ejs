@@ -1129,9 +1129,9 @@
                             <th style="width: 80px;">예약일</th>
                             <th style="width: 120px;">예약번호</th>
                             <th style="width: 80px;">출발일</th>
-                            <th style="width: 90px;">거래처</th>
+                            <th style="width: 110px;">거래처</th>
                             <th style="width: 70px;">담당자</th>
-                            <th style="width: 350px;">진행상태</th>
+                            <th style="width: 330px;">진행상태</th>
                             <th style="width: 70px;">예약자</th>
                             <th style="width: 50px;">지역</th>
                             <th style="min-width: 150px;">호텔명</th>
@@ -1165,7 +1165,6 @@
                                 <td style="font-size: 0.7rem;">${res.agency_name || '-'}</td>
                                 <td>
                                     <span class="badge bg-info" style="font-size: 0.6rem; padding: 1px 3px;">${res.assigned_to || '미배정'}</span>
-                                    ${res.has_memo ? '<br><span class="badge bg-warning mt-1" style="font-size: 0.55rem; padding: 1px 2px;"><i class="fas fa-sticky-note"></i></span>' : ''}
                                 </td>
                                 <td style="padding: 5px; white-space: nowrap;">
                                     ${getProgressBarCompact(res)}
@@ -1188,22 +1187,27 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-outline-primary btn-sm" onclick="editReservation(${res.id})" title="예약변경">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-outline-secondary btn-sm" onclick="createAssignment(${res.id})" title="수배서">
-                                            <i class="fas fa-file-alt"></i>
-                                        </button>
-                                        <button class="btn btn-outline-success btn-sm" onclick="confirmReservation(${res.id})" title="확정">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        <button class="btn btn-outline-info btn-sm" onclick="createVoucher(${res.id})" title="바우처">
-                                            <i class="fas fa-ticket-alt"></i>
-                                        </button>
-                                        <button class="btn btn-outline-warning btn-sm" onclick="createSettlement(${res.id})" title="정산">
-                                            <i class="fas fa-dollar-sign"></i>
-                                        </button>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="badge ${res.has_memo ? 'bg-danger' : 'bg-warning'}" style="font-size: 0.55rem; padding: 2px 4px; cursor: pointer;" onclick="editReservation(${res.id})" title="${res.has_memo ? '메모 있음 (클릭하여 확인)' : '메모 없음'}">
+                                            <i class="fas fa-sticky-note"></i>
+                                        </span>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="editReservation(${res.id})" title="예약변경">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-secondary btn-sm" onclick="createAssignment(${res.id})" title="수배서">
+                                                <i class="fas fa-file-alt"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success btn-sm" onclick="confirmReservation(${res.id})" title="확정">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-outline-info btn-sm" onclick="createVoucher(${res.id})" title="바우처">
+                                                <i class="fas fa-ticket-alt"></i>
+                                            </button>
+                                            <button class="btn btn-outline-warning btn-sm" onclick="createSettlement(${res.id})" title="정산">
+                                                <i class="fas fa-dollar-sign"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -1416,7 +1420,7 @@
                 const textColor = isCompleted || isCurrent ? 'white' : '#6c757d';
                 const fontWeight = isCurrent ? 'bold' : 'normal';
                 
-                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 3px 6px; font-weight: ${fontWeight};">${step.label}</span>`;
+                return `<span class="badge me-1" style="background: ${bgColor}; color: ${textColor}; font-size: 0.6rem; padding: 1px 4px; font-weight: ${fontWeight};">${step.label}</span>`;
             }).join('');
         }
         
