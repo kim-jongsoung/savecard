@@ -69,35 +69,35 @@
 </nav>
 
 <style>
-/* 🔒 전역 폰트 크기 제한: 네비게이션 폰트(0.84rem)보다 절대 크지 않게 설정 */
+/* 🔒 전역 폰트 크기 제한: 컴팩트하게 축소 */
 body, p, span, div, td, th, label, input, select, textarea, button, a, li, ul, ol {
-    font-size: 0.77rem !important;
+    font-size: 0.8rem !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-size: 0.84rem !important;
+    font-size: 0.9rem !important;
     font-weight: 600;
 }
 
 .modal-title {
-    font-size: 0.84rem !important;
+    font-size: 0.9rem !important;
 }
 
 .table {
-    font-size: 0.77rem !important;
+    font-size: 0.8rem !important;
 }
 
 .badge {
-    font-size: 0.72rem !important;
+    font-size: 0.75rem !important;
 }
 
 small, .small {
-    font-size: 0.72rem !important;
+    font-size: 0.75rem !important;
 }
 
-/* 네비게이션 - 심플하고 깔끔한 사무용 스타일 */
+/* 네비게이션 - 심플하고 컴팩트한 PC 최적화 스타일 */
 .navbar {
-    padding: 0.4rem 0;
+    padding: 0.3rem 0;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     background-color: #ffffff !important;
     width: 100%;
@@ -113,23 +113,23 @@ small, .small {
 }
 
 .navbar-brand {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: #2c3e50 !important;
     letter-spacing: -0.5px;
 }
 
-/* 섹션 라벨 (SaveCard, 즐길거리, 호텔) */
+/* 섹션 라벨 (SaveCard, 즐길거리, 호텔) - 컴팩트 */
 .nav-section-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: #495057;
     background: #f8f9fa;
-    padding: 0.25rem 0.4rem;
-    border-radius: 4px;
-    margin-right: 0.3rem;
+    padding: 0.2rem 0.35rem;
+    border-radius: 3px;
+    margin-right: 0.25rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     white-space: nowrap;
 }
 
@@ -154,32 +154,35 @@ small, .small {
 /* 구분선 */
 .nav-divider {
     color: #dee2e6;
-    padding: 0 0.3rem;
-    font-size: 1rem;
+    padding: 0 0.2rem;
+    font-size: 0.9rem;
 }
 
-/* 메뉴 링크 */
+/* 메뉴 링크 - 컴팩트하고 클릭하기 쉽게 */
 .navbar-nav .nav-link {
     color: #212529 !important;
-    font-size: 0.84rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    padding: 0.3rem 0.3rem !important;
-    transition: all 0.2s;
-    border-radius: 4px;
-    min-width: 80px;
+    padding: 0.3rem 0.5rem !important;
+    transition: all 0.15s;
+    border-radius: 3px;
+    min-width: auto;
     text-align: center;
     white-space: nowrap;
+    margin: 0 1px;
 }
 
 .navbar-nav .nav-link:hover {
     color: #007bff !important;
-    background-color: #f8f9fa;
+    background-color: #f0f4ff;
+    transform: translateY(-1px);
 }
 
 .navbar-nav .nav-link.active {
     color: #007bff !important;
     background-color: #e7f3ff;
-    font-weight: 600;
+    font-weight: 700;
+    border-bottom: 2px solid #007bff;
 }
 
 /* 공항픽업 강조 */
@@ -224,9 +227,9 @@ small, .small {
     color: #212529 !important;
 }
 
-/* 간격 조정 */
+/* 간격 조정 - 최소화 */
 .navbar-nav .nav-item {
-    margin: 0 0.075rem;
+    margin: 0;
 }
 
 /* 비활성화 링크 (미구현 메뉴) */
@@ -235,14 +238,14 @@ small, .small {
     cursor: not-allowed;
     pointer-events: none;
     font-style: italic;
-    min-width: 80px;
+    min-width: auto;
     text-align: center;
     white-space: nowrap;
 }
 
-/* ERP 섹션 구분선 */
+/* ERP 섹션 구분선 - 컴팩트 */
 .navbar .d-flex[style*="border-bottom"],
 .navbar .d-flex[style*="border-top"] {
-    padding: 0.3rem 0;
+    padding: 0.25rem 0;
 }
 </style>
