@@ -1132,11 +1132,11 @@
                             <th style="width: 90px;">거래처</th>
                             <th style="width: 70px;">담당자</th>
                             <th style="width: 350px;">진행상태</th>
-                            <th style="width: 80px;">대표예약자</th>
+                            <th style="width: 70px;">예약자</th>
                             <th style="width: 50px;">지역</th>
                             <th style="min-width: 150px;">호텔명</th>
                             <th style="min-width: 150px;">룸타입</th>
-                            <th style="width: 90px;">방개수/인원</th>
+                            <th style="width: 110px;">방/인원/박</th>
                             <th style="width: 280px;">액션</th>
                         </tr>
                     </thead>
@@ -1164,19 +1164,28 @@
                                 <td>${formatDateShort(res.check_in_date)}</td>
                                 <td style="font-size: 0.7rem;">${res.agency_name || '-'}</td>
                                 <td>
-                                    <span class="badge bg-info" style="font-size: 0.65rem;">${res.assigned_to || '미배정'}</span>
-                                    ${res.has_memo ? '<br><span class="badge bg-warning mt-1" style="font-size: 0.6rem;"><i class="fas fa-sticky-note"></i></span>' : ''}
+                                    <span class="badge bg-info" style="font-size: 0.6rem; padding: 1px 3px;">${res.assigned_to || '미배정'}</span>
+                                    ${res.has_memo ? '<br><span class="badge bg-warning mt-1" style="font-size: 0.55rem; padding: 1px 2px;"><i class="fas fa-sticky-note"></i></span>' : ''}
                                 </td>
                                 <td style="padding: 5px; white-space: nowrap;">
                                     ${getProgressBarCompact(res)}
                                 </td>
                                 <td style="font-size: 0.7rem;">${res.representative_name || '-'}</td>
-                                <td><span class="badge bg-secondary" style="font-size: 0.65rem;">${res.region || '괌'}</span></td>
+                                <td><span class="badge bg-secondary" style="font-size: 0.6rem; padding: 1px 3px;">${res.region || '괌'}</span></td>
                                 <td style="text-align: left; font-size: 0.7rem;">${res.hotel_name || '-'}</td>
                                 <td style="text-align: left; font-size: 0.65rem;">${res.room_types || '-'}</td>
                                 <td>
-                                    <span class="badge bg-primary" style="font-size: 0.65rem;">${res.total_rooms || 0}개</span>
-                                    <span class="badge bg-success" style="font-size: 0.65rem;">${res.total_guests || 0}명</span>
+                                    <span class="badge bg-info" style="font-size: 0.6rem; padding: 1px 4px; border-radius: 2px;">
+                                        ${res.total_rooms || 0}개/${res.total_guests || 0}명/${(() => {
+                                            if (res.check_in_date && res.check_out_date) {
+                                                const checkIn = new Date(res.check_in_date);
+                                                const checkOut = new Date(res.check_out_date);
+                                                const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                                                return nights;
+                                            }
+                                            return 0;
+                                        })()}박
+                                    </span>
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm" role="group">
