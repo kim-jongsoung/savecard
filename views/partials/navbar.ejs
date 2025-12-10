@@ -1,11 +1,43 @@
-<!-- 네비게이션 - 모든 메뉴 직접 표시 -->
+<%
+// 현재 페이지가 속한 ERP 영역 판단
+const savecardPages = ['savecard-dashboard', 'users', 'agencies', 'stores', 'usages', 'issue-codes'];
+const activityPages = ['dashboard', 'inbox', 'reservations', 'assignments', 'settlements', 'pricing', 'rag-manager', 'settings', 'pickup'];
+const hotelPages = ['hotel-inbox', 'hotel-assignments', 'hotel-settlements', 'hotels', 'room-types', 'room-inventory', 'season-calendar', 'season-rates', 'promotions', 'booking-agencies', 'agency-fees'];
+
+let currentErp = 'activity'; // 기본값: 즐길거리
+if (savecardPages.includes(currentPage)) currentErp = 'savecard';
+else if (hotelPages.includes(currentPage)) currentErp = 'hotel';
+%>
+
+<!-- 네비게이션 - 2단 탭 구조 -->
 <nav class="navbar navbar-expand-lg navbar-light border-bottom" style="background-color: #ffffff !important;">
     <div class="nav-container-fixed">
         <div class="d-flex flex-column w-100">
-            <!-- 상단: SaveCard 메뉴 + 사용자 -->
-            <div class="d-flex align-items-center" style="border-bottom: 3px solid #03a9f4;">
-                <ul class="navbar-nav flex-row flex-grow-1">
-                    <li class="nav-item"><span class="nav-section-label nav-section-savecard">괌세이브 ERP</span></li>
+            <!-- 1단: 로고 + ERP 탭 + 사용자 + 로그아웃 -->
+            <div class="d-flex align-items-center" style="padding: 0.4rem 0; border-bottom: 2px solid #e9ecef;">
+                <!-- 로고 -->
+                <a href="/admin/dashboard" style="margin-right: 1.5rem;">
+                    <img src="https://media.eoding.com/media/travelagent/1423/logo/rainbow_golf_club_horizontal_180px_whitebg_95jeIil.png" alt="Logo" style="height: 28px;">
+                </a>
+                
+                <!-- ERP 탭 -->
+                <div class="erp-tabs">
+                    <a href="/admin/savecard-dashboard" class="erp-tab <%= currentErp === 'savecard' ? 'active' : '' %>" style="background: #b3e5fc; color: #01579b;">괌세이브카드 ERP</a>
+                    <a href="/admin/dashboard" class="erp-tab <%= currentErp === 'activity' ? 'active' : '' %>" style="background: #c8e6c9; color: #2e7d32;">즐길거리 ERP</a>
+                    <a href="/admin/hotel-inbox" class="erp-tab <%= currentErp === 'hotel' ? 'active' : '' %>" style="background: #ffe0b2; color: #e65100;">호텔예약 ERP</a>
+                </div>
+                
+                <!-- 사용자 + 로그아웃 -->
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 0.7rem; color: #495057;"><%= adminUsername %></span>
+                    <a href="/admin/logout" style="font-size: 0.7rem; color: #dc3545; text-decoration: none;">로그아웃</a>
+                </div>
+            </div>
+            
+            <!-- 2단: 현재 ERP 메뉴만 표시 -->
+            <% if (currentErp === 'savecard') { %>
+            <div class="d-flex align-items-center" style="padding: 0.3rem 0;">
+                <ul class="navbar-nav flex-row">
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'savecard-dashboard' ? 'active' : '' %>" href="/admin/savecard-dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'users' ? 'active' : '' %>" href="/admin/users">사용자</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'agencies' ? 'active' : '' %>" href="/admin/agencies">여행사</a></li>
@@ -13,19 +45,10 @@
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'usages' ? 'active' : '' %>" href="/admin/usages">사용내역</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'issue-codes' ? 'active' : '' %>" href="/admin/issue-codes">발급코드</a></li>
                 </ul>
-                
-                <div class="nav-item dropdown" style="margin-left: auto;">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><%= adminUsername %></a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="/admin/logout">로그아웃</a></li>
-                    </ul>
-                </div>
             </div>
-            
-            <!-- 중간: 즐길거리 ERP 메뉴 (구분선 포함) -->
-            <div class="d-flex align-items-center" style="border-bottom: 3px solid #4caf50;">
+            <% } else if (currentErp === 'activity') { %>
+            <div class="d-flex align-items-center" style="padding: 0.3rem 0;">
                 <ul class="navbar-nav flex-row">
-                    <li class="nav-item"><span class="nav-section-label nav-section-activity">즐길거리 ERP</span></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'inbox' ? 'active' : '' %>" href="/admin/inbox">인박스</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'reservations' ? 'active' : '' %>" href="/admin/reservations">예약관리</a></li>
@@ -39,12 +62,9 @@
                     <li class="nav-item"><a class="nav-link nav-link-pickup <%= currentPage === 'pickup' ? 'active' : '' %>" href="/pickup">공항픽업</a></li>
                 </ul>
             </div>
-            
-            <!-- 하단: 호텔 ERP 메뉴 (구분선 포함) -->
-            <div class="d-flex align-items-center" style="border-top: 3px solid #ff9800;">
+            <% } else if (currentErp === 'hotel') { %>
+            <div class="d-flex align-items-center" style="padding: 0.3rem 0;">
                 <ul class="navbar-nav flex-row">
-                    <li class="nav-item"><span class="nav-section-label nav-section-hotel">호텔예약 ERP</span></li>
-                    <li class="nav-item"><a class="nav-link nav-link-disabled">대시보드</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-inbox' ? 'active' : '' %>" href="/admin/hotel-inbox">인박스</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-assignments' ? 'active' : '' %>" href="/admin/hotel-assignments">수배관리</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'hotel-settlements' ? 'active' : '' %>" href="/admin/hotel-settlements">정산관리</a></li>
@@ -60,6 +80,7 @@
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'agency-fees' ? 'active' : '' %>" href="/admin/agency-fees">수배피</a></li>
                 </ul>
             </div>
+            <% } %>
         </div>
     </div>
 </nav>
@@ -116,36 +137,31 @@ small, .small {
     letter-spacing: -0.5px;
 }
 
-/* 섹션 라벨 (SaveCard, 즐길거리, 호텔) - 컴팩트 */
-.nav-section-label {
-    font-size: 0.51rem;
+/* ERP 탭 버튼 */
+.erp-tabs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.erp-tab {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.erp-tab:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.erp-tab.active {
+    opacity: 1;
     font-weight: 700;
-    color: #495057;
-    background: #f8f9fa;
-    padding: 0.1rem 0.25rem;
-    border-radius: 3px;
-    margin-right: 0.4rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-}
-
-/* 괌세이브 ERP 섹션 (하늘색) */
-.nav-section-savecard {
-    background: #b3e5fc;
-    color: #01579b;
-}
-
-/* 즐길거리 ERP 섹션 (초록색) */
-.nav-section-activity {
-    background: #c8e6c9;
-    color: #2e7d32;
-}
-
-/* 호텔예약 ERP 섹션 (주황색) */
-.nav-section-hotel {
-    background: #ffe0b2;
-    color: #e65100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 /* 구분선 */
@@ -198,31 +214,6 @@ small, .small {
     background-color: #d4edda !important;
 }
 
-/* 사용자 드롭다운 */
-.dropdown-menu {
-    border: 1px solid #e9ecef;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-radius: 4px;
-    padding: 0.25rem 0;
-    margin-top: 0.25rem;
-    min-width: 100px;
-    background-color: #ffffff !important;
-}
-
-.dropdown-item {
-    padding: 0.35rem 0.8rem;
-    font-size: 0.63rem;
-    color: #212529;
-}
-
-.dropdown-item:hover {
-    background-color: #f8f9fa;
-    color: #007bff;
-}
-
-.dropdown-toggle {
-    color: #212529 !important;
-}
 
 /* 간격 조정 - 최소화 */
 .navbar-nav .nav-item {
@@ -240,9 +231,4 @@ small, .small {
     white-space: nowrap;
 }
 
-/* ERP 섹션 구분선 - 컴팩트 */
-.navbar .d-flex[style*="border-bottom"],
-.navbar .d-flex[style*="border-top"] {
-    padding: 0.25rem 0;
-}
 </style>
