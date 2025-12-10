@@ -1188,7 +1188,7 @@
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-1">
-                                        <span class="badge ${res.has_memo ? 'bg-danger' : 'bg-warning'}" style="font-size: 0.55rem; padding: 2px 4px; cursor: pointer;" onclick="editReservation(${res.id})" title="${res.has_memo ? '메모 있음 (클릭하여 확인)' : '메모 없음'}">
+                                        <span class="badge ${res.has_memo ? 'bg-danger' : 'bg-warning'}" style="font-size: 0.55rem; padding: 2px 4px; cursor: pointer;" onclick="showMemoPopup(${res.id}, \`${(res.internal_memo || '').replace(/\`/g, '\\`')}\`)" title="${res.has_memo ? '메모 있음 (클릭하여 확인)' : '메모 없음'}">
                                             <i class="fas fa-sticky-note"></i>
                                         </span>
                                         <div class="btn-group btn-group-sm" role="group">
@@ -1216,6 +1216,51 @@
                     </tbody>
                 </table>
             `;
+        }
+        
+        // 메모 팝업 표시
+        function showMemoPopup(reservationId, memo) {
+            if (!memo || memo.trim() === '') {
+                alert('메모가 없습니다.');
+                return;
+            }
+            
+            // 간단한 모달 생성
+            const modalHtml = `
+                <div class="modal fade" id="memoModal" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h6 class="modal-title"><i class="fas fa-sticky-note me-2"></i>호텔전달 메모</h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div style="white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6;">${memo}</div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">닫기</button>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="editReservation(${reservationId}); bootstrap.Modal.getInstance(document.getElementById('memoModal')).hide();">예약 수정</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 기존 모달 제거
+            const existingModal = document.getElementById('memoModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // 새 모달 추가 및 표시
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            const modal = new bootstrap.Modal(document.getElementById('memoModal'));
+            modal.show();
+            
+            // 모달 닫힐 때 DOM에서 제거
+            document.getElementById('memoModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
         }
         
         // 통계 업데이트
