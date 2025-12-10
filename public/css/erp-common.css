@@ -217,6 +217,7 @@ h6 { font-size: 0.85rem !important; font-weight: 600 !important; color: #495057 
 .modal-title {
     font-size: 1rem !important;
     font-weight: 600 !important;
+    color: #212529 !important;
 }
 
 .modal-body {
@@ -227,6 +228,16 @@ h6 { font-size: 0.85rem !important; font-weight: 600 !important; color: #495057 
     background: #f8f9fa !important;
     border-top: 1px solid #dee2e6 !important;
     padding: 0.75rem !important;
+}
+
+/* 모달 닫기 버튼 */
+.modal-header .btn-close {
+    opacity: 0.8 !important;
+    filter: invert(0) !important;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1 !important;
 }
 
 /* ============ 알림/경고 박스 ============ */
@@ -403,6 +414,21 @@ h6 { font-size: 0.85rem !important; font-weight: 600 !important; color: #495057 
 .stats-card:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* 통계 카드 색상 배경일 때 텍스트 흰색 유지 */
+.stats-card.bg-warning,
+.stats-card.bg-info,
+.stats-card.bg-success,
+.stats-card.bg-danger,
+.stats-card.bg-primary,
+.stats-card.bg-secondary {
+    color: white !important;
+}
+
+.stats-card.text-white,
+.stats-card.text-white * {
+    color: white !important;
 }
 
 /* ============ 상태 배지 색상 통일 ============ */
