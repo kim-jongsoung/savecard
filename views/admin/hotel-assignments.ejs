@@ -347,59 +347,43 @@
             </div>
         </div>
 
-        <!-- 통계 카드 -->
-        <div class="row mb-4">
-            <!-- 이번달 통계 -->
-            <div class="col-md-6">
-                <div class="card stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <div class="card-body text-white">
-                        <h6 class="mb-3" style="font-size: 0.85rem; opacity: 0.9;"><i class="fas fa-calendar-alt me-2"></i>이번달</h6>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div style="font-size: 0.65rem; opacity: 0.8;">신규예약</div>
-                                <div style="font-size: 0.75rem;">
-                                    <span id="stat-month-new-count">0</span>개 / 
-                                    <span id="stat-month-new-rooms">0</span>실 / 
-                                    <span id="stat-month-new-nights">0</span>박
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div style="font-size: 0.65rem; opacity: 0.8;">출발일(투숙일)</div>
-                                <div style="font-size: 0.75rem;">
-                                    <span id="stat-month-checkin-count">0</span>개 / 
-                                    <span id="stat-month-checkin-rooms">0</span>실 / 
-                                    <span id="stat-month-checkin-nights">0</span>박
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <!-- 통계 (한 줄) -->
+        <div class="mb-3 p-3" style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div class="d-flex justify-content-around align-items-center" style="font-size: 0.75rem;">
+                <div class="text-center">
+                    <span style="color: #667eea; font-weight: 600;">📅 이번달 신규예약:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-month-new-count">0</span>개 / 
+                        <span id="stat-month-new-rooms">0</span>실 / 
+                        <span id="stat-month-new-nights">0</span>박
+                    </span>
                 </div>
-            </div>
-            
-            <!-- 오늘 통계 -->
-            <div class="col-md-6">
-                <div class="card stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <div class="card-body text-white">
-                        <h6 class="mb-3" style="font-size: 0.85rem; opacity: 0.9;"><i class="fas fa-calendar-day me-2"></i>오늘</h6>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div style="font-size: 0.65rem; opacity: 0.8;">신규예약</div>
-                                <div style="font-size: 0.75rem;">
-                                    <span id="stat-today-new-count">0</span>개 / 
-                                    <span id="stat-today-new-rooms">0</span>실 / 
-                                    <span id="stat-today-new-nights">0</span>박
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div style="font-size: 0.65rem; opacity: 0.8;">출발일(투숙일)</div>
-                                <div style="font-size: 0.75rem;">
-                                    <span id="stat-today-checkin-count">0</span>개 / 
-                                    <span id="stat-today-checkin-rooms">0</span>실 / 
-                                    <span id="stat-today-checkin-nights">0</span>박
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #667eea; font-weight: 600;">📅 이번달 출발일:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-month-checkin-count">0</span>개 / 
+                        <span id="stat-month-checkin-rooms">0</span>실 / 
+                        <span id="stat-month-checkin-nights">0</span>박
+                    </span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #f5576c; font-weight: 600;">📆 오늘 신규예약:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-today-new-count">0</span>개 / 
+                        <span id="stat-today-new-rooms">0</span>실 / 
+                        <span id="stat-today-new-nights">0</span>박
+                    </span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #f5576c; font-weight: 600;">📆 오늘 출발일:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-today-checkin-count">0</span>개 / 
+                        <span id="stat-today-checkin-rooms">0</span>실 / 
+                        <span id="stat-today-checkin-nights">0</span>박
+                    </span>
                 </div>
             </div>
         </div>
