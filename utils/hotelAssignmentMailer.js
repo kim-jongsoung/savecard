@@ -147,7 +147,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             breakfastHTML = `
                 <tr style="font-size: 13px;">
                     <td colspan="4" style="padding: 2px 4px; border: 1px solid #000;">
-                        <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${breakfastDays}=${adultTotal} │ Child: ${childCount}×${breakfastDays}=${childTotal}
+                        <strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount} PAX × ${breakfastDays} TIME = TOTAL ${adultTotal} TIME │ Child: ${childCount} PAX × ${breakfastDays} TIME = TOTAL ${childTotal} TIME
                     </td>
                 </tr>
             `;

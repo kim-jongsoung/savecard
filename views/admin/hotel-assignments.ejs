@@ -4073,7 +4073,7 @@
                         const breakfastCharge = (adultTotal * adultPrice) + (childTotal * childPrice);
                         breakfastCharges.push({ roomNum, adultCount, childCount, nights: breakfastDays, adultTotal, childTotal, adultPrice, childPrice, breakfastCharge });
                         
-                        breakfastInfo = `<strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount}×${breakfastDays}=${adultTotal} │ Child: ${childCount}×${breakfastDays}=${childTotal}`;
+                        breakfastInfo = `<strong>Breakfast: ☑ Included</strong> │ Adult: ${adultCount} PAX × ${breakfastDays} TIME = TOTAL ${adultTotal} TIME │ Child: ${childCount} PAX × ${breakfastDays} TIME = TOTAL ${childTotal} TIME`;
                     } else {
                         breakfastInfo = '<strong>Breakfast: ☐ Not Included</strong>';
                     }
