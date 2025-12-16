@@ -142,14 +142,14 @@ router.post('/create', async (req, res) => {
                 INSERT INTO hotel_assignment_rooms (
                     assignment_id, room_number, room_type_id, room_type_name,
                     room_rate, promotion_code, confirmation_number,
-                    breakfast_included, breakfast_adult_count, breakfast_adult_price,
+                    breakfast_included, breakfast_days, breakfast_adult_count, breakfast_adult_price,
                     breakfast_child_count, breakfast_child_price
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 RETURNING id
             `, [
                 assignmentId, i + 1, room.room_type_id, room.hotel_room_name || room.room_type_name,
                 roomRate, room.promotion_code, confirmationNumber,
-                room.breakfast_included, room.breakfast_adult_count, room.breakfast_adult_price,
+                room.breakfast_included, room.breakfast_days, room.breakfast_adult_count, room.breakfast_adult_price,
                 room.breakfast_child_count, room.breakfast_child_price
             ]);
             

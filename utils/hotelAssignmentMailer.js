@@ -136,8 +136,8 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
             const adultPrice = parseFloat(room.breakfast_adult_price || 0);
             const childPrice = parseFloat(room.breakfast_child_price || 0);
 
-            // 별도 일수 정보가 없으므로 박수(nights)를 기준으로 계산
-            const breakfastDays = nights;
+            // ⭐ 미리보기와 동일: breakfast_days가 있으면 사용, 없으면 박수(nights) 사용
+            const breakfastDays = parseInt(room.breakfast_days || nights);
             const adultTotal = adultCount * breakfastDays;
             const childTotal = childCount * breakfastDays;
             
