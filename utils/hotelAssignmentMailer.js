@@ -188,7 +188,7 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
         paymentHTML += `
         <tr style="font-size: 9px;">
             <td style="padding: 3px; border: 1px solid #000;">Room ${r.roomNum}:</td>
-            <td style="padding: 3px; border: 1px solid #000; text-align: right;">$${r.roomCharge.toFixed(2)}</td>
+            <td style="padding: 3px; border: 1px solid #000; text-align: right;">$${r.roomRate}×${r.nights} nights = $${r.roomCharge.toFixed(2)}</td>
         </tr>
         `;
         totalAmount += r.roomCharge;
