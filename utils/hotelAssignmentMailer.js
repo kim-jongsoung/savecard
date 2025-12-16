@@ -61,12 +61,19 @@ function generateAssignmentHTML(reservation, assignmentType = 'NEW', revisionNum
     rooms.forEach((room, idx) => {
         const roomNum = idx + 1;
 
-        // 룸 요금: room_rate가 없으면 total_selling_price / nights 로 보정
-        let roomRate = parseFloat(room.room_rate || 0);
-        if (roomRate === 0 && room.total_selling_price && nights > 0) {
-            roomRate = parseFloat(room.total_selling_price) / nights;
+        // 룸 요금: total_selling_price를 우선 사용 (정확한 소수점), 없으면 room_rate 사용
+        let roomRate = 0;
+        let roomCharge = 0;
+        
+        if (room.total_selling_price && nights > 0) {
+            // total_selling_price가 있으면 이걸 우선 사용 (미리보기와 동일)
+            roomCharge = parseFloat(room.total_selling_price);
+            roomRate = roomCharge / nights;
+        } else if (room.room_rate) {
+            // total_selling_price가 없으면 room_rate 사용
+            roomRate = parseFloat(room.room_rate);
+            roomCharge = roomRate * nights;
         }
-        const roomCharge = roomRate * nights;
         roomCharges.push({ roomNum, roomRate, nights, roomCharge });
         
         // 투숙객 정보 (A4 미리보기와 동일한 테이블 레이아웃 적용)
