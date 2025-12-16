@@ -69,7 +69,10 @@ app.set('views', path.join(__dirname, 'views'));
 // 데이터베이스 연결 풀 설정
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    connectionTimeoutMillis: 30000, // 30초로 증가
+    idleTimeoutMillis: 30000,
+    max: 20 // 최대 연결 수 증가
 });
 
 // 앱에 데이터베이스 풀 연결

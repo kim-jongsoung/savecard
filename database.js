@@ -16,9 +16,9 @@ try {
       connectionString: connectionString,
       ssl: isRailway ? { rejectUnauthorized: false } : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
       // Railway PostgreSQL 연결 최적화
-      max: isRailway ? 5 : 20, // Railway는 연결 수 제한
+      max: isRailway ? 10 : 20, // Railway 연결 수 증가
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      connectionTimeoutMillis: 60000, // 60초로 증가 (마이그레이션 시간 확보)
       acquireTimeoutMillis: 60000,
       // 연결 재시도 설정
       retryDelayMs: 1000
