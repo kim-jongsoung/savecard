@@ -71,6 +71,7 @@ async function createHotelAssignmentsTables(existingPool) {
                 room_type_id INTEGER,
                 room_type_name VARCHAR(100),
                 room_rate DECIMAL(10,2) DEFAULT 0,
+                total_selling_price DECIMAL(10,2) DEFAULT 0,
                 promotion_code VARCHAR(50),
                 
                 breakfast_included BOOLEAN DEFAULT FALSE,
