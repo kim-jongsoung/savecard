@@ -16356,6 +16356,10 @@ app.patch('/api/assignments/:id/status', requireAuth, async (req, res) => {
 
 async function startServer() {
     try {
+        // ⚠️ 마이그레이션 비활성화 (2025-12-16) - 서버 시작 속도 향상
+        console.log('ℹ️ startServer 마이그레이션 건너뛰기 (이미 완료됨)');
+        
+        if (false) { // 필요 시 true로 변경
         // 픽업 테이블 마이그레이션 (컬럼 추가)
         console.log('🔧 픽업 테이블 마이그레이션 확인 중...');
         try {
@@ -16716,6 +16720,7 @@ async function startServer() {
         } catch (colErr) {
             console.warn('⚠️  visible_in_public 컬럼 추가 경고:', colErr.message);
         }
+        } // if (false) 마이그레이션 블록 종료
         
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
@@ -20259,7 +20264,10 @@ async function startServer() {
             return Buffer.from('PDF 생성 기능은 추후 구현 예정입니다.');
         }
 
-        // ERP 마이그레이션도 비동기로 실행
+        // ⚠️ 마이그레이션 비활성화 (2025-12-16)
+        // 모든 테이블과 컬럼이 이미 존재하므로 서버 시작 속도 향상을 위해 주석 처리
+        // 필요 시 주석 해제 후 재배포
+        /*
         setTimeout(async () => {
             try {
                 await runERPMigration();
@@ -20289,6 +20297,8 @@ async function startServer() {
                 console.error('⚠️ 마이그레이션 실패 (서버는 계속 실행):', error.message);
             }
         }, 5000);
+        */
+        console.log('ℹ️ 마이그레이션 비활성화됨 (필요 시 server-postgresql.js에서 주석 해제)');
         
         return httpServer;
     } catch (error) {
