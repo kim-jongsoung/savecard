@@ -1416,14 +1416,24 @@
             const months = [];
             for (let i = 0; i < 3; i++) {
                 const targetDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
-                const targetMonth = targetDate.toISOString().slice(0, 7);
+                const year = targetDate.getFullYear();
+                const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+                const targetMonth = `${year}-${month}`;
                 const monthLabel = `${targetDate.getMonth() + 1}월`;
+                
+                console.log(`📅 ${i}번째 월 계산:`, monthLabel, targetMonth);
                 
                 const monthReservations = reservations.filter(r => {
                     if (!r.check_in_date || r.status === 'cancelled') return false;
                     const checkInDate = r.check_in_date.split('T')[0];
-                    return checkInDate.startsWith(targetMonth);
+                    const match = checkInDate.startsWith(targetMonth);
+                    if (match) {
+                        console.log(`  ✅ ${monthLabel} 출발 발견:`, checkInDate, r.representative_name);
+                    }
+                    return match;
                 });
+                
+                console.log(`📊 ${monthLabel} 출발: ${monthReservations.length}건`);
                 
                 months.push({
                     label: monthLabel,
