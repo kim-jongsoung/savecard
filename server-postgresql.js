@@ -12374,7 +12374,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
                 r.reservation_number ILIKE $${paramIndex} OR 
                 r.product_name ILIKE $${paramIndex} OR 
                 r.korean_name ILIKE $${paramIndex} OR
-                r.platform ILIKE $${paramIndex} OR
+                r.platform_name ILIKE $${paramIndex} OR
                 a.vendor_name ILIKE $${paramIndex}
             )`;
             queryParams.push(`%${search}%`);
