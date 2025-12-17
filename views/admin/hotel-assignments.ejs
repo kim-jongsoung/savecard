@@ -1120,13 +1120,13 @@
                             <th style="width: 80px;">예약일</th>
                             <th style="width: 120px;">예약번호</th>
                             <th style="width: 80px;">출발일</th>
-                            <th style="width: 130px;">거래처</th>
+                            <th style="width: 180px;">거래처</th>
                             <th style="width: 70px;">담당자</th>
                             <th style="width: 330px;">진행상태</th>
                             <th style="width: 70px;">예약자</th>
                             <th style="width: 50px;">지역</th>
-                            <th style="min-width: 150px;">호텔명</th>
-                            <th style="min-width: 250px;">룸타입 (인원/박)</th>
+                            <th style="min-width: 120px;">호텔명</th>
+                            <th style="min-width: 220px;">룸타입 (인원/박)</th>
                             <th style="width: 280px;">액션</th>
                         </tr>
                     </thead>
@@ -1180,12 +1180,12 @@
                                                 const infants = room.infants || 0;
                                                 const roomType = room.room_type_name || '미정';
                                                 
-                                                let guestInfo = '';
-                                                if (adults > 0) guestInfo += `<span style="color: #0066cc;">A${adults}</span>`;
-                                                if (children > 0) guestInfo += `${guestInfo ? ' ' : ''}<span style="color: #ff6b6b;">C${children}</span>`;
-                                                if (infants > 0) guestInfo += `${guestInfo ? ' ' : ''}<span style="color: #51cf66;">I${infants}</span>`;
+                                                let guestBadges = '';
+                                                if (adults > 0) guestBadges += `<span style="display: inline-block; background: #0066cc; color: white; padding: 1px 4px; margin: 0 1px; border-radius: 2px; font-size: 0.6rem; font-weight: 600;">${adults}</span>`;
+                                                if (children > 0) guestBadges += `<span style="display: inline-block; background: #ff6b6b; color: white; padding: 1px 4px; margin: 0 1px; border-radius: 2px; font-size: 0.6rem; font-weight: 600;">${children}</span>`;
+                                                if (infants > 0) guestBadges += `<span style="display: inline-block; background: #51cf66; color: white; padding: 1px 4px; margin: 0 1px; border-radius: 2px; font-size: 0.6rem; font-weight: 600;">${infants}</span>`;
                                                 
-                                                return `<div style="margin-bottom: 2px;">${roomType} (${guestInfo} / ${nights}박)</div>`;
+                                                return `<div style="margin-bottom: 2px;">${roomType} (${guestBadges} / ${nights}박)</div>`;
                                             }).join('');
                                         } else {
                                             return `${res.room_types || '-'} (${res.total_guests || 0}명 / ${nights}박)`;
