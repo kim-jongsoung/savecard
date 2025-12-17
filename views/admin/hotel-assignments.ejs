@@ -1284,13 +1284,18 @@
                 return reservationDate.startsWith(thisMonth);
             });
             const monthNewCount = monthNewReservations.length;
-            const monthNewRooms = monthNewReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const monthNewRooms = monthNewReservations.reduce((sum, r) => {
+                // rooms 배열이 있으면 그 길이, 없으면 total_rooms 사용
+                return sum + (r.rooms ? r.rooms.length : (r.total_rooms || 0));
+            }, 0);
             const monthNewNights = monthNewReservations.reduce((sum, r) => {
                 if (r.check_in_date && r.check_out_date) {
                     const checkIn = new Date(r.check_in_date);
                     const checkOut = new Date(r.check_out_date);
                     const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-                    return sum + nights;
+                    const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                    // 총 룸-박수 = 룸수 × 박수
+                    return sum + (rooms * nights);
                 }
                 return sum;
             }, 0);
@@ -1302,13 +1307,16 @@
                 return checkInDate.startsWith(thisMonth);
             });
             const monthCheckinCount = monthCheckinReservations.length;
-            const monthCheckinRooms = monthCheckinReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const monthCheckinRooms = monthCheckinReservations.reduce((sum, r) => {
+                return sum + (r.rooms ? r.rooms.length : (r.total_rooms || 0));
+            }, 0);
             const monthCheckinNights = monthCheckinReservations.reduce((sum, r) => {
                 if (r.check_in_date && r.check_out_date) {
                     const checkIn = new Date(r.check_in_date);
                     const checkOut = new Date(r.check_out_date);
                     const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-                    return sum + nights;
+                    const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                    return sum + (rooms * nights);
                 }
                 return sum;
             }, 0);
@@ -1330,13 +1338,16 @@
             });
             const todayNewCount = todayNewReservations.length;
             console.log('📆 오늘 신규예약:', todayNewCount, '건');
-            const todayNewRooms = todayNewReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const todayNewRooms = todayNewReservations.reduce((sum, r) => {
+                return sum + (r.rooms ? r.rooms.length : (r.total_rooms || 0));
+            }, 0);
             const todayNewNights = todayNewReservations.reduce((sum, r) => {
                 if (r.check_in_date && r.check_out_date) {
                     const checkIn = new Date(r.check_in_date);
                     const checkOut = new Date(r.check_out_date);
                     const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-                    return sum + nights;
+                    const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                    return sum + (rooms * nights);
                 }
                 return sum;
             }, 0);
@@ -1348,13 +1359,16 @@
                 return checkInDate === today;
             });
             const todayCheckinCount = todayCheckinReservations.length;
-            const todayCheckinRooms = todayCheckinReservations.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
+            const todayCheckinRooms = todayCheckinReservations.reduce((sum, r) => {
+                return sum + (r.rooms ? r.rooms.length : (r.total_rooms || 0));
+            }, 0);
             const todayCheckinNights = todayCheckinReservations.reduce((sum, r) => {
                 if (r.check_in_date && r.check_out_date) {
                     const checkIn = new Date(r.check_in_date);
                     const checkOut = new Date(r.check_out_date);
                     const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-                    return sum + nights;
+                    const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                    return sum + (rooms * nights);
                 }
                 return sum;
             }, 0);
