@@ -16356,10 +16356,10 @@ app.patch('/api/assignments/:id/status', requireAuth, async (req, res) => {
 
 async function startServer() {
     try {
-        // ⚠️ 마이그레이션 비활성화 (2025-12-16) - 서버 시작 속도 향상
-        console.log('ℹ️ startServer 마이그레이션 건너뛰기 (이미 완료됨)');
+        // ⚠️ 마이그레이션 일시 활성화 (2025-12-16) - 누락된 컬럼 추가
+        console.log('🔧 마이그레이션 실행 중 (누락된 컬럼 추가)...');
         
-        if (false) { // 필요 시 true로 변경
+        if (true) { // 컬럼 추가 후 다시 false로 변경
         // 픽업 테이블 마이그레이션 (컬럼 추가)
         console.log('🔧 픽업 테이블 마이그레이션 확인 중...');
         try {

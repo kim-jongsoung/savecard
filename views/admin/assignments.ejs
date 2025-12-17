@@ -258,6 +258,14 @@
                         <label class="form-label small mb-1">예약번호</label>
                         <input type="text" class="form-control form-control-sm" id="searchReservationNumber" placeholder="예약번호">
                     </div>
+                    <div class="col-auto" style="width: 130px;">
+                        <label class="form-label small mb-1">플랫폼명</label>
+                        <input type="text" class="form-control form-control-sm" id="searchPlatform" placeholder="플랫폼명">
+                    </div>
+                    <div class="col-auto" style="width: 130px;">
+                        <label class="form-label small mb-1">수배업체명</label>
+                        <input type="text" class="form-control form-control-sm" id="searchVendor" placeholder="수배업체명">
+                    </div>
                     <div class="col-auto" style="width: 120px;">
                         <label class="form-label small mb-1">예약상태</label>
                         <select class="form-select form-select-sm" id="searchStatus">
@@ -1560,10 +1568,12 @@
             const endDate = document.getElementById('searchEndDate').value;
             const customer = document.getElementById('searchCustomer').value;
             const reservationNumber = document.getElementById('searchReservationNumber').value;
+            const platform = document.getElementById('searchPlatform').value;
+            const vendor = document.getElementById('searchVendor').value;
             const status = document.getElementById('searchStatus').value;
             
             currentStatus = status;
-            currentSearch = [customer, reservationNumber].filter(s => s.trim()).join(' ');
+            currentSearch = [customer, reservationNumber, platform, vendor].filter(s => s.trim()).join(' ');
             currentDateType = dateType;
             currentStartDate = startDate;
             currentEndDate = endDate;
@@ -1578,6 +1588,8 @@
             document.getElementById('searchEndDate').value = '';
             document.getElementById('searchCustomer').value = '';
             document.getElementById('searchReservationNumber').value = '';
+            document.getElementById('searchPlatform').value = '';
+            document.getElementById('searchVendor').value = '';
             document.getElementById('searchStatus').value = '';
             
             currentStatus = '';
