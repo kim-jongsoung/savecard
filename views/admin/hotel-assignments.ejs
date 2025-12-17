@@ -1126,8 +1126,7 @@
                             <th style="width: 70px;">예약자</th>
                             <th style="width: 50px;">지역</th>
                             <th style="min-width: 150px;">호텔명</th>
-                            <th style="min-width: 150px;">룸타입</th>
-                            <th style="width: 110px;">방/인원/박</th>
+                            <th style="min-width: 250px;">룸타입 (인원/박)</th>
                             <th style="width: 280px;">액션</th>
                         </tr>
                     </thead>
@@ -1163,19 +1162,35 @@
                                 <td style="font-size: 0.7rem;">${res.representative_name || '-'}</td>
                                 <td><span class="badge bg-secondary" style="font-size: 0.6rem; padding: 1px 3px;">${res.region || '괌'}</span></td>
                                 <td style="text-align: left; font-size: 0.7rem;">${res.hotel_name || '-'}</td>
-                                <td style="text-align: left; font-size: 0.65rem;">${res.room_types || '-'}</td>
-                                <td>
-                                    <span class="badge bg-info" style="font-size: 0.6rem; padding: 1px 4px; border-radius: 2px;">
-                                        ${res.total_rooms || 0}개/${res.total_guests || 0}명/${(() => {
+                                <td style="text-align: left; font-size: 0.65rem; padding: 4px 8px;">
+                                    ${(() => {
+                                        const nights = (() => {
                                             if (res.check_in_date && res.check_out_date) {
                                                 const checkIn = new Date(res.check_in_date);
                                                 const checkOut = new Date(res.check_out_date);
-                                                const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-                                                return nights;
+                                                return Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
                                             }
                                             return 0;
-                                        })()}박
-                                    </span>
+                                        })();
+                                        
+                                        if (res.rooms && res.rooms.length > 0) {
+                                            return res.rooms.map((room, idx) => {
+                                                const adults = room.adults || 0;
+                                                const children = room.children || 0;
+                                                const infants = room.infants || 0;
+                                                const roomType = room.room_type_name || '미정';
+                                                
+                                                let guestInfo = '';
+                                                if (adults > 0) guestInfo += `<span style="color: #0066cc;">A${adults}</span>`;
+                                                if (children > 0) guestInfo += `${guestInfo ? ' ' : ''}<span style="color: #ff6b6b;">C${children}</span>`;
+                                                if (infants > 0) guestInfo += `${guestInfo ? ' ' : ''}<span style="color: #51cf66;">I${infants}</span>`;
+                                                
+                                                return `<div style="margin-bottom: 2px;">${roomType} (${guestInfo} / ${nights}박)</div>`;
+                                            }).join('');
+                                        } else {
+                                            return `${res.room_types || '-'} (${res.total_guests || 0}명 / ${nights}박)`;
+                                        }
+                                    })()}
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-1">

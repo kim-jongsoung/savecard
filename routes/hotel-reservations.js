@@ -384,6 +384,37 @@ router.get('/', async (req, res) => {
                     WHERE hrr.reservation_id = hr.id
                     GROUP BY hrr.reservation_id
                 ) as room_types,
+                (
+                    SELECT json_agg(
+                        json_build_object(
+                            'room_number', hrr.room_number,
+                            'room_type_name', rt.room_type_name,
+                            'total_guests', (
+                                SELECT COUNT(*)
+                                FROM hotel_reservation_guests hrg
+                                WHERE hrg.reservation_room_id = hrr.id
+                            ),
+                            'adults', (
+                                SELECT COUNT(*)
+                                FROM hotel_reservation_guests hrg
+                                WHERE hrg.reservation_room_id = hrr.id AND hrg.guest_type = 'adult'
+                            ),
+                            'children', (
+                                SELECT COUNT(*)
+                                FROM hotel_reservation_guests hrg
+                                WHERE hrg.reservation_room_id = hrr.id AND hrg.guest_type = 'child'
+                            ),
+                            'infants', (
+                                SELECT COUNT(*)
+                                FROM hotel_reservation_guests hrg
+                                WHERE hrg.reservation_room_id = hrr.id AND hrg.guest_type = 'infant'
+                            )
+                        ) ORDER BY hrr.room_number
+                    )
+                    FROM hotel_reservation_rooms hrr
+                    LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
+                    WHERE hrr.reservation_id = hr.id
+                ) as rooms,
                 (hr.internal_memo IS NOT NULL AND hr.internal_memo != '') as has_memo,
                 (
                     SELECT json_build_object(
