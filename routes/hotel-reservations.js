@@ -389,26 +389,10 @@ router.get('/', async (req, res) => {
                         json_build_object(
                             'room_number', hrr.room_number,
                             'room_type_name', rt.room_type_name,
-                            'total_guests', (
-                                SELECT COUNT(*)
-                                FROM hotel_reservation_guests hrg
-                                WHERE hrg.reservation_room_id = hrr.id
-                            ),
-                            'adults', (
-                                SELECT COUNT(*)
-                                FROM hotel_reservation_guests hrg
-                                WHERE hrg.reservation_room_id = hrr.id AND hrg.guest_type = 'adult'
-                            ),
-                            'children', (
-                                SELECT COUNT(*)
-                                FROM hotel_reservation_guests hrg
-                                WHERE hrg.reservation_room_id = hrr.id AND hrg.guest_type = 'child'
-                            ),
-                            'infants', (
-                                SELECT COUNT(*)
-                                FROM hotel_reservation_guests hrg
-                                WHERE hrg.reservation_room_id = hrr.id AND hrg.guest_type = 'infant'
-                            )
+                            'total_guests', hrr.total_guests,
+                            'adults', hrr.adults_count,
+                            'children', hrr.children_count,
+                            'infants', hrr.infants_count
                         ) ORDER BY hrr.room_number
                     )
                     FROM hotel_reservation_rooms hrr
