@@ -353,7 +353,7 @@
             <div class="d-flex justify-content-around align-items-center mb-3 pb-3" style="font-size: 0.7rem; border-bottom: 1px solid #e0e0e0;">
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;">📅 이번달 신규예약:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('month-new')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-month-new-count">0</span>건 / 
                         <span id="stat-month-new-rooms">0</span>룸 / 
                         <span id="stat-month-new-nights">0</span>박
@@ -362,7 +362,7 @@
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;"><span id="stat-month0-label">12월</span> 출발:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('month0-checkin')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-month0-checkin-count">0</span>건 / 
                         <span id="stat-month0-checkin-rooms">0</span>룸 / 
                         <span id="stat-month0-checkin-nights">0</span>박
@@ -371,7 +371,7 @@
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;"><span id="stat-month1-label">1월</span> 출발:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('month1-checkin')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-month1-checkin-count">0</span>건 / 
                         <span id="stat-month1-checkin-rooms">0</span>룸 / 
                         <span id="stat-month1-checkin-nights">0</span>박
@@ -380,7 +380,7 @@
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;"><span id="stat-month2-label">2월</span> 출발:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('month2-checkin')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-month2-checkin-count">0</span>건 / 
                         <span id="stat-month2-checkin-rooms">0</span>룸 / 
                         <span id="stat-month2-checkin-nights">0</span>박
@@ -391,7 +391,7 @@
             <div class="d-flex justify-content-around align-items-center" style="font-size: 0.7rem;">
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 오늘 신규예약:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('today-new')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-today-new-count">0</span>건 / 
                         <span id="stat-today-new-rooms">0</span>룸 / 
                         <span id="stat-today-new-nights">0</span>박
@@ -400,7 +400,7 @@
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 오늘 출발:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('day0-checkin')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-day0-checkin-count">0</span>건 / 
                         <span id="stat-day0-checkin-rooms">0</span>룸 / 
                         <span id="stat-day0-checkin-nights">0</span>박
@@ -409,7 +409,7 @@
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 내일 출발:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('day1-checkin')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-day1-checkin-count">0</span>건 / 
                         <span id="stat-day1-checkin-rooms">0</span>룸 / 
                         <span id="stat-day1-checkin-nights">0</span>박
@@ -418,11 +418,26 @@
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 모레 출발:</span>
-                    <span style="color: #2c3e50; font-weight: bold;">
+                    <span style="color: #2c3e50; font-weight: bold; cursor: pointer; text-decoration: underline;" onclick="showStatsDetail('day2-checkin')" title="클릭하여 거래처별 상세 보기">
                         <span id="stat-day2-checkin-count">0</span>건 / 
                         <span id="stat-day2-checkin-rooms">0</span>룸 / 
                         <span id="stat-day2-checkin-nights">0</span>박
                     </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 상세 모달 -->
+        <div class="modal fade" id="statsDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="fas fa-chart-bar me-2"></i><span id="statsDetailTitle">통계 상세</span></h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="statsDetailContent"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1032,6 +1047,7 @@
     <script>
         let allReservations = [];
         let currentFilter = 'all';
+        let statsData = {}; // 통계 데이터 저장
         
         // 페이지 로드 시
         document.addEventListener('DOMContentLoaded', async function() {
@@ -1448,7 +1464,8 @@
                             return sum + (rooms * nights);
                         }
                         return sum;
-                    }, 0)
+                    }, 0),
+                    reservations: monthReservations
                 });
             }
             
@@ -1477,7 +1494,8 @@
                             return sum + (rooms * nights);
                         }
                         return sum;
-                    }, 0)
+                    }, 0),
+                    reservations: dayReservations
                 });
             }
             
@@ -1504,6 +1522,116 @@
                 document.getElementById(`stat-day${i}-checkin-rooms`).textContent = days[i].rooms;
                 document.getElementById(`stat-day${i}-checkin-nights`).textContent = days[i].nights;
             }
+            
+            // 통계 데이터 저장 (상세 보기용)
+            statsData = {
+                'month-new': monthNewReservations,
+                'month0-checkin': months[0].reservations,
+                'month1-checkin': months[1].reservations,
+                'month2-checkin': months[2].reservations,
+                'today-new': todayNewReservations,
+                'day0-checkin': days[0].reservations,
+                'day1-checkin': days[1].reservations,
+                'day2-checkin': days[2].reservations
+            };
+        }
+        
+        // 통계 상세 보기
+        function showStatsDetail(type) {
+            const data = statsData[type];
+            if (!data || data.length === 0) {
+                alert('해당 통계에 데이터가 없습니다.');
+                return;
+            }
+            
+            // 제목 설정
+            const titles = {
+                'month-new': '이번달 신규예약',
+                'month0-checkin': document.getElementById('stat-month0-label').textContent + ' 출발',
+                'month1-checkin': document.getElementById('stat-month1-label').textContent + ' 출발',
+                'month2-checkin': document.getElementById('stat-month2-label').textContent + ' 출발',
+                'today-new': '오늘 신규예약',
+                'day0-checkin': '오늘 출발',
+                'day1-checkin': '내일 출발',
+                'day2-checkin': '모레 출발'
+            };
+            
+            document.getElementById('statsDetailTitle').textContent = titles[type] + ' 상세';
+            
+            // 거래처별 집계
+            const agencyStats = {};
+            data.forEach(r => {
+                const agency = r.agency_name || '미지정';
+                if (!agencyStats[agency]) {
+                    agencyStats[agency] = {
+                        count: 0,
+                        rooms: 0,
+                        nights: 0
+                    };
+                }
+                agencyStats[agency].count++;
+                agencyStats[agency].rooms += r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                
+                if (r.check_in_date && r.check_out_date) {
+                    const checkIn = new Date(r.check_in_date);
+                    const checkOut = new Date(r.check_out_date);
+                    const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                    const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                    agencyStats[agency].nights += rooms * nights;
+                }
+            });
+            
+            // 테이블 생성
+            let html = `
+                <table class="table table-sm table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>거래처</th>
+                            <th class="text-center">예약 건수</th>
+                            <th class="text-center">룸 수</th>
+                            <th class="text-center">총 룸-박수</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // 거래처별로 정렬 (건수 내림차순)
+            const sorted = Object.entries(agencyStats).sort((a, b) => b[1].count - a[1].count);
+            
+            sorted.forEach(([agency, stats]) => {
+                html += `
+                    <tr>
+                        <td><strong>${agency}</strong></td>
+                        <td class="text-center">${stats.count}건</td>
+                        <td class="text-center">${stats.rooms}룸</td>
+                        <td class="text-center">${stats.nights}박</td>
+                    </tr>
+                `;
+            });
+            
+            // 합계
+            const totalCount = data.length;
+            const totalRooms = sorted.reduce((sum, [, stats]) => sum + stats.rooms, 0);
+            const totalNights = sorted.reduce((sum, [, stats]) => sum + stats.nights, 0);
+            
+            html += `
+                    </tbody>
+                    <tfoot class="table-secondary">
+                        <tr>
+                            <th>합계</th>
+                            <th class="text-center">${totalCount}건</th>
+                            <th class="text-center">${totalRooms}룸</th>
+                            <th class="text-center">${totalNights}박</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+            
+            document.getElementById('statsDetailContent').innerHTML = html;
+            
+            // 모달 표시
+            const modal = new bootstrap.Modal(document.getElementById('statsDetailModal'));
+            modal.show();
         }
         
         // 상태별 필터링
