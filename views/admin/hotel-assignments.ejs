@@ -1279,7 +1279,7 @@
             
             // 이번달 신규예약 (예약일 기준)
             const monthNewReservations = reservations.filter(r => {
-                if (!r.reservation_date) return false;
+                if (!r.reservation_date || r.status === 'cancelled') return false;
                 const reservationDate = r.reservation_date.split('T')[0];
                 return reservationDate.startsWith(thisMonth);
             });
@@ -1302,7 +1302,7 @@
             
             // 이번달 출발일 (체크인 기준)
             const monthCheckinReservations = reservations.filter(r => {
-                if (!r.check_in_date) return false;
+                if (!r.check_in_date || r.status === 'cancelled') return false;
                 const checkInDate = r.check_in_date.split('T')[0];
                 return checkInDate.startsWith(thisMonth);
             });
@@ -1324,7 +1324,7 @@
             // 오늘 신규예약 (예약일 기준)
             console.log('🔍 예약 데이터 샘플:', reservations[0]?.reservation_date);
             const todayNewReservations = reservations.filter(r => {
-                if (!r.reservation_date) return false;
+                if (!r.reservation_date || r.status === 'cancelled') return false;
                 // 날짜 부분만 추출 (YYYY-MM-DD)
                 const reservationDate = r.reservation_date.split('T')[0];
                 const match = reservationDate === today;
@@ -1354,7 +1354,7 @@
             
             // 오늘 출발일 (체크인 기준)
             const todayCheckinReservations = reservations.filter(r => {
-                if (!r.check_in_date) return false;
+                if (!r.check_in_date || r.status === 'cancelled') return false;
                 const checkInDate = r.check_in_date.split('T')[0];
                 return checkInDate === today;
             });
