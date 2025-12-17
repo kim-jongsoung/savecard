@@ -347,9 +347,10 @@
             </div>
         </div>
 
-        <!-- 통계 (한 줄) -->
+        <!-- 통계 (2줄) -->
         <div class="mb-3 p-3" style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-            <div class="d-flex justify-content-around align-items-center" style="font-size: 0.75rem;">
+            <!-- 첫 번째 줄: 월별 통계 -->
+            <div class="d-flex justify-content-around align-items-center mb-3 pb-3" style="font-size: 0.7rem; border-bottom: 1px solid #e0e0e0;">
                 <div class="text-center">
                     <span style="color: #667eea; font-weight: 600;">📅 이번달 신규예약:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
@@ -360,14 +361,34 @@
                 </div>
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
-                    <span style="color: #667eea; font-weight: 600;">📅 이번달 출발일:</span>
+                    <span style="color: #667eea; font-weight: 600;"><span id="stat-month0-label">12월</span> 출발:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
-                        <span id="stat-month-checkin-count">0</span>건 / 
-                        <span id="stat-month-checkin-rooms">0</span>룸 / 
-                        <span id="stat-month-checkin-nights">0</span>박
+                        <span id="stat-month0-checkin-count">0</span>건 / 
+                        <span id="stat-month0-checkin-rooms">0</span>룸 / 
+                        <span id="stat-month0-checkin-nights">0</span>박
                     </span>
                 </div>
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #667eea; font-weight: 600;"><span id="stat-month1-label">1월</span> 출발:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-month1-checkin-count">0</span>건 / 
+                        <span id="stat-month1-checkin-rooms">0</span>룸 / 
+                        <span id="stat-month1-checkin-nights">0</span>박
+                    </span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #667eea; font-weight: 600;"><span id="stat-month2-label">2월</span> 출발:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-month2-checkin-count">0</span>건 / 
+                        <span id="stat-month2-checkin-rooms">0</span>룸 / 
+                        <span id="stat-month2-checkin-nights">0</span>박
+                    </span>
+                </div>
+            </div>
+            <!-- 두 번째 줄: 일별 통계 -->
+            <div class="d-flex justify-content-around align-items-center" style="font-size: 0.7rem;">
                 <div class="text-center">
                     <span style="color: #f5576c; font-weight: 600;">📆 오늘 신규예약:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
@@ -378,11 +399,29 @@
                 </div>
                 <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
                 <div class="text-center">
-                    <span style="color: #f5576c; font-weight: 600;">📆 오늘 출발일:</span>
+                    <span style="color: #f5576c; font-weight: 600;">📆 오늘 출발:</span>
                     <span style="color: #2c3e50; font-weight: bold;">
-                        <span id="stat-today-checkin-count">0</span>건 / 
-                        <span id="stat-today-checkin-rooms">0</span>룸 / 
-                        <span id="stat-today-checkin-nights">0</span>박
+                        <span id="stat-day0-checkin-count">0</span>건 / 
+                        <span id="stat-day0-checkin-rooms">0</span>룸 / 
+                        <span id="stat-day0-checkin-nights">0</span>박
+                    </span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #f5576c; font-weight: 600;">📆 내일 출발:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-day1-checkin-count">0</span>건 / 
+                        <span id="stat-day1-checkin-rooms">0</span>룸 / 
+                        <span id="stat-day1-checkin-nights">0</span>박
+                    </span>
+                </div>
+                <div style="width: 1px; height: 30px; background: #e0e0e0;"></div>
+                <div class="text-center">
+                    <span style="color: #f5576c; font-weight: 600;">📆 모레 출발:</span>
+                    <span style="color: #2c3e50; font-weight: bold;">
+                        <span id="stat-day2-checkin-count">0</span>건 / 
+                        <span id="stat-day2-checkin-rooms">0</span>룸 / 
+                        <span id="stat-day2-checkin-nights">0</span>박
                     </span>
                 </div>
             </div>
@@ -1373,20 +1412,88 @@
                 return sum;
             }, 0);
             
+            // 3개월 출발일 통계 (이번달, 다음달, 다다음달)
+            const months = [];
+            for (let i = 0; i < 3; i++) {
+                const targetDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const targetMonth = targetDate.toISOString().slice(0, 7);
+                const monthLabel = `${targetDate.getMonth() + 1}월`;
+                
+                const monthReservations = reservations.filter(r => {
+                    if (!r.check_in_date || r.status === 'cancelled') return false;
+                    const checkInDate = r.check_in_date.split('T')[0];
+                    return checkInDate.startsWith(targetMonth);
+                });
+                
+                months.push({
+                    label: monthLabel,
+                    count: monthReservations.length,
+                    rooms: monthReservations.reduce((sum, r) => sum + (r.rooms ? r.rooms.length : (r.total_rooms || 0)), 0),
+                    nights: monthReservations.reduce((sum, r) => {
+                        if (r.check_in_date && r.check_out_date) {
+                            const checkIn = new Date(r.check_in_date);
+                            const checkOut = new Date(r.check_out_date);
+                            const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                            const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                            return sum + (rooms * nights);
+                        }
+                        return sum;
+                    }, 0)
+                });
+            }
+            
+            // 3일 출발일 통계 (오늘, 내일, 모레)
+            const days = [];
+            for (let i = 0; i < 3; i++) {
+                const targetDate = new Date(now);
+                targetDate.setDate(targetDate.getDate() + i);
+                const targetDay = targetDate.toISOString().split('T')[0];
+                
+                const dayReservations = reservations.filter(r => {
+                    if (!r.check_in_date || r.status === 'cancelled') return false;
+                    const checkInDate = r.check_in_date.split('T')[0];
+                    return checkInDate === targetDay;
+                });
+                
+                days.push({
+                    count: dayReservations.length,
+                    rooms: dayReservations.reduce((sum, r) => sum + (r.rooms ? r.rooms.length : (r.total_rooms || 0)), 0),
+                    nights: dayReservations.reduce((sum, r) => {
+                        if (r.check_in_date && r.check_out_date) {
+                            const checkIn = new Date(r.check_in_date);
+                            const checkOut = new Date(r.check_out_date);
+                            const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+                            const rooms = r.rooms ? r.rooms.length : (r.total_rooms || 0);
+                            return sum + (rooms * nights);
+                        }
+                        return sum;
+                    }, 0)
+                });
+            }
+            
             // DOM 업데이트
             document.getElementById('stat-month-new-count').textContent = monthNewCount;
             document.getElementById('stat-month-new-rooms').textContent = monthNewRooms;
             document.getElementById('stat-month-new-nights').textContent = monthNewNights;
-            document.getElementById('stat-month-checkin-count').textContent = monthCheckinCount;
-            document.getElementById('stat-month-checkin-rooms').textContent = monthCheckinRooms;
-            document.getElementById('stat-month-checkin-nights').textContent = monthCheckinNights;
+            
+            // 3개월 출발일
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`stat-month${i}-label`).textContent = months[i].label;
+                document.getElementById(`stat-month${i}-checkin-count`).textContent = months[i].count;
+                document.getElementById(`stat-month${i}-checkin-rooms`).textContent = months[i].rooms;
+                document.getElementById(`stat-month${i}-checkin-nights`).textContent = months[i].nights;
+            }
             
             document.getElementById('stat-today-new-count').textContent = todayNewCount;
             document.getElementById('stat-today-new-rooms').textContent = todayNewRooms;
             document.getElementById('stat-today-new-nights').textContent = todayNewNights;
-            document.getElementById('stat-today-checkin-count').textContent = todayCheckinCount;
-            document.getElementById('stat-today-checkin-rooms').textContent = todayCheckinRooms;
-            document.getElementById('stat-today-checkin-nights').textContent = todayCheckinNights;
+            
+            // 3일 출발일
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`stat-day${i}-checkin-count`).textContent = days[i].count;
+                document.getElementById(`stat-day${i}-checkin-rooms`).textContent = days[i].rooms;
+                document.getElementById(`stat-day${i}-checkin-nights`).textContent = days[i].nights;
+            }
         }
         
         // 상태별 필터링
