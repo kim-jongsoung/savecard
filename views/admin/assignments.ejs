@@ -258,13 +258,17 @@
                         <label class="form-label small mb-1">예약번호</label>
                         <input type="text" class="form-control form-control-sm" id="searchReservationNumber" placeholder="예약번호">
                     </div>
-                    <div class="col-auto" style="width: 130px;">
+                    <div class="col-auto" style="width: 150px;">
                         <label class="form-label small mb-1">플랫폼명</label>
-                        <input type="text" class="form-control form-control-sm" id="searchPlatform" placeholder="플랫폼명">
+                        <select class="form-select form-select-sm" id="searchPlatform">
+                            <option value="">전체</option>
+                        </select>
                     </div>
-                    <div class="col-auto" style="width: 130px;">
+                    <div class="col-auto" style="width: 150px;">
                         <label class="form-label small mb-1">수배업체명</label>
-                        <input type="text" class="form-control form-control-sm" id="searchVendor" placeholder="수배업체명">
+                        <select class="form-select form-select-sm" id="searchVendor">
+                            <option value="">전체</option>
+                        </select>
                     </div>
                     <div class="col-auto" style="width: 120px;">
                         <label class="form-label small mb-1">예약상태</label>
@@ -5594,6 +5598,52 @@
                 }
             }, 5000);
         }
+
+        // 플랫폼 목록 로드
+        async function loadPlatforms() {
+            try {
+                const response = await fetch('/api/platforms');
+                const result = await response.json();
+                
+                if (result.success && result.platforms) {
+                    const select = document.getElementById('searchPlatform');
+                    result.platforms.forEach(platform => {
+                        const option = document.createElement('option');
+                        option.value = platform.platform_name;
+                        option.textContent = platform.platform_name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('플랫폼 목록 로드 실패:', error);
+            }
+        }
+
+        // 수배업체 목록 로드
+        async function loadVendors() {
+            try {
+                const response = await fetch('/api/vendors');
+                const result = await response.json();
+                
+                if (result.success && result.vendors) {
+                    const select = document.getElementById('searchVendor');
+                    result.vendors.forEach(vendor => {
+                        const option = document.createElement('option');
+                        option.value = vendor.vendor_name;
+                        option.textContent = vendor.vendor_name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('수배업체 목록 로드 실패:', error);
+            }
+        }
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPlatforms();
+            loadVendors();
+        });
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
