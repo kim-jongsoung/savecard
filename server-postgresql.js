@@ -12367,13 +12367,15 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             }
         }
         
-        // 검색 필터 (예약번호, 상품명, 고객명)
+        // 검색 필터 (예약번호, 상품명, 고객명, 플랫폼명, 수배업체명)
         if (search) {
             paramIndex++;
             whereClause += ` AND (
                 r.reservation_number ILIKE $${paramIndex} OR 
                 r.product_name ILIKE $${paramIndex} OR 
-                r.korean_name ILIKE $${paramIndex}
+                r.korean_name ILIKE $${paramIndex} OR
+                r.platform ILIKE $${paramIndex} OR
+                a.vendor_name ILIKE $${paramIndex}
             )`;
             queryParams.push(`%${search}%`);
         }
