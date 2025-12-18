@@ -238,6 +238,17 @@
             
             <div class="row mb-3">
               <div class="col-md-6">
+                <label class="form-label">날짜 *</label>
+                <input type="date" class="form-control" id="editFlightDate" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">편명 *</label>
+                <input type="text" class="form-control" id="editFlightNumber" required>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
                 <label class="form-label">고객명</label>
                 <input type="text" class="form-control" id="editCustomerName">
               </div>
@@ -817,7 +828,28 @@
       detailModalInstance.hide();
       
       // 등록 모달에 데이터 로드
-      document.getElementById('flightDate').value = pickup.departure_date || '';
+      // 여러 날짜 필드명 시도 (departure_date, flight_date, pickup_date)
+      let dateValue = pickup.departure_date || pickup.flight_date || pickup.pickup_date || '';
+      
+      // 날짜 형식 변환 (YYYY-MM-DD 형식으로)
+      if (dateValue) {
+        try {
+          const date = new Date(dateValue);
+          if (!isNaN(date.getTime())) {
+            dateValue = date.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          console.error('날짜 변환 오류:', e);
+        }
+      }
+      
+      console.log('📅 날짜 로드:', { 
+        departure_date: pickup.departure_date, 
+        flight_date: pickup.flight_date, 
+        pickup_date: pickup.pickup_date, 
+        selected: dateValue 
+      });
+      document.getElementById('flightDate').value = dateValue;
       
       // Select2 값 설정
       $('#flightNumber').val(pickup.flight_number || '').trigger('change');
@@ -1668,6 +1700,8 @@
         const pickup = await res.json();
         
         document.getElementById('editPickupId').value = pickup.id;
+        document.getElementById('editFlightDate').value = pickup.flight_date || pickup.departure_date || '';
+        document.getElementById('editFlightNumber').value = pickup.flight_number || '';
         document.getElementById('editCustomerName').value = pickup.customer_name || '';
         document.getElementById('editHotelName').value = pickup.hotel_name || '';
         document.getElementById('editPhone').value = pickup.phone || '';
@@ -1689,6 +1723,8 @@
     async function saveReservationEdit() {
       const id = document.getElementById('editPickupId').value;
       const data = {
+        flight_date: document.getElementById('editFlightDate').value,
+        flight_number: document.getElementById('editFlightNumber').value,
         customer_name: document.getElementById('editCustomerName').value,
         hotel_name: document.getElementById('editHotelName').value,
         phone: document.getElementById('editPhone').value,
