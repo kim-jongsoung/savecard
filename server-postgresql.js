@@ -12340,12 +12340,24 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         // 📅 날짜 필터링 (예약일 또는 출발일)
         if (dateType && startDate && endDate) {
             const dateColumn = dateType === 'reservation' ? 'r.created_at' : 'r.usage_date';
-            paramIndex++;
-            whereClause += ` AND ${dateColumn} >= $${paramIndex}`;
-            queryParams.push(startDate);
-            paramIndex++;
-            whereClause += ` AND ${dateColumn} <= $${paramIndex}`;
-            queryParams.push(endDate);
+            
+            if (dateType === 'reservation') {
+                // created_at은 TIMESTAMP이므로 날짜 범위를 정확히 처리
+                paramIndex++;
+                whereClause += ` AND ${dateColumn}::date >= $${paramIndex}::date`;
+                queryParams.push(startDate);
+                paramIndex++;
+                whereClause += ` AND ${dateColumn}::date <= $${paramIndex}::date`;
+                queryParams.push(endDate);
+            } else {
+                // usage_date는 DATE 타입이므로 그대로 비교
+                paramIndex++;
+                whereClause += ` AND ${dateColumn} >= $${paramIndex}`;
+                queryParams.push(startDate);
+                paramIndex++;
+                whereClause += ` AND ${dateColumn} <= $${paramIndex}`;
+                queryParams.push(endDate);
+            }
             console.log(`📅 날짜 필터: ${dateType === 'reservation' ? '예약일' : '출발일'} ${startDate} ~ ${endDate}`);
         }
         
