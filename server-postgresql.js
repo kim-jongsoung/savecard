@@ -12317,7 +12317,7 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
         console.log('📋 존재하는 테이블:', tableCheck.rows.map(r => r.table_name));
         
         const { page = 1, status = '', search = '', dateType = '', startDate = '', endDate = '' } = req.query;
-        const limit = 100;  // 페이지당 100개로 증가
+        const limit = 300;  // 페이지당 300개로 증가
         const offset = (page - 1) * limit;
         
         // ✅ 수배관리 페이지: assignment_token이 있는 예약만 표시 (수배서 생성됨)
