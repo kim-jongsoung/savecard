@@ -5921,21 +5921,53 @@
             }
         }
 
-        function sendVoucherInvoiceEmail() {
-            if (!currentVoucherInvoiceLink) {
+        async function sendVoucherInvoiceEmail() {
+            if (!currentVoucherInvoiceId) {
                 alert('먼저 바우처 인보이스를 생성해주세요.');
                 return;
             }
-            const recipient = currentVoucherAgencyEmail || '';
-            const subject = encodeURIComponent('[LUXFIND] Hotel Voucher Invoice');
-            const body = encodeURIComponent(
-                '안녕하세요,\n\n' +
-                '아래 링크에서 호텔 바우처 인보이스를 확인하실 수 있습니다.\n' +
-                currentVoucherInvoiceLink +
-                '\n\n감사합니다.'
-            );
-            const mailtoUrl = `mailto:${recipient}?subject=${subject}&body=${body}`;
-            window.location.href = mailtoUrl;
+            
+            const recipient = prompt('받는 사람 이메일 주소를 입력하세요:', currentVoucherAgencyEmail || '');
+            if (!recipient) {
+                return;
+            }
+            
+            // 이메일 유효성 검사
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(recipient)) {
+                alert('올바른 이메일 주소를 입력해주세요.');
+                return;
+            }
+            
+            try {
+                console.log('📧 바우처 인보이스 이메일 전송 시작:', {
+                    invoiceId: currentVoucherInvoiceId,
+                    recipient: recipient
+                });
+                
+                const response = await fetch(`/api/hotel-assignments/invoice/${currentVoucherInvoiceId}/send-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        recipient_email: recipient
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 이메일이 전송되었습니다.\n받는 사람: ${recipient}`);
+                    console.log('✅ 이메일 전송 완료:', result);
+                } else {
+                    alert('❌ 이메일 전송 실패: ' + (result.message || '알 수 없는 오류'));
+                    console.error('❌ 이메일 전송 실패:', result);
+                }
+            } catch (error) {
+                console.error('❌ 이메일 전송 오류:', error);
+                alert('❌ 이메일 전송 중 오류가 발생했습니다.');
+            }
         }
         
         // 정산 이관 모달 열기

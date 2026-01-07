@@ -732,4 +732,231 @@ router.get('/invoice/:invoiceId/preview', async (req, res) => {
     }
 });
 
+// 바우처 인보이스 이메일 전송 API
+// POST /api/hotel-assignments/invoice/:invoiceId/send-email
+router.post('/invoice/:invoiceId/send-email', async (req, res) => {
+    const { invoiceId } = req.params;
+    const { recipient_email } = req.body;
+    const pool = req.app.get('pool');
+
+    try {
+        console.log('📧 바우처 인보이스 이메일 전송 시작:', { invoiceId, recipient_email });
+
+        // 1. 인보이스 정보 조회
+        const invoiceQuery = await pool.query(`
+            SELECT 
+                i.*,
+                hr.agency_fee,
+                hr.total_cost_price,
+                hr.reservation_number,
+                hr.check_in_date,
+                hr.check_out_date,
+                hr.special_requests,
+                h.hotel_name,
+                ba.agency_name AS booking_agency_name,
+                ba.contact_person AS agency_contact_person,
+                ba.contact_email AS agency_email
+            FROM hotel_invoices i
+            LEFT JOIN hotel_reservations hr ON i.hotel_reservation_id = hr.id
+            LEFT JOIN hotels h ON hr.hotel_id = h.id
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            WHERE i.id = $1
+        `, [invoiceId]);
+
+        if (invoiceQuery.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: '바우처 인보이스를 찾을 수 없습니다.'
+            });
+        }
+
+        const row = invoiceQuery.rows[0];
+        const reservationId = row.hotel_reservation_id;
+
+        // 2. 객실 정보 조회
+        const roomsQuery = await pool.query(`
+            SELECT 
+                hrr.*, 
+                rt.room_type_name
+            FROM hotel_reservation_rooms hrr
+            LEFT JOIN room_types rt ON hrr.room_type_id = rt.id
+            WHERE hrr.reservation_id = $1
+            ORDER BY hrr.id
+        `, [reservationId]);
+
+        // 3. 투숙객 정보 조회
+        for (let room of roomsQuery.rows) {
+            const guestsQuery = await pool.query(`
+                SELECT *
+                FROM hotel_reservation_guests
+                WHERE reservation_room_id = $1
+                ORDER BY id
+            `, [room.id]);
+            room.guests = guestsQuery.rows;
+        }
+
+        // 4. 추가 서비스 조회
+        const extrasQuery = await pool.query(`
+            SELECT *
+            FROM hotel_reservation_extras
+            WHERE reservation_id = $1
+            ORDER BY id
+        `, [reservationId]);
+
+        const extras = extrasQuery.rows.map(e => ({
+            ...e,
+            notes: 'IN_HOTEL'
+        }));
+
+        const reservation = {
+            ...row,
+            id: reservationId,
+            rooms: roomsQuery.rows,
+            extras,
+            __isVoucherInvoice: true
+        };
+
+        const invoice = {
+            id: row.id,
+            invoice_number: row.invoice_number,
+            invoice_date: row.invoice_date,
+            due_date: row.due_date,
+            total_amount: row.total_amount,
+            currency: row.currency,
+            fx_rate: row.fx_rate,
+            fx_rate_date: row.fx_rate_date,
+            total_amount_krw: row.total_amount_krw,
+            status: row.status
+        };
+
+        // 5. HTML 생성
+        const html = generateVoucherInvoiceHTML(reservation, invoice);
+
+        // 6. 이메일 발송
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST || 'smtp.dooray.com',
+            port: parseInt(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            },
+            tls: {
+                rejectUnauthorized: false,
+                minVersion: 'TLSv1.2'
+            },
+            connectionTimeout: 30000,
+            greetingTimeout: 30000,
+            socketTimeout: 30000
+        });
+
+        const invoiceLink = `${process.env.BASE_URL || 'https://www.guamsavecard.com'}/api/hotel-assignments/invoice/${invoiceId}/preview`;
+        
+        const guestName = reservation.rooms?.[0]?.guests?.[0]?.guest_name_en || 
+                         reservation.rooms?.[0]?.guests?.[0]?.guest_name_ko || 
+                         'Guest';
+
+        const mailOptions = {
+            from: `"${process.env.SMTP_FROM_NAME || 'LUXFIND'}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+            replyTo: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: recipient_email,
+            subject: `[LUXFIND] Hotel Voucher Invoice - ${reservation.hotel_name} - ${guestName}`,
+            html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; }
+        .content { background: white; padding: 30px; border: 1px solid #ddd; border-radius: 8px; margin-top: 20px; }
+        .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .info-box { background: #f8f9fa; padding: 15px; border-left: 4px solid #667eea; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏨 Hotel Voucher Invoice</h1>
+        </div>
+        <div class="content">
+            <p>Dear ${reservation.agency_contact_person || 'Partner'},</p>
+            
+            <p>Please find the hotel voucher invoice for the following reservation:</p>
+            
+            <div class="info-box">
+                <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
+                <p><strong>Hotel:</strong> ${reservation.hotel_name}</p>
+                <p><strong>Guest:</strong> ${guestName}</p>
+                <p><strong>Check-in:</strong> ${new Date(reservation.check_in_date).toLocaleDateString('en-CA')}</p>
+                <p><strong>Check-out:</strong> ${new Date(reservation.check_out_date).toLocaleDateString('en-CA')}</p>
+                <p><strong>Total Amount:</strong> ${invoice.currency} ${parseFloat(invoice.total_amount).toFixed(2)}</p>
+            </div>
+            
+            <p>
+                <a href="${invoiceLink}" class="button">📄 View Invoice</a>
+            </p>
+            
+            <p style="font-size: 12px; color: #666;">
+                Or copy this link:<br>
+                <a href="${invoiceLink}">${invoiceLink}</a>
+            </p>
+            
+            <p style="margin-top: 30px;">Best regards,<br><strong>LUXFIND</strong></p>
+            <p style="font-size: 14px; color: #666;">
+                E-mail: ${process.env.SMTP_FROM || 'res@lux-find.com'}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            `,
+            headers: {
+                'X-Mailer': 'LUXFIND Invoice System',
+                'X-Priority': '1',
+                'Importance': 'high'
+            },
+            priority: 'high',
+            text: `
+Dear ${reservation.agency_contact_person || 'Partner'},
+
+Please find the hotel voucher invoice for the following reservation:
+
+Invoice Number: ${invoice.invoice_number}
+Hotel: ${reservation.hotel_name}
+Guest: ${guestName}
+Check-in: ${new Date(reservation.check_in_date).toLocaleDateString('en-CA')}
+Check-out: ${new Date(reservation.check_out_date).toLocaleDateString('en-CA')}
+Total Amount: ${invoice.currency} ${parseFloat(invoice.total_amount).toFixed(2)}
+
+View Invoice: ${invoiceLink}
+
+Best regards,
+LUXFIND
+E-mail: ${process.env.SMTP_FROM || 'res@lux-find.com'}
+            `.trim()
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+
+        console.log('✅ 바우처 인보이스 이메일 전송 완료:', info.messageId);
+
+        res.json({
+            success: true,
+            message: '이메일이 전송되었습니다.',
+            messageId: info.messageId,
+            recipient: recipient_email
+        });
+
+    } catch (error) {
+        console.error('❌ 바우처 인보이스 이메일 전송 오류:', error);
+        res.status(500).json({
+            success: false,
+            message: '이메일 전송 중 오류가 발생했습니다: ' + error.message
+        });
+    }
+});
+
 module.exports = router;
