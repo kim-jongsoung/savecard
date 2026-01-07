@@ -1073,23 +1073,26 @@
             const assignmentModal = document.getElementById('assignmentModal');
             
             if (editModal) {
-                editModal.addEventListener('hidden.bs.modal', function() {
-                    console.log('예약 수정 모달 닫힘 - 서버에서 데이터 새로고침');
-                    loadReservations();
+                editModal.addEventListener('hidden.bs.modal', async function() {
+                    console.log('예약 수정 모달 닫힘 - 검색 상태 유지하며 새로고침');
+                    await loadReservations(false);
+                    filterReservations();
                 });
             }
             
             if (voucherModal) {
-                voucherModal.addEventListener('hidden.bs.modal', function() {
-                    console.log('바우처 모달 닫힘 - 서버에서 데이터 새로고침');
-                    loadReservations();
+                voucherModal.addEventListener('hidden.bs.modal', async function() {
+                    console.log('바우처 모달 닫힘 - 검색 상태 유지하며 새로고침');
+                    await loadReservations(false);
+                    filterReservations();
                 });
             }
             
             if (assignmentModal) {
-                assignmentModal.addEventListener('hidden.bs.modal', function() {
-                    console.log('수배서 모달 닫힘 - 서버에서 데이터 새로고침');
-                    loadReservations();
+                assignmentModal.addEventListener('hidden.bs.modal', async function() {
+                    console.log('수배서 모달 닫힘 - 검색 상태 유지하며 새로고침');
+                    await loadReservations(false);
+                    filterReservations();
                 });
             }
         });
@@ -1656,6 +1659,7 @@
         // 검색 및 필터
         function filterReservations() {
             const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            console.log('🔍 filterReservations 호출 - 검색어:', searchTerm);
             
             let filtered = allReservations;
             
@@ -1710,6 +1714,14 @@
             // 검색어나 필터가 있으면 isSearching = true
             const isSearching = searchTerm || currentFilter !== 'all' || startDate || endDate || 
                                agencyFilter || countryFilter || hotelFilter || assignedToFilter;
+            
+            console.log('🔍 필터링 결과:', {
+                검색어: searchTerm,
+                상태필터: currentFilter,
+                isSearching: isSearching,
+                필터된개수: filtered.length,
+                전체개수: allReservations.length
+            });
             
             displayReservations(filtered, isSearching);
         }
@@ -3744,7 +3756,9 @@
                     lastClosedReservationId = currentEditingId;
                     bootstrap.Modal.getInstance(document.getElementById('editReservationModal')).hide();
                     // 검색 상태 유지를 위해 filterReservations() 호출
+                    console.log('💾 예약 수정 완료 - 검색 상태 유지 시작');
                     await loadReservations(false); // 데이터만 로드
+                    console.log('📊 데이터 로드 완료 - filterReservations 호출');
                     filterReservations(); // 현재 검색/필터 상태로 표시
                 } else {
                     console.error('저장 실패:', result);
