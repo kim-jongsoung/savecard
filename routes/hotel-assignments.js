@@ -943,11 +943,22 @@ E-mail: ${process.env.SMTP_FROM || 'res@lux-find.com'}
 
         console.log('✅ 바우처 인보이스 이메일 전송 완료:', info.messageId);
 
+        // 7. 이메일 전송 기록 업데이트
+        await pool.query(`
+            UPDATE hotel_invoices
+            SET 
+                email_sent_to = $1,
+                email_sent_at = NOW(),
+                email_message_id = $2
+            WHERE id = $3
+        `, [recipient_email, info.messageId, invoiceId]);
+
         res.json({
             success: true,
             message: '이메일이 전송되었습니다.',
             messageId: info.messageId,
-            recipient: recipient_email
+            recipient: recipient_email,
+            sentAt: new Date().toISOString()
         });
 
     } catch (error) {

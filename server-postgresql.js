@@ -16609,6 +16609,28 @@ async function startServer() {
                     ) THEN
                         ALTER TABLE hotel_invoices ADD COLUMN total_amount_krw DECIMAL(12,2);
                     END IF;
+
+                    -- 이메일 전송 기록 필드 추가
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hotel_invoices' AND column_name = 'email_sent_to'
+                    ) THEN
+                        ALTER TABLE hotel_invoices ADD COLUMN email_sent_to VARCHAR(255);
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hotel_invoices' AND column_name = 'email_sent_at'
+                    ) THEN
+                        ALTER TABLE hotel_invoices ADD COLUMN email_sent_at TIMESTAMP;
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'hotel_invoices' AND column_name = 'email_message_id'
+                    ) THEN
+                        ALTER TABLE hotel_invoices ADD COLUMN email_message_id VARCHAR(255);
+                    END IF;
                 END $$;
             `);
 

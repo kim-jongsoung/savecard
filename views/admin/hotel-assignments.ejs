@@ -5569,6 +5569,15 @@
                         const amount = parseFloat(invoice.total_amount || 0);
                         const amountKRW = parseFloat(invoice.total_amount_krw || 0);
                         
+                        // 이메일 전송 기록
+                        const emailSent = invoice.email_sent_to && invoice.email_sent_at;
+                        const emailSentDate = emailSent ? new Date(invoice.email_sent_at).toLocaleString('ko-KR', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : '';
+                        
                         html += `
                             <div class="border-bottom p-3" style="background: ${index % 2 === 0 ? '#f8f9fa' : 'white'};">
                                 <!-- 인보이스 헤더 -->
@@ -5585,28 +5594,22 @@
                                             <span class="badge bg-success">$${amount.toFixed(2)}</span>
                                             ${amountKRW > 0 ? `<span class="badge bg-info ms-1">₩${Math.round(amountKRW).toLocaleString('ko-KR')}</span>` : ''}
                                         </div>
+                                        ${emailSent ? `
+                                        <div class="mt-2 small">
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-check me-1"></i>전송완료
+                                            </span>
+                                            <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                                                <i class="fas fa-envelope me-1"></i>${invoice.email_sent_to}
+                                                <br>
+                                                <i class="fas fa-clock me-1"></i>${emailSentDate}
+                                            </div>
+                                        </div>
+                                        ` : ''}
                                     </div>
                                     <button class="btn btn-sm btn-outline-danger" onclick="deleteVoucherInvoice(${invoice.id})" title="삭제">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </div>
-                                
-                                <!-- 업무 프로세스 (인보이스별) -->
-                                <div class="mb-3 p-2" style="background: white; border-radius: 6px; border: 1px solid #dee2e6;">
-                                    <div class="d-flex justify-content-around text-center small">
-                                        <div class="flex-fill">
-                                            <div class="text-success"><i class="fas fa-check-circle"></i></div>
-                                            <div class="mt-1" style="font-size: 0.75rem;">생성완료</div>
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="text-muted" id="invoice${invoice.id}EmailStatus"><i class="fas fa-envelope"></i></div>
-                                            <div class="mt-1" style="font-size: 0.75rem;">이메일</div>
-                                        </div>
-                                        <div class="flex-fill">
-                                            <div class="text-muted"><i class="fas fa-check-circle"></i></div>
-                                            <div class="mt-1" style="font-size: 0.75rem;">완료</div>
-                                        </div>
-                                    </div>
                                 </div>
                                 
                                 <!-- 이메일 전송 폼 (접기/펼치기) -->
@@ -5960,6 +5963,11 @@
                 if (result.success) {
                     alert(`✅ 이메일이 전송되었습니다.\n받는 사람: ${recipient}`);
                     console.log('✅ 이메일 전송 완료:', result);
+                    
+                    // 인보이스 목록 새로고침하여 전송 기록 표시
+                    if (currentVoucherReservationId) {
+                        await loadVoucherInvoicesList(currentVoucherReservationId);
+                    }
                 } else {
                     alert('❌ 이메일 전송 실패: ' + (result.message || '알 수 없는 오류'));
                     console.error('❌ 이메일 전송 실패:', result);
