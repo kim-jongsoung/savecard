@@ -3738,7 +3738,9 @@
                     alert('✅ 예약이 수정되었습니다.');
                     lastClosedReservationId = currentEditingId;
                     bootstrap.Modal.getInstance(document.getElementById('editReservationModal')).hide();
-                    loadReservations();
+                    // 검색 상태 유지를 위해 filterReservations() 호출
+                    await loadReservations();
+                    filterReservations();
                 } else {
                     console.error('저장 실패:', result);
                     alert('❌ 수정 실패: ' + (result.error || '알 수 없는 오류'));
@@ -5102,7 +5104,9 @@
                     const modalEl = document.getElementById('confirmModal');
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
-                    loadReservations();
+                    // 검색 상태 유지를 위해 filterReservations() 호출
+                    await loadReservations();
+                    filterReservations();
                 } else {
                     alert('❌ 컨펌번호 저장 실패: ' + (result.message || result.error || '알 수 없는 오류'));
                 }
@@ -6252,8 +6256,9 @@
                     alert('✅ 정산으로 이관되었습니다!');
                     bootstrap.Modal.getInstance(document.getElementById('settlementModal')).hide();
                     
-                    // 예약 목록 새로고침
+                    // 예약 목록 새로고침 (검색 상태 유지)
                     await loadReservations();
+                    filterReservations();
                 } else {
                     alert('❌ 이관 실패: ' + (result.error || '알 수 없는 오류'));
                 }
