@@ -1157,22 +1157,19 @@
             
             document.getElementById('emptyState').style.display = 'none';
             
-            // 정렬: 접수/수정 → 수배중/열람 → 확정(출발일순) → 바우처 → 정산
+            // 정렬: 1차 상태별 우선순위, 2차 출발일(체크인일) 가까운 순
             const sorted = [...activeReservations].sort((a, b) => {
                 const priority = { 'pending': 1, 'modifying': 1, 'processing': 2, 'confirmed': 3, 'voucher': 4, 'settlement': 5 };
                 const aPri = priority[a.status] || 99;
                 const bPri = priority[b.status] || 99;
                 
+                // 1차: 상태별 우선순위
                 if (aPri !== bPri) return aPri - bPri;
                 
-                // 확정 그룹 내에서는 출발일(체크인일) 가까운 순
-                if (a.status === 'confirmed' && b.status === 'confirmed') {
-                    const aDate = new Date(a.check_in_date || '9999-12-31');
-                    const bDate = new Date(b.check_in_date || '9999-12-31');
-                    return aDate - bDate;
-                }
-                
-                return 0;
+                // 2차: 같은 상태 내에서는 출발일(체크인일) 가까운 순
+                const aDate = new Date(a.check_in_date || '9999-12-31');
+                const bDate = new Date(b.check_in_date || '9999-12-31');
+                return aDate - bDate;
             });
             
             container.innerHTML = `
