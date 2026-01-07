@@ -1689,8 +1689,23 @@
             if (startDate || endDate) {
                 filtered = filtered.filter(r => {
                     const targetDate = dateType === 'reservation' ? r.reservation_date : r.check_in_date;
-                    if (startDate && targetDate < startDate) return false;
-                    if (endDate && targetDate > endDate) return false;
+                    if (!targetDate) return false;
+                    
+                    // 날짜를 YYYY-MM-DD 형식으로 정규화
+                    const normalizeDate = (dateStr) => {
+                        if (!dateStr) return '';
+                        const d = new Date(dateStr);
+                        if (isNaN(d.getTime())) return '';
+                        return d.toISOString().split('T')[0];
+                    };
+                    
+                    const normalizedTarget = normalizeDate(targetDate);
+                    const normalizedStart = startDate ? normalizeDate(startDate) : '';
+                    const normalizedEnd = endDate ? normalizeDate(endDate) : '';
+                    
+                    // 날짜 범위 비교 (동일 날짜 포함)
+                    if (normalizedStart && normalizedTarget < normalizedStart) return false;
+                    if (normalizedEnd && normalizedTarget > normalizedEnd) return false;
                     return true;
                 });
             }
