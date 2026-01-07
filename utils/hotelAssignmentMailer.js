@@ -828,7 +828,7 @@ function generateEmailHTML(emailContent, assignmentLink, assignmentData) {
             <p style="margin-top: 30px;">${emailContent.closing}</p>
             <p><strong>LUXFIND</strong></p>
             <p style="font-size: 14px; color: #666; margin-top: 10px;">
-                E-mail: luxfind01@gmail.com
+                E-mail: ${process.env.SMTP_FROM || 'res@lux-find.com'}
             </p>
         </div>
         

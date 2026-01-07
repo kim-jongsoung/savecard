@@ -13,7 +13,7 @@ const openai = new OpenAI({
 async function generateHotelEmailContent(assignmentData) {
     try {
         const senderName = assignmentData.agency_contact_person || 'LUXFIND';
-        const senderEmail = assignmentData.agency_contact_email || 'luxfind01@gmail.com';
+        const senderEmail = assignmentData.agency_contact_email || process.env.SMTP_FROM || 'res@lux-find.com';
         const assignmentType = assignmentData.assignment_type || 'NEW';
         
         // 상황별 프롬프트 설정
@@ -58,7 +58,7 @@ Requirements:
 4. Start with a greeting and end with a thank you.
 5. Write everything in English.
 6. Sign as ${senderName} from LUXFIND.
-7. Include the contact email: ${senderEmail}.
+7. DO NOT include any email address in the email body. The email signature will be added automatically.
 
 Output format: JSON
 {
