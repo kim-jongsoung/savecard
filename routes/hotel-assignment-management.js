@@ -403,16 +403,34 @@ router.post('/:assignmentId/send', async (req, res) => {
         // 6-3. 이메일 본문 HTML (AI 문구 + 스타일)
         const emailHTML = generateEmailHTML(emailContent, assignmentLink, assignment);
         
-        // 7. 이메일 발송 설정
+        // 7. 이메일 발송 설정 (국제 호텔 전송 최적화)
         const nodemailer = require('nodemailer');
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT || 587,
-            secure: false,
+            host: process.env.SMTP_HOST || 'smtp.dooray.com',
+            port: parseInt(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === 'true',
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
-            }
+            },
+            // 국제 메일 전송 최적화
+            tls: {
+                rejectUnauthorized: false,
+                minVersion: 'TLSv1.2'
+            },
+            // 타임아웃 설정
+            connectionTimeout: 30000,
+            greetingTimeout: 30000,
+            socketTimeout: 30000,
+            // 풀 설정
+            pool: true,
+            maxConnections: 5
+        });
+        
+        console.log('📧 SMTP 설정:', {
+            host: process.env.SMTP_HOST || 'smtp.dooray.com',
+            port: parseInt(process.env.SMTP_PORT) || 587,
+            user: process.env.SMTP_USER
         });
         
         // 8. 전송할 이메일 주소 결정
@@ -501,13 +519,22 @@ router.post('/:assignmentId/send', async (req, res) => {
         
         console.log(`📧 [최종 발신자 정보] 이름: ${senderName}, 이메일: ${senderEmail}`);
         
-        // 9. 이메일 전송
+        // 9. 이메일 전송 (스팸 필터 통과 최적화)
         const info = await transporter.sendMail({
-            from: `"${senderName}" <${senderEmail}>`,
-            replyTo: senderEmail,
+            from: `"${process.env.SMTP_FROM_NAME || 'LUXFIND Reservation Team'}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+            replyTo: process.env.SMTP_FROM || process.env.SMTP_USER,
             to: toEmail,
             subject: mailSubject,
             html: emailHTML,
+            // 스팸 필터 통과를 위한 헤더
+            headers: {
+                'X-Mailer': 'LUXFIND Hotel Reservation System',
+                'X-Priority': '1',
+                'Importance': 'high',
+                'X-MSMail-Priority': 'High'
+            },
+            priority: 'high',
+            // 텍스트 버전 (필수)
             text: `
 ${emailContent.greeting}
 

@@ -2,15 +2,33 @@ const nodemailer = require('nodemailer');
 
 // SMTP 전송자 설정
 function createTransporter() {
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    const config = {
+        host: process.env.SMTP_HOST || 'smtp.dooray.com',
         port: parseInt(process.env.SMTP_PORT) || 587,
         secure: process.env.SMTP_SECURE === 'true',
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
-        }
+        },
+        // 국제 메일 전송 최적화
+        tls: {
+            rejectUnauthorized: false,
+            minVersion: 'TLSv1.2'
+        },
+        // 타임아웃 설정
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000
+    };
+    
+    console.log('📧 SMTP 설정:', {
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        user: config.auth.user
     });
+    
+    return nodemailer.createTransport(config);
 }
 
 // 호텔 수배서 HTML 생성 (A4 1장 최적화, 영문)

@@ -6,17 +6,39 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-// SMTP 전송자 설정
+// SMTP 전송자 설정 (국제 호텔 전송 최적화)
 function createTransporter() {
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    const config = {
+        host: process.env.SMTP_HOST || 'smtp.dooray.com',
         port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        secure: process.env.SMTP_SECURE === 'true',
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS
-        }
+        },
+        // 국제 메일 전송 최적화
+        tls: {
+            rejectUnauthorized: false,
+            minVersion: 'TLSv1.2'
+        },
+        // 타임아웃 설정 (국제 전송 고려)
+        connectionTimeout: 30000,
+        greetingTimeout: 30000,
+        socketTimeout: 30000,
+        // 풀 설정
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100
+    };
+    
+    console.log('📧 SMTP 설정:', {
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+        user: config.auth.user
     });
+    
+    return nodemailer.createTransport(config);
 }
 
 // AI로 정중한 이메일 문구 생성
@@ -244,11 +266,20 @@ async function sendAssignmentEmail(assignmentData, recipientEmail) {
         const senderEmail = assignmentData.created_by_email || 'support@guamsavecard.com';
         
         const mailOptions = {
-            from: `"${senderName}" <${process.env.SMTP_USER}>`,
-            replyTo: senderEmail,
+            from: `"${process.env.SMTP_FROM_NAME || 'LUXFIND Reservation Team'}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+            replyTo: process.env.SMTP_FROM || process.env.SMTP_USER,
             to: recipientEmail,
             subject: emailContent.subject,
             html: htmlContent,
+            // 스팸 필터 통과를 위한 헤더
+            headers: {
+                'X-Mailer': 'LUXFIND Reservation System',
+                'X-Priority': '1',
+                'Importance': 'high',
+                'X-MSMail-Priority': 'High'
+            },
+            priority: 'high',
+            // 텍스트 버전 (필수 - 스팸 방지)
             text: `
 ${emailContent.greeting}
 
