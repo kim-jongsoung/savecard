@@ -519,21 +519,13 @@ router.post('/:assignmentId/send', async (req, res) => {
         
         console.log(`📧 [최종 발신자 정보] 이름: ${senderName}, 이메일: ${senderEmail}`);
         
-        // 9. 이메일 전송 (스팸 필터 통과 최적화)
+        // 9. 이메일 전송 (스팸 필터 통과 최적화 - HTML 첨부파일 제거)
         const info = await transporter.sendMail({
             from: `"${process.env.SMTP_FROM_NAME || 'LUXFIND Reservation Team'}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
             replyTo: process.env.SMTP_FROM || process.env.SMTP_USER,
             to: toEmail,
             subject: mailSubject,
             html: emailHTML,
-            // 스팸 필터 통과를 위한 헤더
-            headers: {
-                'X-Mailer': 'LUXFIND Hotel Reservation System',
-                'X-Priority': '1',
-                'Importance': 'high',
-                'X-MSMail-Priority': 'High'
-            },
-            priority: 'high',
             // 텍스트 버전 (필수)
             text: `
 ${emailContent.greeting}
@@ -546,13 +538,9 @@ ${emailContent.body}
 ${emailContent.closing}
 
 View Assignment: ${assignmentLink}
-            `.trim(),
-            attachments: [
-                {
-                    filename: `Assignment_${assignment.assignment_type}_${new Date().getTime()}.html`,
-                    content: assignmentHTML
-                }
-            ]
+            `.trim()
+            // ⚠️ HTML 첨부파일 제거 - 호텔 메일 서버에서 스팸으로 차단되는 문제 해결
+            // 대신 이메일 본문에 링크를 제공하여 웹에서 확인하도록 안내
         });
         
         // 10. 전송 정보 업데이트
