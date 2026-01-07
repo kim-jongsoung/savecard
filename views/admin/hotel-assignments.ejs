@@ -1094,8 +1094,8 @@
             }
         });
         
-        // 예약 목록 로드
-        async function loadReservations() {
+        // 예약 목록 로드 (데이터만 로드, 표시는 하지 않음)
+        async function loadReservations(autoDisplay = true) {
             document.getElementById('loading').style.display = 'block';
             document.getElementById('emptyState').style.display = 'none';
             
@@ -1104,7 +1104,12 @@
                 const data = await response.json();
                 
                 allReservations = data;
-                displayReservations(allReservations, false); // false = 기본 필터 적용
+                
+                // autoDisplay가 true일 때만 자동으로 표시 (초기 로드 시)
+                if (autoDisplay) {
+                    displayReservations(allReservations, false); // false = 기본 필터 적용
+                }
+                
                 updateStats(allReservations);
                 
             } catch (error) {
@@ -3739,8 +3744,8 @@
                     lastClosedReservationId = currentEditingId;
                     bootstrap.Modal.getInstance(document.getElementById('editReservationModal')).hide();
                     // 검색 상태 유지를 위해 filterReservations() 호출
-                    await loadReservations();
-                    filterReservations();
+                    await loadReservations(false); // 데이터만 로드
+                    filterReservations(); // 현재 검색/필터 상태로 표시
                 } else {
                     console.error('저장 실패:', result);
                     alert('❌ 수정 실패: ' + (result.error || '알 수 없는 오류'));
@@ -5105,8 +5110,8 @@
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
                     // 검색 상태 유지를 위해 filterReservations() 호출
-                    await loadReservations();
-                    filterReservations();
+                    await loadReservations(false); // 데이터만 로드
+                    filterReservations(); // 현재 검색/필터 상태로 표시
                 } else {
                     alert('❌ 컨펌번호 저장 실패: ' + (result.message || result.error || '알 수 없는 오류'));
                 }
@@ -5460,8 +5465,8 @@
                     await loadVoucherInvoicesList(currentVoucherReservationId);
                     
                     // 예약 목록 갱신 (검색 상태 유지)
-                    await loadReservations();
-                    filterReservations();
+                    await loadReservations(false); // 데이터만 로드
+                    filterReservations(); // 현재 검색/필터 상태로 표시
                 } else {
                     alert('❌ 바우처인보이스 생성 실패: ' + (result.message || result.error || '알 수 없는 오류'));
                 }
@@ -6258,8 +6263,8 @@
                     bootstrap.Modal.getInstance(document.getElementById('settlementModal')).hide();
                     
                     // 예약 목록 새로고침 (검색 상태 유지)
-                    await loadReservations();
-                    filterReservations();
+                    await loadReservations(false); // 데이터만 로드
+                    filterReservations(); // 현재 검색/필터 상태로 표시
                 } else {
                     alert('❌ 이관 실패: ' + (result.error || '알 수 없는 오류'));
                 }
