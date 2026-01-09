@@ -17212,7 +17212,8 @@ async function startServer() {
                 res.render('admin/settlements', { 
                     title: '정산관리',
                     currentPage: 'settlements',
-                    adminUsername: req.session.adminUsername || 'Admin'
+                    adminUsername: req.session.adminUsername || 'Admin',
+                    adminRole: req.session.adminRole || 'staff'
                 });
                 console.log('정산관리 페이지 렌더링 완료');
             } catch (error) {

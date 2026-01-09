@@ -1300,10 +1300,13 @@
                 // 계산 실행
                 calculateEditSettlement();
                 
-                // 완료된 항목은 읽기 전용으로 설정
+                // 관리자 권한 확인
+                const isAdmin = '<%= adminRole %>' === 'admin';
+                
+                // 완료된 항목은 읽기 전용으로 설정 (단, 관리자는 수정 가능)
                 const formElements = document.querySelectorAll('#settlementDetailModal input, #settlementDetailModal select, #settlementDetailModal textarea');
                 formElements.forEach(el => {
-                    if (isCompleted) {
+                    if (isCompleted && !isAdmin) {
                         el.setAttribute('readonly', true);
                         el.setAttribute('disabled', true);
                     } else {
@@ -1314,15 +1317,18 @@
                 
                 // 모달 제목 변경
                 const modalTitle = document.querySelector('#settlementDetailModal .modal-title');
-                modalTitle.innerHTML = isCompleted 
-                    ? '<i class="fas fa-file-invoice me-2"></i>정산서 상세' 
-                    : '<i class="fas fa-edit me-2"></i>정산 상세/수정';
+                if (isCompleted && !isAdmin) {
+                    modalTitle.innerHTML = '<i class="fas fa-file-invoice me-2"></i>정산서 상세';
+                } else {
+                    modalTitle.innerHTML = '<i class="fas fa-edit me-2"></i>정산 상세/수정';
+                }
                 
                 // 버튼 표시/숨김
                 const deleteBtn = document.querySelector('#settlementDetailModal .btn-danger');
                 const saveBtn = document.querySelector('#settlementDetailModal .btn-primary');
                 
-                if (isCompleted) {
+                if (isCompleted && !isAdmin) {
+                    // 일반 직원은 완료된 정산 수정 불가
                     deleteBtn.style.display = 'none';
                     saveBtn.style.display = 'none';
                     
@@ -1342,13 +1348,31 @@
                         modalBody.insertBefore(paymentInfo, modalBody.firstChild);
                     }
                 } else {
+                    // 미완료 정산 또는 관리자는 수정 가능
                     deleteBtn.style.display = 'inline-block';
                     saveBtn.style.display = 'inline-block';
                     
-                    // 입출금 정보 제거
-                    const modalBody = document.querySelector('#settlementDetailModal .modal-body');
-                    const existingInfo = modalBody.querySelector('.alert-info');
-                    if (existingInfo) existingInfo.remove();
+                    // 관리자가 완료된 정산을 수정하는 경우 경고 메시지 표시
+                    if (isCompleted && isAdmin) {
+                        const warningInfo = document.createElement('div');
+                        warningInfo.className = 'alert alert-warning mt-3';
+                        warningInfo.innerHTML = `
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i>관리자 권한으로 완료된 정산을 수정합니다</strong><br>
+                            <small>이미 입출금이 완료된 정산입니다. 신중하게 수정해주세요.</small>
+                        `;
+                        
+                        const modalBody = document.querySelector('#settlementDetailModal .modal-body');
+                        const existingWarning = modalBody.querySelector('.alert-warning');
+                        if (existingWarning) existingWarning.remove();
+                        modalBody.insertBefore(warningInfo, modalBody.firstChild);
+                    } else {
+                        // 입출금 정보 및 경고 메시지 제거
+                        const modalBody = document.querySelector('#settlementDetailModal .modal-body');
+                        const existingInfo = modalBody.querySelector('.alert-info');
+                        const existingWarning = modalBody.querySelector('.alert-warning');
+                        if (existingInfo) existingInfo.remove();
+                        if (existingWarning) existingWarning.remove();
+                    }
                 }
                 
                 // 모달 열기
