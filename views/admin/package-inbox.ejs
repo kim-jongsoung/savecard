@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>패키지 예약 등록 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 0 20px;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .step.active .step-number {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .step.completed .step-number {
+            background-color: #198754;
+            color: white;
+        }
+        .form-section {
+            display: none;
+        }
+        .form-section.active {
+            display: block;
+        }
+        .component-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: white;
+        }
+        .component-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .component-type-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .badge-flight { background-color: #e3f2fd; color: #1976d2; }
+        .badge-hotel { background-color: #f3e5f5; color: #7b1fa2; }
+        .badge-tour { background-color: #e8f5e9; color: #388e3c; }
+        .badge-other { background-color: #fff3e0; color: #f57c00; }
+        .summary-box {
+            background-color: #f8f9fa;
+            border: 2px solid #0d6efd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .summary-total {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #0d6efd;
+            border-top: 2px solid #dee2e6;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/admin-header') %>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-box-open me-2"></i>패키지 예약 등록</h2>
+                    <a href="/admin/package-reservations" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i>예약 목록
+                    </a>
+                </div>
+
+                <!-- 단계 표시 -->
+                <div class="step-indicator">
+                    <div class="step active" id="step1-indicator">
+                        <div class="step-number">1</div>
+                        <span>기본 정보</span>
+                    </div>
+                    <div class="step" id="step2-indicator">
+                        <div class="step-number">2</div>
+                        <span>금액 정보</span>
+                    </div>
+                </div>
+
+                <!-- 폼 -->
+                <div class="card">
+                    <div class="card-body">
+                        <form id="packageForm">
+                            <!-- 1단계: 기본 정보 -->
+                            <div class="form-section active" id="step1">
+                                <h4 class="mb-4">📋 기본 정보</h4>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">예약 채널 *</label>
+                                        <select class="form-select" id="platform_name" required>
+                                            <option value="">선택하세요</option>
+                                            <option value="VASCO">VASCO</option>
+                                            <option value="NOL">NOL</option>
+                                            <option value="롱혼스테이크">롱혼스테이크</option>
+                                            <option value="직접예약">직접예약</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">패키지명 *</label>
+                                        <input type="text" class="form-control" id="package_name" 
+                                               placeholder="예: 인천-괌 3박4일 허니문 패키지" required>
+                                    </div>
+                                </div>
+
+                                <h5 class="mt-4 mb-3">👤 고객 정보</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">한글 이름 *</label>
+                                        <input type="text" class="form-control" id="korean_name" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">영문 이름</label>
+                                        <input type="text" class="form-control" id="english_name" 
+                                               placeholder="HONG GILDONG">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">연락처</label>
+                                        <input type="text" class="form-control" id="phone" 
+                                               placeholder="010-1234-5678">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">이메일</label>
+                                        <input type="email" class="form-control" id="email" 
+                                               placeholder="hong@email.com">
+                                    </div>
+                                </div>
+
+                                <h5 class="mt-4 mb-3">📅 여행 기간</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">출발일 *</label>
+                                        <input type="date" class="form-control" id="departure_date" 
+                                               onchange="calculateNights()" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">귀국일 *</label>
+                                        <input type="date" class="form-control" id="return_date" 
+                                               onchange="calculateNights()" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">기간</label>
+                                        <input type="text" class="form-control" id="period_display" 
+                                               readonly placeholder="자동 계산">
+                                    </div>
+                                </div>
+
+                                <h5 class="mt-4 mb-3">👥 인원</h5>
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">성인</label>
+                                        <input type="number" class="form-control" id="people_adult" 
+                                               value="2" min="0">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">소아</label>
+                                        <input type="number" class="form-control" id="people_child" 
+                                               value="0" min="0">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">유아</label>
+                                        <input type="number" class="form-control" id="people_infant" 
+                                               value="0" min="0">
+                                    </div>
+                                </div>
+
+                                <div class="text-end mt-4">
+                                    <button type="button" class="btn btn-primary btn-lg" onclick="goToStep2()">
+                                        다음 단계: 금액 입력 <i class="fas fa-arrow-right ms-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2단계: 금액 정보 -->
+                            <div class="form-section" id="step2">
+                                <h4 class="mb-4">💰 금액 정보</h4>
+                                
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label">총 판매가 *</label>
+                                        <input type="number" class="form-control" id="total_selling_price" 
+                                               placeholder="1500000" onchange="calculateSummary()" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">통화 *</label>
+                                        <select class="form-select" id="currency" onchange="toggleExchangeRate()">
+                                            <option value="KRW">KRW (원화)</option>
+                                            <option value="USD">USD (달러)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">환율</label>
+                                        <input type="number" class="form-control" id="exchange_rate" 
+                                               value="1300" disabled>
+                                    </div>
+                                </div>
+
+                                <h5 class="mb-3">📦 매입 구성요소</h5>
+                                <div id="components-container"></div>
+
+                                <button type="button" class="btn btn-outline-primary mb-4" onclick="addComponent()">
+                                    <i class="fas fa-plus me-1"></i>구성요소 추가
+                                </button>
+
+                                <!-- 자동 계산 요약 -->
+                                <div class="summary-box">
+                                    <h5 class="mb-3">💵 금액 요약</h5>
+                                    <div class="summary-row">
+                                        <span>총 판매가:</span>
+                                        <span id="summary_revenue">₩0</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>총 매입가:</span>
+                                        <span id="summary_cost">₩0</span>
+                                    </div>
+                                    <div class="summary-row summary-total">
+                                        <span>예상 마진:</span>
+                                        <span id="summary_margin">₩0 (0%)</span>
+                                    </div>
+                                    <div class="summary-row">
+                                        <span>부가세 (마진의 10%):</span>
+                                        <span id="summary_vat">₩0</span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3 mt-4">
+                                    <label class="form-label">특별 요청사항</label>
+                                    <textarea class="form-control" id="special_requests" rows="3" 
+                                              placeholder="특별 요청사항이 있으면 입력하세요"></textarea>
+                                </div>
+
+                                <div class="d-flex justify-content-between mt-4">
+                                    <button type="button" class="btn btn-secondary btn-lg" onclick="goToStep1()">
+                                        <i class="fas fa-arrow-left me-2"></i>이전 단계
+                                    </button>
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-save me-2"></i>패키지 예약 등록
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let componentCount = 0;
+
+        // 박수 자동 계산
+        function calculateNights() {
+            const departure = document.getElementById('departure_date').value;
+            const returnDate = document.getElementById('return_date').value;
+            
+            if (departure && returnDate) {
+                const d1 = new Date(departure);
+                const d2 = new Date(returnDate);
+                const diffTime = Math.abs(d2 - d1);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                document.getElementById('period_display').value = `${diffDays}박${diffDays + 1}일`;
+            }
+        }
+
+        // 환율 필드 토글
+        function toggleExchangeRate() {
+            const currency = document.getElementById('currency').value;
+            const exchangeRateInput = document.getElementById('exchange_rate');
+            
+            if (currency === 'USD') {
+                exchangeRateInput.disabled = false;
+            } else {
+                exchangeRateInput.disabled = true;
+                exchangeRateInput.value = 1;
+            }
+            
+            calculateSummary();
+        }
+
+        // 구성요소 추가
+        function addComponent() {
+            componentCount++;
+            const container = document.getElementById('components-container');
+            
+            const componentHTML = `
+                <div class="component-item" id="component-${componentCount}">
+                    <div class="component-header">
+                        <div>
+                            <select class="form-select form-select-sm d-inline-block w-auto component-type" 
+                                    id="type-${componentCount}" onchange="updateComponentBadge(${componentCount})">
+                                <option value="flight">✈️ 항공권</option>
+                                <option value="hotel">🏨 호텔</option>
+                                <option value="tour">🎯 투어</option>
+                                <option value="other">📦 기타</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeComponent(${componentCount})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">공급업체명 *</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="vendor-${componentCount}" placeholder="예: 아시아나항공" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">매입가 *</label>
+                            <input type="number" class="form-control form-control-sm" 
+                                   id="cost-${componentCount}" placeholder="850000" 
+                                   onchange="calculateSummary()" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">통화</label>
+                            <select class="form-select form-select-sm" id="cost-currency-${componentCount}" 
+                                    onchange="calculateSummary()">
+                                <option value="KRW">KRW</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">원화 환산</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="cost-krw-${componentCount}" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">비고</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="notes-${componentCount}" placeholder="OZ601/OZ602 왕복">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', componentHTML);
+        }
+
+        // 구성요소 삭제
+        function removeComponent(id) {
+            document.getElementById(`component-${id}`).remove();
+            calculateSummary();
+        }
+
+        // 금액 요약 계산
+        function calculateSummary() {
+            const sellingPrice = parseFloat(document.getElementById('total_selling_price').value) || 0;
+            const currency = document.getElementById('currency').value;
+            const exchangeRate = parseFloat(document.getElementById('exchange_rate').value) || 1;
+            
+            // 총 판매가 (원화 환산)
+            const revenueKRW = currency === 'KRW' ? sellingPrice : sellingPrice * exchangeRate;
+            
+            // 총 매입가 계산
+            let totalCostKRW = 0;
+            const components = document.querySelectorAll('.component-item');
+            
+            components.forEach(component => {
+                const id = component.id.split('-')[1];
+                const cost = parseFloat(document.getElementById(`cost-${id}`).value) || 0;
+                const costCurrency = document.getElementById(`cost-currency-${id}`).value;
+                
+                const costKRW = costCurrency === 'KRW' ? cost : cost * exchangeRate;
+                totalCostKRW += costKRW;
+                
+                // 개별 구성요소 원화 환산 표시
+                document.getElementById(`cost-krw-${id}`).value = 
+                    `₩${Math.round(costKRW).toLocaleString()}`;
+            });
+            
+            // 마진 계산
+            const marginKRW = revenueKRW - totalCostKRW;
+            const marginRate = revenueKRW > 0 ? (marginKRW / revenueKRW * 100).toFixed(1) : 0;
+            
+            // 부가세 (마진의 10%)
+            const vatAmount = Math.round(marginKRW * 0.1);
+            
+            // 요약 표시
+            document.getElementById('summary_revenue').textContent = 
+                `₩${Math.round(revenueKRW).toLocaleString()}`;
+            document.getElementById('summary_cost').textContent = 
+                `₩${Math.round(totalCostKRW).toLocaleString()}`;
+            document.getElementById('summary_margin').textContent = 
+                `₩${Math.round(marginKRW).toLocaleString()} (${marginRate}%)`;
+            document.getElementById('summary_margin').style.color = marginKRW >= 0 ? '#198754' : '#dc3545';
+            document.getElementById('summary_vat').textContent = 
+                `₩${vatAmount.toLocaleString()}`;
+        }
+
+        // 단계 이동
+        function goToStep1() {
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1-indicator').classList.add('active');
+            document.getElementById('step2-indicator').classList.remove('active');
+            window.scrollTo(0, 0);
+        }
+
+        function goToStep2() {
+            // 1단계 필수 입력 확인
+            const required = ['platform_name', 'package_name', 'korean_name', 'departure_date', 'return_date'];
+            for (const field of required) {
+                if (!document.getElementById(field).value) {
+                    alert('필수 항목을 모두 입력해주세요.');
+                    return;
+                }
+            }
+            
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('step1-indicator').classList.add('completed');
+            document.getElementById('step2-indicator').classList.add('active');
+            window.scrollTo(0, 0);
+            
+            // 2단계 진입 시 기본 구성요소 추가
+            if (componentCount === 0) {
+                addComponent();
+            }
+        }
+
+        // 폼 제출
+        document.getElementById('packageForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 구성요소 수집
+            const components = [];
+            document.querySelectorAll('.component-item').forEach(component => {
+                const id = component.id.split('-')[1];
+                components.push({
+                    component_type: document.getElementById(`type-${id}`).value,
+                    vendor_name: document.getElementById(`vendor-${id}`).value,
+                    cost_amount: parseFloat(document.getElementById(`cost-${id}`).value),
+                    cost_currency: document.getElementById(`cost-currency-${id}`).value,
+                    notes: document.getElementById(`notes-${id}`).value
+                });
+            });
+            
+            if (components.length === 0) {
+                alert('최소 1개 이상의 구성요소를 추가해주세요.');
+                return;
+            }
+            
+            const data = {
+                platform_name: document.getElementById('platform_name').value,
+                package_name: document.getElementById('package_name').value,
+                customer: {
+                    korean_name: document.getElementById('korean_name').value,
+                    english_name: document.getElementById('english_name').value,
+                    phone: document.getElementById('phone').value,
+                    email: document.getElementById('email').value
+                },
+                travel_period: {
+                    departure_date: document.getElementById('departure_date').value,
+                    return_date: document.getElementById('return_date').value
+                },
+                people: {
+                    adult: parseInt(document.getElementById('people_adult').value) || 0,
+                    child: parseInt(document.getElementById('people_child').value) || 0,
+                    infant: parseInt(document.getElementById('people_infant').value) || 0
+                },
+                pricing: {
+                    total_selling_price: parseFloat(document.getElementById('total_selling_price').value),
+                    currency: document.getElementById('currency').value,
+                    exchange_rate: parseFloat(document.getElementById('exchange_rate').value)
+                },
+                cost_components: components,
+                special_requests: document.getElementById('special_requests').value
+            };
+            
+            try {
+                const response = await fetch('/api/package-reservations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ 패키지 예약이 등록되었습니다!\n예약번호: ${result.data.reservation_number}`);
+                    window.location.href = '/admin/package-reservations';
+                } else {
+                    alert('❌ 등록 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('등록 오류:', error);
+                alert('패키지 예약 등록 중 오류가 발생했습니다.');
+            }
+        });
+
+        // 페이지 로드 시 오늘 날짜 설정
+        window.addEventListener('load', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('departure_date').value = today;
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 3);
+            document.getElementById('return_date').value = tomorrow.toISOString().split('T')[0];
+            
+            calculateNights();
+        });
+    </script>
+</body>
+</html>

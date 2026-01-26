@@ -13,6 +13,10 @@ const cron = require('node-cron');
 const axios = require('axios');
 const XLSX = require('xlsx');
 
+// MongoDB 연결
+const { connectMongoDB } = require('./config/mongodb');
+const PackageReservation = require('./models/PackageReservation');
+
 // 비즈고 서비스 초기화 (싱글톤 인스턴스)
 let bizonService = null;
 try {
@@ -830,6 +834,15 @@ try {
     console.error('⚠️ 수배업체 라우트 연결 실패:', error.message);
 }
 
+// 패키지 예약 API 라우트 연결
+try {
+    const packageReservationsRouter = require('./routes/package-reservations');
+    app.use('/api/package-reservations', packageReservationsRouter);
+    console.log('✅ 패키지 예약 API 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 패키지 예약 라우트 연결 실패:', error.message);
+}
+
 // 요금 RAG API 라우트 연결
 try {
     const pricingRouter = require('./routes/pricing')(pool);
@@ -1108,6 +1121,33 @@ app.get('/admin/hotel-settlements', requireAuth, (req, res) => {
         title: '호텔 정산관리',
         adminUsername: req.session.adminUsername,
         currentPage: 'hotel-settlements'
+    });
+});
+
+// 패키지 예약 등록 페이지
+app.get('/admin/package-inbox', requireAuth, (req, res) => {
+    res.render('admin/package-inbox', {
+        title: '패키지 예약 등록',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'package-inbox'
+    });
+});
+
+// 패키지 예약 목록 페이지
+app.get('/admin/package-reservations', requireAuth, (req, res) => {
+    res.render('admin/package-reservations', {
+        title: '패키지 예약 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'package-reservations'
+    });
+});
+
+// 패키지 정산 관리 페이지
+app.get('/admin/package-settlements', requireAuth, (req, res) => {
+    res.render('admin/package-settlements', {
+        title: '패키지 정산 관리',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'package-settlements'
     });
 });
 
@@ -16757,6 +16797,14 @@ async function startServer() {
             console.warn('⚠️  visible_in_public 컬럼 추가 경고:', colErr.message);
         }
         } // if (false) 마이그레이션 블록 종료
+        
+        // MongoDB 연결
+        try {
+            await connectMongoDB();
+            console.log('✅ MongoDB 연결 완료');
+        } catch (error) {
+            console.error('⚠️ MongoDB 연결 실패 (패키지 예약 기능 제한):', error.message);
+        }
         
         // 서버 먼저 시작
         const httpServer = app.listen(PORT, () => {
