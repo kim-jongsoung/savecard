@@ -1160,6 +1160,34 @@ app.get('/api/test', (req, res) => {
     });
 });
 
+// MongoDB 연결 상태 체크 API
+app.get('/api/mongodb-status', (req, res) => {
+    const mongoose = require('mongoose');
+    const readyState = mongoose.connection.readyState;
+    
+    const states = {
+        0: 'disconnected',
+        1: 'connected',
+        2: 'connecting',
+        3: 'disconnecting'
+    };
+    
+    const isConnected = readyState === 1;
+    
+    res.json({
+        success: true,
+        mongodb: {
+            connected: isConnected,
+            state: states[readyState] || 'unknown',
+            stateCode: readyState,
+            host: mongoose.connection.host || 'N/A',
+            name: mongoose.connection.name || 'N/A',
+            uri: process.env.MONGODB_URI ? '✅ 설정됨' : '❌ 미설정'
+        },
+        message: isConnected ? '✅ MongoDB 연결 정상' : '⚠️ MongoDB 연결 안됨'
+    });
+});
+
 // 예약관리 페이지 전용 API - 대기중 상태만 표시
 app.get('/api/reservations', async (req, res) => {
     try {
