@@ -11,6 +11,11 @@ const connectMongoDB = async () => {
     try {
         const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/guamsavecard';
         
+        // 디버깅: 환경변수 확인
+        console.log('🔍 MongoDB 연결 시도...');
+        console.log('🔍 MONGODB_URI 환경변수:', process.env.MONGODB_URI ? '✅ 설정됨' : '❌ 미설정');
+        console.log('🔍 사용할 URI:', MONGODB_URI.replace(/\/\/.*@/, '//***@'));
+        
         await mongoose.connect(MONGODB_URI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
