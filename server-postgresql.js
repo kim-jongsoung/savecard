@@ -16827,6 +16827,11 @@ async function startServer() {
         } // if (false) 마이그레이션 블록 종료
         
         // MongoDB 연결
+        console.log('🔍 환경변수 디버깅:');
+        console.log('  - MONGODB_URI:', process.env.MONGODB_URI ? '✅ 설정됨' : '❌ 미설정');
+        console.log('  - MONGO_URL:', process.env.MONGO_URL ? '✅ 설정됨' : '❌ 미설정');
+        console.log('  - NODE_ENV:', process.env.NODE_ENV);
+        
         try {
             await connectMongoDB();
             console.log('✅ MongoDB 연결 완료');
