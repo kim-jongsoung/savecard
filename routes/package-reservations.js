@@ -4,7 +4,7 @@ const PackageReservation = require('../models/PackageReservation');
 
 // 인증 미들웨어
 const requireAuth = (req, res, next) => {
-    if (!req.session.admin) {
+    if (!req.session.adminId) {
         return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
     }
     next();
