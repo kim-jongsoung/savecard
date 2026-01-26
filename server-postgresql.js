@@ -18517,6 +18517,98 @@ async function startServer() {
             }
         });
         
+        // 호텔 정산 일괄 입금/송금 취소 처리
+        app.post('/api/hotel-settlements/bulk-cancel-payment', requireAuth, async (req, res) => {
+            try {
+                const { reservation_ids, type } = req.body;
+                
+                console.log('🔄 호텔 정산 일괄 취소:', { reservation_ids, type });
+                
+                if (!reservation_ids || !Array.isArray(reservation_ids) || reservation_ids.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '취소할 예약을 선택해주세요.'
+                    });
+                }
+                
+                if (!type || !['received', 'sent'].includes(type)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '취소 유형이 올바르지 않습니다.'
+                    });
+                }
+                
+                const client = await pool.connect();
+                
+                try {
+                    await client.query('BEGIN');
+                    
+                    let updateQuery;
+                    let params;
+                    
+                    if (type === 'received') {
+                        // 입금 취소 (날짜 삭제)
+                        const placeholders = reservation_ids.map((_, i) => `$${i + 1}`).join(',');
+                        updateQuery = `
+                            UPDATE hotel_reservations
+                            SET payment_received_date = NULL,
+                                status = CASE 
+                                    WHEN payment_sent_date IS NOT NULL THEN 'voucher_sent'
+                                    ELSE 'confirmed'
+                                END,
+                                updated_at = NOW()
+                            WHERE id IN (${placeholders})
+                        `;
+                        params = reservation_ids;
+                    } else {
+                        // 송금 취소 (날짜 및 송금환율 삭제)
+                        const placeholders = reservation_ids.map((_, i) => `$${i + 1}`).join(',');
+                        updateQuery = `
+                            UPDATE hotel_reservations
+                            SET payment_sent_date = NULL,
+                                remittance_rate = NULL,
+                                status = CASE 
+                                    WHEN payment_received_date IS NOT NULL THEN 'voucher_sent'
+                                    ELSE 'confirmed'
+                                END,
+                                updated_at = NOW()
+                            WHERE id IN (${placeholders})
+                        `;
+                        params = reservation_ids;
+                    }
+                    
+                    console.log('🔍 실행 쿼리:', updateQuery);
+                    console.log('🔍 쿼리 파라미터:', params);
+                    
+                    const result = await client.query(updateQuery, params);
+                    console.log('📊 영향받은 행 수:', result.rowCount);
+                    
+                    await client.query('COMMIT');
+                    
+                    console.log(`✅ ${result.rowCount}개 호텔 정산 ${type === 'received' ? '입금' : '송금'} 취소 완료`);
+                    
+                    res.json({
+                        success: true,
+                        message: `${result.rowCount}개 항목의 ${type === 'received' ? '입금' : '송금'}이 취소되었습니다.`,
+                        count: result.rowCount
+                    });
+                    
+                } catch (error) {
+                    await client.query('ROLLBACK');
+                    throw error;
+                } finally {
+                    client.release();
+                }
+                
+            } catch (error) {
+                console.error('❌ 호텔 정산 일괄 취소 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '일괄 취소 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // ==================== 정산관리 목록 및 처리 API ====================
         
         // 정산 목록 조회 (상태별)

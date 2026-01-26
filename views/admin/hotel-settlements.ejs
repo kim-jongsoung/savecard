@@ -107,6 +107,12 @@
             <button class="btn btn-danger btn-sm" onclick="bulkPayment('sent')">
                 <i class="fas fa-arrow-up me-1"></i>선택 항목 일괄 송금
             </button>
+            <button class="btn btn-warning btn-sm" onclick="bulkCancelPayment('received')">
+                <i class="fas fa-undo me-1"></i>선택 항목 일괄 입금 취소
+            </button>
+            <button class="btn btn-info btn-sm" onclick="bulkCancelPayment('sent')">
+                <i class="fas fa-undo me-1"></i>선택 항목 일괄 송금 취소
+            </button>
             <button class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">
                 <i class="fas fa-times me-1"></i>선택 해제
             </button>
@@ -691,6 +697,51 @@
             } catch (error) {
                 console.error('일괄 처리 실패:', error);
                 alert(`일괄 ${typeText} 처리 중 오류가 발생했습니다.`);
+            }
+        }
+
+        // 일괄 입금/송금 취소 처리
+        async function bulkCancelPayment(type) {
+            if (selectedIds.size === 0) {
+                alert('취소할 항목을 선택해주세요.');
+                return;
+            }
+
+            const typeText = type === 'received' ? '입금' : '송금';
+            
+            if (!confirm(`선택한 ${selectedIds.size}개 항목의 ${typeText}을 취소하시겠습니까?\n\n${typeText} 날짜가 삭제되고 미완료 상태로 되돌아갑니다.`)) {
+                return;
+            }
+
+            const reservationIds = Array.from(selectedIds);
+            console.log('🔄 선택된 예약 ID 목록:', reservationIds);
+            console.log('🔄 전송할 데이터:', { reservation_ids: reservationIds, type });
+
+            try {
+                const response = await fetch('/api/hotel-settlements/bulk-cancel-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reservation_ids: reservationIds,
+                        type: type
+                    })
+                });
+
+                const result = await response.json();
+                console.log('🔄 일괄 취소 결과:', result);
+
+                if (result.success) {
+                    alert(`✅ ${result.count || selectedIds.size}개 항목의 ${typeText}이 취소되었습니다.\n\n미완료 상태로 되돌아갑니다.`);
+                    clearSelection();
+                    // 강제 새로고침으로 최신 데이터 로드
+                    await loadSettlements();
+                    console.log('🔄 데이터 새로고침 완료');
+                } else {
+                    alert(`❌ ${typeText} 취소 실패: ` + result.message);
+                }
+            } catch (error) {
+                console.error('일괄 취소 실패:', error);
+                alert(`일괄 ${typeText} 취소 중 오류가 발생했습니다.`);
             }
         }
 
