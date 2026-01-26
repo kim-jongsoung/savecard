@@ -941,10 +941,12 @@
                     : (s.cost_krw || 0)        // 미완료: 기본 환율 기준
                 );
                 
-                // 사용된 환율 (표시용)
-                const displayExchangeRate = isPaymentSent && s.payment_sent_exchange_rate 
+                // 사용된 환율 (표시용) - 숫자로 변환
+                const displayExchangeRate = parseFloat(
+                    isPaymentSent && s.payment_sent_exchange_rate 
                     ? s.payment_sent_exchange_rate 
-                    : (s.exchange_rate || 1330);
+                    : (s.exchange_rate || 1330)
+                );
                 
                 // 마진 - 거래액과 매입액 차이로 재계산
                 const marginKRW = Math.round(revenueKRW - costKRW);
@@ -962,7 +964,8 @@
                         송금환율: s.payment_sent_exchange_rate,
                         기본매입액: s.cost_krw,
                         송금매입액: s.payment_sent_cost_krw,
-                        사용된매입액: costKRW
+                        사용된매입액: costKRW,
+                        표시환율: displayExchangeRate
                     });
                 }
                 
