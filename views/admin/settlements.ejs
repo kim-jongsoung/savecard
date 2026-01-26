@@ -931,16 +931,40 @@
                 const isPaymentReceived = !!s.payment_received_date;
                 const isPaymentSent = !!s.payment_sent_date;
                 
-                // 거래액 (KRW 환산) - 반올림 적용
+                // 거래액 (KRW 환산) - 반올림 적용, 항상 기본 환율 사용
                 const revenueKRW = Math.round(s.sale_currency === 'KRW' ? (s.net_revenue || 0) : (s.net_revenue || 0) * (s.exchange_rate || 1330));
-                // 매입액 (KRW 환산) - 반올림 적용
-                const costKRW = Math.round(s.cost_krw || 0);
-                // 마진 - 반올림 적용
-                const marginKRW = Math.round(s.margin_krw || 0);
+                
+                // 매입액 (KRW 환산) - 송금 완료 시 송금환율 기준, 미완료 시 기본 환율 기준
+                const costKRW = Math.round(
+                    isPaymentSent && s.payment_sent_cost_krw 
+                    ? s.payment_sent_cost_krw  // 송금 완료: 송금환율로 재계산된 값
+                    : (s.cost_krw || 0)        // 미완료: 기본 환율 기준
+                );
+                
+                // 사용된 환율 (표시용)
+                const displayExchangeRate = isPaymentSent && s.payment_sent_exchange_rate 
+                    ? s.payment_sent_exchange_rate 
+                    : (s.exchange_rate || 1330);
+                
+                // 마진 - 거래액과 매입액 차이로 재계산
+                const marginKRW = Math.round(revenueKRW - costKRW);
+                
                 // 부가세 = 마진*10% - 예약업체수수료*10%
                 const marginTax = Math.round(marginKRW * 0.1);  // 마진부가세
                 const commissionTax = Math.round((s.commission_amount || 0) * 0.1);  // 수수료부가세
                 const tax = marginTax - commissionTax;  // 실제부가세
+                
+                // 디버깅: 송금 완료 건 환율 정보 확인
+                if (isPaymentSent && s.payment_sent_exchange_rate) {
+                    console.log('💱 송금 완료 건 환율:', {
+                        id: s.id,
+                        기본환율: s.exchange_rate,
+                        송금환율: s.payment_sent_exchange_rate,
+                        기본매입액: s.cost_krw,
+                        송금매입액: s.payment_sent_cost_krw,
+                        사용된매입액: costKRW
+                    });
+                }
                 
                 totalRevenue += revenueKRW;
                 totalCost += costKRW;
@@ -954,10 +978,10 @@
                     ? formatCurrency(revenueKRW, 'KRW')
                     : `${formatCurrency(revenueKRW, 'KRW')}<br><small class="text-muted">(${formatCurrency(s.net_revenue || 0, 'USD')} × ${s.exchange_rate || 1330})</small>`;
                 
-                // 매입액 표시 (달러 × 환율)
+                // 매입액 표시 (달러 × 환율) - 송금 완료 시 송금환율 표시
                 const costDisplay = s.cost_currency === 'KRW'
                     ? formatCurrency(costKRW, 'KRW')
-                    : `${formatCurrency(costKRW, 'KRW')}<br><small class="text-muted">(${formatCurrency(s.total_cost || 0, 'USD')} × ${s.exchange_rate || 1330})</small>`;
+                    : `${formatCurrency(costKRW, 'KRW')}<br><small class="text-muted">(${formatCurrency(s.total_cost || 0, 'USD')} × ${displayExchangeRate.toFixed(2)})</small>`;
                 
                 return `
                     <tr style="cursor: pointer;" 
@@ -997,6 +1021,12 @@
                     </button>
                     <button class="btn btn-danger btn-sm" onclick="bulkProcessPayment('sent')" id="bulkSentBtn">
                         <i class="fas fa-arrow-up me-1"></i>선택 항목 일괄 송금처리
+                    </button>
+                    <button class="btn btn-warning btn-sm" onclick="bulkCancelPayment('received')">
+                        <i class="fas fa-undo me-1"></i>선택 항목 일괄 입금 취소
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="bulkCancelPayment('sent')">
+                        <i class="fas fa-undo me-1"></i>선택 항목 일괄 송금 취소
                     </button>
                     <button class="btn btn-outline-secondary btn-sm" onclick="clearAllSelections()">
                         <i class="fas fa-times me-1"></i>선택 해제
@@ -1159,6 +1189,46 @@
             } catch (error) {
                 console.error(`❌ 일괄 ${typeText} 처리 오류:`, error);
                 alert(`일괄 ${typeText} 처리 중 오류가 발생했습니다.`);
+            }
+        }
+        
+        // 일괄 입금/송금 취소 처리
+        async function bulkCancelPayment(type) {
+            if (selectedSettlements.size === 0) {
+                alert('취소할 항목을 선택해주세요.');
+                return;
+            }
+            
+            const typeText = type === 'received' ? '입금' : '송금';
+            
+            if (!confirm(`선택한 ${selectedSettlements.size}개 항목의 ${typeText}을 취소하시겠습니까?\n\n${typeText} 날짜가 삭제되고 미완료 상태로 되돌아갑니다.`)) {
+                return;
+            }
+            
+            try {
+                console.log(`🔄 일괄 ${typeText} 취소:`, Array.from(selectedSettlements));
+                
+                const response = await fetch('/api/settlements/bulk-cancel-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        settlement_ids: Array.from(selectedSettlements),
+                        type: type
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ ${selectedSettlements.size}개 항목의 ${typeText}이 취소되었습니다.\n\n미완료 상태로 되돌아갑니다.`);
+                    clearAllSelections();
+                    loadSettlementsByStatus(currentSettlementStatus);
+                } else {
+                    alert(`❌ ${typeText} 취소 실패: ` + (result.message || '알 수 없는 오류'));
+                }
+            } catch (error) {
+                console.error(`❌ 일괄 ${typeText} 취소 오류:`, error);
+                alert(`일괄 ${typeText} 취소 중 오류가 발생했습니다.`);
             }
         }
         

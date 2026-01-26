@@ -19160,6 +19160,76 @@ async function startServer() {
             }
         });
         
+        // 일괄 입금/송금 취소 API
+        app.post('/api/settlements/bulk-cancel-payment', requireAuth, async (req, res) => {
+            try {
+                const { settlement_ids, type } = req.body;
+                
+                if (!settlement_ids || !Array.isArray(settlement_ids) || settlement_ids.length === 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: '취소할 정산 항목을 선택해주세요.'
+                    });
+                }
+                
+                console.log('🔄 일괄 입금/송금 취소:', { count: settlement_ids.length, type });
+                
+                const field = type === 'received' ? 'payment_received_date' : 'payment_sent_date';
+                
+                // 트랜잭션 시작
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+                    
+                    // 각 정산에 대해 처리
+                    for (const id of settlement_ids) {
+                        if (type === 'sent') {
+                            // 송금 취소 시 송금환율 및 송금매입액도 삭제
+                            await client.query(`
+                                UPDATE settlements 
+                                SET ${field} = NULL,
+                                    payment_sent_exchange_rate = NULL,
+                                    payment_sent_cost_krw = NULL,
+                                    settlement_status = 'pending',
+                                    updated_at = NOW()
+                                WHERE id = $1
+                            `, [id]);
+                        } else {
+                            // 입금 취소 시에는 날짜만 삭제
+                            await client.query(`
+                                UPDATE settlements 
+                                SET ${field} = NULL,
+                                    settlement_status = 'pending',
+                                    updated_at = NOW()
+                                WHERE id = $1
+                            `, [id]);
+                        }
+                    }
+                    
+                    await client.query('COMMIT');
+                    
+                    console.log(`✅ 일괄 ${type === 'received' ? '입금' : '송금'} 취소 완료: ${settlement_ids.length}개`);
+                    
+                    res.json({
+                        success: true,
+                        message: `${settlement_ids.length}개 항목의 ${type === 'received' ? '입금' : '송금'}이 취소되었습니다.`,
+                        processed_count: settlement_ids.length
+                    });
+                } catch (error) {
+                    await client.query('ROLLBACK');
+                    throw error;
+                } finally {
+                    client.release();
+                }
+            } catch (error) {
+                console.error('❌ 일괄 입금/송금 취소 실패:', error);
+                res.status(500).json({
+                    success: false,
+                    message: '일괄 입금/송금 취소 중 오류가 발생했습니다.'
+                });
+            }
+        });
+        
         // 정산 상세 조회 API
         app.get('/api/settlements/:id', requireAuth, async (req, res) => {
             try {
