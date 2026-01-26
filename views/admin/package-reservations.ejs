@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>패키지 예약 관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .status-confirmed { background-color: #d1ecf1; color: #0c5460; }
+        .status-completed { background-color: #d4edda; color: #155724; }
+        .status-cancelled { background-color: #f8d7da; color: #721c24; }
+        .component-icons {
+            font-size: 1.2rem;
+        }
+        .margin-positive { color: #198754; font-weight: bold; }
+        .margin-negative { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'package-reservations', adminUsername: adminUsername || '관리자' }) %>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-box-open me-2"></i>패키지 예약 관리</h2>
+                    <a href="/admin/package-inbox" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>새 패키지 예약 등록
+                    </a>
+                </div>
+
+                <!-- 필터 -->
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">상태</label>
+                                <select class="form-select" id="statusFilter" onchange="loadReservations()">
+                                    <option value="all">전체</option>
+                                    <option value="confirmed">확정</option>
+                                    <option value="completed">완료</option>
+                                    <option value="cancelled">취소</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">예약 채널</label>
+                                <select class="form-select" id="platformFilter" onchange="loadReservations()">
+                                    <option value="">전체</option>
+                                    <option value="VASCO">VASCO</option>
+                                    <option value="NOL">NOL</option>
+                                    <option value="롱혼스테이크">롱혼스테이크</option>
+                                    <option value="직접예약">직접예약</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">검색</label>
+                                <input type="text" class="form-control" id="searchInput" 
+                                       placeholder="예약번호, 고객명 검색" onkeyup="handleSearch(event)">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                                    <i class="fas fa-redo me-1"></i>초기화
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 통계 -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted">총 예약</h6>
+                                <h3 id="stat-total">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted">총 거래액</h6>
+                                <h3 id="stat-revenue">₩0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted">총 매입액</h6>
+                                <h3 id="stat-cost">₩0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="text-muted">총 마진</h6>
+                                <h3 id="stat-margin" class="margin-positive">₩0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 예약 목록 -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>예약번호</th>
+                                        <th>패키지명</th>
+                                        <th>고객명</th>
+                                        <th>여행기간</th>
+                                        <th>인원</th>
+                                        <th>구성요소</th>
+                                        <th>거래액</th>
+                                        <th>마진</th>
+                                        <th>상태</th>
+                                        <th>등록일</th>
+                                        <th>관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reservations-tbody">
+                                    <tr>
+                                        <td colspan="11" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">로딩 중...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상세 모달 -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">패키지 예약 상세</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modal-body-content">
+                    <!-- 동적으로 채워짐 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                    <a href="#" id="edit-link" class="btn btn-primary">수정</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allReservations = [];
+
+        // 예약 목록 로드
+        async function loadReservations() {
+            try {
+                const status = document.getElementById('statusFilter').value;
+                const platform = document.getElementById('platformFilter').value;
+                const search = document.getElementById('searchInput').value;
+
+                const params = new URLSearchParams();
+                if (status !== 'all') params.append('status', status);
+                if (platform) params.append('platform', platform);
+                if (search) params.append('search', search);
+
+                const response = await fetch(`/api/package-reservations?${params}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    allReservations = result.data;
+                    renderReservations(result.data);
+                    updateStats(result.data);
+                } else {
+                    alert('예약 목록 로드 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('예약 목록 로드 오류:', error);
+                document.getElementById('reservations-tbody').innerHTML = `
+                    <tr><td colspan="11" class="text-center text-danger">
+                        오류가 발생했습니다: ${error.message}
+                    </td></tr>
+                `;
+            }
+        }
+
+        // 예약 목록 렌더링
+        function renderReservations(reservations) {
+            const tbody = document.getElementById('reservations-tbody');
+
+            if (reservations.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="11" class="text-center text-muted">
+                        등록된 패키지 예약이 없습니다.
+                    </td></tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = reservations.map(r => {
+                const departureDate = new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR');
+                const returnDate = new Date(r.travel_period.return_date).toLocaleDateString('ko-KR');
+                const period = `${departureDate} ~ ${returnDate} (${r.travel_period.nights}박${r.travel_period.days}일)`;
+
+                const people = `성인 ${r.people.adult}명${r.people.child > 0 ? `, 소아 ${r.people.child}명` : ''}${r.people.infant > 0 ? `, 유아 ${r.people.infant}명` : ''}`;
+
+                const componentIcons = r.cost_components.map(c => {
+                    const icons = {
+                        flight: '✈️',
+                        hotel: '🏨',
+                        tour: '🎯',
+                        other: '📦'
+                    };
+                    return icons[c.component_type] || '📦';
+                }).join(' ');
+
+                const marginClass = r.settlement.total_margin_krw >= 0 ? 'margin-positive' : 'margin-negative';
+                const marginText = `₩${r.settlement.total_margin_krw.toLocaleString()} (${r.settlement.margin_rate}%)`;
+
+                const statusClass = `status-${r.status}`;
+                const statusText = {
+                    confirmed: '확정',
+                    completed: '완료',
+                    cancelled: '취소'
+                }[r.status] || r.status;
+
+                const createdDate = new Date(r.createdAt).toLocaleDateString('ko-KR');
+
+                return `
+                    <tr style="cursor: pointer;" onclick="showDetail('${r._id}')">
+                        <td><strong>${r.reservation_number}</strong></td>
+                        <td>${r.package_name}</td>
+                        <td>${r.customer.korean_name}</td>
+                        <td><small>${period}</small></td>
+                        <td><small>${people}</small></td>
+                        <td class="component-icons">${componentIcons}</td>
+                        <td>₩${r.settlement.total_revenue_krw.toLocaleString()}</td>
+                        <td class="${marginClass}">${marginText}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>${createdDate}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showDetail('${r._id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // 통계 업데이트
+        function updateStats(reservations) {
+            const total = reservations.length;
+            const totalRevenue = reservations.reduce((sum, r) => sum + r.settlement.total_revenue_krw, 0);
+            const totalCost = reservations.reduce((sum, r) => sum + r.settlement.total_cost_krw, 0);
+            const totalMargin = reservations.reduce((sum, r) => sum + r.settlement.total_margin_krw, 0);
+
+            document.getElementById('stat-total').textContent = `${total}건`;
+            document.getElementById('stat-revenue').textContent = `₩${totalRevenue.toLocaleString()}`;
+            document.getElementById('stat-cost').textContent = `₩${totalCost.toLocaleString()}`;
+            document.getElementById('stat-margin').textContent = `₩${totalMargin.toLocaleString()}`;
+            document.getElementById('stat-margin').className = totalMargin >= 0 ? 'margin-positive' : 'margin-negative';
+        }
+
+        // 상세 보기
+        async function showDetail(id) {
+            try {
+                const response = await fetch(`/api/package-reservations/${id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const r = result.data;
+                    const departureDate = new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR');
+                    const returnDate = new Date(r.travel_period.return_date).toLocaleDateString('ko-KR');
+
+                    const componentsHTML = r.cost_components.map(c => {
+                        const typeNames = {
+                            flight: '✈️ 항공권',
+                            hotel: '🏨 호텔',
+                            tour: '🎯 투어',
+                            other: '📦 기타'
+                        };
+                        return `
+                            <tr>
+                                <td>${typeNames[c.component_type]}</td>
+                                <td>${c.vendor_name}</td>
+                                <td>${c.cost_currency === 'KRW' ? '₩' : '$'}${c.cost_amount.toLocaleString()}</td>
+                                <td>₩${c.cost_krw.toLocaleString()}</td>
+                                <td>${c.notes || '-'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    document.getElementById('modal-body-content').innerHTML = `
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>예약번호</h6>
+                                <p><strong>${r.reservation_number}</strong></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>예약 채널</h6>
+                                <p>${r.platform_name}</p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>패키지명</h6>
+                            <p>${r.package_name}</p>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>고객 정보</h6>
+                                <p>
+                                    ${r.customer.korean_name} (${r.customer.english_name || '-'})<br>
+                                    ${r.customer.phone || '-'}<br>
+                                    ${r.customer.email || '-'}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>여행 기간</h6>
+                                <p>
+                                    ${departureDate} ~ ${returnDate}<br>
+                                    ${r.travel_period.nights}박${r.travel_period.days}일
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>인원</h6>
+                            <p>성인 ${r.people.adult}명, 소아 ${r.people.child}명, 유아 ${r.people.infant}명</p>
+                        </div>
+                        <div class="mb-3">
+                            <h6>구성요소</h6>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>타입</th>
+                                        <th>공급업체</th>
+                                        <th>매입가</th>
+                                        <th>원화환산</th>
+                                        <th>비고</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${componentsHTML}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mb-3">
+                            <h6>정산 정보</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>총 거래액</td>
+                                    <td class="text-end"><strong>₩${r.settlement.total_revenue_krw.toLocaleString()}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td>총 매입액</td>
+                                    <td class="text-end">₩${r.settlement.total_cost_krw.toLocaleString()}</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td><strong>마진</strong></td>
+                                    <td class="text-end ${r.settlement.total_margin_krw >= 0 ? 'margin-positive' : 'margin-negative'}">
+                                        <strong>₩${r.settlement.total_margin_krw.toLocaleString()} (${r.settlement.margin_rate}%)</strong>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>부가세</td>
+                                    <td class="text-end">₩${r.settlement.vat_amount.toLocaleString()}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        ${r.special_requests ? `
+                            <div class="mb-3">
+                                <h6>특별 요청사항</h6>
+                                <p>${r.special_requests}</p>
+                            </div>
+                        ` : ''}
+                    `;
+
+                    document.getElementById('edit-link').href = `/admin/package-inbox?id=${id}`;
+
+                    new bootstrap.Modal(document.getElementById('detailModal')).show();
+                } else {
+                    alert('상세 정보 로드 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('상세 정보 로드 오류:', error);
+                alert('상세 정보 로드 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 검색
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                loadReservations();
+            }
+        }
+
+        // 필터 초기화
+        function resetFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('platformFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            loadReservations();
+        }
+
+        // 페이지 로드 시 실행
+        window.addEventListener('load', () => {
+            loadReservations();
+        });
+    </script>
+</body>
+</html>
