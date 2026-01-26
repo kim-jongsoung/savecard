@@ -375,6 +375,12 @@
             container.insertAdjacentHTML('beforeend', componentHTML);
         }
 
+        // 구성요소 타입 변경 시 (현재는 아무 동작 안함, 필요시 확장 가능)
+        function updateComponentBadge(id) {
+            // 타입 변경 시 추가 로직이 필요하면 여기에 구현
+            // 현재는 select 값만 변경되면 됨
+        }
+
         // 구성요소 삭제
         function removeComponent(id) {
             document.getElementById(`component-${id}`).remove();
