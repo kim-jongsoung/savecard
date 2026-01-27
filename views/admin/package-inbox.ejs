@@ -10,39 +10,24 @@
         body {
             background-color: #f8f9fa;
         }
-        .step-indicator {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
+        .section-divider {
+            border-top: 2px solid #dee2e6;
+            margin: 30px 0;
+            padding-top: 30px;
         }
-        .step {
-            display: flex;
-            align-items: center;
-            margin: 0 20px;
-        }
-        .step-number {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 10px;
-        }
-        .step.active .step-number {
-            background-color: #0d6efd;
-            color: white;
-        }
-        .step.completed .step-number {
-            background-color: #198754;
-            color: white;
-        }
-        .form-section {
+        .draft-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ffc107;
+            color: #000;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             display: none;
+            z-index: 1000;
         }
-        .form-section.active {
+        .draft-indicator.show {
             display: block;
         }
         .component-item {
@@ -98,20 +83,19 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="fas fa-box-open me-2"></i>패키지 예약 등록</h2>
-                    <a href="/admin/package-reservations" class="btn btn-outline-secondary">
-                        <i class="fas fa-list me-1"></i>예약 목록
-                    </a>
-                </div>
-
-                <!-- 단계 표시 -->
-                <div class="step-indicator">
-                    <div class="step active" id="step1-indicator">
-                        <div class="step-number">1</div>
-                        <span>기본 정보</span>
-                    </div>
-                    <div class="step" id="step2-indicator">
-                        <div class="step-number">2</div>
-                        <span>금액 정보</span>
+                    <div>
+                        <button type="button" class="btn btn-warning me-2" onclick="saveDraft()">
+                            <i class="fas fa-save me-1"></i>임시저장
+                        </button>
+                        <button type="button" class="btn btn-outline-info me-2" onclick="loadDraft()">
+                            <i class="fas fa-folder-open me-1"></i>불러오기
+                        </button>
+                        <button type="button" class="btn btn-outline-danger me-2" onclick="clearDraft()">
+                            <i class="fas fa-trash me-1"></i>초기화
+                        </button>
+                        <a href="/admin/package-reservations" class="btn btn-outline-secondary">
+                            <i class="fas fa-list me-1"></i>예약 목록
+                        </a>
                     </div>
                 </div>
 
@@ -119,8 +103,8 @@
                 <div class="card">
                     <div class="card-body">
                         <form id="packageForm">
-                            <!-- 1단계: 기본 정보 -->
-                            <div class="form-section active" id="step1">
+                            <!-- 기본 정보 -->
+                            <div>
                                 <h4 class="mb-4">📋 기본 정보</h4>
                                 
                                 <div class="row mb-3">
@@ -202,15 +186,10 @@
                                     </div>
                                 </div>
 
-                                <div class="text-end mt-4">
-                                    <button type="button" class="btn btn-primary btn-lg" onclick="goToStep2()">
-                                        다음 단계: 금액 입력 <i class="fas fa-arrow-right ms-2"></i>
-                                    </button>
-                                </div>
                             </div>
 
-                            <!-- 2단계: 금액 정보 -->
-                            <div class="form-section" id="step2">
+                            <!-- 금액 정보 -->
+                            <div class="section-divider">
                                 <h4 class="mb-4">💰 금액 정보</h4>
                                 
                                 <div class="row mb-4">
@@ -267,12 +246,9 @@
                                               placeholder="특별 요청사항이 있으면 입력하세요"></textarea>
                                 </div>
 
-                                <div class="d-flex justify-content-between mt-4">
-                                    <button type="button" class="btn btn-secondary btn-lg" onclick="goToStep1()">
-                                        <i class="fas fa-arrow-left me-2"></i>이전 단계
-                                    </button>
+                                <div class="text-end mt-4">
                                     <button type="submit" class="btn btn-success btn-lg">
-                                        <i class="fas fa-save me-2"></i>패키지 예약 등록
+                                        <i class="fas fa-check me-2"></i>패키지 예약 등록
                                     </button>
                                 </div>
                             </div>
@@ -432,35 +408,151 @@
                 `₩${vatAmount.toLocaleString()}`;
         }
 
-        // 단계 이동
-        function goToStep1() {
-            document.getElementById('step1').classList.add('active');
-            document.getElementById('step2').classList.remove('active');
-            document.getElementById('step1-indicator').classList.add('active');
-            document.getElementById('step2-indicator').classList.remove('active');
-            window.scrollTo(0, 0);
+        // 임시저장
+        function saveDraft() {
+            const draft = {
+                platform_name: document.getElementById('platform_name').value,
+                package_name: document.getElementById('package_name').value,
+                korean_name: document.getElementById('korean_name').value,
+                english_name: document.getElementById('english_name').value,
+                phone: document.getElementById('phone').value,
+                email: document.getElementById('email').value,
+                departure_date: document.getElementById('departure_date').value,
+                return_date: document.getElementById('return_date').value,
+                people_adult: document.getElementById('people_adult').value,
+                people_child: document.getElementById('people_child').value,
+                people_infant: document.getElementById('people_infant').value,
+                total_selling_price: document.getElementById('total_selling_price').value,
+                currency: document.getElementById('currency').value,
+                exchange_rate: document.getElementById('exchange_rate').value,
+                special_requests: document.getElementById('special_requests').value,
+                components: [],
+                componentCount: componentCount
+            };
+            
+            // 구성요소 저장
+            document.querySelectorAll('.component-item').forEach(component => {
+                const id = component.id.split('-')[1];
+                draft.components.push({
+                    id: id,
+                    type: document.getElementById(`type-${id}`).value,
+                    vendor: document.getElementById(`vendor-${id}`).value,
+                    cost: document.getElementById(`cost-${id}`).value,
+                    cost_currency: document.getElementById(`cost-currency-${id}`).value,
+                    notes: document.getElementById(`notes-${id}`).value
+                });
+            });
+            
+            localStorage.setItem('packageDraft', JSON.stringify(draft));
+            alert('✅ 임시저장되었습니다.');
         }
-
-        function goToStep2() {
-            // 1단계 필수 입력 확인
-            const required = ['platform_name', 'package_name', 'korean_name', 'departure_date', 'return_date'];
-            for (const field of required) {
-                if (!document.getElementById(field).value) {
-                    alert('필수 항목을 모두 입력해주세요.');
-                    return;
-                }
+        
+        // 불러오기
+        function loadDraft() {
+            const draftStr = localStorage.getItem('packageDraft');
+            if (!draftStr) {
+                alert('저장된 임시 데이터가 없습니다.');
+                return;
             }
             
-            document.getElementById('step1').classList.remove('active');
-            document.getElementById('step2').classList.add('active');
-            document.getElementById('step1-indicator').classList.add('completed');
-            document.getElementById('step2-indicator').classList.add('active');
-            window.scrollTo(0, 0);
-            
-            // 2단계 진입 시 기본 구성요소 추가
-            if (componentCount === 0) {
-                addComponent();
+            if (!confirm('저장된 데이터를 불러오시겠습니까? 현재 입력된 내용은 사라집니다.')) {
+                return;
             }
+            
+            const draft = JSON.parse(draftStr);
+            
+            // 기본 정보 복원
+            document.getElementById('platform_name').value = draft.platform_name || '';
+            document.getElementById('package_name').value = draft.package_name || '';
+            document.getElementById('korean_name').value = draft.korean_name || '';
+            document.getElementById('english_name').value = draft.english_name || '';
+            document.getElementById('phone').value = draft.phone || '';
+            document.getElementById('email').value = draft.email || '';
+            document.getElementById('departure_date').value = draft.departure_date || '';
+            document.getElementById('return_date').value = draft.return_date || '';
+            document.getElementById('people_adult').value = draft.people_adult || 2;
+            document.getElementById('people_child').value = draft.people_child || 0;
+            document.getElementById('people_infant').value = draft.people_infant || 0;
+            document.getElementById('total_selling_price').value = draft.total_selling_price || '';
+            document.getElementById('currency').value = draft.currency || 'KRW';
+            document.getElementById('exchange_rate').value = draft.exchange_rate || 1300;
+            document.getElementById('special_requests').value = draft.special_requests || '';
+            
+            calculateNights();
+            toggleExchangeRate();
+            
+            // 구성요소 복원
+            document.getElementById('components-container').innerHTML = '';
+            componentCount = 0;
+            
+            if (draft.components && draft.components.length > 0) {
+                draft.components.forEach(comp => {
+                    componentCount++;
+                    const container = document.getElementById('components-container');
+                    const componentHTML = `
+                        <div class="component-item" id="component-${componentCount}">
+                            <div class="component-header">
+                                <div>
+                                    <select class="form-select form-select-sm d-inline-block w-auto component-type" 
+                                            id="type-${componentCount}" onchange="updateComponentBadge(${componentCount})">
+                                        <option value="flight" ${comp.type === 'flight' ? 'selected' : ''}>✈️ 항공권</option>
+                                        <option value="hotel" ${comp.type === 'hotel' ? 'selected' : ''}>🏨 호텔</option>
+                                        <option value="tour" ${comp.type === 'tour' ? 'selected' : ''}>🎯 투어</option>
+                                        <option value="other" ${comp.type === 'other' ? 'selected' : ''}>📦 기타</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeComponent(${componentCount})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="form-label">공급업체명 *</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="vendor-${componentCount}" value="${comp.vendor || ''}" placeholder="예: 아시아나항공" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">매입가 *</label>
+                                    <input type="number" class="form-control form-control-sm" 
+                                           id="cost-${componentCount}" value="${comp.cost || ''}" placeholder="850000" 
+                                           onchange="calculateSummary()" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">통화</label>
+                                    <select class="form-select form-select-sm" id="cost-currency-${componentCount}" 
+                                            onchange="calculateSummary()">
+                                        <option value="KRW" ${comp.cost_currency === 'KRW' ? 'selected' : ''}>KRW</option>
+                                        <option value="USD" ${comp.cost_currency === 'USD' ? 'selected' : ''}>USD</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">원화 환산</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="cost-krw-${componentCount}" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">비고</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="notes-${componentCount}" value="${comp.notes || ''}" placeholder="OZ601/OZ602 왕복">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', componentHTML);
+                });
+            }
+            
+            calculateSummary();
+            alert('✅ 임시저장 데이터를 불러왔습니다.');
+        }
+        
+        // 초기화
+        function clearDraft() {
+            if (!confirm('임시저장된 데이터를 삭제하시겠습니까?')) {
+                return;
+            }
+            localStorage.removeItem('packageDraft');
+            alert('✅ 임시저장 데이터가 삭제되었습니다.');
         }
 
         // 폼 제출
@@ -522,6 +614,8 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    // 등록 성공 시 임시저장 데이터 삭제
+                    localStorage.removeItem('packageDraft');
                     alert(`✅ 패키지 예약이 등록되었습니다!\n예약번호: ${result.data.reservation_number}`);
                     window.location.href = '/admin/package-reservations';
                 } else {
@@ -533,8 +627,18 @@
             }
         });
 
-        // 페이지 로드 시 오늘 날짜 설정
+        // 페이지 로드 시 초기화
         window.addEventListener('load', () => {
+            // 임시저장 데이터 확인
+            const draftStr = localStorage.getItem('packageDraft');
+            if (draftStr) {
+                if (confirm('저장된 임시 데이터가 있습니다. 불러오시겠습니까?')) {
+                    loadDraft();
+                    return;
+                }
+            }
+            
+            // 기본값 설정
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('departure_date').value = today;
             
@@ -543,6 +647,9 @@
             document.getElementById('return_date').value = tomorrow.toISOString().split('T')[0];
             
             calculateNights();
+            
+            // 기본 구성요소 1개 추가
+            addComponent();
         });
     </script>
 </body>
