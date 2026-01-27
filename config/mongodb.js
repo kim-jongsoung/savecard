@@ -19,8 +19,6 @@ const connectMongoDB = async () => {
         console.log('🔍 사용할 URI:', MONGODB_URI.replace(/\/\/.*@/, '//***@'));
         
         await mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,
         });
