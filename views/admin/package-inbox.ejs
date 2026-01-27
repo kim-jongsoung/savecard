@@ -11,9 +11,26 @@
             background-color: #f8f9fa;
         }
         .section-divider {
-            border-top: 2px solid #dee2e6;
-            margin: 30px 0;
-            padding-top: 30px;
+            border-top: 1px solid #dee2e6;
+            margin: 20px 0;
+            padding-top: 20px;
+        }
+        .form-label {
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        .form-control, .form-select {
+            font-size: 0.875rem;
+            padding: 0.375rem 0.5rem;
+        }
+        h4 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem !important;
+        }
+        h5 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem !important;
         }
         .draft-indicator {
             position: fixed;
@@ -32,16 +49,16 @@
         }
         .component-item {
             border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
             background-color: white;
         }
         .component-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
         .component-type-badge {
             padding: 5px 10px;
@@ -55,23 +72,24 @@
         .badge-other { background-color: #fff3e0; color: #f57c00; }
         .summary-box {
             background-color: #f8f9fa;
-            border: 2px solid #0d6efd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
+            border: 1px solid #0d6efd;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
         }
         .summary-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
+            font-size: 0.875rem;
         }
         .summary-total {
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: bold;
             color: #0d6efd;
-            border-top: 2px solid #dee2e6;
-            padding-top: 10px;
-            margin-top: 10px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 8px;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -81,20 +99,20 @@
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2><i class="fas fa-box-open me-2"></i>패키지 예약 등록</h2>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0"><i class="fas fa-box-open me-2"></i>패키지 예약 등록</h3>
                     <div>
-                        <button type="button" class="btn btn-warning me-2" onclick="saveDraft()">
+                        <button type="button" class="btn btn-sm btn-warning me-1" onclick="saveDraft()">
                             <i class="fas fa-save me-1"></i>임시저장
                         </button>
-                        <button type="button" class="btn btn-outline-info me-2" onclick="loadDraft()">
+                        <button type="button" class="btn btn-sm btn-outline-info me-1" onclick="loadDraft()">
                             <i class="fas fa-folder-open me-1"></i>불러오기
                         </button>
-                        <button type="button" class="btn btn-outline-danger me-2" onclick="clearDraft()">
+                        <button type="button" class="btn btn-sm btn-outline-danger me-1" onclick="clearDraft()">
                             <i class="fas fa-trash me-1"></i>초기화
                         </button>
-                        <a href="/admin/package-reservations" class="btn btn-outline-secondary">
-                            <i class="fas fa-list me-1"></i>예약 목록
+                        <a href="/admin/package-reservations" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-list me-1"></i>목록
                         </a>
                     </div>
                 </div>
@@ -105,9 +123,9 @@
                         <form id="packageForm">
                             <!-- 기본 정보 -->
                             <div>
-                                <h4 class="mb-4">📋 기본 정보</h4>
+                                <h4>📋 기본 정보</h4>
                                 
-                                <div class="row mb-3">
+                                <div class="row mb-2">
                                     <div class="col-md-6">
                                         <label class="form-label">예약 채널 *</label>
                                         <select class="form-select" id="platform_name" required>
@@ -125,8 +143,8 @@
                                     </div>
                                 </div>
 
-                                <h5 class="mt-4 mb-3">👤 고객 정보</h5>
-                                <div class="row mb-3">
+                                <h5 class="mt-3">👤 고객 정보</h5>
+                                <div class="row mb-2">
                                     <div class="col-md-3">
                                         <label class="form-label">한글 이름 *</label>
                                         <input type="text" class="form-control" id="korean_name" required>
@@ -148,8 +166,8 @@
                                     </div>
                                 </div>
 
-                                <h5 class="mt-4 mb-3">📅 여행 기간</h5>
-                                <div class="row mb-3">
+                                <h5 class="mt-3">📅 여행 기간</h5>
+                                <div class="row mb-2">
                                     <div class="col-md-4">
                                         <label class="form-label">출발일 *</label>
                                         <input type="date" class="form-control" id="departure_date" 
@@ -167,8 +185,8 @@
                                     </div>
                                 </div>
 
-                                <h5 class="mt-4 mb-3">👥 인원</h5>
-                                <div class="row mb-3">
+                                <h5 class="mt-3">👥 인원</h5>
+                                <div class="row mb-2">
                                     <div class="col-md-4">
                                         <label class="form-label">성인</label>
                                         <input type="number" class="form-control" id="people_adult" 
@@ -190,9 +208,9 @@
 
                             <!-- 금액 정보 -->
                             <div class="section-divider">
-                                <h4 class="mb-4">💰 금액 정보</h4>
+                                <h4>💰 금액 정보</h4>
                                 
-                                <div class="row mb-4">
+                                <div class="row mb-2">
                                     <div class="col-md-4">
                                         <label class="form-label">총 판매가 *</label>
                                         <input type="number" class="form-control" id="total_selling_price" 
@@ -212,16 +230,16 @@
                                     </div>
                                 </div>
 
-                                <h5 class="mb-3">📦 매입 구성요소</h5>
+                                <h5>📦 매입 구성요소</h5>
                                 <div id="components-container"></div>
 
-                                <button type="button" class="btn btn-outline-primary mb-4" onclick="addComponent()">
+                                <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addComponent()">
                                     <i class="fas fa-plus me-1"></i>구성요소 추가
                                 </button>
 
                                 <!-- 자동 계산 요약 -->
                                 <div class="summary-box">
-                                    <h5 class="mb-3">💵 금액 요약</h5>
+                                    <h5>💵 금액 요약</h5>
                                     <div class="summary-row">
                                         <span>총 판매가:</span>
                                         <span id="summary_revenue">₩0</span>
@@ -240,14 +258,14 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-3 mt-4">
+                                <div class="mb-2 mt-3">
                                     <label class="form-label">특별 요청사항</label>
-                                    <textarea class="form-control" id="special_requests" rows="3" 
+                                    <textarea class="form-control" id="special_requests" rows="2" 
                                               placeholder="특별 요청사항이 있으면 입력하세요"></textarea>
                                 </div>
 
-                                <div class="text-end mt-4">
-                                    <button type="submit" class="btn btn-success btn-lg">
+                                <div class="text-end mt-3">
+                                    <button type="submit" class="btn btn-success">
                                         <i class="fas fa-check me-2"></i>패키지 예약 등록
                                     </button>
                                 </div>
