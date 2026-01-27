@@ -219,7 +219,7 @@ packageReservationSchema.methods.calculateSettlement = function() {
 };
 
 // 저장 전 자동 계산
-packageReservationSchema.pre('save', function(next) {
+packageReservationSchema.pre('save', function() {
     // 박수/일수 자동 계산
     if (this.travel_period.departure_date && this.travel_period.return_date) {
         const departure = new Date(this.travel_period.departure_date);
@@ -233,8 +233,6 @@ packageReservationSchema.pre('save', function(next) {
     
     // 정산 금액 자동 계산
     this.calculateSettlement();
-    
-    next();
 });
 
 module.exports = mongoose.model('PackageReservation', packageReservationSchema);
