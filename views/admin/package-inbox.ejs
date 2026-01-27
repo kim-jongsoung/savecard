@@ -264,28 +264,64 @@
                             <div class="section-divider">
                                 <h4>💰 금액 정보</h4>
                                 
+                                <!-- 인원별 판매가 -->
+                                <h5>👥 인원별 판매가</h5>
                                 <div class="row mb-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">총 판매가 *</label>
-                                        <input type="text" class="form-control" id="total_selling_price" 
-                                               placeholder="1,500,000" onchange="calculateSummary()" 
-                                               oninput="formatCurrency(this)" required>
-                                    </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-2">
                                         <label class="form-label">통화 *</label>
                                         <select class="form-select" id="currency" onchange="toggleExchangeRate()">
-                                            <option value="KRW">KRW (원화)</option>
-                                            <option value="USD">USD (달러)</option>
+                                            <option value="KRW">KRW</option>
+                                            <option value="USD">USD</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-2">
                                         <label class="form-label">환율</label>
                                         <input type="text" class="form-control" id="exchange_rate" 
                                                value="1,300" disabled oninput="formatCurrency(this)">
                                     </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">성인 1인 요금 *</label>
+                                        <input type="text" class="form-control" id="price_adult" 
+                                               placeholder="500,000" oninput="formatCurrency(this); calculateTotalPrice();" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">소아 1인 요금</label>
+                                        <input type="text" class="form-control" id="price_child" 
+                                               placeholder="400,000" oninput="formatCurrency(this); calculateTotalPrice();">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">유아 1인 요금</label>
+                                        <input type="text" class="form-control" id="price_infant" 
+                                               placeholder="100,000" oninput="formatCurrency(this); calculateTotalPrice();">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">총 판매가</label>
+                                        <input type="text" class="form-control" id="total_selling_price" 
+                                               readonly style="background-color: #e9ecef; font-weight: bold;">
+                                    </div>
                                 </div>
 
-                                <h5>📦 매입 구성요소</h5>
+                                <!-- 결제 빌링 -->
+                                <h5 class="mt-3">💳 결제 빌링</h5>
+                                <div id="billing-container"></div>
+                                <button type="button" class="btn btn-sm btn-outline-success mb-3" onclick="addBilling()">
+                                    <i class="fas fa-plus me-1"></i>결제 추가
+                                </button>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info mb-0">
+                                            <strong>결제 현황:</strong> 
+                                            <span id="payment_status_text">미결제</span><br>
+                                            <strong>총 판매가:</strong> <span id="billing_total_price">₩0</span><br>
+                                            <strong>결제 완료:</strong> <span id="billing_paid_amount">₩0</span><br>
+                                            <strong>미결제 금액:</strong> <span id="billing_remaining_amount" style="color: #dc3545; font-weight: bold;">₩0</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 매입 구성요소 -->
+                                <h5 class="mt-3">📦 매입 구성요소</h5>
                                 <div id="components-container"></div>
 
                                 <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addComponent()">
@@ -373,6 +409,9 @@
             }
             
             container.innerHTML = html;
+            
+            // 인원수 변경 시 총 판매가 자동 계산
+            calculateTotalPrice();
         }
         
         function createGuestCard(index, type, typeIndex) {
@@ -450,6 +489,25 @@
             return parseFloat(value) || 0;
         }
         
+        // 인원별 요금 계산 및 총 판매가 자동 합산
+        function calculateTotalPrice() {
+            const adultCount = parseInt(document.getElementById('people_adult').value) || 0;
+            const childCount = parseInt(document.getElementById('people_child').value) || 0;
+            const infantCount = parseInt(document.getElementById('people_infant').value) || 0;
+            
+            const adultPrice = getNumericValue('price_adult');
+            const childPrice = getNumericValue('price_child');
+            const infantPrice = getNumericValue('price_infant');
+            
+            const totalPrice = (adultCount * adultPrice) + (childCount * childPrice) + (infantCount * infantPrice);
+            
+            document.getElementById('total_selling_price').value = totalPrice.toLocaleString();
+            
+            // 결제 현황 업데이트
+            updateBillingStatus();
+            calculateSummary();
+        }
+        
         // 환율 필드 토글
         function toggleExchangeRate() {
             const currency = document.getElementById('currency').value;
@@ -462,7 +520,129 @@
                 exchangeRateInput.value = '1';
             }
             
+            calculateTotalPrice();
             calculateSummary();
+        }
+        
+        // 결제 빌링 카운터
+        let billingCount = 0;
+        
+        // 결제 빌링 추가
+        function addBilling() {
+            billingCount++;
+            const container = document.getElementById('billing-container');
+            
+            const billingHTML = `
+                <div class="component-item" id="billing-${billingCount}" style="background-color: #f8f9fa;">
+                    <div class="component-header">
+                        <div>
+                            <select class="form-select form-select-sm d-inline-block w-auto" 
+                                    id="billing-type-${billingCount}" onchange="updateBillingStatus()">
+                                <option value="cash">💵 현금결제</option>
+                                <option value="card">💳 카드결제</option>
+                                <option value="discount">🎁 할인</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeBilling(${billingCount})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2">
+                            <label class="form-label">요청금액 *</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="billing-amount-${billingCount}" placeholder="500,000" 
+                                   oninput="formatCurrency(this); updateBillingStatus();" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">입금완료일</label>
+                            <input type="date" class="form-control form-control-sm" 
+                                   id="billing-date-${billingCount}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">PG수수료</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="billing-fee-${billingCount}" placeholder="5,000" 
+                                   oninput="formatCurrency(this); updateBillingStatus();">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">실제입금금액</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="billing-actual-${billingCount}" placeholder="495,000" 
+                                   oninput="formatCurrency(this);">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">결제상태 *</label>
+                            <select class="form-select form-select-sm" id="billing-status-${billingCount}" 
+                                    onchange="updateBillingStatus()" required>
+                                <option value="pending">결제전</option>
+                                <option value="completed">결제완료</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">비고</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="billing-notes-${billingCount}" placeholder="비고">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', billingHTML);
+            updateBillingStatus();
+        }
+        
+        // 결제 빌링 삭제
+        function removeBilling(id) {
+            document.getElementById(`billing-${id}`).remove();
+            updateBillingStatus();
+        }
+        
+        // 결제 현황 업데이트
+        function updateBillingStatus() {
+            const totalPrice = getNumericValue('total_selling_price');
+            let paidAmount = 0;
+            
+            document.querySelectorAll('[id^="billing-"]').forEach(element => {
+                if (element.id.includes('billing-amount-')) {
+                    const id = element.id.split('-')[2];
+                    const status = document.getElementById(`billing-status-${id}`)?.value;
+                    const type = document.getElementById(`billing-type-${id}`)?.value;
+                    
+                    if (status === 'completed') {
+                        const amount = getNumericValue(`billing-amount-${id}`);
+                        if (type === 'discount') {
+                            // 할인은 차감
+                            paidAmount -= amount;
+                        } else {
+                            paidAmount += amount;
+                        }
+                    }
+                }
+            });
+            
+            const remainingAmount = totalPrice - paidAmount;
+            
+            document.getElementById('billing_total_price').textContent = `₩${totalPrice.toLocaleString()}`;
+            document.getElementById('billing_paid_amount').textContent = `₩${paidAmount.toLocaleString()}`;
+            document.getElementById('billing_remaining_amount').textContent = `₩${remainingAmount.toLocaleString()}`;
+            
+            // 결제 상태 텍스트
+            let statusText = '미결제';
+            let statusColor = '#dc3545';
+            
+            if (remainingAmount <= 0) {
+                statusText = '결제완료';
+                statusColor = '#198754';
+            } else if (paidAmount > 0) {
+                statusText = '부분결제';
+                statusColor = '#ffc107';
+            }
+            
+            const statusElement = document.getElementById('payment_status_text');
+            statusElement.textContent = statusText;
+            statusElement.style.color = statusColor;
+            statusElement.style.fontWeight = 'bold';
         }
 
         // 구성요소 추가
@@ -479,6 +659,7 @@
                                 <option value="flight">✈️ 항공권</option>
                                 <option value="hotel">🏨 호텔</option>
                                 <option value="tour">🎯 투어</option>
+                                <option value="ground">🚗 지상비</option>
                                 <option value="other">📦 기타</option>
                             </select>
                         </div>
@@ -603,13 +784,18 @@
                 itinerary: document.getElementById('itinerary').value,
                 inclusions: document.getElementById('inclusions').value,
                 exclusions: document.getElementById('exclusions').value,
+                price_adult: document.getElementById('price_adult').value,
+                price_child: document.getElementById('price_child').value,
+                price_infant: document.getElementById('price_infant').value,
                 total_selling_price: document.getElementById('total_selling_price').value,
                 currency: document.getElementById('currency').value,
                 exchange_rate: document.getElementById('exchange_rate').value,
                 special_requests: document.getElementById('special_requests').value,
                 components: [],
                 guests: [],
-                componentCount: componentCount
+                billings: [],
+                componentCount: componentCount,
+                billingCount: billingCount
             };
             
             // 구성요소 저장
@@ -641,6 +827,26 @@
                         email: document.getElementById(`guest_${guestIndex}_email`).value,
                         type: koreanNameEl.dataset.guestType
                     });
+                }
+            });
+            
+            // 결제 빌링 저장
+            document.querySelectorAll('[id^="billing-"]').forEach(element => {
+                if (element.id.includes('billing-type-')) {
+                    const id = element.id.split('-')[2];
+                    const amountEl = document.getElementById(`billing-amount-${id}`);
+                    if (amountEl) {
+                        draft.billings.push({
+                            id: id,
+                            type: element.value,
+                            amount: amountEl.value,
+                            date: document.getElementById(`billing-date-${id}`).value,
+                            fee: document.getElementById(`billing-fee-${id}`).value,
+                            actual: document.getElementById(`billing-actual-${id}`).value,
+                            status: document.getElementById(`billing-status-${id}`).value,
+                            notes: document.getElementById(`billing-notes-${id}`).value
+                        });
+                    }
                 }
             });
             
@@ -681,6 +887,9 @@
             document.getElementById('itinerary').value = draft.itinerary || '';
             document.getElementById('inclusions').value = draft.inclusions || '';
             document.getElementById('exclusions').value = draft.exclusions || '';
+            document.getElementById('price_adult').value = draft.price_adult || '';
+            document.getElementById('price_child').value = draft.price_child || '';
+            document.getElementById('price_infant').value = draft.price_infant || '';
             document.getElementById('total_selling_price').value = draft.total_selling_price || '';
             document.getElementById('currency').value = draft.currency || 'KRW';
             document.getElementById('exchange_rate').value = draft.exchange_rate || '1,300';
@@ -707,27 +916,98 @@
                 }, 100);
             }
             
+            // 결제 빌링 복원
+            if (draft.billingCount) {
+                billingCount = draft.billingCount;
+            }
+            
+            if (draft.billings && draft.billings.length > 0) {
+                draft.billings.forEach(billing => {
+                    billingCount = Math.max(billingCount, parseInt(billing.id));
+                    const container = document.getElementById('billing-container');
+                    const billingHTML = `
+                        <div class="component-item" id="billing-${billing.id}" style="background-color: #f8f9fa;">
+                            <div class="component-header">
+                                <div>
+                                    <select class="form-select form-select-sm d-inline-block w-auto" 
+                                            id="billing-type-${billing.id}" onchange="updateBillingStatus()">
+                                        <option value="cash" ${billing.type === 'cash' ? 'selected' : ''}>💵 현금결제</option>
+                                        <option value="card" ${billing.type === 'card' ? 'selected' : ''}>💳 카드결제</option>
+                                        <option value="discount" ${billing.type === 'discount' ? 'selected' : ''}>🎁 할인</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeBilling(${billing.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <label class="form-label">요청금액 *</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="billing-amount-${billing.id}" value="${billing.amount || ''}" placeholder="500,000" 
+                                           oninput="formatCurrency(this); updateBillingStatus();" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">입금완료일</label>
+                                    <input type="date" class="form-control form-control-sm" 
+                                           id="billing-date-${billing.id}" value="${billing.date || ''}">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">PG수수료</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="billing-fee-${billing.id}" value="${billing.fee || ''}" placeholder="5,000" 
+                                           oninput="formatCurrency(this); updateBillingStatus();">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">실제입금금액</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="billing-actual-${billing.id}" value="${billing.actual || ''}" placeholder="495,000" 
+                                           oninput="formatCurrency(this);">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">결제상태 *</label>
+                                    <select class="form-select form-select-sm" id="billing-status-${billing.id}" 
+                                            onchange="updateBillingStatus()" required>
+                                        <option value="pending" ${billing.status === 'pending' ? 'selected' : ''}>결제전</option>
+                                        <option value="completed" ${billing.status === 'completed' ? 'selected' : ''}>결제완료</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">비고</label>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="billing-notes-${billing.id}" value="${billing.notes || ''}" placeholder="비고">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', billingHTML);
+                });
+                updateBillingStatus();
+            }
+            
             // 구성요소 복원
-            document.getElementById('components-container').innerHTML = '';
-            componentCount = 0;
+            if (draft.componentCount) {
+                componentCount = draft.componentCount;
+            }
             
             if (draft.components && draft.components.length > 0) {
+                const container = document.getElementById('components-container');
                 draft.components.forEach(comp => {
-                    componentCount++;
-                    const container = document.getElementById('components-container');
+                    componentCount = Math.max(componentCount, parseInt(comp.id));
                     const componentHTML = `
-                        <div class="component-item" id="component-${componentCount}">
+                        <div class="component-item" id="component-${comp.id}">
                             <div class="component-header">
                                 <div>
                                     <select class="form-select form-select-sm d-inline-block w-auto component-type" 
-                                            id="type-${componentCount}" onchange="updateComponentBadge(${componentCount})">
+                                            id="type-${comp.id}" onchange="updateComponentBadge(${comp.id})">
                                         <option value="flight" ${comp.type === 'flight' ? 'selected' : ''}>✈️ 항공권</option>
                                         <option value="hotel" ${comp.type === 'hotel' ? 'selected' : ''}>🏨 호텔</option>
                                         <option value="tour" ${comp.type === 'tour' ? 'selected' : ''}>🎯 투어</option>
+                                        <option value="ground" ${comp.type === 'ground' ? 'selected' : ''}>🚗 지상비</option>
                                         <option value="other" ${comp.type === 'other' ? 'selected' : ''}>📦 기타</option>
                                     </select>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="removeComponent(${componentCount})">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeComponent(${comp.id})">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -735,17 +1015,17 @@
                                 <div class="col-md-3">
                                     <label class="form-label">공급업체명 *</label>
                                     <input type="text" class="form-control form-control-sm" 
-                                           id="vendor-${componentCount}" value="${comp.vendor || ''}" placeholder="예: 아시아나항공" required>
+                                           id="vendor-${comp.id}" value="${comp.vendor || ''}" placeholder="예: 아시아나항공" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">매입가 *</label>
                                     <input type="text" class="form-control form-control-sm" 
-                                           id="cost-${componentCount}" value="${comp.cost || ''}" placeholder="850,000" 
+                                           id="cost-${comp.id}" value="${comp.cost || ''}" placeholder="850,000" 
                                            onchange="calculateSummary()" oninput="formatCurrency(this)" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">통화</label>
-                                    <select class="form-select form-select-sm" id="cost-currency-${componentCount}" 
+                                    <select class="form-select form-select-sm" id="cost-currency-${comp.id}" 
                                             onchange="calculateSummary()">
                                         <option value="KRW" ${comp.cost_currency === 'KRW' ? 'selected' : ''}>KRW</option>
                                         <option value="USD" ${comp.cost_currency === 'USD' ? 'selected' : ''}>USD</option>
@@ -754,12 +1034,12 @@
                                 <div class="col-md-2">
                                     <label class="form-label">원화 환산</label>
                                     <input type="text" class="form-control form-control-sm" 
-                                           id="cost-krw-${componentCount}" readonly>
+                                           id="cost-krw-${comp.id}" readonly>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">비고</label>
                                     <input type="text" class="form-control form-control-sm" 
-                                           id="notes-${componentCount}" value="${comp.notes || ''}" placeholder="OZ601/OZ602 왕복">
+                                           id="notes-${comp.id}" value="${comp.notes || ''}" placeholder="OZ601/OZ602 왕복">
                                 </div>
                             </div>
                         </div>
@@ -804,7 +1084,7 @@
             
             // 구성요소 수집
             const components = [];
-            document.querySelectorAll('.component-item').forEach(component => {
+            document.querySelectorAll('.component-item[id^="component-"]').forEach(component => {
                 const id = component.id.split('-')[1];
                 components.push({
                     component_type: document.getElementById(`type-${id}`).value,
@@ -819,6 +1099,24 @@
                 alert('최소 1개 이상의 구성요소를 추가해주세요.');
                 return;
             }
+            
+            // 결제 빌링 수집
+            const billings = [];
+            document.querySelectorAll('[id^="billing-type-"]').forEach(element => {
+                const id = element.id.split('-')[2];
+                const amountEl = document.getElementById(`billing-amount-${id}`);
+                if (amountEl) {
+                    billings.push({
+                        type: element.value,
+                        amount: getNumericValue(`billing-amount-${id}`),
+                        date: document.getElementById(`billing-date-${id}`).value,
+                        fee: getNumericValue(`billing-fee-${id}`),
+                        actual_amount: getNumericValue(`billing-actual-${id}`),
+                        status: document.getElementById(`billing-status-${id}`).value,
+                        notes: document.getElementById(`billing-notes-${id}`).value
+                    });
+                }
+            });
             
             const data = {
                 platform_name: document.getElementById('platform_name').value,
@@ -858,10 +1156,14 @@
                 inclusions: document.getElementById('inclusions').value,
                 exclusions: document.getElementById('exclusions').value,
                 pricing: {
+                    price_adult: getNumericValue('price_adult'),
+                    price_child: getNumericValue('price_child'),
+                    price_infant: getNumericValue('price_infant'),
                     total_selling_price: getNumericValue('total_selling_price'),
                     currency: document.getElementById('currency').value,
                     exchange_rate: getNumericValue('exchange_rate') || 1
                 },
+                billings: billings,
                 cost_components: components,
                 special_requests: document.getElementById('special_requests').value
             };
