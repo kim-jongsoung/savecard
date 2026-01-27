@@ -552,7 +552,7 @@
                             <label class="form-label">요청금액 *</label>
                             <input type="text" class="form-control form-control-sm" 
                                    id="billing-amount-${billingCount}" placeholder="500,000" 
-                                   oninput="formatCurrency(this); updateBillingStatus();" required>
+                                   oninput="formatCurrency(this); calculateActualAmount(${billingCount}); updateBillingStatus();" required>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">입금완료일</label>
@@ -563,13 +563,13 @@
                             <label class="form-label">PG수수료</label>
                             <input type="text" class="form-control form-control-sm" 
                                    id="billing-fee-${billingCount}" placeholder="5,000" 
-                                   oninput="formatCurrency(this); updateBillingStatus();">
+                                   oninput="formatCurrency(this); calculateActualAmount(${billingCount}); updateBillingStatus();">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">실제입금금액</label>
                             <input type="text" class="form-control form-control-sm" 
                                    id="billing-actual-${billingCount}" placeholder="495,000" 
-                                   oninput="formatCurrency(this);">
+                                   readonly style="background-color: #e9ecef;">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">결제상태 *</label>
@@ -590,6 +590,15 @@
             
             container.insertAdjacentHTML('beforeend', billingHTML);
             updateBillingStatus();
+        }
+        
+        // 실제입금금액 자동 계산 (요청금액 - PG수수료)
+        function calculateActualAmount(billingId) {
+            const amount = getNumericValue(`billing-amount-${billingId}`);
+            const fee = getNumericValue(`billing-fee-${billingId}`);
+            const actualAmount = amount - fee;
+            
+            document.getElementById(`billing-actual-${billingId}`).value = actualAmount.toLocaleString();
         }
         
         // 결제 빌링 삭제
@@ -945,7 +954,7 @@
                                     <label class="form-label">요청금액 *</label>
                                     <input type="text" class="form-control form-control-sm" 
                                            id="billing-amount-${billing.id}" value="${billing.amount || ''}" placeholder="500,000" 
-                                           oninput="formatCurrency(this); updateBillingStatus();" required>
+                                           oninput="formatCurrency(this); calculateActualAmount(${billing.id}); updateBillingStatus();" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">입금완료일</label>
@@ -956,13 +965,13 @@
                                     <label class="form-label">PG수수료</label>
                                     <input type="text" class="form-control form-control-sm" 
                                            id="billing-fee-${billing.id}" value="${billing.fee || ''}" placeholder="5,000" 
-                                           oninput="formatCurrency(this); updateBillingStatus();">
+                                           oninput="formatCurrency(this); calculateActualAmount(${billing.id}); updateBillingStatus();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">실제입금금액</label>
                                     <input type="text" class="form-control form-control-sm" 
                                            id="billing-actual-${billing.id}" value="${billing.actual || ''}" placeholder="495,000" 
-                                           oninput="formatCurrency(this);">
+                                           readonly style="background-color: #e9ecef;">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">결제상태 *</label>
