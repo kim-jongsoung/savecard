@@ -171,22 +171,27 @@
                                                readonly placeholder="자동">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">이용호텔</label>
-                                        <input type="text" class="form-control" id="hotel_name" 
-                                               placeholder="호텔명">
-                                    </div>
-                                </div>
-
-                                <div class="row mb-2">
-                                    <div class="col-md-3">
                                         <label class="form-label">출국편명</label>
                                         <input type="text" class="form-control" id="outbound_flight" 
                                                placeholder="OZ601">
                                     </div>
-                                    <div class="col-md-3">
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-md-2">
                                         <label class="form-label">입국편명</label>
                                         <input type="text" class="form-control" id="inbound_flight" 
                                                placeholder="OZ602">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">이용호텔</label>
+                                        <input type="text" class="form-control" id="hotel_name" 
+                                               placeholder="호텔명">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">룸타입명</label>
+                                        <input type="text" class="form-control" id="room_type" 
+                                               placeholder="디럭스 오션뷰">
                                     </div>
                                 </div>
 
@@ -569,6 +574,7 @@
                 departure_date: document.getElementById('departure_date').value,
                 return_date: document.getElementById('return_date').value,
                 hotel_name: document.getElementById('hotel_name').value,
+                room_type: document.getElementById('room_type').value,
                 outbound_flight: document.getElementById('outbound_flight').value,
                 inbound_flight: document.getElementById('inbound_flight').value,
                 people_adult: document.getElementById('people_adult').value,
@@ -642,6 +648,7 @@
             document.getElementById('departure_date').value = draft.departure_date || '';
             document.getElementById('return_date').value = draft.return_date || '';
             document.getElementById('hotel_name').value = draft.hotel_name || '';
+            document.getElementById('room_type').value = draft.room_type || '';
             document.getElementById('outbound_flight').value = draft.outbound_flight || '';
             document.getElementById('inbound_flight').value = draft.inbound_flight || '';
             document.getElementById('people_adult').value = draft.people_adult || 0;
@@ -818,6 +825,7 @@
                     inbound_flight: document.getElementById('inbound_flight').value
                 },
                 hotel_name: document.getElementById('hotel_name').value,
+                room_type: document.getElementById('room_type').value,
                 itinerary: document.getElementById('itinerary').value,
                 inclusions: document.getElementById('inclusions').value,
                 exclusions: document.getElementById('exclusions').value,
