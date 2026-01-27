@@ -109,22 +109,28 @@ const packageReservationSchema = new mongoose.Schema({
         payment_sent_amount_krw: Number
     }],
     
-    // 정산 정보
+    // 정산 정보 (pre save 훅에서 자동 계산)
     settlement: {
         total_revenue_krw: {
             type: Number,
-            required: true
+            default: 0
         },
         total_cost_krw: {
             type: Number,
-            required: true
+            default: 0
         },
         total_margin_krw: {
             type: Number,
-            required: true
+            default: 0
         },
-        margin_rate: Number,
-        vat_amount: Number,
+        margin_rate: {
+            type: Number,
+            default: 0
+        },
+        vat_amount: {
+            type: Number,
+            default: 0
+        },
         
         // 입금 관리
         payment_received_date: Date,
