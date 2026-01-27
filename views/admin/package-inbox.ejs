@@ -246,8 +246,9 @@
                                 <div class="row mb-2">
                                     <div class="col-md-4">
                                         <label class="form-label">총 판매가 *</label>
-                                        <input type="number" class="form-control" id="total_selling_price" 
-                                               placeholder="1500000" onchange="calculateSummary()" required>
+                                        <input type="text" class="form-control" id="total_selling_price" 
+                                               placeholder="1,500,000" onchange="calculateSummary()" 
+                                               oninput="formatCurrency(this)" required>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">통화 *</label>
@@ -258,8 +259,8 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">환율</label>
-                                        <input type="number" class="form-control" id="exchange_rate" 
-                                               value="1300" disabled>
+                                        <input type="text" class="form-control" id="exchange_rate" 
+                                               value="1,300" disabled oninput="formatCurrency(this)">
                                     </div>
                                 </div>
 
@@ -373,9 +374,9 @@
                                    placeholder="HONG GILDONG" required>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">생년월일 *</label>
+                            <label class="form-label">생년월일</label>
                             <input type="date" class="form-control form-control-sm" 
-                                   id="guest_${index}_birth_date" required>
+                                   id="guest_${index}_birth_date">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">연락처</label>
@@ -414,6 +415,20 @@
             }
         }
 
+        // 금액 포맷팅 (천단위 쉼표)
+        function formatCurrency(input) {
+            let value = input.value.replace(/,/g, '');
+            if (value && !isNaN(value)) {
+                input.value = Number(value).toLocaleString();
+            }
+        }
+        
+        // 금액 값 추출 (쉼표 제거)
+        function getNumericValue(elementId) {
+            const value = document.getElementById(elementId).value.replace(/,/g, '');
+            return parseFloat(value) || 0;
+        }
+        
         // 환율 필드 토글
         function toggleExchangeRate() {
             const currency = document.getElementById('currency').value;
@@ -423,7 +438,7 @@
                 exchangeRateInput.disabled = false;
             } else {
                 exchangeRateInput.disabled = true;
-                exchangeRateInput.value = 1;
+                exchangeRateInput.value = '1';
             }
             
             calculateSummary();
@@ -458,9 +473,9 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">매입가 *</label>
-                            <input type="number" class="form-control form-control-sm" 
-                                   id="cost-${componentCount}" placeholder="850000" 
-                                   onchange="calculateSummary()" required>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="cost-${componentCount}" placeholder="850,000" 
+                                   onchange="calculateSummary()" oninput="formatCurrency(this)" required>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">통화</label>
@@ -501,9 +516,9 @@
 
         // 금액 요약 계산
         function calculateSummary() {
-            const sellingPrice = parseFloat(document.getElementById('total_selling_price').value) || 0;
+            const sellingPrice = getNumericValue('total_selling_price');
             const currency = document.getElementById('currency').value;
-            const exchangeRate = parseFloat(document.getElementById('exchange_rate').value) || 1;
+            const exchangeRate = getNumericValue('exchange_rate') || 1;
             
             // 총 판매가 (원화 환산)
             const revenueKRW = currency === 'KRW' ? sellingPrice : sellingPrice * exchangeRate;
@@ -514,15 +529,17 @@
             
             components.forEach(component => {
                 const id = component.id.split('-')[1];
-                const cost = parseFloat(document.getElementById(`cost-${id}`).value) || 0;
+                const cost = getNumericValue(`cost-${id}`);
                 const costCurrency = document.getElementById(`cost-currency-${id}`).value;
                 
                 const costKRW = costCurrency === 'KRW' ? cost : cost * exchangeRate;
                 totalCostKRW += costKRW;
                 
                 // 개별 구성요소 원화 환산 표시
-                document.getElementById(`cost-krw-${id}`).value = 
-                    `₩${Math.round(costKRW).toLocaleString()}`;
+                const costKrwEl = document.getElementById(`cost-krw-${id}`);
+                if (costKrwEl) {
+                    costKrwEl.value = `₩${Math.round(costKRW).toLocaleString()}`;
+                }
             });
             
             // 마진 계산
@@ -572,14 +589,17 @@
             // 구성요소 저장
             document.querySelectorAll('.component-item').forEach(component => {
                 const id = component.id.split('-')[1];
-                draft.components.push({
-                    id: id,
-                    type: document.getElementById(`type-${id}`).value,
-                    vendor: document.getElementById(`vendor-${id}`).value,
-                    cost: document.getElementById(`cost-${id}`).value,
-                    cost_currency: document.getElementById(`cost-currency-${id}`).value,
-                    notes: document.getElementById(`notes-${id}`).value
-                });
+                const costEl = document.getElementById(`cost-${id}`);
+                if (costEl) {
+                    draft.components.push({
+                        id: id,
+                        type: document.getElementById(`type-${id}`).value,
+                        vendor: document.getElementById(`vendor-${id}`).value,
+                        cost: costEl.value,
+                        cost_currency: document.getElementById(`cost-currency-${id}`).value,
+                        notes: document.getElementById(`notes-${id}`).value
+                    });
+                }
             });
             
             // 고객정보 저장
@@ -632,7 +652,7 @@
             document.getElementById('exclusions').value = draft.exclusions || '';
             document.getElementById('total_selling_price').value = draft.total_selling_price || '';
             document.getElementById('currency').value = draft.currency || 'KRW';
-            document.getElementById('exchange_rate').value = draft.exchange_rate || 1300;
+            document.getElementById('exchange_rate').value = draft.exchange_rate || '1,300';
             document.getElementById('special_requests').value = draft.special_requests || '';
             
             calculateNights();
@@ -688,9 +708,9 @@
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">매입가 *</label>
-                                    <input type="number" class="form-control form-control-sm" 
-                                           id="cost-${componentCount}" value="${comp.cost || ''}" placeholder="850000" 
-                                           onchange="calculateSummary()" required>
+                                    <input type="text" class="form-control form-control-sm" 
+                                           id="cost-${componentCount}" value="${comp.cost || ''}" placeholder="850,000" 
+                                           onchange="calculateSummary()" oninput="formatCurrency(this)" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label">통화</label>
@@ -758,7 +778,7 @@
                 components.push({
                     component_type: document.getElementById(`type-${id}`).value,
                     vendor_name: document.getElementById(`vendor-${id}`).value,
-                    cost_amount: parseFloat(document.getElementById(`cost-${id}`).value),
+                    cost_amount: getNumericValue(`cost-${id}`),
                     cost_currency: document.getElementById(`cost-currency-${id}`).value,
                     notes: document.getElementById(`notes-${id}`).value
                 });
@@ -802,9 +822,9 @@
                 inclusions: document.getElementById('inclusions').value,
                 exclusions: document.getElementById('exclusions').value,
                 pricing: {
-                    total_selling_price: parseFloat(document.getElementById('total_selling_price').value) || 0,
+                    total_selling_price: getNumericValue('total_selling_price'),
                     currency: document.getElementById('currency').value,
-                    exchange_rate: parseFloat(document.getElementById('exchange_rate').value) || 1
+                    exchange_rate: getNumericValue('exchange_rate') || 1
                 },
                 cost_components: components,
                 special_requests: document.getElementById('special_requests').value
