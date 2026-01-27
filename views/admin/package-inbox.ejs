@@ -170,18 +170,34 @@
                                         <input type="text" class="form-control" id="period_display" 
                                                readonly placeholder="자동">
                                     </div>
-                                    <div class="col-md-2">
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-md-1">
                                         <label class="form-label">출국편명</label>
                                         <input type="text" class="form-control" id="outbound_flight" 
                                                placeholder="OZ601">
                                     </div>
-                                </div>
-
-                                <div class="row mb-2">
-                                    <div class="col-md-2">
+                                    <div class="col-md-1">
+                                        <label class="form-label">출발시간</label>
+                                        <input type="time" class="form-control" id="outbound_departure_time">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label">도착시간</label>
+                                        <input type="time" class="form-control" id="outbound_arrival_time">
+                                    </div>
+                                    <div class="col-md-1">
                                         <label class="form-label">입국편명</label>
                                         <input type="text" class="form-control" id="inbound_flight" 
                                                placeholder="OZ602">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label">출발시간</label>
+                                        <input type="time" class="form-control" id="inbound_departure_time">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label">도착시간</label>
+                                        <input type="time" class="form-control" id="inbound_arrival_time">
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label">이용호텔</label>
@@ -576,7 +592,11 @@
                 hotel_name: document.getElementById('hotel_name').value,
                 room_type: document.getElementById('room_type').value,
                 outbound_flight: document.getElementById('outbound_flight').value,
+                outbound_departure_time: document.getElementById('outbound_departure_time').value,
+                outbound_arrival_time: document.getElementById('outbound_arrival_time').value,
                 inbound_flight: document.getElementById('inbound_flight').value,
+                inbound_departure_time: document.getElementById('inbound_departure_time').value,
+                inbound_arrival_time: document.getElementById('inbound_arrival_time').value,
                 people_adult: document.getElementById('people_adult').value,
                 people_child: document.getElementById('people_child').value,
                 people_infant: document.getElementById('people_infant').value,
@@ -650,7 +670,11 @@
             document.getElementById('hotel_name').value = draft.hotel_name || '';
             document.getElementById('room_type').value = draft.room_type || '';
             document.getElementById('outbound_flight').value = draft.outbound_flight || '';
+            document.getElementById('outbound_departure_time').value = draft.outbound_departure_time || '';
+            document.getElementById('outbound_arrival_time').value = draft.outbound_arrival_time || '';
             document.getElementById('inbound_flight').value = draft.inbound_flight || '';
+            document.getElementById('inbound_departure_time').value = draft.inbound_departure_time || '';
+            document.getElementById('inbound_arrival_time').value = draft.inbound_arrival_time || '';
             document.getElementById('people_adult').value = draft.people_adult || 0;
             document.getElementById('people_child').value = draft.people_child || 0;
             document.getElementById('people_infant').value = draft.people_infant || 0;
@@ -822,7 +846,11 @@
                 },
                 flight_info: {
                     outbound_flight: document.getElementById('outbound_flight').value,
-                    inbound_flight: document.getElementById('inbound_flight').value
+                    outbound_departure_time: document.getElementById('outbound_departure_time').value,
+                    outbound_arrival_time: document.getElementById('outbound_arrival_time').value,
+                    inbound_flight: document.getElementById('inbound_flight').value,
+                    inbound_departure_time: document.getElementById('inbound_departure_time').value,
+                    inbound_arrival_time: document.getElementById('inbound_arrival_time').value
                 },
                 hotel_name: document.getElementById('hotel_name').value,
                 room_type: document.getElementById('room_type').value,
