@@ -143,11 +143,7 @@
                                     <div class="col-md-2">
                                         <label class="form-label">예약채널 *</label>
                                         <select class="form-select" id="platform_name" required>
-                                            <option value="">선택</option>
-                                            <option value="VASCO">VASCO</option>
-                                            <option value="NOL">NOL</option>
-                                            <option value="롱혼스테이크">롱혼</option>
-                                            <option value="직접예약">직접</option>
+                                            <option value="">로딩중...</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -378,6 +374,70 @@
     <script>
         let componentCount = 0;
         let guestData = [];
+        let bookingChannels = [];
+        let suppliers = [];
+
+        // 페이지 로드 시 예약채널과 공급업체 데이터 로드
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadBookingChannels();
+            await loadSuppliers();
+        });
+
+        // 예약채널 로드
+        async function loadBookingChannels() {
+            try {
+                const response = await fetch('/api/package-vendors/channels?active_only=true');
+                const data = await response.json();
+                
+                if (data.success) {
+                    bookingChannels = data.data;
+                    updateChannelDropdown();
+                }
+            } catch (error) {
+                console.error('예약채널 로드 실패:', error);
+            }
+        }
+
+        // 예약채널 드롭다운 업데이트
+        function updateChannelDropdown() {
+            const select = document.getElementById('platform_name');
+            select.innerHTML = '<option value="">선택하세요</option>';
+            
+            bookingChannels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.channel_name;
+                option.textContent = channel.channel_name;
+                select.appendChild(option);
+            });
+        }
+
+        // 공급업체 로드
+        async function loadSuppliers() {
+            try {
+                const response = await fetch('/api/package-vendors/suppliers?active_only=true');
+                const data = await response.json();
+                
+                if (data.success) {
+                    suppliers = data.data;
+                }
+            } catch (error) {
+                console.error('공급업체 로드 실패:', error);
+            }
+        }
+
+        // 공급업체 드롭다운 업데이트 (유형별 필터링)
+        function updateSupplierDropdown(selectElement, supplierType) {
+            selectElement.innerHTML = '<option value="">선택하세요</option>';
+            
+            const filteredSuppliers = suppliers.filter(s => s.supplier_type === supplierType);
+            
+            filteredSuppliers.forEach(supplier => {
+                const option = document.createElement('option');
+                option.value = supplier.supplier_name;
+                option.textContent = supplier.supplier_name;
+                selectElement.appendChild(option);
+            });
+        }
 
         // 동적 고객정보 필드 생성
         function generateGuestFields() {
@@ -693,8 +753,10 @@
                     <div class="row">
                         <div class="col-md-3">
                             <label class="form-label">공급업체명 *</label>
-                            <input type="text" class="form-control form-control-sm" 
-                                   id="vendor-${componentCount}" placeholder="예: 아시아나항공" required>
+                            <select class="form-select form-select-sm supplier-select" 
+                                    id="vendor-${componentCount}" required>
+                                <option value="">선택하세요</option>
+                            </select>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">매입가 *</label>
@@ -725,12 +787,20 @@
             `;
             
             container.insertAdjacentHTML('beforeend', componentHTML);
+            
+            // 공급업체 드롭다운 초기화 (기본값: flight)
+            const vendorSelect = document.getElementById(`vendor-${componentCount}`);
+            updateSupplierDropdown(vendorSelect, 'flight');
         }
 
-        // 구성요소 타입 변경 시 (현재는 아무 동작 안함, 필요시 확장 가능)
+        // 구성요소 타입 변경 시 공급업체 드롭다운 업데이트
         function updateComponentBadge(id) {
-            // 타입 변경 시 추가 로직이 필요하면 여기에 구현
-            // 현재는 select 값만 변경되면 됨
+            const typeSelect = document.getElementById(`type-${id}`);
+            const vendorSelect = document.getElementById(`vendor-${id}`);
+            const selectedType = typeSelect.value;
+            
+            // 유형에 맞는 공급업체 목록으로 업데이트
+            updateSupplierDropdown(vendorSelect, selectedType);
         }
 
         // 구성요소 삭제
