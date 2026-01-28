@@ -758,66 +758,76 @@
                 if (result.success && result.data) {
                     const data = result.data;
                     
+                    // 안전한 값 설정 헬퍼 함수
+                    const safeSetValue = (id, value) => {
+                        const element = document.getElementById(id);
+                        if (element && value !== null && value !== undefined) {
+                            element.value = value;
+                        }
+                    };
+                    
                     // 기본 정보
-                    if (data.platform_name) document.getElementById('platform_name').value = data.platform_name;
-                    if (data.package_name) document.getElementById('package_name').value = data.package_name;
+                    safeSetValue('platform_name', data.platform_name);
+                    safeSetValue('package_name', data.package_name);
                     
                     // 고객 정보
                     if (data.customer) {
-                        if (data.customer.korean_name) document.getElementById('customer_korean_name').value = data.customer.korean_name;
-                        if (data.customer.english_name) document.getElementById('customer_english_name').value = data.customer.english_name;
-                        if (data.customer.phone) document.getElementById('customer_phone').value = data.customer.phone;
-                        if (data.customer.email) document.getElementById('customer_email').value = data.customer.email;
+                        safeSetValue('customer_korean_name', data.customer.korean_name);
+                        safeSetValue('customer_english_name', data.customer.english_name);
+                        safeSetValue('customer_phone', data.customer.phone);
+                        safeSetValue('customer_email', data.customer.email);
                     }
                     
                     // 여행 기간
                     if (data.travel_period) {
-                        if (data.travel_period.departure_date) document.getElementById('departure_date').value = data.travel_period.departure_date;
-                        if (data.travel_period.return_date) document.getElementById('return_date').value = data.travel_period.return_date;
-                        calculateNights();
+                        safeSetValue('departure_date', data.travel_period.departure_date);
+                        safeSetValue('return_date', data.travel_period.return_date);
+                        if (data.travel_period.departure_date && data.travel_period.return_date) {
+                            calculateNights();
+                        }
                     }
                     
                     // 인원 구성
                     if (data.people) {
-                        if (data.people.adult !== undefined) document.getElementById('people_adult').value = data.people.adult;
-                        if (data.people.child !== undefined) document.getElementById('people_child').value = data.people.child;
-                        if (data.people.infant !== undefined) document.getElementById('people_infant').value = data.people.infant;
+                        if (data.people.adult !== undefined) safeSetValue('people_adult', data.people.adult);
+                        if (data.people.child !== undefined) safeSetValue('people_child', data.people.child);
+                        if (data.people.infant !== undefined) safeSetValue('people_infant', data.people.infant);
                         generateGuestFields();
                     }
                     
                     // 항공편 정보
                     if (data.flight_info) {
-                        if (data.flight_info.outbound_flight) document.getElementById('outbound_flight').value = data.flight_info.outbound_flight;
-                        if (data.flight_info.outbound_departure_time) document.getElementById('outbound_departure_time').value = data.flight_info.outbound_departure_time;
-                        if (data.flight_info.outbound_arrival_time) document.getElementById('outbound_arrival_time').value = data.flight_info.outbound_arrival_time;
-                        if (data.flight_info.inbound_flight) document.getElementById('inbound_flight').value = data.flight_info.inbound_flight;
-                        if (data.flight_info.inbound_departure_time) document.getElementById('inbound_departure_time').value = data.flight_info.inbound_departure_time;
-                        if (data.flight_info.inbound_arrival_time) document.getElementById('inbound_arrival_time').value = data.flight_info.inbound_arrival_time;
+                        safeSetValue('outbound_flight', data.flight_info.outbound_flight);
+                        safeSetValue('outbound_departure_time', data.flight_info.outbound_departure_time);
+                        safeSetValue('outbound_arrival_time', data.flight_info.outbound_arrival_time);
+                        safeSetValue('inbound_flight', data.flight_info.inbound_flight);
+                        safeSetValue('inbound_departure_time', data.flight_info.inbound_departure_time);
+                        safeSetValue('inbound_arrival_time', data.flight_info.inbound_arrival_time);
                     }
                     
                     // 호텔 정보
-                    if (data.hotel_name) document.getElementById('hotel_name').value = data.hotel_name;
-                    if (data.room_type) document.getElementById('room_type').value = data.room_type;
+                    safeSetValue('hotel_name', data.hotel_name);
+                    safeSetValue('room_type', data.room_type);
                     
                     // 일정 및 포함/불포함
-                    if (data.itinerary) document.getElementById('itinerary').value = data.itinerary;
-                    if (data.inclusions) document.getElementById('inclusions').value = data.inclusions;
-                    if (data.exclusions) document.getElementById('exclusions').value = data.exclusions;
+                    safeSetValue('itinerary', data.itinerary);
+                    safeSetValue('inclusions', data.inclusions);
+                    safeSetValue('exclusions', data.exclusions);
                     
                     // 금액 정보
                     if (data.pricing) {
-                        if (data.pricing.currency) document.getElementById('currency').value = data.pricing.currency;
+                        safeSetValue('currency', data.pricing.currency);
                         if (data.pricing.exchange_rate) {
-                            document.getElementById('exchange_rate').value = data.pricing.exchange_rate.toLocaleString();
+                            safeSetValue('exchange_rate', data.pricing.exchange_rate.toLocaleString());
                         }
                         if (data.pricing.price_adult) {
-                            document.getElementById('price_adult').value = data.pricing.price_adult.toLocaleString();
+                            safeSetValue('price_adult', data.pricing.price_adult.toLocaleString());
                         }
                         if (data.pricing.price_child) {
-                            document.getElementById('price_child').value = data.pricing.price_child.toLocaleString();
+                            safeSetValue('price_child', data.pricing.price_child.toLocaleString());
                         }
                         if (data.pricing.price_infant) {
-                            document.getElementById('price_infant').value = data.pricing.price_infant.toLocaleString();
+                            safeSetValue('price_infant', data.pricing.price_infant.toLocaleString());
                         }
                         toggleExchangeRate();
                         calculateTotalPrice();
@@ -827,19 +837,18 @@
                     if (data.guests && data.guests.length > 0) {
                         setTimeout(() => {
                             data.guests.forEach((guest, index) => {
-                                if (document.getElementById(`guest_${index + 1}_korean_name`)) {
-                                    if (guest.korean_name) document.getElementById(`guest_${index + 1}_korean_name`).value = guest.korean_name;
-                                    if (guest.english_name) document.getElementById(`guest_${index + 1}_english_name`).value = guest.english_name;
-                                    if (guest.birth_date) document.getElementById(`guest_${index + 1}_birth_date`).value = guest.birth_date;
-                                    if (guest.phone) document.getElementById(`guest_${index + 1}_phone`).value = guest.phone;
-                                    if (guest.email) document.getElementById(`guest_${index + 1}_email`).value = guest.email;
-                                }
+                                const guestNum = index + 1;
+                                safeSetValue(`guest_${guestNum}_korean_name`, guest.korean_name);
+                                safeSetValue(`guest_${guestNum}_english_name`, guest.english_name);
+                                safeSetValue(`guest_${guestNum}_birth_date`, guest.birth_date);
+                                safeSetValue(`guest_${guestNum}_phone`, guest.phone);
+                                safeSetValue(`guest_${guestNum}_email`, guest.email);
                             });
                         }, 300);
                     }
                     
                     // 특별 요청사항
-                    if (data.special_requests) document.getElementById('special_requests').value = data.special_requests;
+                    safeSetValue('special_requests', data.special_requests);
                     
                     alert('✅ AI 파싱이 완료되었습니다!\n\n파싱된 정보를 확인하고 필요시 수정해주세요.');
                     
