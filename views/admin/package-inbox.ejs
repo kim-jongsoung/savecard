@@ -278,10 +278,6 @@
                                         </button>
                                     </div>
                                 </div>
-                                
-                                <div class="alert alert-info mb-2 py-1">
-                                    <small>💡 인원수 입력 후 자동으로 고객정보 입력 필드가 생성됩니다</small>
-                                </div>
 
                                 <!-- 동적 고객 정보 필드 -->
                                 <div id="guests-container" class="mt-3"></div>
@@ -355,13 +351,14 @@
                                 </button>
                                 
                                 <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <div class="alert alert-info mb-0">
-                                            <strong>결제 현황:</strong> 
-                                            <span id="payment_status_text">미결제</span><br>
-                                            <strong>총 판매가:</strong> <span id="billing_total_price">₩0</span><br>
-                                            <strong>결제 완료:</strong> <span id="billing_paid_amount">₩0</span><br>
-                                            <strong>미결제 금액:</strong> <span id="billing_remaining_amount" style="color: #dc3545; font-weight: bold;">₩0</span>
+                                    <div class="col-md-12">
+                                        <div class="alert alert-info mb-0 py-2">
+                                            <small>
+                                                <strong>결제 현황:</strong> <span id="payment_status_text">미결제</span> | 
+                                                <strong>총 판매가:</strong> <span id="billing_total_price">₩0</span> | 
+                                                <strong>결제 완료:</strong> <span id="billing_paid_amount">₩0</span> | 
+                                                <strong>미결제:</strong> <span id="billing_remaining_amount" style="color: #dc3545; font-weight: bold;">₩0</span>
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -378,13 +375,17 @@
                                 <div class="summary-box">
                                     <h5>💵 금액 요약</h5>
                                     <div class="summary-row">
-                                        <span>총 판매가:</span>
-                                        <span id="summary_revenue">₩0</span>
+                                        <span><strong></strong>총 판매가:</strong></span>
+                                        <span id="summary_revenue" style="font-weight: bold;">₩0</span>
                                     </div>
+                                    <div id="summary_revenue_detail" style="font-size: 0.8rem; color: #6c757d; margin-left: 10px; margin-bottom: 8px;"></div>
+                                    
                                     <div class="summary-row">
-                                        <span>총 매입가:</span>
-                                        <span id="summary_cost">₩0</span>
+                                        <span><strong>총 매입가:</strong></span>
+                                        <span id="summary_cost" style="font-weight: bold;">₩0</span>
                                     </div>
+                                    <div id="summary_cost_detail" style="font-size: 0.8rem; color: #6c757d; margin-left: 10px; margin-bottom: 8px;"></div>
+                                    
                                     <div class="summary-row summary-total">
                                         <span>예상 마진:</span>
                                         <span id="summary_margin">₩0 (0%)</span>
@@ -1022,14 +1023,44 @@
             // 총 판매가 (원화 환산)
             const revenueKRW = currency === 'KRW' ? sellingPrice : sellingPrice * exchangeRate;
             
-            // 총 매입가 계산
+            // 판매가 상세 항목 생성
+            const adultCount = parseInt(document.getElementById('people_adult').value) || 0;
+            const childCount = parseInt(document.getElementById('people_child').value) || 0;
+            const infantCount = parseInt(document.getElementById('people_infant').value) || 0;
+            
+            const adultPrice = getNumericValue('price_adult');
+            const childPrice = getNumericValue('price_child');
+            const infantPrice = getNumericValue('price_infant');
+            
+            let revenueDetails = [];
+            if (adultCount > 0 && adultPrice > 0) {
+                const adultTotal = adultCount * adultPrice;
+                const adultKRW = currency === 'KRW' ? adultTotal : adultTotal * exchangeRate;
+                revenueDetails.push(`성인 ${adultCount}명 × ${currency === 'KRW' ? '₩' : '$'}${adultPrice.toLocaleString()} = ₩${Math.round(adultKRW).toLocaleString()}`);
+            }
+            if (childCount > 0 && childPrice > 0) {
+                const childTotal = childCount * childPrice;
+                const childKRW = currency === 'KRW' ? childTotal : childTotal * exchangeRate;
+                revenueDetails.push(`소아 ${childCount}명 × ${currency === 'KRW' ? '₩' : '$'}${childPrice.toLocaleString()} = ₩${Math.round(childKRW).toLocaleString()}`);
+            }
+            if (infantCount > 0 && infantPrice > 0) {
+                const infantTotal = infantCount * infantPrice;
+                const infantKRW = currency === 'KRW' ? infantTotal : infantTotal * exchangeRate;
+                revenueDetails.push(`유아 ${infantCount}명 × ${currency === 'KRW' ? '₩' : '$'}${infantPrice.toLocaleString()} = ₩${Math.round(infantKRW).toLocaleString()}`);
+            }
+            
+            // 총 매입가 계산 및 상세 항목 생성
             let totalCostKRW = 0;
+            let costDetails = [];
             const components = document.querySelectorAll('.component-item');
             
             components.forEach(component => {
                 const id = component.id.split('-')[1];
                 const cost = getNumericValue(`cost-${id}`);
                 const costCurrency = document.getElementById(`cost-currency-${id}`).value;
+                const vendorName = document.getElementById(`vendor-${id}`).value || '업체명';
+                const typeSelect = document.getElementById(`type-${id}`);
+                const typeText = typeSelect ? typeSelect.options[typeSelect.selectedIndex].text : '';
                 
                 const costKRW = costCurrency === 'KRW' ? cost : cost * exchangeRate;
                 totalCostKRW += costKRW;
@@ -1038,6 +1069,11 @@
                 const costKrwEl = document.getElementById(`cost-krw-${id}`);
                 if (costKrwEl) {
                     costKrwEl.value = `₩${Math.round(costKRW).toLocaleString()}`;
+                }
+                
+                // 상세 항목 추가
+                if (cost > 0) {
+                    costDetails.push(`${typeText} (${vendorName}) ${costCurrency === 'KRW' ? '₩' : '$'}${cost.toLocaleString()} = ₩${Math.round(costKRW).toLocaleString()}`);
                 }
             });
             
@@ -1051,8 +1087,14 @@
             // 요약 표시
             document.getElementById('summary_revenue').textContent = 
                 `₩${Math.round(revenueKRW).toLocaleString()}`;
+            document.getElementById('summary_revenue_detail').innerHTML = 
+                revenueDetails.length > 0 ? revenueDetails.join('<br>') : '';
+                
             document.getElementById('summary_cost').textContent = 
                 `₩${Math.round(totalCostKRW).toLocaleString()}`;
+            document.getElementById('summary_cost_detail').innerHTML = 
+                costDetails.length > 0 ? costDetails.join('<br>') : '';
+                
             document.getElementById('summary_margin').textContent = 
                 `₩${Math.round(marginKRW).toLocaleString()} (${marginRate}%)`;
             document.getElementById('summary_margin').style.color = marginKRW >= 0 ? '#198754' : '#dc3545';
@@ -1514,9 +1556,6 @@
             document.getElementById('return_date').value = tomorrow.toISOString().split('T')[0];
             
             calculateNights();
-            
-            // 기본 구성요소 1개 추가
-            addComponent();
         });
     </script>
 </body>
