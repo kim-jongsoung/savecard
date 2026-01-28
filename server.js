@@ -98,6 +98,9 @@ const auditsRouter = require('./routes/audits');
 // 수배업체 관리 API 라우트
 const vendorsRouter = require('./routes/vendors');
 
+// 패키지 예약 AI 파싱 라우트
+const packageParseRouter = require('./routes/package-parse');
+
 app.use('/', indexRouter);
 app.use('/admin', adminRouter);
 
@@ -117,6 +120,7 @@ try {
     app.use('/api', fieldDefsRouter);
     app.use('/api', auditsRouter);
     app.use('/api/vendors', vendorsRouter);
+    app.use('/api/parse-package-reservation', packageParseRouter);
 } catch (error) {
     console.error('API 라우트 연결 오류:', error);
 }

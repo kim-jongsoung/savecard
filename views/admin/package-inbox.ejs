@@ -230,11 +230,17 @@
                                                value="0" min="0" onchange="generateGuestFields()">
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">&nbsp;</label>
-                                        <div class="alert alert-info mb-0 py-1">
-                                            <small>인원수 입력 후 자동으로 고객정보 입력 필드가 생성됩니다</small>
-                                        </div>
+                                        <label class="form-label">🤖 AI 인박스 (예약 데이터 붙여넣기)</label>
+                                        <textarea class="form-control" id="ai_inbox" rows="3" 
+                                                  placeholder="예약 데이터를 여기에 붙여넣으세요. AI가 자동으로 분석하여 필드를 채웁니다."></textarea>
+                                        <button type="button" class="btn btn-sm btn-primary mt-1" onclick="parseAIInbox()">
+                                            <i class="fas fa-magic"></i> AI 파싱 시작
+                                        </button>
                                     </div>
+                                </div>
+                                
+                                <div class="alert alert-info mb-2 py-1">
+                                    <small>💡 인원수 입력 후 자동으로 고객정보 입력 필드가 생성됩니다</small>
                                 </div>
 
                                 <!-- 동적 고객 정보 필드 -->
@@ -723,6 +729,131 @@
         function removeComponent(id) {
             document.getElementById(`component-${id}`).remove();
             calculateSummary();
+        }
+
+        // AI 인박스 파싱
+        async function parseAIInbox() {
+            const aiInboxText = document.getElementById('ai_inbox').value.trim();
+            
+            if (!aiInboxText) {
+                alert('⚠️ AI 인박스에 예약 데이터를 입력해주세요.');
+                return;
+            }
+            
+            // 로딩 표시
+            const parseButton = event.target;
+            const originalText = parseButton.innerHTML;
+            parseButton.disabled = true;
+            parseButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI 분석 중...';
+            
+            try {
+                const response = await fetch('/api/parse-package-reservation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: aiInboxText })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const data = result.data;
+                    
+                    // 기본 정보
+                    if (data.platform_name) document.getElementById('platform_name').value = data.platform_name;
+                    if (data.package_name) document.getElementById('package_name').value = data.package_name;
+                    
+                    // 고객 정보
+                    if (data.customer) {
+                        if (data.customer.korean_name) document.getElementById('customer_korean_name').value = data.customer.korean_name;
+                        if (data.customer.english_name) document.getElementById('customer_english_name').value = data.customer.english_name;
+                        if (data.customer.phone) document.getElementById('customer_phone').value = data.customer.phone;
+                        if (data.customer.email) document.getElementById('customer_email').value = data.customer.email;
+                    }
+                    
+                    // 여행 기간
+                    if (data.travel_period) {
+                        if (data.travel_period.departure_date) document.getElementById('departure_date').value = data.travel_period.departure_date;
+                        if (data.travel_period.return_date) document.getElementById('return_date').value = data.travel_period.return_date;
+                        calculateNights();
+                    }
+                    
+                    // 인원 구성
+                    if (data.people) {
+                        if (data.people.adult !== undefined) document.getElementById('people_adult').value = data.people.adult;
+                        if (data.people.child !== undefined) document.getElementById('people_child').value = data.people.child;
+                        if (data.people.infant !== undefined) document.getElementById('people_infant').value = data.people.infant;
+                        generateGuestFields();
+                    }
+                    
+                    // 항공편 정보
+                    if (data.flight_info) {
+                        if (data.flight_info.outbound_flight) document.getElementById('outbound_flight').value = data.flight_info.outbound_flight;
+                        if (data.flight_info.outbound_departure_time) document.getElementById('outbound_departure_time').value = data.flight_info.outbound_departure_time;
+                        if (data.flight_info.outbound_arrival_time) document.getElementById('outbound_arrival_time').value = data.flight_info.outbound_arrival_time;
+                        if (data.flight_info.inbound_flight) document.getElementById('inbound_flight').value = data.flight_info.inbound_flight;
+                        if (data.flight_info.inbound_departure_time) document.getElementById('inbound_departure_time').value = data.flight_info.inbound_departure_time;
+                        if (data.flight_info.inbound_arrival_time) document.getElementById('inbound_arrival_time').value = data.flight_info.inbound_arrival_time;
+                    }
+                    
+                    // 호텔 정보
+                    if (data.hotel_name) document.getElementById('hotel_name').value = data.hotel_name;
+                    if (data.room_type) document.getElementById('room_type').value = data.room_type;
+                    
+                    // 일정 및 포함/불포함
+                    if (data.itinerary) document.getElementById('itinerary').value = data.itinerary;
+                    if (data.inclusions) document.getElementById('inclusions').value = data.inclusions;
+                    if (data.exclusions) document.getElementById('exclusions').value = data.exclusions;
+                    
+                    // 금액 정보
+                    if (data.pricing) {
+                        if (data.pricing.currency) document.getElementById('currency').value = data.pricing.currency;
+                        if (data.pricing.exchange_rate) {
+                            document.getElementById('exchange_rate').value = data.pricing.exchange_rate.toLocaleString();
+                        }
+                        if (data.pricing.price_adult) {
+                            document.getElementById('price_adult').value = data.pricing.price_adult.toLocaleString();
+                        }
+                        if (data.pricing.price_child) {
+                            document.getElementById('price_child').value = data.pricing.price_child.toLocaleString();
+                        }
+                        if (data.pricing.price_infant) {
+                            document.getElementById('price_infant').value = data.pricing.price_infant.toLocaleString();
+                        }
+                        toggleExchangeRate();
+                        calculateTotalPrice();
+                    }
+                    
+                    // 투숙객 정보 (있는 경우)
+                    if (data.guests && data.guests.length > 0) {
+                        setTimeout(() => {
+                            data.guests.forEach((guest, index) => {
+                                if (document.getElementById(`guest_${index + 1}_korean_name`)) {
+                                    if (guest.korean_name) document.getElementById(`guest_${index + 1}_korean_name`).value = guest.korean_name;
+                                    if (guest.english_name) document.getElementById(`guest_${index + 1}_english_name`).value = guest.english_name;
+                                    if (guest.birth_date) document.getElementById(`guest_${index + 1}_birth_date`).value = guest.birth_date;
+                                    if (guest.phone) document.getElementById(`guest_${index + 1}_phone`).value = guest.phone;
+                                    if (guest.email) document.getElementById(`guest_${index + 1}_email`).value = guest.email;
+                                }
+                            });
+                        }, 300);
+                    }
+                    
+                    // 특별 요청사항
+                    if (data.special_requests) document.getElementById('special_requests').value = data.special_requests;
+                    
+                    alert('✅ AI 파싱이 완료되었습니다!\n\n파싱된 정보를 확인하고 필요시 수정해주세요.');
+                    
+                } else {
+                    alert('❌ AI 파싱 실패: ' + (result.message || '알 수 없는 오류'));
+                }
+                
+            } catch (error) {
+                console.error('AI 파싱 오류:', error);
+                alert('❌ AI 파싱 중 오류가 발생했습니다.\n\n' + error.message);
+            } finally {
+                parseButton.disabled = false;
+                parseButton.innerHTML = originalText;
+            }
         }
 
         // 금액 요약 계산
