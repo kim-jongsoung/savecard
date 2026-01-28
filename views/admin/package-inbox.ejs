@@ -425,7 +425,7 @@
                 <div class="guest-card">
                     <div class="guest-header">${type} ${typeIndex}</div>
                     <div class="row">
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="form-label">한글이름 *</label>
                             <input type="text" class="form-control form-control-sm" 
                                    id="guest_${index}_korean_name" 
@@ -450,7 +450,7 @@
                                    id="guest_${index}_phone" 
                                    placeholder="010-1234-5678">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label class="form-label">이메일</label>
                             <input type="email" class="form-control form-control-sm" 
                                    id="guest_${index}_email" 
@@ -461,7 +461,7 @@
                             <input type="text" class="form-control form-control-sm" 
                                    value="${type}" readonly>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="form-label">성별 ${type === '성인' ? '*' : ''}</label>
                             <select class="form-select form-select-sm" id="guest_${index}_gender" ${type === '성인' ? 'required' : ''}>
                                 <option value="">선택</option>
