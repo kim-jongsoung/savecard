@@ -852,6 +852,15 @@ try {
     console.error('⚠️ 패키지 예약 AI 파싱 라우트 연결 실패:', error.message);
 }
 
+// 패키지 업체 관리 라우트 연결
+try {
+    const packageVendorsRouter = require('./routes/package-vendors');
+    app.use('/api/package-vendors', packageVendorsRouter);
+    console.log('✅ 패키지 업체 관리 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 패키지 업체 관리 라우트 연결 실패:', error.message);
+}
+
 // 요금 RAG API 라우트 연결
 try {
     const pricingRouter = require('./routes/pricing')(pool);
