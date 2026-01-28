@@ -93,6 +93,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
     try {
         const {
+            reservation_status,
             platform_name,
             package_name,
             customer,
@@ -129,6 +130,7 @@ router.post('/', requireAuth, async (req, res) => {
         // 새 예약 생성
         const newReservation = new PackageReservation({
             reservation_number,
+            reservation_status: reservation_status || 'pending',
             platform_name,
             package_name,
             customer,

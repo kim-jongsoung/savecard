@@ -9,6 +9,13 @@ const packageReservationSchema = new mongoose.Schema({
         index: true
     },
     
+    // 예약 상태
+    reservation_status: {
+        type: String,
+        enum: ['pending', 'confirmed', 'cancelled'],
+        default: 'pending'
+    },
+    
     // 기본 정보
     platform_name: {
         type: String,

@@ -104,6 +104,42 @@
             margin-bottom: 8px;
             font-size: 0.9rem;
         }
+        /* 예약 상태별 스타일 */
+        #reservation_status {
+            font-weight: 600;
+        }
+        #reservation_status option[value="pending"] {
+            color: #ffc107;
+        }
+        #reservation_status option[value="confirmed"] {
+            color: #28a745;
+        }
+        #reservation_status option[value="cancelled"] {
+            color: #dc3545;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+        .status-confirmed {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+        .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #dc3545;
+        }
     </style>
 </head>
 <body>
@@ -141,12 +177,20 @@
                                 <!-- 한줄 요약 정보 -->
                                 <div class="row mb-2">
                                     <div class="col-md-2">
+                                        <label class="form-label">예약 상태 *</label>
+                                        <select class="form-select" id="reservation_status" required onchange="updateStatusBadge()">
+                                            <option value="pending">⏳ 대기</option>
+                                            <option value="confirmed">✅ 확정</option>
+                                            <option value="cancelled">❌ 취소</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
                                         <label class="form-label">예약채널 *</label>
                                         <select class="form-select" id="platform_name" required>
                                             <option value="">로딩중...</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label">패키지명 *</label>
                                         <input type="text" class="form-control" id="package_name" 
                                                placeholder="3박4일 허니문" required>
@@ -381,6 +425,9 @@
         document.addEventListener('DOMContentLoaded', async function() {
             await loadBookingChannels();
             await loadSuppliers();
+            
+            // 초기 예약 상태 색상 적용
+            updateStatusBadge();
         });
 
         // 예약채널 로드
@@ -437,6 +484,28 @@
                 option.textContent = supplier.supplier_name;
                 selectElement.appendChild(option);
             });
+        }
+
+        // 예약 상태 변경 시 시각적 피드백
+        function updateStatusBadge() {
+            const statusSelect = document.getElementById('reservation_status');
+            const selectedValue = statusSelect.value;
+            
+            // 드롭다운 색상 변경
+            statusSelect.className = 'form-select';
+            if (selectedValue === 'pending') {
+                statusSelect.style.color = '#856404';
+                statusSelect.style.backgroundColor = '#fff3cd';
+                statusSelect.style.borderColor = '#ffc107';
+            } else if (selectedValue === 'confirmed') {
+                statusSelect.style.color = '#155724';
+                statusSelect.style.backgroundColor = '#d4edda';
+                statusSelect.style.borderColor = '#28a745';
+            } else if (selectedValue === 'cancelled') {
+                statusSelect.style.color = '#721c24';
+                statusSelect.style.backgroundColor = '#f8d7da';
+                statusSelect.style.borderColor = '#dc3545';
+            }
         }
 
         // 동적 고객정보 필드 생성
