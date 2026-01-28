@@ -40,6 +40,10 @@ const packageReservationSchema = new mongoose.Schema({
         type: {
             type: String,
             enum: ['성인', '소아', '유아']
+        },
+        gender: {
+            type: String,
+            enum: ['남자', '여자', '']
         }
     }],
     

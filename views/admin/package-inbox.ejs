@@ -450,7 +450,7 @@
                                    id="guest_${index}_phone" 
                                    placeholder="010-1234-5678">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">이메일</label>
                             <input type="email" class="form-control form-control-sm" 
                                    id="guest_${index}_email" 
@@ -460,6 +460,14 @@
                             <label class="form-label">구분</label>
                             <input type="text" class="form-control form-control-sm" 
                                    value="${type}" readonly>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">성별 ${type === '성인' ? '*' : ''}</label>
+                            <select class="form-select form-select-sm" id="guest_${index}_gender" ${type === '성인' ? 'required' : ''}>
+                                <option value="">선택</option>
+                                <option value="남자">남자</option>
+                                <option value="여자">여자</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -843,6 +851,7 @@
                                 safeSetValue(`guest_${guestNum}_birth_date`, guest.birth_date);
                                 safeSetValue(`guest_${guestNum}_phone`, guest.phone);
                                 safeSetValue(`guest_${guestNum}_email`, guest.email);
+                                safeSetValue(`guest_${guestNum}_gender`, guest.gender);
                             });
                         }, 300);
                     }
@@ -974,7 +983,8 @@
                         birth_date: document.getElementById(`guest_${guestIndex}_birth_date`).value,
                         phone: document.getElementById(`guest_${guestIndex}_phone`).value,
                         email: document.getElementById(`guest_${guestIndex}_email`).value,
-                        type: koreanNameEl.dataset.guestType
+                        type: koreanNameEl.dataset.guestType,
+                        gender: document.getElementById(`guest_${guestIndex}_gender`)?.value || ''
                     });
                 }
             });
@@ -1060,6 +1070,10 @@
                             document.getElementById(`guest_${guestIndex}_birth_date`).value = guest.birth_date || '';
                             document.getElementById(`guest_${guestIndex}_phone`).value = guest.phone || '';
                             document.getElementById(`guest_${guestIndex}_email`).value = guest.email || '';
+                            const genderEl = document.getElementById(`guest_${guestIndex}_gender`);
+                            if (genderEl && guest.gender) {
+                                genderEl.value = guest.gender;
+                            }
                         }
                     });
                 }, 100);
@@ -1226,7 +1240,8 @@
                         birth_date: document.getElementById(`guest_${guestIndex}_birth_date`).value,
                         phone: document.getElementById(`guest_${guestIndex}_phone`).value,
                         email: document.getElementById(`guest_${guestIndex}_email`).value,
-                        type: koreanNameEl.dataset.guestType
+                        type: koreanNameEl.dataset.guestType,
+                        gender: document.getElementById(`guest_${guestIndex}_gender`)?.value || ''
                     });
                 }
             });
