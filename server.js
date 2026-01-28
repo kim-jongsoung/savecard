@@ -120,7 +120,7 @@ try {
     app.use('/api', fieldDefsRouter);
     app.use('/api', auditsRouter);
     app.use('/api/vendors', vendorsRouter);
-    app.use('/api/parse-package-reservation', packageParseRouter);
+    app.use('/api', packageParseRouter);
 } catch (error) {
     console.error('API 라우트 연결 오류:', error);
 }

@@ -26,7 +26,7 @@ const requireAuth = (req, res, next) => {
 };
 
 // 패키지 예약 AI 파싱
-router.post('/', requireAuth, async (req, res) => {
+router.post('/parse-package-reservation', requireAuth, async (req, res) => {
     try {
         const { text } = req.body;
         
