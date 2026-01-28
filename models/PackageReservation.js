@@ -19,7 +19,7 @@ const packageReservationSchema = new mongoose.Schema({
         required: true
     },
     
-    // 고객 정보
+    // 고객 정보 (대표)
     customer: {
         korean_name: {
             type: String,
@@ -29,6 +29,19 @@ const packageReservationSchema = new mongoose.Schema({
         phone: String,
         email: String
     },
+    
+    // 전체 투숙객 정보
+    guests: [{
+        korean_name: String,
+        english_name: String,
+        birth_date: Date,
+        phone: String,
+        email: String,
+        type: {
+            type: String,
+            enum: ['성인', '소아', '유아']
+        }
+    }],
     
     // 여행 기간
     travel_period: {
@@ -43,6 +56,25 @@ const packageReservationSchema = new mongoose.Schema({
         nights: Number,
         days: Number
     },
+    
+    // 항공편 정보
+    flight_info: {
+        outbound_flight: String,
+        outbound_departure_time: String,
+        outbound_arrival_time: String,
+        inbound_flight: String,
+        inbound_departure_time: String,
+        inbound_arrival_time: String
+    },
+    
+    // 호텔 정보
+    hotel_name: String,
+    room_type: String,
+    
+    // 일정 및 포함/불포함 사항
+    itinerary: String,
+    inclusions: String,
+    exclusions: String,
     
     // 인원
     people: {
@@ -62,6 +94,9 @@ const packageReservationSchema = new mongoose.Schema({
     
     // 판매 금액
     pricing: {
+        price_adult: Number,
+        price_child: Number,
+        price_infant: Number,
         total_selling_price: {
             type: Number,
             required: true
@@ -77,11 +112,29 @@ const packageReservationSchema = new mongoose.Schema({
         }
     },
     
+    // 결제 빌링
+    billings: [{
+        type: {
+            type: String,
+            enum: ['cash', 'card', 'discount']
+        },
+        amount: Number,
+        date: Date,
+        fee: Number,
+        actual_amount: Number,
+        status: {
+            type: String,
+            enum: ['pending', 'completed'],
+            default: 'pending'
+        },
+        notes: String
+    }],
+    
     // 매입 구성요소
     cost_components: [{
         component_type: {
             type: String,
-            enum: ['flight', 'hotel', 'tour', 'other'],
+            enum: ['flight', 'hotel', 'tour', 'ground', 'other'],
             required: true
         },
         vendor_name: {

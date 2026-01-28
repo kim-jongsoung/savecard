@@ -96,9 +96,17 @@ router.post('/', requireAuth, async (req, res) => {
             platform_name,
             package_name,
             customer,
+            guests,
             travel_period,
             people,
+            flight_info,
+            hotel_name,
+            room_type,
+            itinerary,
+            inclusions,
+            exclusions,
             pricing,
+            billings,
             cost_components,
             special_requests
         } = req.body;
@@ -124,9 +132,17 @@ router.post('/', requireAuth, async (req, res) => {
             platform_name,
             package_name,
             customer,
+            guests,
             travel_period,
             people,
+            flight_info,
+            hotel_name,
+            room_type,
+            itinerary,
+            inclusions,
+            exclusions,
             pricing,
+            billings,
             cost_components: processedComponents,
             special_requests,
             status: 'confirmed'
@@ -145,6 +161,7 @@ router.post('/', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ 패키지 예약 등록 실패:', error);
+        console.error('에러 상세:', error);
         res.status(500).json({
             success: false,
             message: '패키지 예약 등록 중 오류가 발생했습니다.',
@@ -170,9 +187,17 @@ router.put('/:id', requireAuth, async (req, res) => {
             'platform_name',
             'package_name',
             'customer',
+            'guests',
             'travel_period',
             'people',
+            'flight_info',
+            'hotel_name',
+            'room_type',
+            'itinerary',
+            'inclusions',
+            'exclusions',
             'pricing',
+            'billings',
             'cost_components',
             'special_requests',
             'status'
