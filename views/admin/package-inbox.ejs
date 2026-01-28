@@ -434,10 +434,10 @@
                                    placeholder="홍길동" required>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">영문이름 *</label>
+                            <label class="form-label">영문이름</label>
                             <input type="text" class="form-control form-control-sm" 
                                    id="guest_${index}_english_name" 
-                                   placeholder="HONG GILDONG" required>
+                                   placeholder="HONG GILDONG">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">생년월일</label>
@@ -462,8 +462,8 @@
                                    value="${type}" readonly>
                         </div>
                         <div class="col-md-1">
-                            <label class="form-label">성별 ${type === '성인' ? '*' : ''}</label>
-                            <select class="form-select form-select-sm" id="guest_${index}_gender" ${type === '성인' ? 'required' : ''}>
+                            <label class="form-label">성별</label>
+                            <select class="form-select form-select-sm" id="guest_${index}_gender">
                                 <option value="">선택</option>
                                 <option value="남자">남자</option>
                                 <option value="여자">여자</option>
