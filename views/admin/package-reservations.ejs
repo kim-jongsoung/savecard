@@ -16,9 +16,13 @@
             font-size: 0.85rem;
             font-weight: bold;
         }
-        .status-confirmed { background-color: #d1ecf1; color: #0c5460; }
-        .status-completed { background-color: #d4edda; color: #155724; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-confirmed { background-color: #d4edda; color: #155724; }
         .status-cancelled { background-color: #f8d7da; color: #721c24; }
+        .action-icons .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
         .component-icons {
             font-size: 1.2rem;
         }
@@ -42,19 +46,25 @@
                 <!-- 필터 -->
                 <div class="card mb-3">
                     <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">상태</label>
-                                <select class="form-select" id="statusFilter" onchange="loadReservations()">
-                                    <option value="all">전체</option>
-                                    <option value="confirmed">확정</option>
-                                    <option value="completed">완료</option>
-                                    <option value="cancelled">취소</option>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-2">
+                                <label class="form-label">날짜 기준</label>
+                                <select class="form-select" id="dateTypeFilter">
+                                    <option value="departure">출발일</option>
+                                    <option value="created">예약일</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <label class="form-label">시작일</label>
+                                <input type="date" class="form-control" id="startDateFilter">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">종료일</label>
+                                <input type="date" class="form-control" id="endDateFilter">
+                            </div>
+                            <div class="col-md-2">
                                 <label class="form-label">예약 채널</label>
-                                <select class="form-select" id="platformFilter" onchange="loadReservations()">
+                                <select class="form-select" id="platformFilter">
                                     <option value="">전체</option>
                                     <option value="VASCO">VASCO</option>
                                     <option value="NOL">NOL</option>
@@ -62,14 +72,27 @@
                                     <option value="직접예약">직접예약</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">검색</label>
-                                <input type="text" class="form-control" id="searchInput" 
-                                       placeholder="예약번호, 고객명 검색" onkeyup="handleSearch(event)">
+                            <div class="col-md-2">
+                                <label class="form-label">상태</label>
+                                <select class="form-select" id="statusFilter">
+                                    <option value="all">전체</option>
+                                    <option value="pending">대기</option>
+                                    <option value="confirmed">확정</option>
+                                    <option value="cancelled">취소</option>
+                                </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">&nbsp;</label>
-                                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                                <label class="form-label">검색</label>
+                                <input type="text" class="form-control" id="searchInput" 
+                                       placeholder="예약번호, 고객명">
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-12 text-end">
+                                <button class="btn btn-primary" onclick="loadReservations()">
+                                    <i class="fas fa-search me-1"></i>검색하기
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="resetFilters()">
                                     <i class="fas fa-redo me-1"></i>초기화
                                 </button>
                             </div>
@@ -120,16 +143,14 @@
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>예약번호</th>
-                                        <th>패키지명</th>
+                                        <th>출발일</th>
+                                        <th>예약일</th>
+                                        <th>예약채널</th>
                                         <th>고객명</th>
                                         <th>여행기간</th>
                                         <th>인원</th>
                                         <th>구성요소</th>
-                                        <th>거래액</th>
-                                        <th>마진</th>
                                         <th>상태</th>
-                                        <th>등록일</th>
                                         <th>관리</th>
                                     </tr>
                                 </thead>
@@ -176,11 +197,19 @@
         // 예약 목록 로드
         async function loadReservations() {
             try {
+                const dateType = document.getElementById('dateTypeFilter').value;
+                const startDate = document.getElementById('startDateFilter').value;
+                const endDate = document.getElementById('endDateFilter').value;
                 const status = document.getElementById('statusFilter').value;
                 const platform = document.getElementById('platformFilter').value;
                 const search = document.getElementById('searchInput').value;
 
                 const params = new URLSearchParams();
+                if (dateType && startDate && endDate) {
+                    params.append('dateType', dateType);
+                    params.append('startDate', startDate);
+                    params.append('endDate', endDate);
+                }
                 if (status !== 'all') params.append('status', status);
                 if (platform) params.append('platform', platform);
                 if (search) params.append('search', search);
@@ -198,7 +227,7 @@
             } catch (error) {
                 console.error('예약 목록 로드 오류:', error);
                 document.getElementById('reservations-tbody').innerHTML = `
-                    <tr><td colspan="11" class="text-center text-danger">
+                    <tr><td colspan="9" class="text-center text-danger">
                         오류가 발생했습니다: ${error.message}
                     </td></tr>
                 `;
@@ -211,7 +240,7 @@
 
             if (reservations.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="11" class="text-center text-muted">
+                    <tr><td colspan="9" class="text-center text-muted">
                         등록된 패키지 예약이 없습니다.
                     </td></tr>
                 `;
@@ -219,15 +248,17 @@
             }
 
             tbody.innerHTML = reservations.map(r => {
-                const departureDate = new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR');
-                const returnDate = new Date(r.travel_period.return_date).toLocaleDateString('ko-KR');
-                const period = `${departureDate} ~ ${returnDate} (${r.travel_period.nights}박${r.travel_period.days}일)`;
-
-                const people = `성인 ${r.people.adult}명${r.people.child > 0 ? `, 소아 ${r.people.child}명` : ''}${r.people.infant > 0 ? `, 유아 ${r.people.infant}명` : ''}`;
+                const departureDate = new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit'}).replace(/\. /g, '-').replace('.', '');
+                const returnDate = new Date(r.travel_period.return_date).toLocaleDateString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit'}).replace(/\. /g, '-').replace('.', '');
+                const createdDate = new Date(r.createdAt).toLocaleDateString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit'}).replace(/\. /g, '-').replace('.', '');
+                
+                const period = `${r.travel_period.nights}박${r.travel_period.days}일`;
+                const people = `성인${r.people.adult}${r.people.child > 0 ? `/소아${r.people.child}` : ''}${r.people.infant > 0 ? `/유아${r.people.infant}` : ''}`;
 
                 const componentIcons = r.cost_components.map(c => {
                     const icons = {
                         flight: '✈️',
+                        ground: '🚗',
                         hotel: '🏨',
                         tour: '🎯',
                         other: '📦'
@@ -235,33 +266,36 @@
                     return icons[c.component_type] || '📦';
                 }).join(' ');
 
-                const marginClass = r.settlement.total_margin_krw >= 0 ? 'margin-positive' : 'margin-negative';
-                const marginText = `₩${r.settlement.total_margin_krw.toLocaleString()} (${r.settlement.margin_rate}%)`;
-
-                const statusClass = `status-${r.status}`;
+                const reservationStatus = r.reservation_status || 'pending';
+                const statusClass = `status-${reservationStatus}`;
                 const statusText = {
+                    pending: '대기',
                     confirmed: '확정',
-                    completed: '완료',
                     cancelled: '취소'
-                }[r.status] || r.status;
-
-                const createdDate = new Date(r.createdAt).toLocaleDateString('ko-KR');
+                }[reservationStatus] || reservationStatus;
 
                 return `
-                    <tr style="cursor: pointer;" onclick="showDetail('${r._id}')">
-                        <td><strong>${r.reservation_number}</strong></td>
-                        <td>${r.package_name}</td>
+                    <tr>
+                        <td><small>${departureDate}</small></td>
+                        <td><small>${createdDate}</small></td>
+                        <td><small>${r.platform_name}</small></td>
                         <td>${r.customer.korean_name}</td>
                         <td><small>${period}</small></td>
                         <td><small>${people}</small></td>
                         <td class="component-icons">${componentIcons}</td>
-                        <td>₩${r.settlement.total_revenue_krw.toLocaleString()}</td>
-                        <td class="${marginClass}">${marginText}</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>${createdDate}</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); showDetail('${r._id}')">
-                                <i class="fas fa-eye"></i>
+                        <td class="action-icons">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openEditModal('${r._id}')" title="예약수정">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="openAssignmentModal('${r._id}')" title="수배서">
+                                <i class="fas fa-file-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="openInvoiceModal('${r._id}')" title="확정서">
+                                <i class="fas fa-file-invoice"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="openSettlementModal('${r._id}')" title="정산관리">
+                                <i class="fas fa-calculator"></i>
                             </button>
                         </td>
                     </tr>
@@ -417,10 +451,30 @@
 
         // 필터 초기화
         function resetFilters() {
+            document.getElementById('dateTypeFilter').value = 'departure';
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
             document.getElementById('statusFilter').value = 'all';
             document.getElementById('platformFilter').value = '';
             document.getElementById('searchInput').value = '';
             loadReservations();
+        }
+
+        // 모달 함수들 (추후 구현)
+        function openEditModal(id) {
+            alert('예약수정 모달 - 추후 구현 예정 (ID: ' + id + ')');
+        }
+
+        function openAssignmentModal(id) {
+            alert('수배서 모달 - 추후 구현 예정 (ID: ' + id + ')');
+        }
+
+        function openInvoiceModal(id) {
+            alert('확정서 모달 - 추후 구함 예정 (ID: ' + id + ')');
+        }
+
+        function openSettlementModal(id) {
+            alert('정산관리 모달 - 추후 구현 예정 (ID: ' + id + ')');
         }
 
         // 페이지 로드 시 실행

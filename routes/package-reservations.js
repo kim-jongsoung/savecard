@@ -13,21 +13,34 @@ const requireAuth = (req, res, next) => {
 // 패키지 예약 목록 조회
 router.get('/', requireAuth, async (req, res) => {
     try {
-        const { status, startDate, endDate, platform, search } = req.query;
+        const { status, dateType, startDate, endDate, platform, search } = req.query;
         
         const query = {};
         
-        // 상태 필터
+        // 상태 필터 (reservation_status 사용)
         if (status && status !== 'all') {
-            query.status = status;
+            query.reservation_status = status;
         }
         
-        // 날짜 필터
+        // 날짜 필터 (출발일 또는 예약일)
         if (startDate && endDate) {
-            query['travel_period.departure_date'] = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate)
-            };
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999); // 종료일 23:59:59까지 포함
+            
+            if (dateType === 'created') {
+                // 예약일 기준
+                query.createdAt = {
+                    $gte: start,
+                    $lte: end
+                };
+            } else {
+                // 출발일 기준 (기본값)
+                query['travel_period.departure_date'] = {
+                    $gte: start,
+                    $lte: end
+                };
+            }
         }
         
         // 플랫폼 필터
