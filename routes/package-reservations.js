@@ -20,6 +20,9 @@ router.get('/', requireAuth, async (req, res) => {
         // 상태 필터 (reservation_status 사용)
         if (status && status !== 'all') {
             query.reservation_status = status;
+        } else if (!status || status === 'all') {
+            // 기본적으로 취소 예약 제외
+            query.reservation_status = { $ne: 'cancelled' };
         }
         
         // 날짜 필터 (출발일 또는 예약일)
@@ -58,7 +61,7 @@ router.get('/', requireAuth, async (req, res) => {
         }
         
         const reservations = await PackageReservation.find(query)
-            .sort({ createdAt: -1 })
+            .sort({ 'travel_period.departure_date': 1 })
             .lean();
         
         res.json({
