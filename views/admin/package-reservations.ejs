@@ -146,6 +146,7 @@
                                         <th>출발일</th>
                                         <th>예약일</th>
                                         <th>예약채널</th>
+                                        <th>상품명</th>
                                         <th>고객명</th>
                                         <th>여행기간</th>
                                         <th>인원</th>
@@ -156,7 +157,7 @@
                                 </thead>
                                 <tbody id="reservations-tbody">
                                     <tr>
-                                        <td colspan="11" class="text-center">
+                                        <td colspan="10" class="text-center">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">로딩 중...</span>
                                             </div>
@@ -227,7 +228,7 @@
             } catch (error) {
                 console.error('예약 목록 로드 오류:', error);
                 document.getElementById('reservations-tbody').innerHTML = `
-                    <tr><td colspan="9" class="text-center text-danger">
+                    <tr><td colspan="10" class="text-center text-danger">
                         오류가 발생했습니다: ${error.message}
                     </td></tr>
                 `;
@@ -240,7 +241,7 @@
 
             if (reservations.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="9" class="text-center text-muted">
+                    <tr><td colspan="10" class="text-center text-muted">
                         등록된 패키지 예약이 없습니다.
                     </td></tr>
                 `;
@@ -279,6 +280,7 @@
                         <td><small>${departureDate}</small></td>
                         <td><small>${createdDate}</small></td>
                         <td><small>${r.platform_name}</small></td>
+                        <td>${r.package_name}</td>
                         <td>${r.customer.korean_name}</td>
                         <td><small>${period}</small></td>
                         <td><small>${people}</small></td>
