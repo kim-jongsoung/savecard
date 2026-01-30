@@ -1826,11 +1826,11 @@
             }
             
             const steps = [
-                { key: 'pending', label: step1Label, color: step1Color },
-                { key: 'processing', label: step2Label, color: step2Color },
-                { key: 'confirmed', label: '확정', color: '#28a745' },
-                { key: 'voucher', label: '바우처', color: '#6f42c1' },
-                { key: 'settlement', label: '정산', color: '#ffc107' }
+                { key: 'pending', label: step1Label, color: step1Color, order: 0 },
+                { key: 'processing', label: step2Label, color: step2Color, order: 3 },
+                { key: 'confirmed', label: '확정', color: '#28a745', order: 4 },
+                { key: 'voucher', label: '바우처', color: '#6f42c1', order: 5 },
+                { key: 'settlement', label: '정산', color: '#ffc107', order: 6 }
             ];
             
             const statusOrder = ['pending', 'modifying', 'cancelled', 'processing', 'confirmed', 'voucher', 'settlement'];
@@ -1843,7 +1843,23 @@
             
             return steps.map((step, index) => {
                 const stepIndex = statusOrder.indexOf(step.key);
-                const isCompleted = stepIndex !== -1 && stepIndex <= currentIndex;
+                
+                // 완료 여부 판단: 현재 상태보다 이전 단계이거나 현재 단계
+                let isCompleted = false;
+                if (stepIndex !== -1 && stepIndex <= currentIndex) {
+                    isCompleted = true;
+                }
+                
+                // 특수 케이스: modifying, cancelled는 pending 단계로 간주
+                if ((res.status === 'modifying' || res.status === 'cancelled') && step.key === 'pending') {
+                    isCompleted = true;
+                }
+                
+                // 특수 케이스: latest_assignment가 있으면 processing 단계 완료
+                if (res.latest_assignment && step.key === 'processing') {
+                    isCompleted = true;
+                }
+                
                 const isCurrent = (step.key === res.status || 
                                  (res.status === 'modifying' && step.key === 'pending') ||
                                  (res.status === 'cancelled' && step.key === 'pending') ||
