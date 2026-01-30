@@ -18720,6 +18720,7 @@ async function startServer() {
                 let query = `
                     SELECT 
                         s.*,
+                        s.cost_currency,
                         r.reservation_number,
                         r.korean_name,
                         r.product_name,
