@@ -922,6 +922,7 @@
             // 총액 계산
             let totalRevenue = 0;
             let totalCost = 0;
+            let totalCostUSD = 0;  // 달러 총액 추가
             let totalMargin = 0;
             let totalMarginTax = 0;
             let totalCommissionTax = 0;
@@ -940,6 +941,9 @@
                     ? s.payment_sent_cost_krw  // 송금 완료: 송금환율로 재계산된 값
                     : (s.cost_krw || 0)        // 미완료: 기본 환율 기준
                 );
+                
+                // 매입액 달러 합계 (cost_currency가 USD인 경우만)
+                const costUSD = s.cost_currency === 'USD' ? (s.total_cost || 0) : 0;
                 
                 // 사용된 환율 (표시용) - 숫자로 변환
                 const displayExchangeRate = parseFloat(
@@ -971,6 +975,7 @@
                 
                 totalRevenue += revenueKRW;
                 totalCost += costKRW;
+                totalCostUSD += costUSD;  // 달러 총액 누적
                 totalMargin += marginKRW;
                 totalMarginTax += marginTax;
                 totalCommissionTax += commissionTax;
@@ -1070,7 +1075,10 @@
                             <tr>
                                 <th colspan="7" class="text-end">총액</th>
                                 <th class="text-end">${formatCurrency(totalRevenue, 'KRW')}</th>
-                                <th class="text-end text-danger">${formatCurrency(totalCost, 'KRW')}</th>
+                                <th class="text-end text-danger">
+                                    ${formatCurrency(totalCost, 'KRW')}
+                                    ${totalCostUSD > 0 ? `<br><small class="text-muted">(${formatCurrency(totalCostUSD, 'USD')})</small>` : ''}
+                                </th>
                                 <th class="text-end text-primary">${formatCurrency(totalMargin, 'KRW')}</th>
                                 <th class="text-end" style="background-color: #e0f7ff;">${formatCurrency(totalMarginTax, 'KRW')}</th>
                                 <th class="text-end" style="background-color: #e0ffe0;">${formatCurrency(totalCommissionTax, 'KRW')}</th>
