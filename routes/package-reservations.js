@@ -202,6 +202,7 @@ router.put('/:id', requireAuth, async (req, res) => {
         
         // 수정 가능한 필드만 업데이트
         const allowedFields = [
+            'reservation_status',
             'platform_name',
             'package_name',
             'customer',
