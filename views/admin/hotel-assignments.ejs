@@ -1833,8 +1833,13 @@
                 { key: 'settlement', label: '정산', color: '#ffc107', order: 6 }
             ];
             
-            const statusOrder = ['pending', 'modifying', 'cancelled', 'processing', 'confirmed', 'voucher', 'settlement'];
+            const statusOrder = ['pending', 'modifying', 'cancelled', 'processing', 'confirmed', 'voucher', 'settlement', 'completed'];
             let currentIndex = statusOrder.indexOf(res.status);
+            
+            // completed 상태는 settlement와 동일하게 처리 (모든 단계 완료)
+            if (res.status === 'completed') {
+                currentIndex = statusOrder.indexOf('settlement');
+            }
             
             // latest_assignment가 있으면 최소한 processing 단계로 간주
             if (res.latest_assignment && currentIndex < statusOrder.indexOf('processing')) {
