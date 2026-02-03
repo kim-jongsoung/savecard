@@ -916,7 +916,7 @@
             container.innerHTML = html;
         }
         
-        // 인원 변경 시 투숙객 필드 동적 생성 (신규 예약 페이지와 동일)
+        // 인원 변경 시 투숙객 필드 동적 생성 (기존 데이터 유지)
         function generateEditGuestFields() {
             const adultCount = parseInt(document.getElementById('edit_people_adult').value) || 0;
             const childCount = parseInt(document.getElementById('edit_people_child').value) || 0;
@@ -930,31 +930,63 @@
                 return;
             }
             
+            // 기존 입력된 데이터 수집
+            const existingData = [];
+            const existingInputs = container.querySelectorAll('input[data-guest-index], select[data-guest-index]');
+            existingInputs.forEach(input => {
+                const guestIndex = parseInt(input.getAttribute('data-guest-index'));
+                const field = input.getAttribute('data-field');
+                if (!existingData[guestIndex]) {
+                    existingData[guestIndex] = {};
+                }
+                if (input.tagName === 'SELECT') {
+                    existingData[guestIndex][field] = input.value;
+                } else if (input.type === 'date') {
+                    existingData[guestIndex][field] = input.value;
+                } else {
+                    existingData[guestIndex][field] = input.value;
+                }
+            });
+            
+            // 기존 type 정보도 수집
+            const existingTypes = container.querySelectorAll('input[data-guest-type]');
+            existingTypes.forEach(input => {
+                const guestIndex = parseInt(input.getAttribute('data-guest-index'));
+                const guestType = input.getAttribute('data-guest-type');
+                if (!existingData[guestIndex]) {
+                    existingData[guestIndex] = {};
+                }
+                existingData[guestIndex].type = guestType;
+            });
+            
             let html = '<h6 style="font-size: 0.95rem; margin-bottom: 0.5rem;">👤 고객 정보</h6>';
             let guestIndex = 0;
             
             // 성인
             for (let i = 0; i < adultCount; i++) {
+                const existingGuest = existingData[guestIndex] || {};
+                html += createEditGuestCard(guestIndex + 1, '성인', i + 1, existingGuest);
                 guestIndex++;
-                html += createEditGuestCard(guestIndex, '성인', i + 1);
             }
             
             // 소아
             for (let i = 0; i < childCount; i++) {
+                const existingGuest = existingData[guestIndex] || {};
+                html += createEditGuestCard(guestIndex + 1, '소아', i + 1, existingGuest);
                 guestIndex++;
-                html += createEditGuestCard(guestIndex, '소아', i + 1);
             }
             
             // 유아
             for (let i = 0; i < infantCount; i++) {
+                const existingGuest = existingData[guestIndex] || {};
+                html += createEditGuestCard(guestIndex + 1, '유아', i + 1, existingGuest);
                 guestIndex++;
-                html += createEditGuestCard(guestIndex, '유아', i + 1);
             }
             
             container.innerHTML = html;
         }
         
-        function createEditGuestCard(index, type, typeIndex) {
+        function createEditGuestCard(index, type, typeIndex, existingGuest = {}) {
             return `
                 <div class="guest-card" style="border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; margin-bottom: 10px; background-color: #f8f9fa;">
                     <div class="guest-header" style="font-weight: 600; color: #495057; margin-bottom: 8px; font-size: 0.9rem;">${type} ${typeIndex}</div>
@@ -966,6 +998,7 @@
                                    data-guest-index="${index - 1}"
                                    data-guest-type="${type}"
                                    data-field="korean_name"
+                                   value="${existingGuest.korean_name || ''}"
                                    placeholder="홍길동" required>
                         </div>
                         <div class="col-md-2">
@@ -974,6 +1007,7 @@
                                    id="edit_guest_${index}_english_name"
                                    data-guest-index="${index - 1}"
                                    data-field="english_name"
+                                   value="${existingGuest.english_name || ''}"
                                    placeholder="HONG GILDONG">
                         </div>
                         <div class="col-md-2">
@@ -981,7 +1015,8 @@
                             <input type="date" class="form-control form-control-sm" 
                                    id="edit_guest_${index}_birth_date"
                                    data-guest-index="${index - 1}"
-                                   data-field="birth_date">
+                                   data-field="birth_date"
+                                   value="${existingGuest.birth_date || ''}">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">연락처</label>
@@ -989,6 +1024,7 @@
                                    id="edit_guest_${index}_phone"
                                    data-guest-index="${index - 1}"
                                    data-field="phone"
+                                   value="${existingGuest.phone || ''}"
                                    placeholder="010-1234-5678">
                         </div>
                         <div class="col-md-3">
@@ -997,6 +1033,7 @@
                                    id="edit_guest_${index}_email"
                                    data-guest-index="${index - 1}"
                                    data-field="email"
+                                   value="${existingGuest.email || ''}"
                                    placeholder="hong@email.com">
                         </div>
                         <div class="col-md-1">
@@ -1011,8 +1048,8 @@
                                     data-guest-index="${index - 1}"
                                     data-field="gender">
                                 <option value="">선택</option>
-                                <option value="남자">남자</option>
-                                <option value="여자">여자</option>
+                                <option value="남자" ${existingGuest.gender === '남자' ? 'selected' : ''}>남자</option>
+                                <option value="여자" ${existingGuest.gender === '여자' ? 'selected' : ''}>여자</option>
                             </select>
                         </div>
                     </div>
