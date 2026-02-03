@@ -1309,11 +1309,6 @@
                 alert('필수 항목을 입력해주세요.');
                 return;
             }
-            
-            if (guests.length === 0 || !guests[0].korean_name) {
-                alert('최소 1명의 고객 정보(한글 이름)를 입력해주세요.');
-                return;
-            }
 
             try {
                 const response = await fetch(`/api/package-reservations/${id}`, {
