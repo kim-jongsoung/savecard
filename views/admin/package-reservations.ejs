@@ -687,12 +687,6 @@
                     document.getElementById('edit_platform_name').value = r.platform_name;
                     document.getElementById('edit_package_name').value = r.package_name;
                     
-                    // 고객 정보
-                    document.getElementById('edit_customer_korean_name').value = r.customer.korean_name;
-                    document.getElementById('edit_customer_english_name').value = r.customer.english_name || '';
-                    document.getElementById('edit_customer_phone').value = r.customer.phone || '';
-                    document.getElementById('edit_customer_email').value = r.customer.email || '';
-                    
                     // 여행 기간
                     document.getElementById('edit_departure_date').value = r.travel_period.departure_date.split('T')[0];
                     document.getElementById('edit_return_date').value = r.travel_period.return_date.split('T')[0];
@@ -1193,18 +1187,41 @@
                 return parseFloat(value.toString().replace(/,/g, '')) || 0;
             };
             
-            // 투숙객 정보 수집
+            // 투숙객 정보 수집 (신규 예약 페이지와 동일한 방식)
+            const adultCount = parseInt(document.getElementById('edit_people_adult').value) || 0;
+            const childCount = parseInt(document.getElementById('edit_people_child').value) || 0;
+            const infantCount = parseInt(document.getElementById('edit_people_infant').value) || 0;
+            const totalCount = adultCount + childCount + infantCount;
+            
             const guests = [];
-            document.querySelectorAll('#edit_guests_container [data-guest-index]').forEach(input => {
-                const index = parseInt(input.dataset.guestIndex);
-                const field = input.dataset.field;
-                
-                if (!guests[index]) {
-                    guests[index] = {};
+            for (let i = 1; i <= totalCount; i++) {
+                const koreanNameEl = document.getElementById(`edit_guest_${i}_korean_name`);
+                if (koreanNameEl) {
+                    const guest = {
+                        korean_name: koreanNameEl.value || '',
+                        english_name: document.getElementById(`edit_guest_${i}_english_name`)?.value || '',
+                        birth_date: document.getElementById(`edit_guest_${i}_birth_date`)?.value || '',
+                        phone: document.getElementById(`edit_guest_${i}_phone`)?.value || '',
+                        email: document.getElementById(`edit_guest_${i}_email`)?.value || '',
+                        type: koreanNameEl.dataset.guestType || '',
+                        gender: document.getElementById(`edit_guest_${i}_gender`)?.value || ''
+                    };
+                    guests.push(guest);
                 }
-                
-                guests[index][field] = input.value;
-            });
+            }
+            
+            // 첫 번째 투숙객을 고객 정보로 사용 (신규 예약 페이지와 동일)
+            const customer = guests.length > 0 ? {
+                korean_name: guests[0].korean_name,
+                english_name: guests[0].english_name,
+                phone: guests[0].phone,
+                email: guests[0].email
+            } : {
+                korean_name: '',
+                english_name: '',
+                phone: '',
+                email: ''
+            };
             
             // 결제 빌링 수집
             const billings = [];
@@ -1240,12 +1257,7 @@
                 reservation_status: document.getElementById('edit_reservation_status').value,
                 platform_name: document.getElementById('edit_platform_name').value,
                 package_name: document.getElementById('edit_package_name').value,
-                customer: {
-                    korean_name: document.getElementById('edit_customer_korean_name').value,
-                    english_name: document.getElementById('edit_customer_english_name').value,
-                    phone: document.getElementById('edit_customer_phone').value,
-                    email: document.getElementById('edit_customer_email').value
-                },
+                customer: customer,
                 travel_period: {
                     departure_date: document.getElementById('edit_departure_date').value,
                     return_date: document.getElementById('edit_return_date').value,
@@ -1293,8 +1305,13 @@
             };
 
             // 유효성 검사
-            if (!data.platform_name || !data.package_name || !data.customer.korean_name) {
+            if (!data.platform_name || !data.package_name) {
                 alert('필수 항목을 입력해주세요.');
+                return;
+            }
+            
+            if (guests.length === 0 || !guests[0].korean_name) {
+                alert('최소 1명의 고객 정보(한글 이름)를 입력해주세요.');
                 return;
             }
 
