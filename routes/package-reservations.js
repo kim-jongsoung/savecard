@@ -671,22 +671,47 @@ router.get('/:id/assignment/:componentIndex/view', async (req, res) => {
             other: '기타'
         };
 
-        // 수배서 데이터 구성
+        // 수배서 데이터 구성 (전체 예약 정보 포함)
         const assignmentData = {
+            // 기본 예약 정보
             reservation_number: reservation.reservation_number,
-            customer_name: reservation.customer.korean_name,
-            english_name: reservation.customer.english_name,
+            reservation_status: reservation.reservation_status,
             platform_name: reservation.platform_name,
             package_name: reservation.package_name,
+            
+            // 여행 기간
             departure_date: reservation.travel_period.departure_date,
             return_date: reservation.travel_period.return_date,
             nights: reservation.travel_period.nights,
             days: reservation.travel_period.days,
+            
+            // 항공편 정보
+            flight_info: reservation.flight_info || {},
+            
+            // 호텔 정보
+            hotel_name: reservation.hotel_name,
+            room_type: reservation.room_type,
+            
+            // 인원 정보
             adult_count: reservation.people.adult,
             child_count: reservation.people.child,
             infant_count: reservation.people.infant,
+            
+            // 고객 정보
+            customer_name: reservation.customer.korean_name,
+            english_name: reservation.customer.english_name,
             phone_number: reservation.customer.phone,
             email: reservation.customer.email,
+            
+            // 투숙객 정보
+            guests: reservation.guests || [],
+            
+            // 일정 및 포함/불포함 사항
+            itinerary: reservation.itinerary,
+            inclusions: reservation.inclusions,
+            exclusions: reservation.exclusions,
+            
+            // 특별 요청사항
             special_requests: reservation.special_requests,
             
             // 구성요소 정보

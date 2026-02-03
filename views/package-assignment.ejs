@@ -110,97 +110,263 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="info-row">
                             <div class="info-label">예약번호</div>
                             <div class="info-value"><code><%= assignment.reservation_number %></code></div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="info-row">
-                            <div class="info-label">고객명</div>
+                            <div class="info-label">예약 상태</div>
                             <div class="info-value">
-                                <%= assignment.customer_name %>
-                                <% if (assignment.english_name) { %>
-                                    / <%= assignment.english_name %>
+                                <% if (assignment.reservation_status === 'confirmed') { %>
+                                    <span class="badge bg-success">✅ 확정</span>
+                                <% } else if (assignment.reservation_status === 'pending') { %>
+                                    <span class="badge bg-warning">⏳ 대기</span>
+                                <% } else if (assignment.reservation_status === 'cancelled') { %>
+                                    <span class="badge bg-danger">❌ 취소</span>
+                                <% } else { %>
+                                    <span class="badge bg-secondary"><%= assignment.reservation_status %></span>
                                 <% } %>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="info-row">
                             <div class="info-label">예약채널</div>
                             <div class="info-value"><span class="badge bg-info"><%= assignment.platform_name %></span></div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="info-row">
                             <div class="info-label">패키지명</div>
-                            <div class="info-value"><%= assignment.package_name %></div>
+                            <div class="info-value"><strong><%= assignment.package_name %></strong></div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="info-row">
                             <div class="info-label">출발일</div>
                             <div class="info-value"><%= new Date(assignment.departure_date).toLocaleDateString('ko-KR') %></div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="info-row">
                             <div class="info-label">귀국일</div>
                             <div class="info-value"><%= new Date(assignment.return_date).toLocaleDateString('ko-KR') %></div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="info-row">
                             <div class="info-label">기간</div>
-                            <div class="info-value"><%= assignment.nights %>박<%= assignment.days %>일</div>
+                            <div class="info-value"><strong><%= assignment.nights %>박<%= assignment.days %>일</strong></div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 항공편 정보 -->
+        <% if (assignment.flight_info && (assignment.flight_info.outbound_flight || assignment.flight_info.inbound_flight)) { %>
+        <div class="card info-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-plane me-2"></i>항공편 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <% if (assignment.flight_info.outbound_flight) { %>
+                    <div class="col-md-6">
+                        <h6 class="text-primary"><i class="fas fa-plane-departure me-2"></i>출국편</h6>
+                        <div class="info-row">
+                            <div class="info-label">편명</div>
+                            <div class="info-value"><strong><%= assignment.flight_info.outbound_flight %></strong></div>
+                        </div>
+                        <% if (assignment.flight_info.outbound_departure_time) { %>
+                        <div class="info-row">
+                            <div class="info-label">출발시간</div>
+                            <div class="info-value"><%= assignment.flight_info.outbound_departure_time %></div>
+                        </div>
+                        <% } %>
+                        <% if (assignment.flight_info.outbound_arrival_time) { %>
+                        <div class="info-row">
+                            <div class="info-label">도착시간</div>
+                            <div class="info-value"><%= assignment.flight_info.outbound_arrival_time %></div>
+                        </div>
+                        <% } %>
+                    </div>
+                    <% } %>
+                    <% if (assignment.flight_info.inbound_flight) { %>
+                    <div class="col-md-6">
+                        <h6 class="text-success"><i class="fas fa-plane-arrival me-2"></i>입국편</h6>
+                        <div class="info-row">
+                            <div class="info-label">편명</div>
+                            <div class="info-value"><strong><%= assignment.flight_info.inbound_flight %></strong></div>
+                        </div>
+                        <% if (assignment.flight_info.inbound_departure_time) { %>
+                        <div class="info-row">
+                            <div class="info-label">출발시간</div>
+                            <div class="info-value"><%= assignment.flight_info.inbound_departure_time %></div>
+                        </div>
+                        <% } %>
+                        <% if (assignment.flight_info.inbound_arrival_time) { %>
+                        <div class="info-row">
+                            <div class="info-label">도착시간</div>
+                            <div class="info-value"><%= assignment.flight_info.inbound_arrival_time %></div>
+                        </div>
+                        <% } %>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- 호텔 정보 -->
+        <% if (assignment.hotel_name || assignment.room_type) { %>
+        <div class="card info-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-hotel me-2"></i>이용호텔</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <% if (assignment.hotel_name) { %>
                     <div class="col-md-6">
                         <div class="info-row">
-                            <div class="info-label">인원</div>
-                            <div class="info-value">
-                                성인 <span class="badge bg-primary"><%= assignment.adult_count %></span>
-                                <% if (assignment.child_count > 0) { %>
-                                    소아 <span class="badge bg-info"><%= assignment.child_count %></span>
-                                <% } %>
-                                <% if (assignment.infant_count > 0) { %>
-                                    유아 <span class="badge bg-secondary"><%= assignment.infant_count %></span>
-                                <% } %>
-                            </div>
-                        </div>
-                    </div>
-                    <% if (assignment.phone_number || assignment.email) { %>
-                    <div class="col-md-12">
-                        <div class="info-row">
-                            <div class="info-label">연락처</div>
-                            <div class="info-value">
-                                <% if (assignment.phone_number) { %>
-                                    <i class="fas fa-phone me-1"></i><%= assignment.phone_number %>
-                                <% } %>
-                                <% if (assignment.email) { %>
-                                    <br><i class="fas fa-envelope me-1"></i><%= assignment.email %>
-                                <% } %>
-                            </div>
+                            <div class="info-label">호텔명</div>
+                            <div class="info-value"><strong><%= assignment.hotel_name %></strong></div>
                         </div>
                     </div>
                     <% } %>
-                    <% if (assignment.special_requests) { %>
-                    <div class="col-md-12">
+                    <% if (assignment.room_type) { %>
+                    <div class="col-md-6">
                         <div class="info-row">
-                            <div class="info-label">특별 요청사항</div>
-                            <div class="info-value">
-                                <div class="alert alert-info mb-0">
-                                    <i class="fas fa-info-circle me-2"></i><%= assignment.special_requests %>
-                                </div>
-                            </div>
+                            <div class="info-label">룸타입명</div>
+                            <div class="info-value"><%= assignment.room_type %></div>
                         </div>
                     </div>
                     <% } %>
                 </div>
             </div>
         </div>
+        <% } %>
+
+        <!-- 인원 구성 -->
+        <div class="card info-card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>인원 구성</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="info-row">
+                            <div class="info-label">성인</div>
+                            <div class="info-value"><span class="badge bg-primary fs-5"><%= assignment.adult_count %></span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-row">
+                            <div class="info-label">소아</div>
+                            <div class="info-value"><span class="badge bg-info fs-5"><%= assignment.child_count %></span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-row">
+                            <div class="info-label">유아</div>
+                            <div class="info-value"><span class="badge bg-secondary fs-5"><%= assignment.infant_count %></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 고객 정보 (투숙객) -->
+        <% if (assignment.guests && assignment.guests.length > 0) { %>
+        <div class="card info-card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>고객 정보</h5>
+            </div>
+            <div class="card-body">
+                <% assignment.guests.forEach((guest, index) => { %>
+                <div class="card mb-2" style="border-left: 3px solid #007bff;">
+                    <div class="card-body">
+                        <h6 class="text-primary mb-3"><%= guest.type || '고객' %> <%= index + 1 %></h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="info-label">한글이름</div>
+                                <div class="info-value"><strong><%= guest.korean_name || '-' %></strong></div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="info-label">영문이름</div>
+                                <div class="info-value"><%= guest.english_name || '-' %></div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="info-label">생년월일</div>
+                                <div class="info-value"><%= guest.birth_date ? new Date(guest.birth_date).toLocaleDateString('ko-KR') : '-' %></div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="info-label">연락처</div>
+                                <div class="info-value"><%= guest.phone || '-' %></div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="info-label">성별</div>
+                                <div class="info-value"><%= guest.gender || '-' %></div>
+                            </div>
+                            <% if (guest.email) { %>
+                            <div class="col-md-12 mt-2">
+                                <div class="info-label">이메일</div>
+                                <div class="info-value"><%= guest.email %></div>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- 일정 및 포함/불포함 사항 -->
+        <% if (assignment.itinerary || assignment.inclusions || assignment.exclusions) { %>
+        <div class="card info-card">
+            <div class="card-header" style="background: linear-gradient(to right, #667eea, #764ba2); color: white;">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>일정 및 포함/불포함 사항</h5>
+            </div>
+            <div class="card-body">
+                <% if (assignment.itinerary) { %>
+                <div class="mb-3">
+                    <div class="info-label mb-2">일정</div>
+                    <div class="alert alert-light" style="white-space: pre-line;"><%= assignment.itinerary %></div>
+                </div>
+                <% } %>
+                <% if (assignment.inclusions) { %>
+                <div class="mb-3">
+                    <div class="info-label mb-2">포함사항</div>
+                    <div class="alert alert-success" style="white-space: pre-line;"><i class="fas fa-check-circle me-2"></i><%= assignment.inclusions %></div>
+                </div>
+                <% } %>
+                <% if (assignment.exclusions) { %>
+                <div class="mb-3">
+                    <div class="info-label mb-2">불포함사항</div>
+                    <div class="alert alert-warning" style="white-space: pre-line;"><i class="fas fa-times-circle me-2"></i><%= assignment.exclusions %></div>
+                </div>
+                <% } %>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- 특별 요청사항 -->
+        <% if (assignment.special_requests) { %>
+        <div class="card info-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>특별 요청사항</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger mb-0" style="white-space: pre-line;">
+                    <i class="fas fa-info-circle me-2"></i><%= assignment.special_requests %>
+                </div>
+            </div>
+        </div>
+        <% } %>
 
         <!-- 수배 정보 -->
         <div class="card info-card">
