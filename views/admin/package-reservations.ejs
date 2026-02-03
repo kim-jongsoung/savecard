@@ -871,30 +871,40 @@
                                 <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">한글이름 *</label>
                                 <input type="text" class="form-control form-control-sm" value="${guest.korean_name || ''}" 
                                        id="edit_guest_${guestNum}_korean_name"
+                                       data-guest-index="${index}"
                                        data-guest-type="${guest.type || ''}"
+                                       data-field="korean_name"
                                        placeholder="홍길동" required>
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">영문이름</label>
                                 <input type="text" class="form-control form-control-sm" value="${guest.english_name || ''}"
                                        id="edit_guest_${guestNum}_english_name"
+                                       data-guest-index="${index}"
+                                       data-field="english_name"
                                        placeholder="HONG GILDONG">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">생년월일</label>
                                 <input type="date" class="form-control form-control-sm" value="${guest.birth_date ? new Date(guest.birth_date).toISOString().split('T')[0] : ''}"
-                                       id="edit_guest_${guestNum}_birth_date">
+                                       id="edit_guest_${guestNum}_birth_date"
+                                       data-guest-index="${index}"
+                                       data-field="birth_date">
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">연락처</label>
                                 <input type="text" class="form-control form-control-sm" value="${guest.phone || ''}"
                                        id="edit_guest_${guestNum}_phone"
+                                       data-guest-index="${index}"
+                                       data-field="phone"
                                        placeholder="010-1234-5678">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">이메일</label>
                                 <input type="email" class="form-control form-control-sm" value="${guest.email || ''}"
                                        id="edit_guest_${guestNum}_email"
+                                       data-guest-index="${index}"
+                                       data-field="email"
                                        placeholder="hong@email.com">
                             </div>
                             <div class="col-md-1">
@@ -903,7 +913,9 @@
                             </div>
                             <div class="col-md-1">
                                 <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">성별</label>
-                                <select class="form-select form-select-sm" id="edit_guest_${guestNum}_gender">
+                                <select class="form-select form-select-sm" id="edit_guest_${guestNum}_gender"
+                                        data-guest-index="${index}"
+                                        data-field="gender">
                                     <option value="">선택</option>
                                     <option value="남자" ${guest.gender === '남자' ? 'selected' : ''}>남자</option>
                                     <option value="여자" ${guest.gender === '여자' ? 'selected' : ''}>여자</option>
