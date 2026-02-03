@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || '수배서' %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .document-wrapper {
+            max-width: 1200px;
+            margin: 2rem auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+        
+        @media print {
+            body { background: white; margin: 0; }
+            .document-wrapper { 
+                max-width: 100%;
+                margin: 0;
+                padding: 1.5cm;
+                box-shadow: none;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 1.5cm; }
+        }
+        
+        .assignment-header {
+            background: linear-gradient(to right, #28a745, #20c997);
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .doc-title {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-card {
+            border: 1px solid #e0e0e0;
+            border-left: 4px solid #28a745;
+            background: white;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .card-header {
+            background: #f8f9fa;
+            border-bottom: 2px solid #28a745;
+            font-weight: 600;
+        }
+        
+        .info-row {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            font-size: 1rem;
+            color: #333;
+        }
+        
+        .badge-status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="document-wrapper">
+        <!-- 헤더 -->
+        <div class="assignment-header">
+            <div class="doc-title">
+                <i class="fas fa-file-alt me-2"></i>
+                수배서 - 럭스파인드
+            </div>
+            <div class="mt-2">
+                <code class="fs-5 text-white"><%= assignment.reservation_number %></code>
+            </div>
+        </div>
+
+        <!-- 기본 예약 정보 -->
+        <div class="card info-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>기본 예약 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">예약번호</div>
+                            <div class="info-value"><code><%= assignment.reservation_number %></code></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">고객명</div>
+                            <div class="info-value">
+                                <%= assignment.customer_name %>
+                                <% if (assignment.english_name) { %>
+                                    / <%= assignment.english_name %>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">예약채널</div>
+                            <div class="info-value"><span class="badge bg-info"><%= assignment.platform_name %></span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">패키지명</div>
+                            <div class="info-value"><%= assignment.package_name %></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">출발일</div>
+                            <div class="info-value"><%= new Date(assignment.departure_date).toLocaleDateString('ko-KR') %></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">귀국일</div>
+                            <div class="info-value"><%= new Date(assignment.return_date).toLocaleDateString('ko-KR') %></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">기간</div>
+                            <div class="info-value"><%= assignment.nights %>박<%= assignment.days %>일</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">인원</div>
+                            <div class="info-value">
+                                성인 <span class="badge bg-primary"><%= assignment.adult_count %></span>
+                                <% if (assignment.child_count > 0) { %>
+                                    소아 <span class="badge bg-info"><%= assignment.child_count %></span>
+                                <% } %>
+                                <% if (assignment.infant_count > 0) { %>
+                                    유아 <span class="badge bg-secondary"><%= assignment.infant_count %></span>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    <% if (assignment.phone_number || assignment.email) { %>
+                    <div class="col-md-12">
+                        <div class="info-row">
+                            <div class="info-label">연락처</div>
+                            <div class="info-value">
+                                <% if (assignment.phone_number) { %>
+                                    <i class="fas fa-phone me-1"></i><%= assignment.phone_number %>
+                                <% } %>
+                                <% if (assignment.email) { %>
+                                    <br><i class="fas fa-envelope me-1"></i><%= assignment.email %>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                    <% if (assignment.special_requests) { %>
+                    <div class="col-md-12">
+                        <div class="info-row">
+                            <div class="info-label">특별 요청사항</div>
+                            <div class="info-value">
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i><%= assignment.special_requests %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- 수배 정보 -->
+        <div class="card info-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-building me-2"></i>수배 정보</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">항목</div>
+                            <div class="info-value">
+                                <span class="badge bg-success fs-6"><%= assignment.component_type %> - <%= assignment.vendor_name %></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">매입가</div>
+                            <div class="info-value">
+                                <strong class="text-success fs-5">
+                                    <%= assignment.cost_amount.toLocaleString() %> <%= assignment.cost_currency %>
+                                </strong>
+                                <% if (assignment.cost_currency === 'USD') { %>
+                                    <br><small class="text-muted">(₩<%= assignment.cost_krw.toLocaleString() %>)</small>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    <% if (assignment.notes) { %>
+                    <div class="col-md-12">
+                        <div class="info-row">
+                            <div class="info-label">비고</div>
+                            <div class="info-value">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="fas fa-sticky-note me-2"></i><%= assignment.notes %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                    <% if (assignment.assignment_sent_at) { %>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">발송일시</div>
+                            <div class="info-value">
+                                <%= new Date(assignment.assignment_sent_at).toLocaleString('ko-KR') %>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                    <% if (assignment.assignment_confirmed_at) { %>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">수신확인일시</div>
+                            <div class="info-value">
+                                <span class="badge bg-info">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    <%= new Date(assignment.assignment_confirmed_at).toLocaleString('ko-KR') %>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- 수신 확인 버튼 (미확인 시에만 표시) -->
+        <% if (!assignment.assignment_confirmed_at) { %>
+        <div class="text-center mt-4 no-print">
+            <button class="btn btn-success btn-lg" onclick="confirmReceipt()" style="min-width: 250px;">
+                <i class="fas fa-check-circle me-2"></i>수신 확인
+            </button>
+        </div>
+        <% } %>
+
+        <!-- 인쇄 버튼 -->
+        <div class="text-center mt-4 no-print">
+            <button class="btn btn-primary btn-lg" onclick="window.print()" style="min-width: 250px;">
+                <i class="fas fa-print me-2"></i>인쇄
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 수신 확인
+        async function confirmReceipt() {
+            if (!confirm('수배서를 수신 확인하시겠습니까?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/package-reservations/<%= reservationId %>/assignment/<%= componentIndex %>/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('수신 확인이 완료되었습니다.');
+                    location.reload();
+                } else {
+                    alert('수신 확인 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('수신 확인 오류:', error);
+                alert('수신 확인 중 오류가 발생했습니다.');
+            }
+        }
+    </script>
+</body>
+</html>

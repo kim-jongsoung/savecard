@@ -405,6 +405,71 @@
         </div>
     </div>
 
+    <!-- 수배서 모달 -->
+    <div class="modal fade" id="assignmentModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i>수배서 관리</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 기본 예약 정보 -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>기본 예약 정보</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>예약번호:</strong> <span id="assign_reservation_number"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>고객명:</strong> <span id="assign_customer_name"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>출발일:</strong> <span id="assign_departure_date"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>귀국일:</strong> <span id="assign_return_date"></span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-3">
+                                    <strong>기간:</strong> <span id="assign_period"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>인원:</strong> <span id="assign_people"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>패키지명:</strong> <span id="assign_package_name"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>예약채널:</strong> <span id="assign_platform_name"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 매입 구성요소별 수배서 목록 -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-list me-2"></i>매입 구성요소별 수배서</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="assignment_list"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let allReservations = [];
@@ -1362,9 +1427,171 @@
             }
         }
 
-        // 모달 함수들 (추후 구현)
-        function openAssignmentModal(id) {
-            alert('수배서 모달 - 추후 구현 예정 (ID: ' + id + ')');
+        // 수배서 모달 열기
+        async function openAssignmentModal(id) {
+            try {
+                const response = await fetch(`/api/package-reservations/${id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const r = result.data;
+                    
+                    // 기본 예약 정보 표시
+                    document.getElementById('assign_reservation_number').textContent = r.reservation_number;
+                    document.getElementById('assign_customer_name').textContent = `${r.customer.korean_name}${r.customer.english_name ? ' / ' + r.customer.english_name : ''}`;
+                    document.getElementById('assign_departure_date').textContent = new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR');
+                    document.getElementById('assign_return_date').textContent = new Date(r.travel_period.return_date).toLocaleDateString('ko-KR');
+                    document.getElementById('assign_period').textContent = `${r.travel_period.nights}박${r.travel_period.days}일`;
+                    document.getElementById('assign_people').textContent = `성인${r.people.adult}${r.people.child > 0 ? `/소아${r.people.child}` : ''}${r.people.infant > 0 ? `/유아${r.people.infant}` : ''}`;
+                    document.getElementById('assign_package_name').textContent = r.package_name;
+                    document.getElementById('assign_platform_name').textContent = r.platform_name;
+                    
+                    // 매입 구성요소별 수배서 목록 생성
+                    renderAssignmentList(r);
+                    
+                    // 모달 열기
+                    const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
+                    modal.show();
+                } else {
+                    alert('예약 정보 로드 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('예약 정보 로드 오류:', error);
+                alert('예약 정보 로드 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 매입 구성요소별 수배서 목록 렌더링
+        function renderAssignmentList(reservation) {
+            const container = document.getElementById('assignment_list');
+            
+            if (!reservation.cost_components || reservation.cost_components.length === 0) {
+                container.innerHTML = '<p class="text-muted">매입 구성요소가 없습니다.</p>';
+                return;
+            }
+
+            const componentTypeNames = {
+                flight: '✈️ 항공권',
+                hotel: '🏨 호텔',
+                tour: '🎯 투어',
+                ground: '🚗 지상비',
+                other: '📦 기타'
+            };
+
+            let html = '';
+            reservation.cost_components.forEach((component, index) => {
+                const typeName = componentTypeNames[component.component_type] || component.component_type;
+                const costKRW = component.cost_currency === 'USD' 
+                    ? (component.cost_amount * (reservation.pricing?.exchange_rate || 1300)).toLocaleString()
+                    : component.cost_amount.toLocaleString();
+                
+                html += `
+                    <div class="card mb-3" style="border-left: 4px solid #28a745;">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <h6 class="mb-1">${typeName} - ${component.vendor_name}</h6>
+                                    <small class="text-muted">매입가: ${component.cost_amount.toLocaleString()} ${component.cost_currency} ${component.cost_currency === 'USD' ? `(₩${costKRW})` : ''}</small>
+                                    ${component.notes ? `<br><small class="text-muted">비고: ${component.notes}</small>` : ''}
+                                </div>
+                                <div class="col-md-3">
+                                    <div id="assignment_status_${index}">
+                                        ${component.assignment_sent_at 
+                                            ? `<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>발송완료</span>
+                                               <br><small class="text-muted">${new Date(component.assignment_sent_at).toLocaleString('ko-KR')}</small>`
+                                            : '<span class="badge bg-secondary">미발송</span>'
+                                        }
+                                        ${component.assignment_confirmed_at 
+                                            ? `<br><span class="badge bg-info mt-1"><i class="fas fa-eye me-1"></i>수신확인</span>
+                                               <br><small class="text-muted">${new Date(component.assignment_confirmed_at).toLocaleString('ko-KR')}</small>`
+                                            : ''
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-5 text-end">
+                                    <button class="btn btn-sm btn-success me-1" onclick="generateAssignment('${reservation._id}', ${index})" title="수배서 생성">
+                                        <i class="fas fa-file-alt me-1"></i>수배서 생성
+                                    </button>
+                                    <button class="btn btn-sm btn-primary me-1" onclick="sendAssignmentEmail('${reservation._id}', ${index})" title="이메일 발송">
+                                        <i class="fas fa-envelope me-1"></i>이메일 발송
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="copyAssignmentLink('${reservation._id}', ${index})" title="링크 복사">
+                                        <i class="fas fa-link me-1"></i>링크 복사
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // 수배서 생성
+        async function generateAssignment(reservationId, componentIndex) {
+            try {
+                const response = await fetch(`/api/package-reservations/${reservationId}/assignment/${componentIndex}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('수배서가 생성되었습니다.');
+                    // 모달 새로고침
+                    openAssignmentModal(reservationId);
+                } else {
+                    alert('수배서 생성 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('수배서 생성 오류:', error);
+                alert('수배서 생성 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 수배서 이메일 발송
+        async function sendAssignmentEmail(reservationId, componentIndex) {
+            const email = prompt('수배서를 받을 이메일 주소를 입력하세요:');
+            if (!email) return;
+
+            try {
+                const response = await fetch(`/api/package-reservations/${reservationId}/assignment/${componentIndex}/email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`수배서가 ${email}로 발송되었습니다.`);
+                    // 모달 새로고침
+                    openAssignmentModal(reservationId);
+                } else {
+                    alert('이메일 발송 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('이메일 발송 오류:', error);
+                alert('이메일 발송 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 수배서 링크 복사
+        async function copyAssignmentLink(reservationId, componentIndex) {
+            try {
+                const response = await fetch(`/api/package-reservations/${reservationId}/assignment/${componentIndex}/link`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const link = result.link;
+                    await navigator.clipboard.writeText(link);
+                    alert('수배서 링크가 클립보드에 복사되었습니다.\n\n' + link);
+                } else {
+                    alert('링크 생성 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('링크 복사 오류:', error);
+                alert('링크 복사 중 오류가 발생했습니다.');
+            }
         }
 
         function openInvoiceModal(id) {

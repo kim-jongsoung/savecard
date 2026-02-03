@@ -170,7 +170,12 @@ const packageReservationSchema = new mongoose.Schema({
         // 송금 정보
         payment_sent_date: Date,
         payment_sent_exchange_rate: Number,
-        payment_sent_amount_krw: Number
+        payment_sent_amount_krw: Number,
+        
+        // 수배서 정보
+        assignment_sent_at: Date,
+        assignment_confirmed_at: Date,
+        assignment_email: String
     }],
     
     // 정산 정보 (pre save 훅에서 자동 계산)

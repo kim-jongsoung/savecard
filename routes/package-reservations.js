@@ -465,4 +465,257 @@ router.get('/stats/summary', requireAuth, async (req, res) => {
     }
 });
 
+// 수배서 생성
+router.post('/:id/assignment/:componentIndex', requireAuth, async (req, res) => {
+    try {
+        const { id, componentIndex } = req.params;
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const index = parseInt(componentIndex);
+        if (index < 0 || index >= reservation.cost_components.length) {
+            return res.status(400).json({
+                success: false,
+                message: '유효하지 않은 구성요소 인덱스입니다.'
+            });
+        }
+
+        // 수배서 발송 시간 기록
+        reservation.cost_components[index].assignment_sent_at = new Date();
+        await reservation.save();
+
+        console.log('✅ 수배서 생성 완료:', reservation.reservation_number, '- 구성요소', index);
+
+        res.json({
+            success: true,
+            message: '수배서가 생성되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 생성 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 이메일 발송
+router.post('/:id/assignment/:componentIndex/email', requireAuth, async (req, res) => {
+    try {
+        const { id, componentIndex } = req.params;
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: '이메일 주소가 필요합니다.'
+            });
+        }
+
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const index = parseInt(componentIndex);
+        if (index < 0 || index >= reservation.cost_components.length) {
+            return res.status(400).json({
+                success: false,
+                message: '유효하지 않은 구성요소 인덱스입니다.'
+            });
+        }
+
+        const component = reservation.cost_components[index];
+        
+        // 수배서 발송 시간 기록
+        reservation.cost_components[index].assignment_sent_at = new Date();
+        reservation.cost_components[index].assignment_email = email;
+        await reservation.save();
+
+        // TODO: 실제 이메일 발송 로직 구현 (Nodemailer 등 사용)
+        console.log('✅ 수배서 이메일 발송:', email, '- 예약번호:', reservation.reservation_number);
+
+        res.json({
+            success: true,
+            message: `수배서가 ${email}로 발송되었습니다.`
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 이메일 발송 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 이메일 발송 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 링크 생성
+router.get('/:id/assignment/:componentIndex/link', requireAuth, async (req, res) => {
+    try {
+        const { id, componentIndex } = req.params;
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const index = parseInt(componentIndex);
+        if (index < 0 || index >= reservation.cost_components.length) {
+            return res.status(400).json({
+                success: false,
+                message: '유효하지 않은 구성요소 인덱스입니다.'
+            });
+        }
+
+        // 수배서 링크 생성
+        const link = `${req.protocol}://${req.get('host')}/api/package-reservations/${id}/assignment/${componentIndex}/view`;
+
+        res.json({
+            success: true,
+            link: link
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 링크 생성 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 링크 생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 수신 확인 (공개 엔드포인트 - 인증 불필요)
+router.post('/:id/assignment/:componentIndex/confirm', async (req, res) => {
+    try {
+        const { id, componentIndex } = req.params;
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const index = parseInt(componentIndex);
+        if (index < 0 || index >= reservation.cost_components.length) {
+            return res.status(400).json({
+                success: false,
+                message: '유효하지 않은 구성요소 인덱스입니다.'
+            });
+        }
+
+        // 수배서 수신 확인 시간 기록 (최초 1회만)
+        if (!reservation.cost_components[index].assignment_confirmed_at) {
+            reservation.cost_components[index].assignment_confirmed_at = new Date();
+            await reservation.save();
+            
+            console.log('✅ 수배서 수신 확인:', reservation.reservation_number, '- 구성요소', index);
+        }
+
+        res.json({
+            success: true,
+            message: '수배서 수신이 확인되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 수신 확인 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '수배서 수신 확인 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 수배서 페이지 뷰 (공개 엔드포인트 - 인증 불필요)
+router.get('/:id/assignment/:componentIndex/view', async (req, res) => {
+    try {
+        const { id, componentIndex } = req.params;
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).render('error', {
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const index = parseInt(componentIndex);
+        if (index < 0 || index >= reservation.cost_components.length) {
+            return res.status(400).render('error', {
+                message: '유효하지 않은 구성요소 인덱스입니다.'
+            });
+        }
+
+        const component = reservation.cost_components[index];
+        
+        // 구성요소 타입 이름
+        const componentTypeNames = {
+            flight: '항공권',
+            hotel: '호텔',
+            tour: '투어',
+            ground: '지상비',
+            other: '기타'
+        };
+
+        // 수배서 데이터 구성
+        const assignmentData = {
+            reservation_number: reservation.reservation_number,
+            customer_name: reservation.customer.korean_name,
+            english_name: reservation.customer.english_name,
+            platform_name: reservation.platform_name,
+            package_name: reservation.package_name,
+            departure_date: reservation.travel_period.departure_date,
+            return_date: reservation.travel_period.return_date,
+            nights: reservation.travel_period.nights,
+            days: reservation.travel_period.days,
+            adult_count: reservation.people.adult,
+            child_count: reservation.people.child,
+            infant_count: reservation.people.infant,
+            phone_number: reservation.customer.phone,
+            email: reservation.customer.email,
+            special_requests: reservation.special_requests,
+            
+            // 구성요소 정보
+            component_type: componentTypeNames[component.component_type] || component.component_type,
+            vendor_name: component.vendor_name,
+            cost_amount: component.cost_amount,
+            cost_currency: component.cost_currency,
+            cost_krw: component.cost_krw,
+            notes: component.notes,
+            
+            // 수배서 상태
+            assignment_sent_at: component.assignment_sent_at,
+            assignment_confirmed_at: component.assignment_confirmed_at,
+            assignment_email: component.assignment_email
+        };
+
+        res.render('package-assignment', {
+            title: `수배서 - ${reservation.reservation_number}`,
+            assignment: assignmentData,
+            reservationId: id,
+            componentIndex: index
+        });
+
+    } catch (error) {
+        console.error('❌ 수배서 페이지 로드 실패:', error);
+        res.status(500).render('error', {
+            message: '수배서 페이지 로드 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 module.exports = router;
