@@ -216,7 +216,23 @@ const packageReservationSchema = new mongoose.Schema({
     },
     
     // 특별 요청사항
-    special_requests: String
+    special_requests: String,
+    
+    // 수정 이력
+    modification_history: [{
+        modified_at: {
+            type: Date,
+            default: Date.now
+        },
+        modified_by: String,
+        changes: [{
+            field: String,
+            field_label: String,
+            old_value: mongoose.Schema.Types.Mixed,
+            new_value: mongoose.Schema.Types.Mixed
+        }],
+        summary: String
+    }]
     
 }, {
     timestamps: true  // createdAt, updatedAt 자동 생성

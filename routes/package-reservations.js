@@ -200,7 +200,57 @@ router.put('/:id', requireAuth, async (req, res) => {
             });
         }
         
-        // 수정 가능한 필드만 업데이트
+        // 변경사항 추적을 위한 배열
+        const changes = [];
+        
+        // 필드 라벨 매핑
+        const fieldLabels = {
+            'reservation_status': '예약 상태',
+            'platform_name': '예약 채널',
+            'package_name': '패키지명',
+            'customer.korean_name': '고객 한글명',
+            'customer.english_name': '고객 영문명',
+            'customer.phone': '고객 전화번호',
+            'customer.email': '고객 이메일',
+            'travel_period.departure_date': '출발일',
+            'travel_period.return_date': '귀국일',
+            'people.adult': '성인 인원',
+            'people.child': '소아 인원',
+            'people.infant': '유아 인원',
+            'flight_info.outbound_flight': '출국 편명',
+            'flight_info.inbound_flight': '입국 편명',
+            'hotel_name': '호텔명',
+            'room_type': '룸타입',
+            'itinerary': '일정',
+            'inclusions': '포함사항',
+            'exclusions': '불포함사항',
+            'pricing.price_adult': '성인 1인 요금',
+            'pricing.price_child': '소아 1인 요금',
+            'pricing.price_infant': '유아 1인 요금',
+            'pricing.total_selling_price': '총 판매가',
+            'pricing.currency': '통화',
+            'pricing.exchange_rate': '환율',
+            'special_requests': '특별 요청사항',
+            'status': '상태'
+        };
+        
+        // 값 포맷팅 함수
+        const formatValue = (value, field) => {
+            if (value === null || value === undefined) return '-';
+            if (field.includes('date')) {
+                return new Date(value).toLocaleDateString('ko-KR');
+            }
+            if (field.includes('price') || field.includes('amount')) {
+                return `₩${Number(value).toLocaleString()}`;
+            }
+            if (field === 'reservation_status') {
+                const statusMap = { pending: '대기', confirmed: '확정', cancelled: '취소' };
+                return statusMap[value] || value;
+            }
+            return value;
+        };
+        
+        // 수정 가능한 필드만 업데이트 및 변경사항 추적
         const allowedFields = [
             'reservation_status',
             'platform_name',
@@ -222,11 +272,92 @@ router.put('/:id', requireAuth, async (req, res) => {
             'status'
         ];
         
-        allowedFields.forEach(field => {
-            if (req.body[field] !== undefined) {
+        // 단순 필드 비교
+        const simpleFields = ['reservation_status', 'platform_name', 'package_name', 'hotel_name', 'room_type', 'itinerary', 'inclusions', 'exclusions', 'special_requests', 'status'];
+        simpleFields.forEach(field => {
+            if (req.body[field] !== undefined && reservation[field] !== req.body[field]) {
+                changes.push({
+                    field: field,
+                    field_label: fieldLabels[field],
+                    old_value: formatValue(reservation[field], field),
+                    new_value: formatValue(req.body[field], field)
+                });
                 reservation[field] = req.body[field];
             }
         });
+        
+        // 중첩 객체 필드 비교
+        if (req.body.customer) {
+            ['korean_name', 'english_name', 'phone', 'email'].forEach(subField => {
+                if (req.body.customer[subField] !== undefined && reservation.customer[subField] !== req.body.customer[subField]) {
+                    changes.push({
+                        field: `customer.${subField}`,
+                        field_label: fieldLabels[`customer.${subField}`],
+                        old_value: formatValue(reservation.customer[subField], subField),
+                        new_value: formatValue(req.body.customer[subField], subField)
+                    });
+                }
+            });
+            reservation.customer = req.body.customer;
+        }
+        
+        if (req.body.travel_period) {
+            ['departure_date', 'return_date'].forEach(subField => {
+                if (req.body.travel_period[subField] !== undefined) {
+                    const oldDate = reservation.travel_period[subField] ? new Date(reservation.travel_period[subField]).toISOString().split('T')[0] : null;
+                    const newDate = new Date(req.body.travel_period[subField]).toISOString().split('T')[0];
+                    if (oldDate !== newDate) {
+                        changes.push({
+                            field: `travel_period.${subField}`,
+                            field_label: fieldLabels[`travel_period.${subField}`],
+                            old_value: formatValue(oldDate, subField),
+                            new_value: formatValue(newDate, subField)
+                        });
+                    }
+                }
+            });
+            reservation.travel_period = req.body.travel_period;
+        }
+        
+        if (req.body.people) {
+            ['adult', 'child', 'infant'].forEach(subField => {
+                if (req.body.people[subField] !== undefined && reservation.people[subField] !== req.body.people[subField]) {
+                    changes.push({
+                        field: `people.${subField}`,
+                        field_label: fieldLabels[`people.${subField}`],
+                        old_value: `${reservation.people[subField]}명`,
+                        new_value: `${req.body.people[subField]}명`
+                    });
+                }
+            });
+            reservation.people = req.body.people;
+        }
+        
+        if (req.body.flight_info) {
+            reservation.flight_info = req.body.flight_info;
+        }
+        
+        if (req.body.pricing) {
+            ['price_adult', 'price_child', 'price_infant', 'total_selling_price', 'currency', 'exchange_rate'].forEach(subField => {
+                if (req.body.pricing[subField] !== undefined && reservation.pricing[subField] !== req.body.pricing[subField]) {
+                    changes.push({
+                        field: `pricing.${subField}`,
+                        field_label: fieldLabels[`pricing.${subField}`],
+                        old_value: formatValue(reservation.pricing[subField], subField),
+                        new_value: formatValue(req.body.pricing[subField], subField)
+                    });
+                }
+            });
+            reservation.pricing = req.body.pricing;
+        }
+        
+        if (req.body.guests) {
+            reservation.guests = req.body.guests;
+        }
+        
+        if (req.body.billings) {
+            reservation.billings = req.body.billings;
+        }
         
         // 구성요소 원화 환산
         if (req.body.cost_components) {
@@ -242,14 +373,30 @@ router.put('/:id', requireAuth, async (req, res) => {
             });
         }
         
+        // 수정 이력 추가
+        if (changes.length > 0) {
+            const modificationEntry = {
+                modified_at: new Date(),
+                modified_by: req.session.adminUsername || req.session.adminId || '관리자',
+                changes: changes,
+                summary: `${changes.length}개 필드 수정됨`
+            };
+            
+            if (!reservation.modification_history) {
+                reservation.modification_history = [];
+            }
+            reservation.modification_history.push(modificationEntry);
+        }
+        
         await reservation.save();
         
-        console.log('✅ 패키지 예약 수정 완료:', reservation.reservation_number);
+        console.log('✅ 패키지 예약 수정 완료:', reservation.reservation_number, `(${changes.length}개 변경)`);
         
         res.json({
             success: true,
             message: '패키지 예약이 수정되었습니다.',
-            data: reservation
+            data: reservation,
+            changes_count: changes.length
         });
         
     } catch (error) {

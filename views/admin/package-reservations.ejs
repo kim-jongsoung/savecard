@@ -311,13 +311,160 @@
                             </div>
                         </div>
 
+                        <!-- 항공편 정보 -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-plane me-2"></i>항공편 정보</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-2">
+                                        <label class="form-label">출국편명</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_outbound_flight" placeholder="OZ601">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">출발시간</label>
+                                        <input type="time" class="form-control form-control-sm" id="edit_outbound_departure_time">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">도착시간</label>
+                                        <input type="time" class="form-control form-control-sm" id="edit_outbound_arrival_time">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">입국편명</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_inbound_flight" placeholder="OZ602">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">출발시간</label>
+                                        <input type="time" class="form-control form-control-sm" id="edit_inbound_departure_time">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">도착시간</label>
+                                        <input type="time" class="form-control form-control-sm" id="edit_inbound_arrival_time">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 호텔 정보 -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-hotel me-2"></i>호텔 정보</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">호텔명</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_hotel_name" placeholder="호텔명">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">룸타입</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_room_type" placeholder="디럭스 오션뷰">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 일정 및 포함/불포함 -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>일정 및 포함/불포함 사항</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">일정</label>
+                                        <textarea class="form-control form-control-sm" id="edit_itinerary" rows="3"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">포함사항</label>
+                                        <textarea class="form-control form-control-sm" id="edit_inclusions" rows="1"></textarea>
+                                        <label class="form-label mt-2">불포함사항</label>
+                                        <textarea class="form-control form-control-sm" id="edit_exclusions" rows="1"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 투숙객 정보 -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>투숙객 정보</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="edit_guests_container"></div>
+                            </div>
+                        </div>
+
+                        <!-- 금액 정보 -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>금액 정보</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-2">
+                                        <label class="form-label">통화</label>
+                                        <select class="form-select form-select-sm" id="edit_currency">
+                                            <option value="KRW">KRW</option>
+                                            <option value="USD">USD</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">환율</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_exchange_rate" value="1,300">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">성인 1인</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_price_adult" placeholder="500,000">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">소아 1인</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_price_child" placeholder="400,000">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">유아 1인</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_price_infant" placeholder="100,000">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">총 판매가</label>
+                                        <input type="text" class="form-control form-control-sm" id="edit_total_selling_price" readonly style="background-color: #e9ecef; font-weight: bold;">
+                                    </div>
+                                </div>
+
+                                <h6 class="mb-2">결제 빌링</h6>
+                                <div id="edit_billings_container"></div>
+                                <button type="button" class="btn btn-sm btn-outline-success mb-3" onclick="addEditBilling()">
+                                    <i class="fas fa-plus me-1"></i>결제 추가
+                                </button>
+
+                                <h6 class="mb-2">매입 구성요소</h6>
+                                <div id="edit_components_container"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addEditComponent()">
+                                    <i class="fas fa-plus me-1"></i>구성요소 추가
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- 특별 요청사항 -->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0"><i class="fas fa-comment me-2"></i>특별 요청사항</h6>
                             </div>
                             <div class="card-body">
-                                <textarea class="form-control" id="edit_special_requests" rows="3"></textarea>
+                                <textarea class="form-control" id="edit_special_requests" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 수정 이력 -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-history me-2"></i>수정 이력</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="modification_history_container" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-muted mb-0">수정 이력이 없습니다.</p>
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -606,6 +753,9 @@
         }
 
         // 예약수정 모달 열기
+        let editComponentCount = 0;
+        let editBillingCount = 0;
+        
         async function openEditModal(id) {
             try {
                 const response = await fetch(`/api/package-reservations/${id}`);
@@ -638,8 +788,49 @@
                     document.getElementById('edit_people_child').value = r.people.child;
                     document.getElementById('edit_people_infant').value = r.people.infant;
                     
+                    // 항공편 정보
+                    if (r.flight_info) {
+                        document.getElementById('edit_outbound_flight').value = r.flight_info.outbound_flight || '';
+                        document.getElementById('edit_outbound_departure_time').value = r.flight_info.outbound_departure_time || '';
+                        document.getElementById('edit_outbound_arrival_time').value = r.flight_info.outbound_arrival_time || '';
+                        document.getElementById('edit_inbound_flight').value = r.flight_info.inbound_flight || '';
+                        document.getElementById('edit_inbound_departure_time').value = r.flight_info.inbound_departure_time || '';
+                        document.getElementById('edit_inbound_arrival_time').value = r.flight_info.inbound_arrival_time || '';
+                    }
+                    
+                    // 호텔 정보
+                    document.getElementById('edit_hotel_name').value = r.hotel_name || '';
+                    document.getElementById('edit_room_type').value = r.room_type || '';
+                    
+                    // 일정 및 포함/불포함
+                    document.getElementById('edit_itinerary').value = r.itinerary || '';
+                    document.getElementById('edit_inclusions').value = r.inclusions || '';
+                    document.getElementById('edit_exclusions').value = r.exclusions || '';
+                    
+                    // 투숙객 정보
+                    renderEditGuests(r.guests || []);
+                    
+                    // 금액 정보
+                    if (r.pricing) {
+                        document.getElementById('edit_currency').value = r.pricing.currency || 'KRW';
+                        document.getElementById('edit_exchange_rate').value = (r.pricing.exchange_rate || 1300).toLocaleString();
+                        document.getElementById('edit_price_adult').value = (r.pricing.price_adult || 0).toLocaleString();
+                        document.getElementById('edit_price_child').value = (r.pricing.price_child || 0).toLocaleString();
+                        document.getElementById('edit_price_infant').value = (r.pricing.price_infant || 0).toLocaleString();
+                        document.getElementById('edit_total_selling_price').value = (r.pricing.total_selling_price || 0).toLocaleString();
+                    }
+                    
+                    // 결제 빌링
+                    renderEditBillings(r.billings || []);
+                    
+                    // 매입 구성요소
+                    renderEditComponents(r.cost_components || []);
+                    
                     // 특별 요청사항
                     document.getElementById('edit_special_requests').value = r.special_requests || '';
+                    
+                    // 수정 이력
+                    renderModificationHistory(r.modification_history || []);
                     
                     // 모달 열기
                     new bootstrap.Modal(document.getElementById('editModal')).show();
@@ -650,6 +841,312 @@
                 console.error('예약 정보 로드 오류:', error);
                 alert('예약 정보 로드 중 오류가 발생했습니다.');
             }
+        }
+        
+        // 투숙객 정보 렌더링
+        function renderEditGuests(guests) {
+            const container = document.getElementById('edit_guests_container');
+            if (!guests || guests.length === 0) {
+                container.innerHTML = '<p class="text-muted mb-0">투숙객 정보가 없습니다.</p>';
+                return;
+            }
+            
+            let html = '';
+            guests.forEach((guest, index) => {
+                html += `
+                    <div class="card mb-2" style="background-color: #f8f9fa;">
+                        <div class="card-body p-2">
+                            <div class="row g-2">
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.75rem;">한글이름</label>
+                                    <input type="text" class="form-control form-control-sm" value="${guest.korean_name || ''}" 
+                                           data-guest-index="${index}" data-field="korean_name">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.75rem;">영문이름</label>
+                                    <input type="text" class="form-control form-control-sm" value="${guest.english_name || ''}"
+                                           data-guest-index="${index}" data-field="english_name">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.75rem;">생년월일</label>
+                                    <input type="date" class="form-control form-control-sm" value="${guest.birth_date ? new Date(guest.birth_date).toISOString().split('T')[0] : ''}"
+                                           data-guest-index="${index}" data-field="birth_date">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.75rem;">연락처</label>
+                                    <input type="text" class="form-control form-control-sm" value="${guest.phone || ''}"
+                                           data-guest-index="${index}" data-field="phone">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.75rem;">이메일</label>
+                                    <input type="email" class="form-control form-control-sm" value="${guest.email || ''}"
+                                           data-guest-index="${index}" data-field="email">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.75rem;">구분</label>
+                                    <input type="text" class="form-control form-control-sm" value="${guest.type || ''}" readonly>
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.75rem;">성별</label>
+                                    <select class="form-select form-select-sm" data-guest-index="${index}" data-field="gender">
+                                        <option value="">선택</option>
+                                        <option value="남자" ${guest.gender === '남자' ? 'selected' : ''}>남자</option>
+                                        <option value="여자" ${guest.gender === '여자' ? 'selected' : ''}>여자</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+        
+        // 결제 빌링 렌더링
+        function renderEditBillings(billings) {
+            const container = document.getElementById('edit_billings_container');
+            container.innerHTML = '';
+            editBillingCount = 0;
+            
+            if (billings && billings.length > 0) {
+                billings.forEach(billing => {
+                    editBillingCount++;
+                    const billingHTML = `
+                        <div class="card mb-2" id="edit_billing_${editBillingCount}" style="background-color: #f8f9fa;">
+                            <div class="card-body p-2">
+                                <div class="row g-2">
+                                    <div class="col-md-2">
+                                        <select class="form-select form-select-sm">
+                                            <option value="cash" ${billing.type === 'cash' ? 'selected' : ''}>💵 현금</option>
+                                            <option value="card" ${billing.type === 'card' ? 'selected' : ''}>💳 카드</option>
+                                            <option value="discount" ${billing.type === 'discount' ? 'selected' : ''}>🎁 할인</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control form-control-sm" value="${(billing.amount || 0).toLocaleString()}" placeholder="금액">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="date" class="form-control form-control-sm" value="${billing.date ? new Date(billing.date).toISOString().split('T')[0] : ''}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <select class="form-select form-select-sm">
+                                            <option value="pending" ${billing.status === 'pending' ? 'selected' : ''}>결제전</option>
+                                            <option value="completed" ${billing.status === 'completed' ? 'selected' : ''}>결제완료</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control form-control-sm" value="${billing.notes || ''}" placeholder="비고">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('edit_billing_${editBillingCount}').remove()">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', billingHTML);
+                });
+            }
+        }
+        
+        // 매입 구성요소 렌더링
+        function renderEditComponents(components) {
+            const container = document.getElementById('edit_components_container');
+            container.innerHTML = '';
+            editComponentCount = 0;
+            
+            if (components && components.length > 0) {
+                components.forEach(comp => {
+                    editComponentCount++;
+                    const typeIcons = {
+                        flight: '✈️ 항공권',
+                        hotel: '🏨 호텔',
+                        tour: '🎯 투어',
+                        ground: '🚗 지상비',
+                        other: '📦 기타'
+                    };
+                    const componentHTML = `
+                        <div class="card mb-2" id="edit_component_${editComponentCount}" style="background-color: #fff;">
+                            <div class="card-body p-2">
+                                <div class="row g-2">
+                                    <div class="col-md-2">
+                                        <select class="form-select form-select-sm">
+                                            <option value="flight" ${comp.component_type === 'flight' ? 'selected' : ''}>✈️ 항공권</option>
+                                            <option value="hotel" ${comp.component_type === 'hotel' ? 'selected' : ''}>🏨 호텔</option>
+                                            <option value="tour" ${comp.component_type === 'tour' ? 'selected' : ''}>🎯 투어</option>
+                                            <option value="ground" ${comp.component_type === 'ground' ? 'selected' : ''}>🚗 지상비</option>
+                                            <option value="other" ${comp.component_type === 'other' ? 'selected' : ''}>📦 기타</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control form-control-sm" value="${comp.vendor_name || ''}" placeholder="공급업체">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control form-control-sm" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <select class="form-select form-select-sm">
+                                            <option value="KRW" ${comp.cost_currency === 'KRW' ? 'selected' : ''}>KRW</option>
+                                            <option value="USD" ${comp.cost_currency === 'USD' ? 'selected' : ''}>USD</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control form-control-sm" value="${(comp.cost_krw || 0).toLocaleString()}" placeholder="원화환산" readonly>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" class="form-control form-control-sm" value="${comp.notes || ''}" placeholder="비고">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('edit_component_${editComponentCount}').remove()">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', componentHTML);
+                });
+            }
+        }
+        
+        // 수정 이력 렌더링
+        function renderModificationHistory(history) {
+            const container = document.getElementById('modification_history_container');
+            
+            if (!history || history.length === 0) {
+                container.innerHTML = '<p class="text-muted mb-0">수정 이력이 없습니다.</p>';
+                return;
+            }
+            
+            let html = '';
+            history.reverse().forEach((entry, index) => {
+                const date = new Date(entry.modified_at).toLocaleString('ko-KR');
+                html += `
+                    <div class="card mb-2 ${index === 0 ? 'border-primary' : ''}">
+                        <div class="card-body p-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong style="font-size: 0.9rem;">
+                                    <i class="fas fa-user-edit me-1"></i>${entry.modified_by}
+                                </strong>
+                                <small class="text-muted">${date}</small>
+                            </div>
+                            <div style="font-size: 0.85rem;">
+                                <span class="badge bg-info">${entry.summary}</span>
+                            </div>
+                            <div class="mt-2" style="font-size: 0.8rem;">
+                `;
+                
+                entry.changes.forEach(change => {
+                    html += `
+                        <div class="mb-1">
+                            <span class="badge bg-secondary">${change.field_label}</span>
+                            <span class="text-danger" style="text-decoration: line-through;">${change.old_value}</span>
+                            <i class="fas fa-arrow-right mx-1"></i>
+                            <span class="text-success"><strong>${change.new_value}</strong></span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 결제 빌링 추가
+        function addEditBilling() {
+            editBillingCount++;
+            const container = document.getElementById('edit_billings_container');
+            const billingHTML = `
+                <div class="card mb-2" id="edit_billing_${editBillingCount}" style="background-color: #f8f9fa;">
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm">
+                                    <option value="cash">💵 현금</option>
+                                    <option value="card">💳 카드</option>
+                                    <option value="discount">🎁 할인</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="금액">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="date" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm">
+                                    <option value="pending">결제전</option>
+                                    <option value="completed">결제완료</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" placeholder="비고">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('edit_billing_${editBillingCount}').remove()">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', billingHTML);
+        }
+        
+        // 매입 구성요소 추가
+        function addEditComponent() {
+            editComponentCount++;
+            const container = document.getElementById('edit_components_container');
+            const componentHTML = `
+                <div class="card mb-2" id="edit_component_${editComponentCount}" style="background-color: #fff;">
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm">
+                                    <option value="flight">✈️ 항공권</option>
+                                    <option value="hotel">🏨 호텔</option>
+                                    <option value="tour">🎯 투어</option>
+                                    <option value="ground">🚗 지상비</option>
+                                    <option value="other">📦 기타</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="공급업체">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="매입가">
+                            </div>
+                            <div class="col-md-1">
+                                <select class="form-select form-select-sm">
+                                    <option value="KRW">KRW</option>
+                                    <option value="USD">USD</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="원화환산" readonly>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" placeholder="비고">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('edit_component_${editComponentCount}').remove()">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', componentHTML);
         }
 
         // 박수/일수 계산 (수정 모달)
@@ -671,6 +1168,54 @@
         // 예약수정 저장
         async function saveReservationEdit() {
             const id = document.getElementById('edit_reservation_id').value;
+            
+            // 숫자 파싱 헬퍼
+            const parseNumber = (value) => {
+                if (!value) return 0;
+                return parseFloat(value.toString().replace(/,/g, '')) || 0;
+            };
+            
+            // 투숙객 정보 수집
+            const guests = [];
+            document.querySelectorAll('#edit_guests_container [data-guest-index]').forEach(input => {
+                const index = parseInt(input.dataset.guestIndex);
+                const field = input.dataset.field;
+                
+                if (!guests[index]) {
+                    guests[index] = {};
+                }
+                
+                guests[index][field] = input.value;
+            });
+            
+            // 결제 빌링 수집
+            const billings = [];
+            document.querySelectorAll('#edit_billings_container .card').forEach(card => {
+                const inputs = card.querySelectorAll('input, select');
+                const billing = {
+                    type: inputs[0].value,
+                    amount: parseNumber(inputs[1].value),
+                    date: inputs[2].value || null,
+                    status: inputs[3].value,
+                    notes: inputs[4].value
+                };
+                billings.push(billing);
+            });
+            
+            // 매입 구성요소 수집
+            const cost_components = [];
+            document.querySelectorAll('#edit_components_container .card').forEach(card => {
+                const inputs = card.querySelectorAll('input, select');
+                const component = {
+                    component_type: inputs[0].value,
+                    vendor_name: inputs[1].value,
+                    cost_amount: parseNumber(inputs[2].value),
+                    cost_currency: inputs[3].value,
+                    cost_krw: parseNumber(inputs[4].value),
+                    notes: inputs[5].value
+                };
+                cost_components.push(component);
+            });
             
             // 폼 데이터 수집
             const data = {
@@ -694,6 +1239,30 @@
                     child: parseInt(document.getElementById('edit_people_child').value),
                     infant: parseInt(document.getElementById('edit_people_infant').value)
                 },
+                flight_info: {
+                    outbound_flight: document.getElementById('edit_outbound_flight').value,
+                    outbound_departure_time: document.getElementById('edit_outbound_departure_time').value,
+                    outbound_arrival_time: document.getElementById('edit_outbound_arrival_time').value,
+                    inbound_flight: document.getElementById('edit_inbound_flight').value,
+                    inbound_departure_time: document.getElementById('edit_inbound_departure_time').value,
+                    inbound_arrival_time: document.getElementById('edit_inbound_arrival_time').value
+                },
+                hotel_name: document.getElementById('edit_hotel_name').value,
+                room_type: document.getElementById('edit_room_type').value,
+                itinerary: document.getElementById('edit_itinerary').value,
+                inclusions: document.getElementById('edit_inclusions').value,
+                exclusions: document.getElementById('edit_exclusions').value,
+                guests: guests.filter(g => g && Object.keys(g).length > 0),
+                pricing: {
+                    currency: document.getElementById('edit_currency').value,
+                    exchange_rate: parseNumber(document.getElementById('edit_exchange_rate').value),
+                    price_adult: parseNumber(document.getElementById('edit_price_adult').value),
+                    price_child: parseNumber(document.getElementById('edit_price_child').value),
+                    price_infant: parseNumber(document.getElementById('edit_price_infant').value),
+                    total_selling_price: parseNumber(document.getElementById('edit_total_selling_price').value)
+                },
+                billings: billings,
+                cost_components: cost_components,
                 special_requests: document.getElementById('edit_special_requests').value
             };
 
@@ -715,7 +1284,7 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert('예약이 수정되었습니다.');
+                    alert(`예약이 수정되었습니다.\n${result.changes_count || 0}개 필드가 변경되었습니다.`);
                     bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
                     loadReservations(); // 목록 새로고침
                 } else {
