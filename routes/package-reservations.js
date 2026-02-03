@@ -465,7 +465,7 @@ router.get('/stats/summary', requireAuth, async (req, res) => {
     }
 });
 
-// 수배서 생성
+// 수배서 생성 (발송 시간 기록 및 이력 저장)
 router.post('/:id/assignment/:componentIndex', requireAuth, async (req, res) => {
     try {
         const { id, componentIndex } = req.params;
@@ -486,15 +486,29 @@ router.post('/:id/assignment/:componentIndex', requireAuth, async (req, res) => 
             });
         }
 
-        // 수배서 발송 시간 기록
-        reservation.cost_components[index].assignment_sent_at = new Date();
+        const now = new Date();
+        
+        // 수배서 발송 시간 기록 (최신 정보)
+        reservation.cost_components[index].assignment_sent_at = now;
+        
+        // 수배서 생성 이력에 추가
+        if (!reservation.cost_components[index].assignment_history) {
+            reservation.cost_components[index].assignment_history = [];
+        }
+        
+        reservation.cost_components[index].assignment_history.push({
+            created_at: now,
+            created_by: req.session.user?.username || 'admin'
+        });
+        
         await reservation.save();
 
-        console.log('✅ 수배서 생성 완료:', reservation.reservation_number, '- 구성요소', index);
+        console.log('✅ 수배서 생성:', reservation.reservation_number, '- 구성요소', index);
 
         res.json({
             success: true,
-            message: '수배서가 생성되었습니다.'
+            message: '수배서가 생성되었습니다.',
+            history_count: reservation.cost_components[index].assignment_history.length
         });
 
     } catch (error) {

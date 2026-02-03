@@ -462,7 +462,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" onclick="closeAssignmentModal()">
                         <i class="fas fa-times me-1"></i>닫기
                     </button>
                 </div>
@@ -1427,9 +1427,13 @@
             }
         }
 
+        let assignmentModalInstance = null;
+        let currentReservationId = null;
+
         // 수배서 모달 열기
         async function openAssignmentModal(id) {
             try {
+                currentReservationId = id;
                 const response = await fetch(`/api/package-reservations/${id}`);
                 const result = await response.json();
 
@@ -1450,8 +1454,10 @@
                     renderAssignmentList(r);
                     
                     // 모달 열기
-                    const modal = new bootstrap.Modal(document.getElementById('assignmentModal'));
-                    modal.show();
+                    if (!assignmentModalInstance) {
+                        assignmentModalInstance = new bootstrap.Modal(document.getElementById('assignmentModal'));
+                    }
+                    assignmentModalInstance.show();
                 } else {
                     alert('예약 정보 로드 실패: ' + result.message);
                 }
@@ -1459,6 +1465,23 @@
                 console.error('예약 정보 로드 오류:', error);
                 alert('예약 정보 로드 중 오류가 발생했습니다.');
             }
+        }
+
+        // 수배서 모달 닫기
+        function closeAssignmentModal() {
+            if (assignmentModalInstance) {
+                assignmentModalInstance.hide();
+            }
+            // 배경 제거
+            setTimeout(() => {
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 300);
         }
 
         // 매입 구성요소별 수배서 목록 렌더링
@@ -1485,6 +1508,19 @@
                     ? (component.cost_amount * (reservation.pricing?.exchange_rate || 1300)).toLocaleString()
                     : component.cost_amount.toLocaleString();
                 
+                const historyCount = component.assignment_history ? component.assignment_history.length : 0;
+                const historyHtml = component.assignment_history && component.assignment_history.length > 0
+                    ? component.assignment_history.map((history, hIndex) => `
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="badge bg-light text-dark me-2">#${hIndex + 1}</span>
+                            <small class="text-muted">
+                                ${new Date(history.created_at).toLocaleString('ko-KR')}
+                                ${history.created_by ? `<span class="ms-2 text-primary">by ${history.created_by}</span>` : ''}
+                            </small>
+                        </div>
+                    `).join('')
+                    : '';
+
                 html += `
                     <div class="card mb-3" style="border-left: 4px solid #28a745;">
                         <div class="card-body">
@@ -1506,11 +1542,28 @@
                                                <br><small class="text-muted">${new Date(component.assignment_confirmed_at).toLocaleString('ko-KR')}</small>`
                                             : ''
                                         }
+                                        ${historyCount > 0 
+                                            ? `<br><button class="btn btn-sm btn-link p-0 mt-1" onclick="toggleHistory(${index})">
+                                                   <i class="fas fa-history me-1"></i>생성이력 (${historyCount})
+                                               </button>`
+                                            : ''
+                                        }
+                                    </div>
+                                    <div id="assignment_history_${index}" class="mt-2" style="display: none;">
+                                        <div class="border-top pt-2">
+                                            <strong class="text-muted" style="font-size: 0.85rem;">생성 이력</strong>
+                                            <div class="mt-1">
+                                                ${historyHtml}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-5 text-end">
                                     <button class="btn btn-sm btn-success me-1" onclick="generateAssignment('${reservation._id}', ${index})" title="수배서 생성">
                                         <i class="fas fa-file-alt me-1"></i>수배서 생성
+                                    </button>
+                                    <button class="btn btn-sm btn-warning me-1" onclick="previewAssignment('${reservation._id}', ${index})" title="미리보기">
+                                        <i class="fas fa-eye me-1"></i>미리보기
                                     </button>
                                     <button class="btn btn-sm btn-primary me-1" onclick="sendAssignmentEmail('${reservation._id}', ${index})" title="이메일 발송">
                                         <i class="fas fa-envelope me-1"></i>이메일 발송
@@ -1591,6 +1644,31 @@
             } catch (error) {
                 console.error('링크 복사 오류:', error);
                 alert('링크 복사 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 수배서 미리보기
+        async function previewAssignment(reservationId, componentIndex) {
+            try {
+                const response = await fetch(`/api/package-reservations/${reservationId}/assignment/${componentIndex}/link`);
+                const result = await response.json();
+
+                if (result.success) {
+                    window.open(result.link, '_blank');
+                } else {
+                    alert('미리보기 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('미리보기 오류:', error);
+                alert('미리보기 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 수배서 생성 이력 토글
+        function toggleHistory(index) {
+            const historyDiv = document.getElementById(`assignment_history_${index}`);
+            if (historyDiv) {
+                historyDiv.style.display = historyDiv.style.display === 'none' ? 'block' : 'none';
             }
         }
 
