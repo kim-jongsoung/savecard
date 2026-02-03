@@ -203,268 +203,184 @@
                     <form id="editForm">
                         <input type="hidden" id="edit_reservation_id">
                         
-                        <!-- 기본 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>기본 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">예약번호</label>
-                                        <input type="text" class="form-control" id="edit_reservation_number" readonly>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">예약 상태 <span class="text-danger">*</span></label>
-                                        <select class="form-select" id="edit_reservation_status" required>
-                                            <option value="pending">대기</option>
-                                            <option value="confirmed">확정</option>
-                                            <option value="cancelled">취소</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">예약 채널 <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="edit_platform_name" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">패키지명 <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="edit_package_name" required>
+                        <!-- 기본 예약 정보 -->
+                        <div>
+                            <h6 style="font-size: 1rem; margin-bottom: 0.75rem;">📋 기본 예약 정보</h6>
+                            
+                            <!-- 예약번호 표시 -->
+                            <div class="row mb-2">
+                                <div class="col-md-12">
+                                    <div class="alert alert-info py-2 mb-2">
+                                        <strong>예약번호:</strong> <span id="edit_reservation_number_display"></span>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- 고객 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>고객 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">한글 이름 <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="edit_customer_korean_name" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">영문 이름</label>
-                                        <input type="text" class="form-control" id="edit_customer_english_name">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">전화번호</label>
-                                        <input type="tel" class="form-control" id="edit_customer_phone">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">이메일</label>
-                                        <input type="email" class="form-control" id="edit_customer_email">
-                                    </div>
+                            
+                            <!-- 한줄 요약 정보 -->
+                            <div class="row mb-2">
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">예약 상태 *</label>
+                                    <select class="form-select" id="edit_reservation_status" required>
+                                        <option value="pending">⏳ 대기</option>
+                                        <option value="confirmed">✅ 확정</option>
+                                        <option value="cancelled">❌ 취소</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">예약채널 *</label>
+                                    <input type="text" class="form-control" id="edit_platform_name" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">패키지명 *</label>
+                                    <input type="text" class="form-control" id="edit_package_name" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">출발일 *</label>
+                                    <input type="date" class="form-control" id="edit_departure_date" onchange="calculateEditNights()" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">귀국일 *</label>
+                                    <input type="date" class="form-control" id="edit_return_date" onchange="calculateEditNights()" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">기간</label>
+                                    <input type="text" class="form-control" id="edit_period_display" readonly placeholder="자동">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- 여행 기간 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>여행 기간</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">출발일 <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="edit_departure_date" required onchange="calculateEditNights()">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">귀국일 <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="edit_return_date" required onchange="calculateEditNights()">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">박수</label>
-                                        <input type="number" class="form-control" id="edit_nights" readonly>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">일수</label>
-                                        <input type="number" class="form-control" id="edit_days" readonly>
-                                    </div>
+                            <div class="row mb-2">
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.875rem;">출국편명</label>
+                                    <input type="text" class="form-control" id="edit_outbound_flight" placeholder="OZ601">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.875rem;">출발시간</label>
+                                    <input type="time" class="form-control" id="edit_outbound_departure_time">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.875rem;">도착시간</label>
+                                    <input type="time" class="form-control" id="edit_outbound_arrival_time">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.875rem;">입국편명</label>
+                                    <input type="text" class="form-control" id="edit_inbound_flight" placeholder="OZ602">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.875rem;">출발시간</label>
+                                    <input type="time" class="form-control" id="edit_inbound_departure_time">
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label" style="font-size: 0.875rem;">도착시간</label>
+                                    <input type="time" class="form-control" id="edit_inbound_arrival_time">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" style="font-size: 0.875rem;">이용호텔</label>
+                                    <input type="text" class="form-control" id="edit_hotel_name" placeholder="호텔명">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label" style="font-size: 0.875rem;">룸타입명</label>
+                                    <input type="text" class="form-control" id="edit_room_type" placeholder="디럭스 오션뷰">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- 인원 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>인원 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label class="form-label">성인 <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" id="edit_people_adult" min="0" value="0" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">소아</label>
-                                        <input type="number" class="form-control" id="edit_people_child" min="0" value="0">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">유아</label>
-                                        <input type="number" class="form-control" id="edit_people_infant" min="0" value="0">
-                                    </div>
+                            <!-- 인원 입력 -->
+                            <h6 style="font-size: 0.95rem; margin-top: 1rem; margin-bottom: 0.75rem;">👥 인원 구성</h6>
+                            <div class="row mb-2">
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">성인</label>
+                                    <input type="number" class="form-control" id="edit_people_adult" value="0" min="0" onchange="generateEditGuestFields()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">소아</label>
+                                    <input type="number" class="form-control" id="edit_people_child" value="0" min="0" onchange="generateEditGuestFields()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">유아</label>
+                                    <input type="number" class="form-control" id="edit_people_infant" value="0" min="0" onchange="generateEditGuestFields()">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- 항공편 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-plane me-2"></i>항공편 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-2 mb-2">
-                                    <div class="col-md-2">
-                                        <label class="form-label">출국편명</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_outbound_flight" placeholder="OZ601">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">출발시간</label>
-                                        <input type="time" class="form-control form-control-sm" id="edit_outbound_departure_time">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">도착시간</label>
-                                        <input type="time" class="form-control form-control-sm" id="edit_outbound_arrival_time">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">입국편명</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_inbound_flight" placeholder="OZ602">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">출발시간</label>
-                                        <input type="time" class="form-control form-control-sm" id="edit_inbound_departure_time">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">도착시간</label>
-                                        <input type="time" class="form-control form-control-sm" id="edit_inbound_arrival_time">
-                                    </div>
+                            <!-- 동적 고객 정보 필드 -->
+                            <div id="edit_guests_container" class="mt-3"></div>
+
+                            <!-- 일정 및 포함/불포함 사항 -->
+                            <h6 style="font-size: 0.95rem; margin-top: 1rem; margin-bottom: 0.75rem;">📅 일정 및 포함/불포함 사항</h6>
+                            <div class="row mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size: 0.875rem;">일정</label>
+                                    <textarea class="form-control" id="edit_itinerary" rows="4" placeholder="1일차: 인천공항 출발 → 괌 도착&#10;2일차: 자유일정&#10;3일차: 시내관광&#10;4일차: 귀국"></textarea>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- 호텔 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-hotel me-2"></i>호텔 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label">호텔명</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_hotel_name" placeholder="호텔명">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">룸타입</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_room_type" placeholder="디럭스 오션뷰">
-                                    </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" style="font-size: 0.875rem;">포함사항</label>
+                                    <textarea class="form-control" id="edit_inclusions" rows="2" placeholder="왕복항공권, 호텔숙박, 공항픽업, 조식 등"></textarea>
+                                    <label class="form-label mt-2" style="font-size: 0.875rem;">불포함사항</label>
+                                    <textarea class="form-control" id="edit_exclusions" rows="2" placeholder="개인경비, 선택관광, 여행자보험 등"></textarea>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- 일정 및 포함/불포함 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-list me-2"></i>일정 및 포함/불포함 사항</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label">일정</label>
-                                        <textarea class="form-control form-control-sm" id="edit_itinerary" rows="3"></textarea>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">포함사항</label>
-                                        <textarea class="form-control form-control-sm" id="edit_inclusions" rows="1"></textarea>
-                                        <label class="form-label mt-2">불포함사항</label>
-                                        <textarea class="form-control form-control-sm" id="edit_exclusions" rows="1"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 투숙객 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>투숙객 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="edit_guests_container"></div>
                             </div>
                         </div>
 
                         <!-- 금액 정보 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>금액 정보</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-2">
-                                        <label class="form-label">통화</label>
-                                        <select class="form-select form-select-sm" id="edit_currency">
-                                            <option value="KRW">KRW</option>
-                                            <option value="USD">USD</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">환율</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_exchange_rate" value="1,300">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">성인 1인</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_price_adult" placeholder="500,000">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">소아 1인</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_price_child" placeholder="400,000">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">유아 1인</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_price_infant" placeholder="100,000">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">총 판매가</label>
-                                        <input type="text" class="form-control form-control-sm" id="edit_total_selling_price" readonly style="background-color: #e9ecef; font-weight: bold;">
-                                    </div>
+                        <div class="section-divider" style="border-top: 1px solid #dee2e6; margin: 20px 0; padding-top: 20px;">
+                            <h6 style="font-size: 1rem; margin-bottom: 0.75rem;">💰 금액 정보</h6>
+                            
+                            <!-- 인원별 판매가 -->
+                            <h6 style="font-size: 0.95rem; margin-bottom: 0.75rem;">👥 인원별 판매가</h6>
+                            <div class="row mb-2">
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">통화 *</label>
+                                    <select class="form-select" id="edit_currency">
+                                        <option value="KRW">KRW</option>
+                                        <option value="USD">USD</option>
+                                    </select>
                                 </div>
-
-                                <h6 class="mb-2">결제 빌링</h6>
-                                <div id="edit_billings_container"></div>
-                                <button type="button" class="btn btn-sm btn-outline-success mb-3" onclick="addEditBilling()">
-                                    <i class="fas fa-plus me-1"></i>결제 추가
-                                </button>
-
-                                <h6 class="mb-2">매입 구성요소</h6>
-                                <div id="edit_components_container"></div>
-                                <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addEditComponent()">
-                                    <i class="fas fa-plus me-1"></i>구성요소 추가
-                                </button>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">환율</label>
+                                    <input type="text" class="form-control" id="edit_exchange_rate" value="1,300">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">성인 1인 요금 *</label>
+                                    <input type="text" class="form-control" id="edit_price_adult" placeholder="500,000">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">소아 1인 요금</label>
+                                    <input type="text" class="form-control" id="edit_price_child" placeholder="400,000">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">유아 1인 요금</label>
+                                    <input type="text" class="form-control" id="edit_price_infant" placeholder="100,000">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">총 판매가</label>
+                                    <input type="text" class="form-control" id="edit_total_selling_price" readonly style="background-color: #e9ecef; font-weight: bold;">
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- 특별 요청사항 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-comment me-2"></i>특별 요청사항</h6>
-                            </div>
-                            <div class="card-body">
-                                <textarea class="form-control" id="edit_special_requests" rows="2"></textarea>
+                            <!-- 결제 빌링 -->
+                            <h6 style="font-size: 0.95rem; margin-top: 1rem; margin-bottom: 0.75rem;">💳 결제 빌링</h6>
+                            <div id="edit_billings_container"></div>
+                            <button type="button" class="btn btn-sm btn-outline-success mb-3" onclick="addEditBilling()">
+                                <i class="fas fa-plus me-1"></i>결제 추가
+                            </button>
+
+                            <!-- 매입 구성요소 -->
+                            <h6 style="font-size: 0.95rem; margin-top: 1rem; margin-bottom: 0.75rem;">📦 매입 구성요소</h6>
+                            <div id="edit_components_container"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addEditComponent()">
+                                <i class="fas fa-plus me-1"></i>구성요소 추가
+                            </button>
+                            
+                            <!-- 특별 요청사항 -->
+                            <div class="mb-2 mt-3">
+                                <label class="form-label" style="font-size: 0.875rem;">특별 요청사항</label>
+                                <textarea class="form-control" id="edit_special_requests" rows="2" placeholder="특별 요청사항이 있으면 입력하세요"></textarea>
                             </div>
                         </div>
 
                         <!-- 수정 이력 -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0"><i class="fas fa-history me-2"></i>수정 이력</h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="modification_history_container" style="max-height: 200px; overflow-y: auto;">
-                                    <p class="text-muted mb-0">수정 이력이 없습니다.</p>
-                                </div>
+                        <div class="section-divider" style="border-top: 1px solid #dee2e6; margin: 20px 0; padding-top: 20px;">
+                            <h6 style="font-size: 1rem; margin-bottom: 0.75rem;">📜 수정 이력</h6>
+                            <div id="modification_history_container" style="max-height: 200px; overflow-y: auto;">
+                                <p class="text-muted mb-0" style="font-size: 0.875rem;">수정 이력이 없습니다.</p>
                             </div>
                         </div>
                     </form>
@@ -766,7 +682,7 @@
                     
                     // 기본 정보
                     document.getElementById('edit_reservation_id').value = r._id;
-                    document.getElementById('edit_reservation_number').value = r.reservation_number;
+                    document.getElementById('edit_reservation_number_display').textContent = r.reservation_number;
                     document.getElementById('edit_reservation_status').value = r.reservation_status || 'pending';
                     document.getElementById('edit_platform_name').value = r.platform_name;
                     document.getElementById('edit_package_name').value = r.package_name;
@@ -780,8 +696,7 @@
                     // 여행 기간
                     document.getElementById('edit_departure_date').value = r.travel_period.departure_date.split('T')[0];
                     document.getElementById('edit_return_date').value = r.travel_period.return_date.split('T')[0];
-                    document.getElementById('edit_nights').value = r.travel_period.nights;
-                    document.getElementById('edit_days').value = r.travel_period.days;
+                    document.getElementById('edit_period_display').value = `${r.travel_period.nights}박${r.travel_period.days}일`;
                     
                     // 인원 정보
                     document.getElementById('edit_people_adult').value = r.people.adult;
@@ -843,63 +758,167 @@
             }
         }
         
-        // 투숙객 정보 렌더링
+        // 투숙객 정보 렌더링 (신규 예약 페이지와 동일한 구조)
         function renderEditGuests(guests) {
             const container = document.getElementById('edit_guests_container');
             if (!guests || guests.length === 0) {
-                container.innerHTML = '<p class="text-muted mb-0">투숙객 정보가 없습니다.</p>';
+                container.innerHTML = '';
                 return;
             }
             
-            let html = '';
+            let html = '<h6 style="font-size: 0.95rem; margin-bottom: 0.5rem;">👤 고객 정보</h6>';
             guests.forEach((guest, index) => {
+                const guestNum = index + 1;
                 html += `
-                    <div class="card mb-2" style="background-color: #f8f9fa;">
-                        <div class="card-body p-2">
-                            <div class="row g-2">
-                                <div class="col-md-2">
-                                    <label class="form-label" style="font-size: 0.75rem;">한글이름</label>
-                                    <input type="text" class="form-control form-control-sm" value="${guest.korean_name || ''}" 
-                                           data-guest-index="${index}" data-field="korean_name">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label" style="font-size: 0.75rem;">영문이름</label>
-                                    <input type="text" class="form-control form-control-sm" value="${guest.english_name || ''}"
-                                           data-guest-index="${index}" data-field="english_name">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label" style="font-size: 0.75rem;">생년월일</label>
-                                    <input type="date" class="form-control form-control-sm" value="${guest.birth_date ? new Date(guest.birth_date).toISOString().split('T')[0] : ''}"
-                                           data-guest-index="${index}" data-field="birth_date">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label" style="font-size: 0.75rem;">연락처</label>
-                                    <input type="text" class="form-control form-control-sm" value="${guest.phone || ''}"
-                                           data-guest-index="${index}" data-field="phone">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label" style="font-size: 0.75rem;">이메일</label>
-                                    <input type="email" class="form-control form-control-sm" value="${guest.email || ''}"
-                                           data-guest-index="${index}" data-field="email">
-                                </div>
-                                <div class="col-md-1">
-                                    <label class="form-label" style="font-size: 0.75rem;">구분</label>
-                                    <input type="text" class="form-control form-control-sm" value="${guest.type || ''}" readonly>
-                                </div>
-                                <div class="col-md-1">
-                                    <label class="form-label" style="font-size: 0.75rem;">성별</label>
-                                    <select class="form-select form-select-sm" data-guest-index="${index}" data-field="gender">
-                                        <option value="">선택</option>
-                                        <option value="남자" ${guest.gender === '남자' ? 'selected' : ''}>남자</option>
-                                        <option value="여자" ${guest.gender === '여자' ? 'selected' : ''}>여자</option>
-                                    </select>
-                                </div>
+                    <div class="guest-card" style="border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; margin-bottom: 10px; background-color: #f8f9fa;">
+                        <div class="guest-header" style="font-weight: 600; color: #495057; margin-bottom: 8px; font-size: 0.9rem;">${guest.type || ''} ${guest.type ? guestNum : ''}</div>
+                        <div class="row">
+                            <div class="col-md-1">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">한글이름 *</label>
+                                <input type="text" class="form-control form-control-sm" value="${guest.korean_name || ''}" 
+                                       data-guest-index="${index}" data-field="korean_name" placeholder="홍길동" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">영문이름</label>
+                                <input type="text" class="form-control form-control-sm" value="${guest.english_name || ''}"
+                                       data-guest-index="${index}" data-field="english_name" placeholder="HONG GILDONG">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">생년월일</label>
+                                <input type="date" class="form-control form-control-sm" value="${guest.birth_date ? new Date(guest.birth_date).toISOString().split('T')[0] : ''}"
+                                       data-guest-index="${index}" data-field="birth_date">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">연락처</label>
+                                <input type="text" class="form-control form-control-sm" value="${guest.phone || ''}"
+                                       data-guest-index="${index}" data-field="phone" placeholder="010-1234-5678">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">이메일</label>
+                                <input type="email" class="form-control form-control-sm" value="${guest.email || ''}"
+                                       data-guest-index="${index}" data-field="email" placeholder="hong@email.com">
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">구분</label>
+                                <input type="text" class="form-control form-control-sm" value="${guest.type || ''}" readonly>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">성별</label>
+                                <select class="form-select form-select-sm" data-guest-index="${index}" data-field="gender">
+                                    <option value="">선택</option>
+                                    <option value="남자" ${guest.gender === '남자' ? 'selected' : ''}>남자</option>
+                                    <option value="여자" ${guest.gender === '여자' ? 'selected' : ''}>여자</option>
+                                </select>
                             </div>
                         </div>
                     </div>
                 `;
             });
             container.innerHTML = html;
+        }
+        
+        // 인원 변경 시 투숙객 필드 동적 생성 (신규 예약 페이지와 동일)
+        function generateEditGuestFields() {
+            const adultCount = parseInt(document.getElementById('edit_people_adult').value) || 0;
+            const childCount = parseInt(document.getElementById('edit_people_child').value) || 0;
+            const infantCount = parseInt(document.getElementById('edit_people_infant').value) || 0;
+            const totalCount = adultCount + childCount + infantCount;
+            
+            const container = document.getElementById('edit_guests_container');
+            
+            if (totalCount === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<h6 style="font-size: 0.95rem; margin-bottom: 0.5rem;">👤 고객 정보</h6>';
+            let guestIndex = 0;
+            
+            // 성인
+            for (let i = 0; i < adultCount; i++) {
+                guestIndex++;
+                html += createEditGuestCard(guestIndex, '성인', i + 1);
+            }
+            
+            // 소아
+            for (let i = 0; i < childCount; i++) {
+                guestIndex++;
+                html += createEditGuestCard(guestIndex, '소아', i + 1);
+            }
+            
+            // 유아
+            for (let i = 0; i < infantCount; i++) {
+                guestIndex++;
+                html += createEditGuestCard(guestIndex, '유아', i + 1);
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function createEditGuestCard(index, type, typeIndex) {
+            return `
+                <div class="guest-card" style="border: 1px solid #dee2e6; border-radius: 6px; padding: 10px; margin-bottom: 10px; background-color: #f8f9fa;">
+                    <div class="guest-header" style="font-weight: 600; color: #495057; margin-bottom: 8px; font-size: 0.9rem;">${type} ${typeIndex}</div>
+                    <div class="row">
+                        <div class="col-md-1">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">한글이름 *</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="edit_guest_${index}_korean_name" 
+                                   data-guest-index="${index - 1}"
+                                   data-guest-type="${type}"
+                                   data-field="korean_name"
+                                   placeholder="홍길동" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">영문이름</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="edit_guest_${index}_english_name"
+                                   data-guest-index="${index - 1}"
+                                   data-field="english_name"
+                                   placeholder="HONG GILDONG">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">생년월일</label>
+                            <input type="date" class="form-control form-control-sm" 
+                                   id="edit_guest_${index}_birth_date"
+                                   data-guest-index="${index - 1}"
+                                   data-field="birth_date">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">연락처</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   id="edit_guest_${index}_phone"
+                                   data-guest-index="${index - 1}"
+                                   data-field="phone"
+                                   placeholder="010-1234-5678">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">이메일</label>
+                            <input type="email" class="form-control form-control-sm" 
+                                   id="edit_guest_${index}_email"
+                                   data-guest-index="${index - 1}"
+                                   data-field="email"
+                                   placeholder="hong@email.com">
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">구분</label>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${type}" readonly>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label" style="font-size: 0.875rem; margin-bottom: 0.25rem; font-weight: 500;">성별</label>
+                            <select class="form-select form-select-sm" 
+                                    id="edit_guest_${index}_gender"
+                                    data-guest-index="${index - 1}"
+                                    data-field="gender">
+                                <option value="">선택</option>
+                                <option value="남자">남자</option>
+                                <option value="여자">여자</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
         // 결제 빌링 렌더링
@@ -1160,8 +1179,7 @@
                 const nights = Math.floor((returnD - departure) / (1000 * 60 * 60 * 24));
                 const days = nights + 1;
                 
-                document.getElementById('edit_nights').value = nights;
-                document.getElementById('edit_days').value = days;
+                document.getElementById('edit_period_display').value = `${nights}박${days}일`;
             }
         }
 
@@ -1231,8 +1249,16 @@
                 travel_period: {
                     departure_date: document.getElementById('edit_departure_date').value,
                     return_date: document.getElementById('edit_return_date').value,
-                    nights: parseInt(document.getElementById('edit_nights').value),
-                    days: parseInt(document.getElementById('edit_days').value)
+                    nights: (() => {
+                        const dep = new Date(document.getElementById('edit_departure_date').value);
+                        const ret = new Date(document.getElementById('edit_return_date').value);
+                        return Math.floor((ret - dep) / (1000 * 60 * 60 * 24));
+                    })(),
+                    days: (() => {
+                        const dep = new Date(document.getElementById('edit_departure_date').value);
+                        const ret = new Date(document.getElementById('edit_return_date').value);
+                        return Math.floor((ret - dep) / (1000 * 60 * 60 * 24)) + 1;
+                    })()
                 },
                 people: {
                     adult: parseInt(document.getElementById('edit_people_adult').value),
