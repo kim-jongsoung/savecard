@@ -186,7 +186,39 @@ const packageReservationSchema = new mongoose.Schema({
             sent_at: Date,
             confirmed_at: Date,
             email: String,
-            created_by: String
+            created_by: String,
+            // 수배서 생성 시점의 예약 데이터 스냅샷
+            snapshot: {
+                reservation_number: String,
+                reservation_status: String,
+                platform_name: String,
+                package_name: String,
+                departure_date: Date,
+                return_date: Date,
+                nights: Number,
+                days: Number,
+                flight_info: Object,
+                hotel_name: String,
+                room_type: String,
+                adult_count: Number,
+                child_count: Number,
+                infant_count: Number,
+                customer_name: String,
+                english_name: String,
+                phone_number: String,
+                email: String,
+                guests: Array,
+                itinerary: String,
+                inclusions: String,
+                exclusions: String,
+                special_requests: String,
+                component_type: String,
+                vendor_name: String,
+                cost_amount: Number,
+                cost_currency: String,
+                cost_krw: Number,
+                notes: String
+            }
         }]
     }],
     
