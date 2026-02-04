@@ -125,11 +125,14 @@ router.post('/', requireAuth, async (req, res) => {
             pricing,
             billings,
             cost_components,
-            special_requests
+            special_requests,
+            custom_reservation_number
         } = req.body;
         
-        // 예약번호 자동 생성
-        const reservation_number = await PackageReservation.generateReservationNumber();
+        // 예약번호 처리: 입력값이 있으면 사용, 없으면 자동 생성
+        const reservation_number = custom_reservation_number && custom_reservation_number.trim() 
+            ? custom_reservation_number.trim() 
+            : await PackageReservation.generateReservationNumber();
         
         // 구성요소 원화 환산
         const processedComponents = cost_components.map(component => {

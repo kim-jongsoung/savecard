@@ -154,6 +154,7 @@
                                         <th>출발일</th>
                                         <th>예약일</th>
                                         <th>예약채널</th>
+                                        <th>예약번호</th>
                                         <th>상품명</th>
                                         <th>고객명</th>
                                         <th>여행기간</th>
@@ -165,7 +166,7 @@
                                 </thead>
                                 <tbody id="reservations-tbody">
                                     <tr>
-                                        <td colspan="10" class="text-center">
+                                        <td colspan="11" class="text-center">
                                             <div class="spinner-border text-primary" role="status">
                                                 <span class="visually-hidden">로딩 중...</span>
                                             </div>
@@ -237,6 +238,11 @@
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">예약채널 *</label>
                                     <input type="text" class="form-control" id="edit_platform_name" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label" style="font-size: 0.875rem;">예약번호</label>
+                                    <input type="text" class="form-control" id="edit_reservation_number_field" readonly style="background-color: #e9ecef;">
+                                    <small class="text-muted">수정 불가</small>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">패키지명 *</label>
@@ -347,21 +353,31 @@
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">성인 1인 요금 *</label>
-                                    <input type="text" class="form-control" id="edit_price_adult" placeholder="500,000">
+                                    <input type="text" class="form-control" id="edit_price_adult" placeholder="500,000" oninput="formatCurrency(this); calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">소아 1인 요금</label>
-                                    <input type="text" class="form-control" id="edit_price_child" placeholder="400,000">
+                                    <input type="text" class="form-control" id="edit_price_child" placeholder="400,000" oninput="formatCurrency(this); calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">유아 1인 요금</label>
-                                    <input type="text" class="form-control" id="edit_price_infant" placeholder="100,000">
+                                    <input type="text" class="form-control" id="edit_price_infant" placeholder="100,000" oninput="formatCurrency(this); calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">총 판매가</label>
                                     <input type="text" class="form-control" id="edit_total_selling_price" readonly style="background-color: #e9ecef; font-weight: bold;">
                                 </div>
                             </div>
+
+                            <!-- 금액 변동 추가 항목 -->
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEditPriceAdjustment()">
+                                        <i class="fas fa-plus"></i> 금액 변동 추가
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="edit_price_adjustments_container" class="mt-2"></div>
 
                             <!-- 결제 빌링 -->
                             <h6 style="font-size: 0.95rem; margin-top: 1rem; margin-bottom: 0.75rem;">💳 결제 빌링</h6>
@@ -583,6 +599,7 @@
                         <td><small>${departureDate}</small></td>
                         <td><small>${createdDate}</small></td>
                         <td><small>${r.platform_name}</small></td>
+                        <td><code style="font-size: 0.85rem;">${r.reservation_number}</code></td>
                         <td>${r.package_name}</td>
                         <td>${r.customer.korean_name}</td>
                         <td><small>${period}</small></td>
@@ -768,6 +785,7 @@
         // 예약수정 모달 열기
         let editComponentCount = 0;
         let editBillingCount = 0;
+        let editPriceAdjustmentCount = 0;
         
         async function openEditModal(id) {
             // 마지막 작업한 예약 ID 저장
@@ -783,6 +801,7 @@
                     // 기본 정보
                     document.getElementById('edit_reservation_id').value = r._id;
                     document.getElementById('edit_reservation_number_display').textContent = r.reservation_number;
+                    document.getElementById('edit_reservation_number_field').value = r.reservation_number;
                     document.getElementById('edit_reservation_status').value = r.reservation_status || 'pending';
                     document.getElementById('edit_platform_name').value = r.platform_name;
                     document.getElementById('edit_package_name').value = r.package_name;
@@ -1330,6 +1349,99 @@
                 document.getElementById('edit_period_display').value = `${nights}박${days}일`;
             }
         }
+        
+        // 금액 변동 추가 (수정 모달)
+        function addEditPriceAdjustment() {
+            editPriceAdjustmentCount++;
+            const container = document.getElementById('edit_price_adjustments_container');
+            
+            const adjustmentHTML = `
+                <div class="card mb-2" id="edit_adjustment_${editPriceAdjustmentCount}" style="background-color: #fff3cd;">
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="edit_adjustment_name_${editPriceAdjustmentCount}" 
+                                       placeholder="항목명 (예: 조식 추가)">
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm" 
+                                        id="edit_adjustment_type_${editPriceAdjustmentCount}" 
+                                        onchange="calculateEditTotalPrice()">
+                                    <option value="add">➕ 추가</option>
+                                    <option value="subtract">➖ 차감</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="edit_adjustment_amount_${editPriceAdjustmentCount}" 
+                                       placeholder="금액" 
+                                       oninput="formatCurrency(this); calculateEditTotalPrice();">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="edit_adjustment_notes_${editPriceAdjustmentCount}" 
+                                       placeholder="비고">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeEditPriceAdjustment(${editPriceAdjustmentCount})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', adjustmentHTML);
+        }
+        
+        // 금액 변동 삭제 (수정 모달)
+        function removeEditPriceAdjustment(id) {
+            const element = document.getElementById(`edit_adjustment_${id}`);
+            if (element) {
+                element.remove();
+                calculateEditTotalPrice();
+            }
+        }
+        
+        // 총 판매가 계산 (수정 모달)
+        function calculateEditTotalPrice() {
+            const adultCount = parseInt(document.getElementById('edit_people_adult').value) || 0;
+            const childCount = parseInt(document.getElementById('edit_people_child').value) || 0;
+            const infantCount = parseInt(document.getElementById('edit_people_infant').value) || 0;
+            
+            const parseNumber = (id) => {
+                const value = document.getElementById(id)?.value || '0';
+                return parseFloat(value.replace(/,/g, '')) || 0;
+            };
+            
+            const adultPrice = parseNumber('edit_price_adult');
+            const childPrice = parseNumber('edit_price_child');
+            const infantPrice = parseNumber('edit_price_infant');
+            
+            let totalPrice = (adultCount * adultPrice) + (childCount * childPrice) + (infantCount * infantPrice);
+            
+            // 금액 변동 항목 합산
+            const adjustmentCards = document.querySelectorAll('#edit_price_adjustments_container .card');
+            adjustmentCards.forEach(card => {
+                const typeSelect = card.querySelector('select[id^="edit_adjustment_type_"]');
+                const amountInput = card.querySelector('input[id^="edit_adjustment_amount_"]');
+                
+                if (typeSelect && amountInput) {
+                    const type = typeSelect.value;
+                    const amount = parseFloat(amountInput.value.replace(/,/g, '')) || 0;
+                    
+                    if (type === 'add') {
+                        totalPrice += amount;
+                    } else if (type === 'subtract') {
+                        totalPrice -= amount;
+                    }
+                }
+            });
+            
+            document.getElementById('edit_total_selling_price').value = totalPrice.toLocaleString();
+        }
 
         // 예약수정 저장
         async function saveReservationEdit() {
@@ -1451,7 +1563,23 @@
                     price_adult: parseNumber(document.getElementById('edit_price_adult').value),
                     price_child: parseNumber(document.getElementById('edit_price_child').value),
                     price_infant: parseNumber(document.getElementById('edit_price_infant').value),
-                    total_selling_price: parseNumber(document.getElementById('edit_total_selling_price').value)
+                    total_selling_price: parseNumber(document.getElementById('edit_total_selling_price').value),
+                    price_adjustments: (() => {
+                        const adjustments = [];
+                        const adjustmentCards = document.querySelectorAll('#edit_price_adjustments_container .card');
+                        adjustmentCards.forEach(card => {
+                            const id = card.id.replace('edit_adjustment_', '');
+                            const name = document.getElementById(`edit_adjustment_name_${id}`)?.value || '';
+                            const type = document.getElementById(`edit_adjustment_type_${id}`)?.value || 'add';
+                            const amount = parseNumber(document.getElementById(`edit_adjustment_amount_${id}`)?.value);
+                            const notes = document.getElementById(`edit_adjustment_notes_${id}`)?.value || '';
+                            
+                            if (name && amount) {
+                                adjustments.push({ name, type, amount, notes });
+                            }
+                        });
+                        return adjustments;
+                    })()
                 },
                 billings: billings,
                 cost_components: cost_components,

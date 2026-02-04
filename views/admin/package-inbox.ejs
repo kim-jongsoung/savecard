@@ -191,6 +191,12 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
+                                        <label class="form-label">예약번호</label>
+                                        <input type="text" class="form-control" id="custom_reservation_number" 
+                                               placeholder="비어있으면 자동생성">
+                                        <small class="text-muted">입력 시 해당 번호 사용</small>
+                                    </div>
+                                    <div class="col-md-2">
                                         <label class="form-label">패키지명 *</label>
                                         <input type="text" class="form-control" id="package_name" 
                                                placeholder="3박4일 허니문" required>
@@ -343,6 +349,16 @@
                                     </div>
                                 </div>
 
+                                <!-- 금액 변동 추가 항목 -->
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPriceAdjustment()">
+                                            <i class="fas fa-plus"></i> 금액 변동 추가
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="price_adjustments_container" class="mt-2"></div>
+
                                 <!-- 결제 빌링 -->
                                 <h5 class="mt-3">💳 결제 빌링</h5>
                                 <div id="billing-container"></div>
@@ -418,6 +434,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let componentCount = 0;
+        let priceAdjustmentCount = 0;
         let guestData = [];
         let bookingChannels = [];
         let suppliers = [];
@@ -643,7 +660,25 @@
             const childPrice = getNumericValue('price_child');
             const infantPrice = getNumericValue('price_infant');
             
-            const totalPrice = (adultCount * adultPrice) + (childCount * childPrice) + (infantCount * infantPrice);
+            let totalPrice = (adultCount * adultPrice) + (childCount * childPrice) + (infantCount * infantPrice);
+            
+            // 금액 변동 항목 합산
+            const adjustmentCards = document.querySelectorAll('#price_adjustments_container .card');
+            adjustmentCards.forEach(card => {
+                const typeSelect = card.querySelector('select[id^="adjustment_type_"]');
+                const amountInput = card.querySelector('input[id^="adjustment_amount_"]');
+                
+                if (typeSelect && amountInput) {
+                    const type = typeSelect.value; // 'add' or 'subtract'
+                    const amount = parseFloat(amountInput.value.replace(/,/g, '')) || 0;
+                    
+                    if (type === 'add') {
+                        totalPrice += amount;
+                    } else if (type === 'subtract') {
+                        totalPrice -= amount;
+                    }
+                }
+            });
             
             document.getElementById('total_selling_price').value = totalPrice.toLocaleString();
             
@@ -666,6 +701,61 @@
             
             calculateTotalPrice();
             calculateSummary();
+        }
+        
+        // 금액 변동 추가
+        function addPriceAdjustment() {
+            priceAdjustmentCount++;
+            const container = document.getElementById('price_adjustments_container');
+            
+            const adjustmentHTML = `
+                <div class="card mb-2" id="adjustment_${priceAdjustmentCount}" style="background-color: #fff3cd;">
+                    <div class="card-body p-2">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="adjustment_name_${priceAdjustmentCount}" 
+                                       placeholder="항목명 (예: 조식 추가)">
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select form-select-sm" 
+                                        id="adjustment_type_${priceAdjustmentCount}" 
+                                        onchange="calculateTotalPrice()">
+                                    <option value="add">➕ 추가</option>
+                                    <option value="subtract">➖ 차감</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="adjustment_amount_${priceAdjustmentCount}" 
+                                       placeholder="금액" 
+                                       oninput="formatCurrency(this); calculateTotalPrice();">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" class="form-control form-control-sm" 
+                                       id="adjustment_notes_${priceAdjustmentCount}" 
+                                       placeholder="비고">
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removePriceAdjustment(${priceAdjustmentCount})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', adjustmentHTML);
+        }
+        
+        // 금액 변동 삭제
+        function removePriceAdjustment(id) {
+            const element = document.getElementById(`adjustment_${id}`);
+            if (element) {
+                element.remove();
+                calculateTotalPrice();
+            }
         }
         
         // 결제 빌링 카운터
@@ -1463,7 +1553,28 @@
                 }
             });
             
+            // 금액 변동 항목 수집
+            const priceAdjustments = [];
+            const adjustmentCards = document.querySelectorAll('#price_adjustments_container .card');
+            adjustmentCards.forEach(card => {
+                const id = card.id.replace('adjustment_', '');
+                const name = document.getElementById(`adjustment_name_${id}`)?.value || '';
+                const type = document.getElementById(`adjustment_type_${id}`)?.value || 'add';
+                const amount = getNumericValue(`adjustment_amount_${id}`);
+                const notes = document.getElementById(`adjustment_notes_${id}`)?.value || '';
+                
+                if (name && amount) {
+                    priceAdjustments.push({
+                        name: name,
+                        type: type,
+                        amount: amount,
+                        notes: notes
+                    });
+                }
+            });
+            
             const data = {
+                custom_reservation_number: document.getElementById('custom_reservation_number').value || null,
                 platform_name: document.getElementById('platform_name').value,
                 package_name: document.getElementById('package_name').value,
                 customer: guests.length > 0 ? {
@@ -1506,7 +1617,8 @@
                     price_infant: getNumericValue('price_infant'),
                     total_selling_price: getNumericValue('total_selling_price'),
                     currency: document.getElementById('currency').value,
-                    exchange_rate: getNumericValue('exchange_rate') || 1
+                    exchange_rate: getNumericValue('exchange_rate') || 1,
+                    price_adjustments: priceAdjustments
                 },
                 billings: billings,
                 cost_components: components,
