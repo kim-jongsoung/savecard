@@ -694,6 +694,12 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>닫기
                     </button>
+                    <button type="button" class="btn btn-info" onclick="previewConfirmation()">
+                        <i class="fas fa-eye me-1"></i>미리보기
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="copyConfirmationLink()">
+                        <i class="fas fa-link me-1"></i>링크 복사
+                    </button>
                     <button type="button" class="btn btn-primary" onclick="sendInvoice()">
                         <i class="fas fa-paper-plane me-1"></i>확정서 발송
                     </button>
@@ -2407,6 +2413,8 @@
 
         async function openInvoiceModal(id) {
             try {
+                currentConfirmationId = id;
+                
                 const response = await fetch(`/api/package-reservations/${id}`);
                 if (!response.ok) throw new Error('예약 정보를 불러올 수 없습니다.');
                 
@@ -2604,6 +2612,8 @@
             }
         }
         
+        let currentConfirmationId = null;
+        
         async function sendInvoice() {
             const email = document.getElementById('invoice_email').value.trim();
             
@@ -2631,6 +2641,49 @@
             } catch (error) {
                 console.error('확정서 발송 오류:', error);
                 alert('확정서 발송에 실패했습니다.');
+            }
+        }
+        
+        function previewConfirmation() {
+            if (!currentConfirmationId) {
+                alert('예약 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            const url = `/api/package-reservations/${currentConfirmationId}/confirmation/view`;
+            window.open(url, '_blank');
+        }
+        
+        async function copyConfirmationLink() {
+            if (!currentConfirmationId) {
+                alert('예약 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            const url = `${window.location.origin}/api/package-reservations/${currentConfirmationId}/confirmation/view`;
+            
+            try {
+                await navigator.clipboard.writeText(url);
+                alert('확정서 링크가 클립보드에 복사되었습니다!\n\n' + url);
+            } catch (error) {
+                console.error('링크 복사 오류:', error);
+                
+                // 폴백: 텍스트 영역 사용
+                const textarea = document.createElement('textarea');
+                textarea.value = url;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    alert('확정서 링크가 클립보드에 복사되었습니다!\n\n' + url);
+                } catch (err) {
+                    alert('링크 복사에 실패했습니다. 수동으로 복사해주세요:\n\n' + url);
+                }
+                
+                document.body.removeChild(textarea);
             }
         }
 

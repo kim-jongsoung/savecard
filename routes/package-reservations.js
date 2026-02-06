@@ -820,4 +820,92 @@ router.get('/:id/assignment/:componentIndex/view', async (req, res) => {
     }
 });
 
+// 확정서 뷰
+router.get('/:id/confirmation/view', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).render('error', {
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        // 총 판매가 계산
+        const adultTotal = (reservation.pricing?.adult_price || 0) * (reservation.people?.adult || 0);
+        const childTotal = (reservation.pricing?.child_price || 0) * (reservation.people?.child || 0);
+        const infantTotal = (reservation.pricing?.infant_price || 0) * (reservation.people?.infant || 0);
+        const adjustmentsTotal = (reservation.pricing?.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0);
+        const totalAmount = adultTotal + childTotal + infantTotal + adjustmentsTotal;
+
+        // 확정서 데이터 구성
+        const confirmationData = {
+            // 기본 예약 정보
+            reservation_number: reservation.reservation_number,
+            reservation_status: reservation.reservation_status,
+            platform_name: reservation.platform_name,
+            package_name: reservation.package_name,
+            
+            // 여행 기간
+            departure_date: reservation.travel_period.departure_date,
+            return_date: reservation.travel_period.return_date,
+            nights: reservation.travel_period.nights,
+            days: reservation.travel_period.days,
+            
+            // 항공편 정보
+            flight_info: reservation.flight_info || {},
+            
+            // 호텔 정보
+            hotel_name: reservation.hotel_name,
+            room_type: reservation.room_type,
+            
+            // 인원 정보
+            adult_count: reservation.people.adult,
+            child_count: reservation.people.child,
+            infant_count: reservation.people.infant,
+            
+            // 인원별 판매가
+            adult_price: reservation.pricing?.adult_price || 0,
+            child_price: reservation.pricing?.child_price || 0,
+            infant_price: reservation.pricing?.infant_price || 0,
+            
+            // 금액 변동 사항
+            adjustments: reservation.pricing?.adjustments || [],
+            
+            // 총 판매가
+            total_amount: totalAmount,
+            
+            // 고객 정보
+            customer_name: reservation.customer.korean_name,
+            english_name: reservation.customer.english_name,
+            phone_number: reservation.customer.phone,
+            email: reservation.customer.email,
+            
+            // 투숙객 정보
+            guests: reservation.guests || [],
+            
+            // 일정 및 포함/불포함 사항
+            itinerary: reservation.itinerary,
+            inclusions: reservation.inclusions,
+            exclusions: reservation.exclusions,
+            
+            // 특별 요청사항
+            special_requests: reservation.special_requests
+        };
+
+        res.render('package-confirmation', {
+            title: `확정서 - ${reservation.reservation_number}`,
+            confirmation: confirmationData,
+            reservationId: id
+        });
+
+    } catch (error) {
+        console.error('❌ 확정서 페이지 로드 실패:', error);
+        res.status(500).render('error', {
+            message: '확정서 페이지 로드 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 module.exports = router;
