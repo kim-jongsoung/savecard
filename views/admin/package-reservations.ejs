@@ -531,6 +531,177 @@
         </div>
     </div>
 
+    <!-- 확정서 모달 -->
+    <div class="modal fade" id="invoiceModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>확정서 발송</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- 기본 예약 정보 -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>기본 예약 정보</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>예약번호:</strong> <span id="invoice_reservation_number"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>고객명:</strong> <span id="invoice_customer_name"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>출발일:</strong> <span id="invoice_departure_date"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>귀국일:</strong> <span id="invoice_return_date"></span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-3">
+                                    <strong>기간:</strong> <span id="invoice_period"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>인원:</strong> <span id="invoice_people"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>패키지명:</strong> <span id="invoice_package_name"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>예약채널:</strong> <span id="invoice_platform_name"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 청구 금액 정보 -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>청구 금액</h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- 인원별 판매가 -->
+                            <div class="mb-3">
+                                <h6 class="text-primary"><i class="fas fa-users me-2"></i>인원별 판매가</h6>
+                                <div id="invoice_per_person_prices"></div>
+                            </div>
+
+                            <!-- 금액 변동 내역 -->
+                            <div class="mb-3" id="invoice_price_adjustments_section" style="display: none;">
+                                <h6 class="text-info"><i class="fas fa-exchange-alt me-2"></i>금액 변동 내역</h6>
+                                <div id="invoice_price_adjustments"></div>
+                            </div>
+
+                            <!-- 총 청구 금액 -->
+                            <div class="alert alert-success mb-3">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>총 청구 금액</h5>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <h4 class="mb-0 text-success" id="invoice_total_amount"></h4>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 입금 계좌 정보 -->
+                            <div class="alert alert-info mb-0">
+                                <h6 class="mb-2"><i class="fas fa-university me-2"></i>입금 계좌 정보</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>은행:</strong> 신한은행
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>계좌번호:</strong> 140-014-014440
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>예금주:</strong> (주)럭스파인드
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 여행 상세 정보 -->
+                    <div class="card mb-3" id="invoice_travel_details_section">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-plane-departure me-2"></i>여행 상세 정보</h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- 항공편 정보 -->
+                            <div class="mb-3" id="invoice_flight_info_section" style="display: none;">
+                                <h6><i class="fas fa-plane me-2"></i>항공편 정보</h6>
+                                <div id="invoice_flight_info"></div>
+                            </div>
+
+                            <!-- 호텔 정보 -->
+                            <div class="mb-3" id="invoice_hotel_info_section" style="display: none;">
+                                <h6><i class="fas fa-hotel me-2"></i>호텔 정보</h6>
+                                <div id="invoice_hotel_info"></div>
+                            </div>
+
+                            <!-- 일정 정보 -->
+                            <div class="mb-3" id="invoice_itinerary_section" style="display: none;">
+                                <h6><i class="fas fa-calendar-alt me-2"></i>일정</h6>
+                                <div id="invoice_itinerary" style="white-space: pre-line;"></div>
+                            </div>
+
+                            <!-- 포함사항 -->
+                            <div class="mb-3" id="invoice_inclusions_section" style="display: none;">
+                                <h6><i class="fas fa-check-circle me-2 text-success"></i>포함사항</h6>
+                                <div id="invoice_inclusions" style="white-space: pre-line;"></div>
+                            </div>
+
+                            <!-- 불포함사항 -->
+                            <div class="mb-0" id="invoice_exclusions_section" style="display: none;">
+                                <h6><i class="fas fa-times-circle me-2 text-danger"></i>불포함사항</h6>
+                                <div id="invoice_exclusions" style="white-space: pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 특별 요청사항 -->
+                    <div class="card mb-3" id="invoice_special_requests_section" style="display: none;">
+                        <div class="card-header bg-warning">
+                            <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>특별 요청사항</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="invoice_special_requests" style="white-space: pre-line;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 이메일 발송 -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-envelope me-2"></i>이메일 발송</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">수신 이메일 *</label>
+                                <input type="email" class="form-control" id="invoice_email" placeholder="customer@example.com">
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label">메모 (선택)</label>
+                                <textarea class="form-control" id="invoice_memo" rows="2" placeholder="추가 메시지를 입력하세요"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>닫기
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="sendInvoice()">
+                        <i class="fas fa-paper-plane me-1"></i>확정서 발송
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let allReservations = [];
@@ -2234,8 +2405,233 @@
             }, 300);
         }
 
-        function openInvoiceModal(id) {
-            alert('확정서 모달 - 추후 구현 예정 (ID: ' + id + ')');
+        async function openInvoiceModal(id) {
+            try {
+                const response = await fetch(`/api/package-reservations/${id}`);
+                if (!response.ok) throw new Error('예약 정보를 불러올 수 없습니다.');
+                
+                const reservation = await response.json();
+                
+                // 기본 예약 정보
+                document.getElementById('invoice_reservation_number').textContent = reservation.reservation_number || '-';
+                document.getElementById('invoice_customer_name').textContent = reservation.customer_name || '-';
+                document.getElementById('invoice_departure_date').textContent = reservation.departure_date ? new Date(reservation.departure_date).toLocaleDateString('ko-KR') : '-';
+                document.getElementById('invoice_return_date').textContent = reservation.return_date ? new Date(reservation.return_date).toLocaleDateString('ko-KR') : '-';
+                document.getElementById('invoice_period').textContent = `${reservation.nights || 0}박 ${reservation.days || 0}일`;
+                document.getElementById('invoice_people').textContent = `성인 ${reservation.people?.adult || 0}명${reservation.people?.child ? `, 소아 ${reservation.people.child}명` : ''}${reservation.people?.infant ? `, 유아 ${reservation.people.infant}명` : ''}`;
+                document.getElementById('invoice_package_name').textContent = reservation.package_name || '-';
+                document.getElementById('invoice_platform_name').textContent = reservation.platform_name || '-';
+                
+                // 인원별 판매가
+                let perPersonHTML = '<table class="table table-sm table-bordered mb-0"><tbody>';
+                const pricing = reservation.pricing || {};
+                
+                if (reservation.people?.adult > 0) {
+                    perPersonHTML += `
+                        <tr>
+                            <td style="width: 30%;"><strong>성인 (${reservation.people.adult}명)</strong></td>
+                            <td style="width: 30%;" class="text-end">1인당 ₩${(pricing.adult_price || 0).toLocaleString()}</td>
+                            <td style="width: 40%;" class="text-end"><strong>₩${((pricing.adult_price || 0) * reservation.people.adult).toLocaleString()}</strong></td>
+                        </tr>
+                    `;
+                }
+                
+                if (reservation.people?.child > 0) {
+                    perPersonHTML += `
+                        <tr>
+                            <td><strong>소아 (${reservation.people.child}명)</strong></td>
+                            <td class="text-end">1인당 ₩${(pricing.child_price || 0).toLocaleString()}</td>
+                            <td class="text-end"><strong>₩${((pricing.child_price || 0) * reservation.people.child).toLocaleString()}</strong></td>
+                        </tr>
+                    `;
+                }
+                
+                if (reservation.people?.infant > 0) {
+                    perPersonHTML += `
+                        <tr>
+                            <td><strong>유아 (${reservation.people.infant}명)</strong></td>
+                            <td class="text-end">1인당 ₩${(pricing.infant_price || 0).toLocaleString()}</td>
+                            <td class="text-end"><strong>₩${((pricing.infant_price || 0) * reservation.people.infant).toLocaleString()}</strong></td>
+                        </tr>
+                    `;
+                }
+                
+                const baseTotal = ((pricing.adult_price || 0) * (reservation.people?.adult || 0)) +
+                                 ((pricing.child_price || 0) * (reservation.people?.child || 0)) +
+                                 ((pricing.infant_price || 0) * (reservation.people?.infant || 0));
+                
+                perPersonHTML += `
+                    <tr class="table-light">
+                        <td colspan="2"><strong>인원별 판매가 소계</strong></td>
+                        <td class="text-end"><strong>₩${baseTotal.toLocaleString()}</strong></td>
+                    </tr>
+                `;
+                perPersonHTML += '</tbody></table>';
+                document.getElementById('invoice_per_person_prices').innerHTML = perPersonHTML;
+                
+                // 금액 변동 내역
+                if (pricing.adjustments && pricing.adjustments.length > 0) {
+                    let adjustmentsHTML = '<table class="table table-sm table-bordered mb-0"><tbody>';
+                    let adjustmentsTotal = 0;
+                    
+                    pricing.adjustments.forEach(adj => {
+                        const amount = adj.amount || 0;
+                        adjustmentsTotal += amount;
+                        const sign = amount >= 0 ? '+' : '';
+                        const colorClass = amount >= 0 ? 'text-success' : 'text-danger';
+                        
+                        adjustmentsHTML += `
+                            <tr>
+                                <td style="width: 70%;"><strong>${adj.description || '금액 변동'}</strong></td>
+                                <td style="width: 30%;" class="text-end ${colorClass}"><strong>${sign}₩${amount.toLocaleString()}</strong></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    adjustmentsHTML += `
+                        <tr class="table-light">
+                            <td><strong>금액 변동 합계</strong></td>
+                            <td class="text-end ${adjustmentsTotal >= 0 ? 'text-success' : 'text-danger'}"><strong>${adjustmentsTotal >= 0 ? '+' : ''}₩${adjustmentsTotal.toLocaleString()}</strong></td>
+                        </tr>
+                    `;
+                    adjustmentsHTML += '</tbody></table>';
+                    
+                    document.getElementById('invoice_price_adjustments').innerHTML = adjustmentsHTML;
+                    document.getElementById('invoice_price_adjustments_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_price_adjustments_section').style.display = 'none';
+                }
+                
+                // 총 청구 금액
+                const totalAmount = baseTotal + (pricing.adjustments?.reduce((sum, adj) => sum + (adj.amount || 0), 0) || 0);
+                document.getElementById('invoice_total_amount').textContent = `₩${totalAmount.toLocaleString()}`;
+                
+                // 항공편 정보
+                if (reservation.flight_info && (reservation.flight_info.outbound_flight || reservation.flight_info.inbound_flight)) {
+                    let flightHTML = '';
+                    
+                    if (reservation.flight_info.outbound_flight) {
+                        flightHTML += `
+                            <div class="mb-2">
+                                <strong>가는편:</strong> ${reservation.flight_info.outbound_flight}
+                            </div>
+                        `;
+                    }
+                    
+                    if (reservation.flight_info.inbound_flight) {
+                        flightHTML += `
+                            <div>
+                                <strong>오는편:</strong> ${reservation.flight_info.inbound_flight}
+                            </div>
+                        `;
+                    }
+                    
+                    document.getElementById('invoice_flight_info').innerHTML = flightHTML;
+                    document.getElementById('invoice_flight_info_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_flight_info_section').style.display = 'none';
+                }
+                
+                // 호텔 정보
+                if (reservation.hotel_info && reservation.hotel_info.hotel_name) {
+                    let hotelHTML = `
+                        <div><strong>호텔명:</strong> ${reservation.hotel_info.hotel_name}</div>
+                    `;
+                    if (reservation.hotel_info.room_type) {
+                        hotelHTML += `<div><strong>객실타입:</strong> ${reservation.hotel_info.room_type}</div>`;
+                    }
+                    if (reservation.hotel_info.check_in) {
+                        hotelHTML += `<div><strong>체크인:</strong> ${new Date(reservation.hotel_info.check_in).toLocaleDateString('ko-KR')}</div>`;
+                    }
+                    if (reservation.hotel_info.check_out) {
+                        hotelHTML += `<div><strong>체크아웃:</strong> ${new Date(reservation.hotel_info.check_out).toLocaleDateString('ko-KR')}</div>`;
+                    }
+                    
+                    document.getElementById('invoice_hotel_info').innerHTML = hotelHTML;
+                    document.getElementById('invoice_hotel_info_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_hotel_info_section').style.display = 'none';
+                }
+                
+                // 일정
+                if (reservation.itinerary) {
+                    document.getElementById('invoice_itinerary').textContent = reservation.itinerary;
+                    document.getElementById('invoice_itinerary_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_itinerary_section').style.display = 'none';
+                }
+                
+                // 포함사항
+                if (reservation.inclusions) {
+                    document.getElementById('invoice_inclusions').textContent = reservation.inclusions;
+                    document.getElementById('invoice_inclusions_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_inclusions_section').style.display = 'none';
+                }
+                
+                // 불포함사항
+                if (reservation.exclusions) {
+                    document.getElementById('invoice_exclusions').textContent = reservation.exclusions;
+                    document.getElementById('invoice_exclusions_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_exclusions_section').style.display = 'none';
+                }
+                
+                // 특별 요청사항
+                if (reservation.special_requests) {
+                    document.getElementById('invoice_special_requests').textContent = reservation.special_requests;
+                    document.getElementById('invoice_special_requests_section').style.display = 'block';
+                } else {
+                    document.getElementById('invoice_special_requests_section').style.display = 'none';
+                }
+                
+                // 이메일 자동 입력
+                if (reservation.guests && reservation.guests.length > 0 && reservation.guests[0].email) {
+                    document.getElementById('invoice_email').value = reservation.guests[0].email;
+                } else {
+                    document.getElementById('invoice_email').value = '';
+                }
+                
+                document.getElementById('invoice_memo').value = '';
+                
+                // 모달 열기
+                const modal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('확정서 모달 열기 오류:', error);
+                alert('확정서 정보를 불러오는데 실패했습니다.');
+            }
+        }
+        
+        async function sendInvoice() {
+            const email = document.getElementById('invoice_email').value.trim();
+            
+            if (!email) {
+                alert('수신 이메일을 입력해주세요.');
+                return;
+            }
+            
+            if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+                alert('올바른 이메일 주소를 입력해주세요.');
+                return;
+            }
+            
+            if (!confirm(`${email}로 확정서를 발송하시겠습니까?`)) {
+                return;
+            }
+            
+            try {
+                // TODO: 확정서 발송 API 구현
+                alert('확정서 발송 기능은 추후 구현 예정입니다.');
+                
+                // 성공 시 모달 닫기
+                // bootstrap.Modal.getInstance(document.getElementById('invoiceModal')).hide();
+                
+            } catch (error) {
+                console.error('확정서 발송 오류:', error);
+                alert('확정서 발송에 실패했습니다.');
+            }
         }
 
         function openSettlementModal(id) {
