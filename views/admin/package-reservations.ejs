@@ -302,15 +302,15 @@
                             <div class="row mb-2">
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">성인</label>
-                                    <input type="number" class="form-control" id="edit_people_adult" value="0" min="0" onchange="generateEditGuestFields()">
+                                    <input type="number" class="form-control" id="edit_people_adult" value="0" min="0" onchange="generateEditGuestFields(); calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">소아</label>
-                                    <input type="number" class="form-control" id="edit_people_child" value="0" min="0" onchange="generateEditGuestFields()">
+                                    <input type="number" class="form-control" id="edit_people_child" value="0" min="0" onchange="generateEditGuestFields(); calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">유아</label>
-                                    <input type="number" class="form-control" id="edit_people_infant" value="0" min="0" onchange="generateEditGuestFields()">
+                                    <input type="number" class="form-control" id="edit_people_infant" value="0" min="0" onchange="generateEditGuestFields(); calculateEditTotalPrice();">
                                 </div>
                             </div>
 
@@ -349,7 +349,7 @@
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">환율</label>
-                                    <input type="text" class="form-control" id="edit_exchange_rate" value="1,300">
+                                    <input type="text" class="form-control" id="edit_exchange_rate" value="1,300" oninput="formatCurrency(this); calculateEditSummary();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">성인 1인 요금 *</label>
@@ -393,6 +393,31 @@
                                 <i class="fas fa-plus me-1"></i>구성요소 추가
                             </button>
                             
+                            <!-- 금액 요약 -->
+                            <div class="summary-box mt-3">
+                                <h6 style="font-size: 1rem; margin-bottom: 0.75rem;">💵 금액 요약</h6>
+                                <div class="summary-row">
+                                    <span><strong>총 판매가:</strong></span>
+                                    <span id="edit_summary_revenue" style="font-weight: bold;">₩0</span>
+                                </div>
+                                <div id="edit_summary_revenue_detail" style="font-size: 0.8rem; color: #6c757d; margin-left: 10px; margin-bottom: 8px;"></div>
+                                
+                                <div class="summary-row">
+                                    <span><strong>총 매입가:</strong></span>
+                                    <span id="edit_summary_cost" style="font-weight: bold;">₩0</span>
+                                </div>
+                                <div id="edit_summary_cost_detail" style="font-size: 0.8rem; color: #6c757d; margin-left: 10px; margin-bottom: 8px;"></div>
+                                
+                                <div class="summary-row summary-total">
+                                    <span>예상 마진:</span>
+                                    <span id="edit_summary_margin">₩0 (0%)</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>부가세 (마진의 10%):</span>
+                                    <span id="edit_summary_vat">₩0</span>
+                                </div>
+                            </div>
+
                             <!-- 특별 요청사항 -->
                             <div class="mb-2 mt-3">
                                 <label class="form-label" style="font-size: 0.875rem;">특별 요청사항</label>
@@ -860,6 +885,9 @@
                     // 수정 이력
                     renderModificationHistory(r.modification_history || []);
                     
+                    // 금액 요약 초기 계산
+                    calculateEditSummary();
+                    
                     // 모달 열기
                     new bootstrap.Modal(document.getElementById('editModal')).show();
                 } else {
@@ -1146,19 +1174,12 @@
             if (components && components.length > 0) {
                 components.forEach(comp => {
                     editComponentCount++;
-                    const typeIcons = {
-                        flight: '✈️ 항공권',
-                        hotel: '🏨 호텔',
-                        tour: '🎯 투어',
-                        ground: '🚗 지상비',
-                        other: '📦 기타'
-                    };
                     const componentHTML = `
-                        <div class="card mb-2" id="edit_component_${editComponentCount}" style="background-color: #fff;">
+                        <div class="card mb-2 component-item" id="edit-component-${editComponentCount}" style="background-color: #fff;">
                             <div class="card-body p-2">
                                 <div class="row g-2">
                                     <div class="col-md-2">
-                                        <select class="form-select form-select-sm">
+                                        <select class="form-select form-select-sm" id="edit-type-${editComponentCount}" onchange="calculateEditSummary()">
                                             <option value="flight" ${comp.component_type === 'flight' ? 'selected' : ''}>✈️ 항공권</option>
                                             <option value="hotel" ${comp.component_type === 'hotel' ? 'selected' : ''}>🏨 호텔</option>
                                             <option value="tour" ${comp.component_type === 'tour' ? 'selected' : ''}>🎯 투어</option>
@@ -1167,25 +1188,25 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" value="${comp.vendor_name || ''}" placeholder="공급업체">
+                                        <input type="text" class="form-control form-control-sm" id="edit-vendor-${editComponentCount}" value="${comp.vendor_name || ''}" placeholder="공급업체" onchange="calculateEditSummary()">
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가">
+                                        <input type="text" class="form-control form-control-sm" id="edit-cost-${editComponentCount}" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
                                     </div>
                                     <div class="col-md-1">
-                                        <select class="form-select form-select-sm">
+                                        <select class="form-select form-select-sm" id="edit-cost-currency-${editComponentCount}" onchange="calculateEditSummary()">
                                             <option value="KRW" ${comp.cost_currency === 'KRW' ? 'selected' : ''}>KRW</option>
                                             <option value="USD" ${comp.cost_currency === 'USD' ? 'selected' : ''}>USD</option>
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" value="${(comp.cost_krw || 0).toLocaleString()}" placeholder="원화환산" readonly>
+                                        <input type="text" class="form-control form-control-sm" id="edit-cost-krw-${editComponentCount}" value="₩${(comp.cost_krw || 0).toLocaleString()}" placeholder="원화환산" readonly style="background-color: #e9ecef;">
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" value="${comp.notes || ''}" placeholder="비고">
+                                        <input type="text" class="form-control form-control-sm" id="edit-notes-${editComponentCount}" value="${comp.notes || ''}" placeholder="비고">
                                     </div>
                                     <div class="col-md-1">
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('edit_component_${editComponentCount}').remove()">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeEditComponent(${editComponentCount})">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -1293,11 +1314,11 @@
             editComponentCount++;
             const container = document.getElementById('edit_components_container');
             const componentHTML = `
-                <div class="card mb-2" id="edit_component_${editComponentCount}" style="background-color: #fff;">
+                <div class="card mb-2 component-item" id="edit-component-${editComponentCount}" style="background-color: #fff;">
                     <div class="card-body p-2">
                         <div class="row g-2">
                             <div class="col-md-2">
-                                <select class="form-select form-select-sm">
+                                <select class="form-select form-select-sm" id="edit-type-${editComponentCount}" onchange="calculateEditSummary()">
                                     <option value="flight">✈️ 항공권</option>
                                     <option value="hotel">🏨 호텔</option>
                                     <option value="tour">🎯 투어</option>
@@ -1306,25 +1327,25 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" placeholder="공급업체">
+                                <input type="text" class="form-control form-control-sm" id="edit-vendor-${editComponentCount}" placeholder="공급업체" onchange="calculateEditSummary()">
                             </div>
                             <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" placeholder="매입가">
+                                <input type="text" class="form-control form-control-sm" id="edit-cost-${editComponentCount}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
                             </div>
                             <div class="col-md-1">
-                                <select class="form-select form-select-sm">
+                                <select class="form-select form-select-sm" id="edit-cost-currency-${editComponentCount}" onchange="calculateEditSummary()">
                                     <option value="KRW">KRW</option>
                                     <option value="USD">USD</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" placeholder="원화환산" readonly>
+                                <input type="text" class="form-control form-control-sm" id="edit-cost-krw-${editComponentCount}" placeholder="원화환산" readonly style="background-color: #e9ecef;">
                             </div>
                             <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" placeholder="비고">
+                                <input type="text" class="form-control form-control-sm" id="edit-notes-${editComponentCount}" placeholder="비고">
                             </div>
                             <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('edit_component_${editComponentCount}').remove()">
+                                <button type="button" class="btn btn-sm btn-danger" onclick="removeEditComponent(${editComponentCount})">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -1333,6 +1354,15 @@
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', componentHTML);
+        }
+        
+        // 매입 구성요소 삭제
+        function removeEditComponent(id) {
+            const element = document.getElementById(`edit-component-${id}`);
+            if (element) {
+                element.remove();
+                calculateEditSummary();
+            }
         }
 
         // 박수/일수 계산 (수정 모달)
@@ -1441,6 +1471,128 @@
             });
             
             document.getElementById('edit_total_selling_price').value = totalPrice.toLocaleString();
+            
+            // 금액 요약 업데이트
+            calculateEditSummary();
+        }
+        
+        // 금액 요약 계산 (수정 모달)
+        function calculateEditSummary() {
+            const parseNumber = (id) => {
+                const value = document.getElementById(id)?.value || '0';
+                return parseFloat(value.replace(/,/g, '')) || 0;
+            };
+            
+            const sellingPrice = parseNumber('edit_total_selling_price');
+            const currency = document.getElementById('edit_currency').value;
+            const exchangeRate = parseNumber('edit_exchange_rate') || 1;
+            
+            // 총 판매가 (원화 환산)
+            const revenueKRW = currency === 'KRW' ? sellingPrice : sellingPrice * exchangeRate;
+            
+            // 판매가 상세 항목 생성
+            const adultCount = parseInt(document.getElementById('edit_people_adult').value) || 0;
+            const childCount = parseInt(document.getElementById('edit_people_child').value) || 0;
+            const infantCount = parseInt(document.getElementById('edit_people_infant').value) || 0;
+            
+            const adultPrice = parseNumber('edit_price_adult');
+            const childPrice = parseNumber('edit_price_child');
+            const infantPrice = parseNumber('edit_price_infant');
+            
+            let revenueDetails = [];
+            if (adultCount > 0 && adultPrice > 0) {
+                const adultTotal = adultCount * adultPrice;
+                const adultKRW = currency === 'KRW' ? adultTotal : adultTotal * exchangeRate;
+                revenueDetails.push(`성인 ${adultCount}명 × ${currency === 'KRW' ? '₩' : '$'}${adultPrice.toLocaleString()} = ₩${Math.round(adultKRW).toLocaleString()}`);
+            }
+            if (childCount > 0 && childPrice > 0) {
+                const childTotal = childCount * childPrice;
+                const childKRW = currency === 'KRW' ? childTotal : childTotal * exchangeRate;
+                revenueDetails.push(`소아 ${childCount}명 × ${currency === 'KRW' ? '₩' : '$'}${childPrice.toLocaleString()} = ₩${Math.round(childKRW).toLocaleString()}`);
+            }
+            if (infantCount > 0 && infantPrice > 0) {
+                const infantTotal = infantCount * infantPrice;
+                const infantKRW = currency === 'KRW' ? infantTotal : infantTotal * exchangeRate;
+                revenueDetails.push(`유아 ${infantCount}명 × ${currency === 'KRW' ? '₩' : '$'}${infantPrice.toLocaleString()} = ₩${Math.round(infantKRW).toLocaleString()}`);
+            }
+            
+            // 금액 변동 항목 추가
+            const adjustmentCards = document.querySelectorAll('#edit_price_adjustments_container .card');
+            adjustmentCards.forEach(card => {
+                const nameInput = card.querySelector('input[id^="edit_adjustment_name_"]');
+                const typeSelect = card.querySelector('select[id^="edit_adjustment_type_"]');
+                const amountInput = card.querySelector('input[id^="edit_adjustment_amount_"]');
+                
+                if (nameInput && typeSelect && amountInput) {
+                    const name = nameInput.value || '항목';
+                    const type = typeSelect.value;
+                    const amount = parseFloat(amountInput.value.replace(/,/g, '')) || 0;
+                    
+                    if (amount > 0) {
+                        const amountKRW = currency === 'KRW' ? amount : amount * exchangeRate;
+                        const sign = type === 'add' ? '➕' : '➖';
+                        revenueDetails.push(`${sign} ${name} ${currency === 'KRW' ? '₩' : '$'}${amount.toLocaleString()} = ${type === 'add' ? '+' : '-'}₩${Math.round(amountKRW).toLocaleString()}`);
+                    }
+                }
+            });
+            
+            // 총 매입가 계산 및 상세 항목 생성
+            let totalCostKRW = 0;
+            let costDetails = [];
+            const components = document.querySelectorAll('#edit_components_container .component-item');
+            
+            components.forEach(component => {
+                const id = component.id.replace('edit-component-', '');
+                const costInput = document.getElementById(`edit-cost-${id}`);
+                const costCurrencySelect = document.getElementById(`edit-cost-currency-${id}`);
+                const vendorInput = document.getElementById(`edit-vendor-${id}`);
+                const typeSelect = document.getElementById(`edit-type-${id}`);
+                
+                if (costInput && costCurrencySelect) {
+                    const cost = parseFloat(costInput.value.replace(/,/g, '')) || 0;
+                    const costCurrency = costCurrencySelect.value;
+                    const vendorName = vendorInput?.value || '업체명';
+                    const typeText = typeSelect ? typeSelect.options[typeSelect.selectedIndex].text : '';
+                    
+                    const costKRW = costCurrency === 'KRW' ? cost : cost * exchangeRate;
+                    totalCostKRW += costKRW;
+                    
+                    // 개별 구성요소 원화 환산 표시
+                    const costKrwEl = document.getElementById(`edit-cost-krw-${id}`);
+                    if (costKrwEl) {
+                        costKrwEl.value = `₩${Math.round(costKRW).toLocaleString()}`;
+                    }
+                    
+                    // 상세 항목 추가
+                    if (cost > 0) {
+                        costDetails.push(`${typeText} (${vendorName}) ${costCurrency === 'KRW' ? '₩' : '$'}${cost.toLocaleString()} = ₩${Math.round(costKRW).toLocaleString()}`);
+                    }
+                }
+            });
+            
+            // 마진 계산
+            const marginKRW = revenueKRW - totalCostKRW;
+            const marginRate = revenueKRW > 0 ? (marginKRW / revenueKRW * 100).toFixed(1) : 0;
+            
+            // 부가세 (마진의 10%)
+            const vatAmount = Math.round(marginKRW * 0.1);
+            
+            // 요약 표시
+            document.getElementById('edit_summary_revenue').textContent = 
+                `₩${Math.round(revenueKRW).toLocaleString()}`;
+            document.getElementById('edit_summary_revenue_detail').innerHTML = 
+                revenueDetails.length > 0 ? revenueDetails.join('<br>') : '';
+                
+            document.getElementById('edit_summary_cost').textContent = 
+                `₩${Math.round(totalCostKRW).toLocaleString()}`;
+            document.getElementById('edit_summary_cost_detail').innerHTML = 
+                costDetails.length > 0 ? costDetails.join('<br>') : '';
+                
+            document.getElementById('edit_summary_margin').textContent = 
+                `₩${Math.round(marginKRW).toLocaleString()} (${marginRate}%)`;
+            document.getElementById('edit_summary_margin').style.color = marginKRW >= 0 ? '#198754' : '#dc3545';
+            document.getElementById('edit_summary_vat').textContent = 
+                `₩${vatAmount.toLocaleString()}`;
         }
 
         // 예약수정 저장
