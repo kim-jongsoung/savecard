@@ -11,33 +11,34 @@
             font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
             background: #f5f5f5;
             color: #000;
-            font-size: 11pt;
+            font-size: 9pt;
+            line-height: 1.3;
         }
         
         .document-wrapper {
             max-width: 210mm;
-            margin: 1rem auto;
+            margin: 0.5rem auto;
             background: white;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 15mm;
+            padding: 12mm;
         }
         
         @media print {
             body { 
                 background: white; 
                 margin: 0;
-                font-size: 10pt;
+                font-size: 9pt;
             }
             .document-wrapper { 
                 max-width: 100%;
                 margin: 0;
-                padding: 10mm;
+                padding: 8mm;
                 box-shadow: none;
             }
             .no-print { display: none !important; }
             @page { 
                 size: A4; 
-                margin: 10mm;
+                margin: 8mm;
             }
             table { page-break-inside: avoid; }
         }
@@ -45,33 +46,35 @@
         .assignment-header {
             text-align: center;
             border: 2px solid #000;
-            padding: 8px;
-            margin-bottom: 10px;
-            background: #f8f9fa;
+            padding: 6px;
+            margin-bottom: 8px;
+            background: #fff;
         }
         
         .doc-title {
-            font-size: 18pt;
+            font-size: 20pt;
             font-weight: 700;
             margin: 0;
-            padding: 5px 0;
+            padding: 3px 0;
+            letter-spacing: 8px;
         }
         
         .doc-subtitle {
-            font-size: 11pt;
-            margin: 3px 0;
+            font-size: 9pt;
+            margin: 2px 0;
+            color: #333;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
-            font-size: 10pt;
+            margin-bottom: 6px;
+            font-size: 9pt;
         }
         
         table th, table td {
-            border: 1px solid #000;
-            padding: 4px 6px;
+            border: 1px solid #333;
+            padding: 3px 5px;
             text-align: left;
             vertical-align: middle;
         }
@@ -83,26 +86,25 @@
         }
         
         .section-title {
-            background: #28a745;
+            background: #333;
             color: white;
             font-weight: 600;
             text-align: center;
-            padding: 5px;
+            padding: 4px;
+            font-size: 9pt;
         }
         
         .label-cell {
             background: #f8f9fa;
             font-weight: 600;
-            width: 20%;
+            width: 15%;
             text-align: center;
+            font-size: 8.5pt;
         }
         
         .value-cell {
-            width: 30%;
-        }
-        
-        .full-width {
-            width: 100%;
+            width: 18%;
+            font-size: 9pt;
         }
         
         .text-center { text-align: center; }
@@ -111,15 +113,20 @@
         
         .badge {
             display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 9pt;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 8pt;
+            font-weight: 600;
         }
         
         .badge-success { background: #28a745; color: white; }
         .badge-warning { background: #ffc107; color: #000; }
         .badge-danger { background: #dc3545; color: white; }
         .badge-info { background: #17a2b8; color: white; }
+        
+        .btn-group {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -137,7 +144,7 @@
                 <th colspan="6" class="section-title">기본 예약 정보</th>
             </tr>
             <tr>
-                <td class="label-cell">예약 상태</td>
+                <td class="label-cell">상태</td>
                 <td class="value-cell">
                     <% if (assignment.reservation_status === 'confirmed') { %>
                         <span class="badge badge-success">확정</span>
@@ -152,11 +159,11 @@
                 <td class="label-cell">예약채널</td>
                 <td class="value-cell"><%= assignment.platform_name %></td>
                 <td class="label-cell">기간</td>
-                <td class="value-cell"><strong><%= assignment.nights %>박<%= assignment.days %>일</strong></td>
+                <td class="value-cell"><%= assignment.nights %>박<%= assignment.days %>일</td>
             </tr>
             <tr>
                 <td class="label-cell">패키지명</td>
-                <td colspan="5"><strong><%= assignment.package_name %></strong></td>
+                <td colspan="5"><%= assignment.package_name %></td>
             </tr>
             <tr>
                 <td class="label-cell">출발일</td>
@@ -164,7 +171,7 @@
                 <td class="label-cell">귀국일</td>
                 <td class="value-cell"><%= new Date(assignment.return_date).toLocaleDateString('ko-KR') %></td>
                 <td class="label-cell">인원</td>
-                <td class="value-cell">성인 <%= assignment.adult_count %><% if(assignment.child_count > 0) { %> / 소아 <%= assignment.child_count %><% } %><% if(assignment.infant_count > 0) { %> / 유아 <%= assignment.infant_count %><% } %></td>
+                <td class="value-cell">성인 <%= assignment.adult_count %><% if(assignment.child_count > 0) { %>, 소아 <%= assignment.child_count %><% } %><% if(assignment.infant_count > 0) { %>, 유아 <%= assignment.infant_count %><% } %></td>
             </tr>
         </table>
 
@@ -211,26 +218,24 @@
         <% if (assignment.guests && assignment.guests.length > 0) { %>
         <table>
             <tr>
-                <th colspan="8" class="section-title">고객 정보</th>
+                <th colspan="6" class="section-title">고객 정보</th>
             </tr>
             <tr>
-                <th class="text-center">구분</th>
-                <th class="text-center">한글이름</th>
-                <th class="text-center">영문이름</th>
-                <th class="text-center">생년월일</th>
-                <th class="text-center">연락처</th>
-                <th class="text-center">성별</th>
-                <th colspan="2" class="text-center">이메일</th>
+                <th class="text-center" style="width: 8%;">구분</th>
+                <th class="text-center" style="width: 15%;">한글이름</th>
+                <th class="text-center" style="width: 22%;">영문이름</th>
+                <th class="text-center" style="width: 12%;">생년월일</th>
+                <th class="text-center" style="width: 15%;">연락처</th>
+                <th class="text-center" style="width: 8%;">성별</th>
             </tr>
             <% assignment.guests.forEach((guest, index) => { %>
             <tr>
                 <td class="text-center"><%= guest.type || '성인' %></td>
-                <td><strong><%= guest.korean_name || '-' %></strong></td>
+                <td><%= guest.korean_name || '-' %></td>
                 <td><%= guest.english_name || '-' %></td>
                 <td class="text-center"><%= guest.birth_date ? new Date(guest.birth_date).toLocaleDateString('ko-KR') : '-' %></td>
                 <td class="text-center"><%= guest.phone || '-' %></td>
                 <td class="text-center"><%= guest.gender || '-' %></td>
-                <td colspan="2"><%= guest.email || '-' %></td>
             </tr>
             <% }); %>
         </table>
@@ -278,52 +283,43 @@
         <!-- 수배 정보 -->
         <table>
             <tr>
-                <th colspan="6" class="section-title">수배 정보</th>
+                <th colspan="4" class="section-title">수배 정보</th>
             </tr>
             <tr>
-                <td class="label-cell">항목</td>
-                <td class="value-cell"><strong><%= assignment.component_type %> - <%= assignment.vendor_name %></strong></td>
-                <td class="label-cell">매입가</td>
-                <td class="value-cell">
-                    <strong><%= assignment.cost_amount.toLocaleString() %> <%= assignment.cost_currency %></strong>
-                    <% if (assignment.cost_currency === 'USD') { %>
-                        <br><small>(₩<%= assignment.cost_krw.toLocaleString() %>)</small>
-                    <% } %>
-                </td>
-                <td class="label-cell">발송일시</td>
-                <td class="value-cell"><%= assignment.assignment_sent_at ? new Date(assignment.assignment_sent_at).toLocaleString('ko-KR') : '-' %></td>
+                <td class="label-cell">수배항목</td>
+                <td class="value-cell"><%= assignment.component_type %></td>
+                <td class="label-cell">공급업체</td>
+                <td class="value-cell"><%= assignment.vendor_name %></td>
             </tr>
             <% if (assignment.notes) { %>
             <tr>
                 <td class="label-cell">비고</td>
-                <td colspan="5" style="background: #fff3cd;"><%= assignment.notes %></td>
+                <td colspan="3" style="background: #fff3cd;"><%= assignment.notes %></td>
             </tr>
             <% } %>
-            <% if (assignment.assignment_confirmed_at) { %>
             <tr>
+                <td class="label-cell">발송일시</td>
+                <td class="value-cell"><%= assignment.assignment_sent_at ? new Date(assignment.assignment_sent_at).toLocaleString('ko-KR') : '-' %></td>
                 <td class="label-cell">수신확인</td>
-                <td colspan="5">
-                    <span class="badge badge-info">
-                        ✓ <%= new Date(assignment.assignment_confirmed_at).toLocaleString('ko-KR') %>
-                    </span>
+                <td class="value-cell">
+                    <% if (assignment.assignment_confirmed_at) { %>
+                        <span class="badge badge-info">✓ <%= new Date(assignment.assignment_confirmed_at).toLocaleString('ko-KR') %></span>
+                    <% } else { %>
+                        <span class="badge badge-warning">미확인</span>
+                    <% } %>
                 </td>
             </tr>
-            <% } %>
         </table>
 
-        <!-- 수신 확인 버튼 (미확인 시에만 표시) -->
-        <% if (!assignment.assignment_confirmed_at) { %>
-        <div class="text-center mt-4 no-print">
-            <button class="btn btn-success btn-lg" onclick="confirmReceipt()" style="min-width: 250px;">
-                <i class="fas fa-check-circle me-2"></i>수신 확인
+        <!-- 버튼 영역 -->
+        <div class="text-center mt-3 no-print btn-group">
+            <% if (!assignment.assignment_confirmed_at) { %>
+            <button class="btn btn-success" onclick="confirmReceipt()" style="min-width: 150px; margin-right: 10px;">
+                <i class="fas fa-check-circle me-1"></i>수신 확인
             </button>
-        </div>
-        <% } %>
-
-        <!-- 인쇄 버튼 -->
-        <div class="text-center mt-4 no-print">
-            <button class="btn btn-primary btn-lg" onclick="window.print()" style="min-width: 250px;">
-                <i class="fas fa-print me-2"></i>인쇄
+            <% } %>
+            <button class="btn btn-primary" onclick="window.print()" style="min-width: 150px;">
+                <i class="fas fa-print me-1"></i>인쇄
             </button>
         </div>
     </div>
