@@ -2421,14 +2421,17 @@
                 const response = await fetch(`/api/package-reservations/${id}`);
                 if (!response.ok) throw new Error('예약 정보를 불러올 수 없습니다.');
                 
-                const reservation = await response.json();
+                const result = await response.json();
+                const reservation = result.data || result;
+                
+                console.log('📦 확정서 모달 데이터:', reservation);
                 
                 // 기본 예약 정보
                 document.getElementById('invoice_reservation_number').textContent = reservation.reservation_number || '-';
-                document.getElementById('invoice_customer_name').textContent = reservation.customer_name || '-';
-                document.getElementById('invoice_departure_date').textContent = reservation.departure_date ? new Date(reservation.departure_date).toLocaleDateString('ko-KR') : '-';
-                document.getElementById('invoice_return_date').textContent = reservation.return_date ? new Date(reservation.return_date).toLocaleDateString('ko-KR') : '-';
-                document.getElementById('invoice_period').textContent = `${reservation.nights || 0}박 ${reservation.days || 0}일`;
+                document.getElementById('invoice_customer_name').textContent = reservation.customer?.korean_name || '-';
+                document.getElementById('invoice_departure_date').textContent = reservation.travel_period?.departure_date ? new Date(reservation.travel_period.departure_date).toLocaleDateString('ko-KR') : '-';
+                document.getElementById('invoice_return_date').textContent = reservation.travel_period?.return_date ? new Date(reservation.travel_period.return_date).toLocaleDateString('ko-KR') : '-';
+                document.getElementById('invoice_period').textContent = `${reservation.travel_period?.nights || 0}박 ${reservation.travel_period?.days || 0}일`;
                 document.getElementById('invoice_people').textContent = `성인 ${reservation.people?.adult || 0}명${reservation.people?.child ? `, 소아 ${reservation.people.child}명` : ''}${reservation.people?.infant ? `, 유아 ${reservation.people.infant}명` : ''}`;
                 document.getElementById('invoice_package_name').textContent = reservation.package_name || '-';
                 document.getElementById('invoice_platform_name').textContent = reservation.platform_name || '-';
@@ -2544,18 +2547,12 @@
                 }
                 
                 // 호텔 정보
-                if (reservation.hotel_info && reservation.hotel_info.hotel_name) {
+                if (reservation.hotel_name) {
                     let hotelHTML = `
-                        <div><strong>호텔명:</strong> ${reservation.hotel_info.hotel_name}</div>
+                        <div><strong>호텔명:</strong> ${reservation.hotel_name}</div>
                     `;
-                    if (reservation.hotel_info.room_type) {
-                        hotelHTML += `<div><strong>객실타입:</strong> ${reservation.hotel_info.room_type}</div>`;
-                    }
-                    if (reservation.hotel_info.check_in) {
-                        hotelHTML += `<div><strong>체크인:</strong> ${new Date(reservation.hotel_info.check_in).toLocaleDateString('ko-KR')}</div>`;
-                    }
-                    if (reservation.hotel_info.check_out) {
-                        hotelHTML += `<div><strong>체크아웃:</strong> ${new Date(reservation.hotel_info.check_out).toLocaleDateString('ko-KR')}</div>`;
+                    if (reservation.room_type) {
+                        hotelHTML += `<div><strong>객실타입:</strong> ${reservation.room_type}</div>`;
                     }
                     
                     document.getElementById('invoice_hotel_info').innerHTML = hotelHTML;
