@@ -120,7 +120,16 @@ const packageReservationSchema = new mongoose.Schema({
         exchange_rate: {
             type: Number,
             default: 1300
-        }
+        },
+        // 금액 변동 추가 사항
+        adjustments: [{
+            description: String,
+            amount: Number,
+            created_at: {
+                type: Date,
+                default: Date.now
+            }
+        }]
     },
     
     // 결제 빌링

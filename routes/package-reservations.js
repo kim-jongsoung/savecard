@@ -832,12 +832,35 @@ router.get('/:id/confirmation/view', async (req, res) => {
             });
         }
 
+        console.log('📄 확정서 데이터:', {
+            reservation_number: reservation.reservation_number,
+            people: reservation.people,
+            pricing: reservation.pricing
+        });
+
+        // 안전한 데이터 접근
+        const adultCount = reservation.people?.adult || 0;
+        const childCount = reservation.people?.child || 0;
+        const infantCount = reservation.people?.infant || 0;
+        
+        const adultPrice = reservation.pricing?.price_adult || 0;
+        const childPrice = reservation.pricing?.price_child || 0;
+        const infantPrice = reservation.pricing?.price_infant || 0;
+
         // 총 판매가 계산
-        const adultTotal = (reservation.pricing?.adult_price || 0) * (reservation.people?.adult || 0);
-        const childTotal = (reservation.pricing?.child_price || 0) * (reservation.people?.child || 0);
-        const infantTotal = (reservation.pricing?.infant_price || 0) * (reservation.people?.infant || 0);
+        const adultTotal = adultPrice * adultCount;
+        const childTotal = childPrice * childCount;
+        const infantTotal = infantPrice * infantCount;
         const adjustmentsTotal = (reservation.pricing?.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0);
         const totalAmount = adultTotal + childTotal + infantTotal + adjustmentsTotal;
+
+        console.log('💰 금액 계산:', {
+            adultCount, adultPrice, adultTotal,
+            childCount, childPrice, childTotal,
+            infantCount, infantPrice, infantTotal,
+            adjustmentsTotal,
+            totalAmount
+        });
 
         // 확정서 데이터 구성
         const confirmationData = {
@@ -848,10 +871,10 @@ router.get('/:id/confirmation/view', async (req, res) => {
             package_name: reservation.package_name,
             
             // 여행 기간
-            departure_date: reservation.travel_period.departure_date,
-            return_date: reservation.travel_period.return_date,
-            nights: reservation.travel_period.nights,
-            days: reservation.travel_period.days,
+            departure_date: reservation.travel_period?.departure_date,
+            return_date: reservation.travel_period?.return_date,
+            nights: reservation.travel_period?.nights || 0,
+            days: reservation.travel_period?.days || 0,
             
             // 항공편 정보
             flight_info: reservation.flight_info || {},
@@ -861,14 +884,14 @@ router.get('/:id/confirmation/view', async (req, res) => {
             room_type: reservation.room_type,
             
             // 인원 정보
-            adult_count: reservation.people.adult,
-            child_count: reservation.people.child,
-            infant_count: reservation.people.infant,
+            adult_count: adultCount,
+            child_count: childCount,
+            infant_count: infantCount,
             
             // 인원별 판매가
-            adult_price: reservation.pricing?.adult_price || 0,
-            child_price: reservation.pricing?.child_price || 0,
-            infant_price: reservation.pricing?.infant_price || 0,
+            adult_price: adultPrice,
+            child_price: childPrice,
+            infant_price: infantPrice,
             
             // 금액 변동 사항
             adjustments: reservation.pricing?.adjustments || [],
@@ -877,10 +900,10 @@ router.get('/:id/confirmation/view', async (req, res) => {
             total_amount: totalAmount,
             
             // 고객 정보
-            customer_name: reservation.customer.korean_name,
-            english_name: reservation.customer.english_name,
-            phone_number: reservation.customer.phone,
-            email: reservation.customer.email,
+            customer_name: reservation.customer?.korean_name || '',
+            english_name: reservation.customer?.english_name || '',
+            phone_number: reservation.customer?.phone || '',
+            email: reservation.customer?.email || '',
             
             // 투숙객 정보
             guests: reservation.guests || [],
