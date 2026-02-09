@@ -2722,8 +2722,11 @@
                 
                 document.getElementById('invoice_memo').value = '';
                 
-                // 모달 열기
-                const modal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+                // 모달 열기 (기존 인스턴스가 있으면 재사용)
+                let modal = bootstrap.Modal.getInstance(document.getElementById('invoiceModal'));
+                if (!modal) {
+                    modal = new bootstrap.Modal(document.getElementById('invoiceModal'));
+                }
                 modal.show();
                 
             } catch (error) {
