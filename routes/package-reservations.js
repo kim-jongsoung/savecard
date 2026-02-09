@@ -820,10 +820,122 @@ router.get('/:id/assignment/:componentIndex/view', async (req, res) => {
     }
 });
 
+// 확정서 생성 (발송 시간 기록 및 이력 저장)
+router.post('/:id/confirmation', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const reservation = await PackageReservation.findById(id);
+        
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: '예약을 찾을 수 없습니다.'
+            });
+        }
+
+        const now = new Date();
+        
+        // 확정서 발송 시간 기록 (최신 정보)
+        reservation.confirmation_sent_at = now;
+        
+        // 확정서 생성 이력에 추가 (예약 데이터 스냅샷 포함)
+        if (!reservation.confirmation_history) {
+            reservation.confirmation_history = [];
+        }
+        
+        // 금액 계산
+        const adultCount = reservation.people?.adult || 0;
+        const childCount = reservation.people?.child || 0;
+        const infantCount = reservation.people?.infant || 0;
+        
+        const adultPrice = reservation.pricing?.price_adult || 0;
+        const childPrice = reservation.pricing?.price_child || 0;
+        const infantPrice = reservation.pricing?.price_infant || 0;
+        
+        const adultTotal = adultPrice * adultCount;
+        const childTotal = childPrice * childCount;
+        const infantTotal = infantPrice * infantCount;
+        const adjustmentsTotal = (reservation.pricing?.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0);
+        const totalAmount = adultTotal + childTotal + infantTotal + adjustmentsTotal;
+        
+        reservation.confirmation_history.push({
+            created_at: now,
+            created_by: req.session.user?.username || 'admin',
+            snapshot: {
+                // 기본 예약 정보
+                reservation_number: reservation.reservation_number,
+                reservation_status: reservation.reservation_status,
+                platform_name: reservation.platform_name,
+                package_name: reservation.package_name,
+                
+                // 여행 기간
+                departure_date: reservation.travel_period.departure_date,
+                return_date: reservation.travel_period.return_date,
+                nights: reservation.travel_period.nights,
+                days: reservation.travel_period.days,
+                
+                // 항공편 정보
+                flight_info: reservation.flight_info || {},
+                
+                // 호텔 정보
+                hotel_name: reservation.hotel_name,
+                room_type: reservation.room_type,
+                
+                // 인원 정보
+                adult_count: adultCount,
+                child_count: childCount,
+                infant_count: infantCount,
+                
+                // 고객 정보
+                customer_name: reservation.customer?.korean_name || '',
+                english_name: reservation.customer?.english_name || '',
+                phone_number: reservation.customer?.phone || '',
+                email: reservation.customer?.email || '',
+                
+                // 투숙객 정보
+                guests: reservation.guests || [],
+                
+                // 일정 및 포함/불포함 사항
+                itinerary: reservation.itinerary,
+                inclusions: reservation.inclusions,
+                exclusions: reservation.exclusions,
+                
+                // 특별 요청사항
+                special_requests: reservation.special_requests,
+                
+                // 금액 정보
+                adult_price: adultPrice,
+                child_price: childPrice,
+                infant_price: infantPrice,
+                adjustments: reservation.pricing?.adjustments || [],
+                total_amount: totalAmount
+            }
+        });
+        
+        await reservation.save();
+
+        console.log('✅ 확정서 생성:', reservation.reservation_number);
+
+        res.json({
+            success: true,
+            message: '확정서가 생성되었습니다.',
+            history_count: reservation.confirmation_history.length
+        });
+
+    } catch (error) {
+        console.error('❌ 확정서 생성 실패:', error);
+        res.status(500).json({
+            success: false,
+            message: '확정서 생성 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 // 확정서 뷰
 router.get('/:id/confirmation/view', async (req, res) => {
     try {
         const { id } = req.params;
+        const { historyIndex } = req.query;
         const reservation = await PackageReservation.findById(id);
         
         if (!reservation) {
@@ -832,43 +944,105 @@ router.get('/:id/confirmation/view', async (req, res) => {
             });
         }
 
-        console.log('📄 확정서 데이터:', {
-            reservation_number: reservation.reservation_number,
-            people: reservation.people,
-            pricing: reservation.pricing
-        });
-
-        // 안전한 데이터 접근
-        const adultCount = reservation.people?.adult || 0;
-        const childCount = reservation.people?.child || 0;
-        const infantCount = reservation.people?.infant || 0;
+        let confirmationData;
         
-        const adultPrice = reservation.pricing?.price_adult || 0;
-        const childPrice = reservation.pricing?.price_child || 0;
-        const infantPrice = reservation.pricing?.price_infant || 0;
+        // 이력 인덱스가 제공된 경우 해당 이력의 스냅샷 사용
+        if (historyIndex !== undefined && reservation.confirmation_history && reservation.confirmation_history[historyIndex]) {
+            const snapshot = reservation.confirmation_history[historyIndex].snapshot;
+            
+            confirmationData = {
+                // 기본 예약 정보
+                reservation_number: snapshot.reservation_number,
+                reservation_status: snapshot.reservation_status,
+                platform_name: snapshot.platform_name,
+                package_name: snapshot.package_name,
+                
+                // 여행 기간
+                departure_date: snapshot.departure_date,
+                return_date: snapshot.return_date,
+                nights: snapshot.nights,
+                days: snapshot.days,
+                
+                // 항공편 정보
+                flight_info: snapshot.flight_info || {},
+                
+                // 호텔 정보
+                hotel_name: snapshot.hotel_name,
+                room_type: snapshot.room_type,
+                
+                // 인원 정보
+                adult_count: snapshot.adult_count,
+                child_count: snapshot.child_count,
+                infant_count: snapshot.infant_count,
+                
+                // 고객 정보
+                customer_name: snapshot.customer_name,
+                english_name: snapshot.english_name,
+                phone_number: snapshot.phone_number,
+                email: snapshot.email,
+                
+                // 투숙객 정보
+                guests: snapshot.guests || [],
+                
+                // 일정 및 포함/불포함 사항
+                itinerary: snapshot.itinerary,
+                inclusions: snapshot.inclusions,
+                exclusions: snapshot.exclusions,
+                
+                // 특별 요청사항
+                special_requests: snapshot.special_requests,
+                
+                // 금액 정보
+                adult_price: snapshot.adult_price,
+                child_price: snapshot.child_price,
+                infant_price: snapshot.infant_price,
+                adjustments: snapshot.adjustments || [],
+                total_amount: snapshot.total_amount,
+                
+                // 이력 정보
+                is_history: true,
+                history_index: parseInt(historyIndex) + 1,
+                history_created_at: reservation.confirmation_history[historyIndex].created_at
+            };
+        } else {
+            // 현재 예약 데이터 사용
+            console.log('📄 확정서 데이터:', {
+                reservation_number: reservation.reservation_number,
+                people: reservation.people,
+                pricing: reservation.pricing
+            });
 
-        // 총 판매가 계산
-        const adultTotal = adultPrice * adultCount;
-        const childTotal = childPrice * childCount;
-        const infantTotal = infantPrice * infantCount;
-        const adjustmentsTotal = (reservation.pricing?.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0);
-        const totalAmount = adultTotal + childTotal + infantTotal + adjustmentsTotal;
+            // 안전한 데이터 접근
+            const adultCount = reservation.people?.adult || 0;
+            const childCount = reservation.people?.child || 0;
+            const infantCount = reservation.people?.infant || 0;
+            
+            const adultPrice = reservation.pricing?.price_adult || 0;
+            const childPrice = reservation.pricing?.price_child || 0;
+            const infantPrice = reservation.pricing?.price_infant || 0;
 
-        console.log('💰 금액 계산:', {
-            adultCount, adultPrice, adultTotal,
-            childCount, childPrice, childTotal,
-            infantCount, infantPrice, infantTotal,
-            adjustmentsTotal,
-            totalAmount
-        });
+            // 총 판매가 계산
+            const adultTotal = adultPrice * adultCount;
+            const childTotal = childPrice * childCount;
+            const infantTotal = infantPrice * infantCount;
+            const adjustmentsTotal = (reservation.pricing?.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0);
+            const totalAmount = adultTotal + childTotal + infantTotal + adjustmentsTotal;
 
-        // 확정서 데이터 구성
-        const confirmationData = {
-            // 기본 예약 정보
-            reservation_number: reservation.reservation_number,
-            reservation_status: reservation.reservation_status,
-            platform_name: reservation.platform_name,
-            package_name: reservation.package_name,
+            console.log('💰 금액 계산:', {
+                adultCount, adultPrice, adultTotal,
+                childCount, childPrice, childTotal,
+                infantCount, infantPrice, infantTotal,
+                adjustmentsTotal,
+                totalAmount
+            });
+
+            // 확정서 데이터 구성
+            confirmationData = {
+                // 기본 예약 정보
+                reservation_number: reservation.reservation_number,
+                reservation_status: reservation.reservation_status,
+                platform_name: reservation.platform_name,
+                package_name: reservation.package_name,
             
             // 여행 기간
             departure_date: reservation.travel_period?.departure_date,

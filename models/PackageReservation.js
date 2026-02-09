@@ -276,6 +276,48 @@ const packageReservationSchema = new mongoose.Schema({
     // 특별 요청사항
     special_requests: String,
     
+    // 확정서 발송 시간
+    confirmation_sent_at: Date,
+    
+    // 확정서 생성 이력
+    confirmation_history: [{
+        created_at: {
+            type: Date,
+            default: Date.now
+        },
+        created_by: String,
+        snapshot: {
+            reservation_number: String,
+            reservation_status: String,
+            platform_name: String,
+            package_name: String,
+            departure_date: Date,
+            return_date: Date,
+            nights: Number,
+            days: Number,
+            flight_info: mongoose.Schema.Types.Mixed,
+            hotel_name: String,
+            room_type: String,
+            adult_count: Number,
+            child_count: Number,
+            infant_count: Number,
+            customer_name: String,
+            english_name: String,
+            phone_number: String,
+            email: String,
+            guests: [mongoose.Schema.Types.Mixed],
+            itinerary: String,
+            inclusions: String,
+            exclusions: String,
+            special_requests: String,
+            adult_price: Number,
+            child_price: Number,
+            infant_price: Number,
+            adjustments: [mongoose.Schema.Types.Mixed],
+            total_amount: Number
+        }
+    }],
+    
     // 수정 이력
     modification_history: [{
         modified_at: {

@@ -540,6 +540,30 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <!-- 확정서 생성 상태 및 이력 -->
+                    <div class="card mb-3" style="border-left: 4px solid #ffc107;">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div id="confirmation_status">
+                                        <span class="badge bg-secondary">미생성</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <button class="btn btn-sm btn-link p-0" id="confirmation_history_toggle" onclick="toggleConfirmationHistory()" style="display: none;">
+                                        <i class="fas fa-history me-1"></i>생성이력 (<span id="confirmation_history_count">0</span>)
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="confirmation_history_list" class="mt-2" style="display: none;">
+                                <div class="border-top pt-2">
+                                    <strong class="text-muted" style="font-size: 0.85rem;">생성 이력</strong>
+                                    <div class="mt-1" id="confirmation_history_items"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 기본 예약 정보 -->
                     <div class="card mb-3">
                         <div class="card-header bg-light">
@@ -2650,6 +2674,45 @@
                     document.getElementById('invoice_special_requests_section').style.display = 'none';
                 }
                 
+                // 확정서 생성 상태 및 이력 표시
+                const historyCount = reservation.confirmation_history?.length || 0;
+                
+                if (reservation.confirmation_sent_at) {
+                    document.getElementById('confirmation_status').innerHTML = `
+                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>생성완료</span>
+                        <br><small class="text-muted">${new Date(reservation.confirmation_sent_at).toLocaleString('ko-KR')}</small>
+                    `;
+                } else {
+                    document.getElementById('confirmation_status').innerHTML = '<span class="badge bg-secondary">미생성</span>';
+                }
+                
+                if (historyCount > 0) {
+                    document.getElementById('confirmation_history_count').textContent = historyCount;
+                    document.getElementById('confirmation_history_toggle').style.display = 'inline-block';
+                    
+                    // 이력 목록 생성
+                    let historyHTML = '';
+                    reservation.confirmation_history.forEach((history, hIndex) => {
+                        historyHTML += `
+                            <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded" style="background: #f8f9fa;">
+                                <div>
+                                    <span class="badge bg-primary me-2">#${hIndex + 1}</span>
+                                    <small class="text-muted">
+                                        ${new Date(history.created_at).toLocaleString('ko-KR')}
+                                        ${history.created_by ? `<span class="ms-2 text-primary">by ${history.created_by}</span>` : ''}
+                                    </small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewConfirmationHistory(${hIndex})" title="이 버전 보기">
+                                    <i class="fas fa-eye me-1"></i>보기
+                                </button>
+                            </div>
+                        `;
+                    });
+                    document.getElementById('confirmation_history_items').innerHTML = historyHTML;
+                } else {
+                    document.getElementById('confirmation_history_toggle').style.display = 'none';
+                }
+                
                 // 이메일 자동 입력
                 if (reservation.guests && reservation.guests.length > 0 && reservation.guests[0].email) {
                     document.getElementById('invoice_email').value = reservation.guests[0].email;
@@ -2711,7 +2774,7 @@
             window.open(url, '_blank');
         }
         
-        function generateConfirmation() {
+        async function generateConfirmation() {
             if (!currentConfirmationId) {
                 alert('예약 정보를 불러올 수 없습니다.');
                 return;
@@ -2721,8 +2784,42 @@
                 return;
             }
             
-            // 확정서 생성 완료 메시지
-            alert('✅ 확정서가 생성되었습니다!\n\n"미리보기" 버튼을 클릭하여 확인하거나\n"링크 복사" 버튼으로 고객에게 전달할 수 있습니다.');
+            try {
+                const response = await fetch(`/api/package-reservations/${currentConfirmationId}/confirmation`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ 확정서가 생성되었습니다!\n\n"미리보기" 버튼을 클릭하여 확인하거나\n"링크 복사" 버튼으로 고객에게 전달할 수 있습니다.');
+                    // 모달 새로고침
+                    openInvoiceModal(currentConfirmationId);
+                } else {
+                    alert('확정서 생성 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('확정서 생성 오류:', error);
+                alert('확정서 생성 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 확정서 이력 토글
+        function toggleConfirmationHistory() {
+            const historyDiv = document.getElementById('confirmation_history_list');
+            if (historyDiv) {
+                historyDiv.style.display = historyDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        // 확정서 이력 보기
+        function viewConfirmationHistory(historyIndex) {
+            if (!currentConfirmationId) {
+                alert('예약 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            const url = `/api/package-reservations/${currentConfirmationId}/confirmation/view?historyIndex=${historyIndex}`;
+            window.open(url, '_blank');
         }
         
         async function copyConfirmationLink() {

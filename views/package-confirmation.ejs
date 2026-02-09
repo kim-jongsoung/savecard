@@ -152,6 +152,14 @@
             <div class="doc-title">확 정 서</div>
             <div class="doc-subtitle">럭스파인드 (LUXFIND)</div>
             <div class="doc-subtitle">예약번호: <strong><%= confirmation.reservation_number %></strong></div>
+            <% if (confirmation.is_history) { %>
+                <div style="margin-top: 4px;">
+                    <span class="badge badge-info">이력 #<%= confirmation.history_index %></span>
+                    <small style="font-size: 8pt; color: #666;">
+                        생성일시: <%= new Date(confirmation.history_created_at).toLocaleString('ko-KR') %>
+                    </small>
+                </div>
+            <% } %>
         </div>
 
         <!-- 기본 예약 정보 -->
