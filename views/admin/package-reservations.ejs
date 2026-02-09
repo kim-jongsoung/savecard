@@ -742,7 +742,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 // 공급업체 로드
-                const suppliersResponse = await fetch('/api/suppliers');
+                const suppliersResponse = await fetch('/api/package-vendors/suppliers');
                 const suppliersResult = await suppliersResponse.json();
                 if (suppliersResult.success) {
                     suppliers = suppliersResult.data;
