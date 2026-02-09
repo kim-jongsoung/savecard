@@ -74,10 +74,6 @@
                                 <label class="form-label">예약 채널</label>
                                 <select class="form-select" id="platformFilter">
                                     <option value="">전체</option>
-                                    <option value="VASCO">VASCO</option>
-                                    <option value="NOL">NOL</option>
-                                    <option value="롱혼스테이크">롱혼스테이크</option>
-                                    <option value="직접예약">직접예약</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -740,19 +736,52 @@
         let allReservations = [];
         let lastEditedReservationId = null;
         let suppliers = [];
+        let bookingChannels = [];
 
-        // 페이지 로드 시 공급업체 데이터 로드
+        // 페이지 로드 시 공급업체 및 예약채널 데이터 로드
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                const response = await fetch('/api/suppliers');
-                const result = await response.json();
-                if (result.success) {
-                    suppliers = result.data;
+                // 공급업체 로드
+                const suppliersResponse = await fetch('/api/suppliers');
+                const suppliersResult = await suppliersResponse.json();
+                if (suppliersResult.success) {
+                    suppliers = suppliersResult.data;
                 }
+                
+                // 예약채널 로드
+                await loadBookingChannels();
             } catch (error) {
-                console.error('공급업체 로드 실패:', error);
+                console.error('데이터 로드 실패:', error);
             }
         });
+
+        // 예약채널 로드
+        async function loadBookingChannels() {
+            try {
+                const response = await fetch('/api/package-vendors/channels?active_only=true');
+                const data = await response.json();
+                
+                if (data.success) {
+                    bookingChannels = data.data;
+                    updatePlatformFilterDropdown();
+                }
+            } catch (error) {
+                console.error('예약채널 로드 실패:', error);
+            }
+        }
+
+        // 예약채널 필터 드롭다운 업데이트
+        function updatePlatformFilterDropdown() {
+            const select = document.getElementById('platformFilter');
+            select.innerHTML = '<option value="">전체</option>';
+            
+            bookingChannels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.channel_name;
+                option.textContent = channel.channel_name;
+                select.appendChild(option);
+            });
+        }
 
         // 공급업체 드롭다운 업데이트 (유형별 필터링)
         function updateSupplierDropdown(selectElement, supplierType) {
