@@ -1043,53 +1043,54 @@ router.get('/:id/confirmation/view', async (req, res) => {
                 reservation_status: reservation.reservation_status,
                 platform_name: reservation.platform_name,
                 package_name: reservation.package_name,
-            
-            // 여행 기간
-            departure_date: reservation.travel_period?.departure_date,
-            return_date: reservation.travel_period?.return_date,
-            nights: reservation.travel_period?.nights || 0,
-            days: reservation.travel_period?.days || 0,
-            
-            // 항공편 정보
-            flight_info: reservation.flight_info || {},
-            
-            // 호텔 정보
-            hotel_name: reservation.hotel_name,
-            room_type: reservation.room_type,
-            
-            // 인원 정보
-            adult_count: adultCount,
-            child_count: childCount,
-            infant_count: infantCount,
-            
-            // 인원별 판매가
-            adult_price: adultPrice,
-            child_price: childPrice,
-            infant_price: infantPrice,
-            
-            // 금액 변동 사항
-            adjustments: reservation.pricing?.adjustments || [],
-            
-            // 총 판매가
-            total_amount: totalAmount,
-            
-            // 고객 정보
-            customer_name: reservation.customer?.korean_name || '',
-            english_name: reservation.customer?.english_name || '',
-            phone_number: reservation.customer?.phone || '',
-            email: reservation.customer?.email || '',
-            
-            // 투숙객 정보
-            guests: reservation.guests || [],
-            
-            // 일정 및 포함/불포함 사항
-            itinerary: reservation.itinerary,
-            inclusions: reservation.inclusions,
-            exclusions: reservation.exclusions,
-            
-            // 특별 요청사항
-            special_requests: reservation.special_requests
-        };
+                
+                // 여행 기간
+                departure_date: reservation.travel_period?.departure_date,
+                return_date: reservation.travel_period?.return_date,
+                nights: reservation.travel_period?.nights || 0,
+                days: reservation.travel_period?.days || 0,
+                
+                // 항공편 정보
+                flight_info: reservation.flight_info || {},
+                
+                // 호텔 정보
+                hotel_name: reservation.hotel_name,
+                room_type: reservation.room_type,
+                
+                // 인원 정보
+                adult_count: adultCount,
+                child_count: childCount,
+                infant_count: infantCount,
+                
+                // 인원별 판매가
+                adult_price: adultPrice,
+                child_price: childPrice,
+                infant_price: infantPrice,
+                
+                // 금액 변동 사항
+                adjustments: reservation.pricing?.adjustments || [],
+                
+                // 총 판매가
+                total_amount: totalAmount,
+                
+                // 고객 정보
+                customer_name: reservation.customer?.korean_name || '',
+                english_name: reservation.customer?.english_name || '',
+                phone_number: reservation.customer?.phone || '',
+                email: reservation.customer?.email || '',
+                
+                // 투숙객 정보
+                guests: reservation.guests || [],
+                
+                // 일정 및 포함/불포함 사항
+                itinerary: reservation.itinerary,
+                inclusions: reservation.inclusions,
+                exclusions: reservation.exclusions,
+                
+                // 특별 요청사항
+                special_requests: reservation.special_requests
+            };
+        }
 
         res.render('package-confirmation', {
             title: `확정서 - ${reservation.reservation_number}`,
