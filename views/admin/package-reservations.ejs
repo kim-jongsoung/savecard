@@ -739,6 +739,34 @@
     <script>
         let allReservations = [];
         let lastEditedReservationId = null;
+        let suppliers = [];
+
+        // 페이지 로드 시 공급업체 데이터 로드
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const response = await fetch('/api/suppliers');
+                const result = await response.json();
+                if (result.success) {
+                    suppliers = result.data;
+                }
+            } catch (error) {
+                console.error('공급업체 로드 실패:', error);
+            }
+        });
+
+        // 공급업체 드롭다운 업데이트 (유형별 필터링)
+        function updateSupplierDropdown(selectElement, supplierType) {
+            selectElement.innerHTML = '<option value="">선택하세요</option>';
+            
+            const filteredSuppliers = suppliers.filter(s => s.supplier_type === supplierType);
+            
+            filteredSuppliers.forEach(supplier => {
+                const option = document.createElement('option');
+                option.value = supplier.supplier_name;
+                option.textContent = supplier.supplier_name;
+                selectElement.appendChild(option);
+            });
+        }
 
         // 예약 목록 로드
         async function loadReservations() {
@@ -1381,12 +1409,13 @@
             if (components && components.length > 0) {
                 components.forEach(comp => {
                     editComponentCount++;
+                    const currentCount = editComponentCount;
                     const componentHTML = `
-                        <div class="card mb-2 component-item" id="edit-component-${editComponentCount}" style="background-color: #fff;">
+                        <div class="card mb-2 component-item" id="edit-component-${currentCount}" style="background-color: #fff;">
                             <div class="card-body p-2">
                                 <div class="row g-2">
                                     <div class="col-md-2">
-                                        <select class="form-select form-select-sm" id="edit-type-${editComponentCount}" onchange="calculateEditSummary()">
+                                        <select class="form-select form-select-sm" id="edit-type-${currentCount}" onchange="updateEditComponentVendor(${currentCount}); calculateEditSummary()">
                                             <option value="flight" ${comp.component_type === 'flight' ? 'selected' : ''}>✈️ 항공권</option>
                                             <option value="hotel" ${comp.component_type === 'hotel' ? 'selected' : ''}>🏨 호텔</option>
                                             <option value="tour" ${comp.component_type === 'tour' ? 'selected' : ''}>🎯 투어</option>
@@ -1395,10 +1424,12 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" id="edit-vendor-${editComponentCount}" value="${comp.vendor_name || ''}" placeholder="공급업체" onchange="calculateEditSummary()">
+                                        <select class="form-select form-select-sm" id="edit-vendor-${currentCount}" onchange="calculateEditSummary()">
+                                            <option value="">선택하세요</option>
+                                        </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" id="edit-cost-${editComponentCount}" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
+                                        <input type="text" class="form-control form-control-sm" id="edit-cost-${currentCount}" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
                                     </div>
                                     <div class="col-md-1">
                                         <select class="form-select form-select-sm" id="edit-cost-currency-${editComponentCount}" onchange="calculateEditSummary()">
@@ -1422,6 +1453,17 @@
                         </div>
                     `;
                     container.insertAdjacentHTML('beforeend', componentHTML);
+                    
+                    // 드롭다운 초기화 및 기존 값 설정
+                    const vendorSelect = document.getElementById(`edit-vendor-${currentCount}`);
+                    updateSupplierDropdown(vendorSelect, comp.component_type);
+                    
+                    // 기존 거래처 값 설정
+                    if (comp.vendor_name) {
+                        setTimeout(() => {
+                            vendorSelect.value = comp.vendor_name;
+                        }, 0);
+                    }
                 });
             }
         }
@@ -1525,7 +1567,7 @@
                     <div class="card-body p-2">
                         <div class="row g-2">
                             <div class="col-md-2">
-                                <select class="form-select form-select-sm" id="edit-type-${editComponentCount}" onchange="calculateEditSummary()">
+                                <select class="form-select form-select-sm" id="edit-type-${editComponentCount}" onchange="updateEditComponentVendor(${editComponentCount}); calculateEditSummary()">
                                     <option value="flight">✈️ 항공권</option>
                                     <option value="hotel">🏨 호텔</option>
                                     <option value="tour">🎯 투어</option>
@@ -1534,7 +1576,9 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" id="edit-vendor-${editComponentCount}" placeholder="공급업체" onchange="calculateEditSummary()">
+                                <select class="form-select form-select-sm" id="edit-vendor-${editComponentCount}" onchange="calculateEditSummary()">
+                                    <option value="">선택하세요</option>
+                                </select>
                             </div>
                             <div class="col-md-2">
                                 <input type="text" class="form-control form-control-sm" id="edit-cost-${editComponentCount}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
@@ -1561,6 +1605,20 @@
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', componentHTML);
+            
+            // 공급업체 드롭다운 초기화 (기본값: flight)
+            const vendorSelect = document.getElementById(`edit-vendor-${editComponentCount}`);
+            updateSupplierDropdown(vendorSelect, 'flight');
+        }
+        
+        // 구성요소 타입 변경 시 공급업체 드롭다운 업데이트
+        function updateEditComponentVendor(id) {
+            const typeSelect = document.getElementById(`edit-type-${id}`);
+            const vendorSelect = document.getElementById(`edit-vendor-${id}`);
+            const selectedType = typeSelect.value;
+            
+            // 유형에 맞는 공급업체 목록으로 업데이트
+            updateSupplierDropdown(vendorSelect, selectedType);
         }
         
         // 매입 구성요소 삭제
