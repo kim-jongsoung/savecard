@@ -1565,10 +1565,8 @@
                 
                 if (name && amount) {
                     priceAdjustments.push({
-                        name: name,
-                        type: type,
-                        amount: amount,
-                        notes: notes
+                        description: name,
+                        amount: type === 'subtract' ? -Math.abs(amount) : Math.abs(amount)
                     });
                 }
             });
@@ -1618,7 +1616,7 @@
                     total_selling_price: getNumericValue('total_selling_price'),
                     currency: document.getElementById('currency').value,
                     exchange_rate: getNumericValue('exchange_rate') || 1,
-                    price_adjustments: priceAdjustments
+                    adjustments: priceAdjustments
                 },
                 billings: billings,
                 cost_components: components,

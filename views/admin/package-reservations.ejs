@@ -1051,6 +1051,9 @@
                         document.getElementById('edit_price_child').value = (r.pricing.price_child || 0).toLocaleString();
                         document.getElementById('edit_price_infant').value = (r.pricing.price_infant || 0).toLocaleString();
                         document.getElementById('edit_total_selling_price').value = (r.pricing.total_selling_price || 0).toLocaleString();
+                        
+                        // 금액 변동 내역 불러오기
+                        renderEditPriceAdjustments(r.pricing.adjustments || []);
                     }
                     
                     // 결제 빌링
@@ -1560,6 +1563,58 @@
             }
         }
         
+        // 금액 변동 내역 렌더링 (수정 모달)
+        function renderEditPriceAdjustments(adjustments) {
+            const container = document.getElementById('edit_price_adjustments_container');
+            container.innerHTML = '';
+            editPriceAdjustmentCount = 0;
+            
+            if (adjustments && adjustments.length > 0) {
+                adjustments.forEach(adj => {
+                    editPriceAdjustmentCount++;
+                    const type = (adj.amount || 0) < 0 ? 'subtract' : 'add';
+                    const amount = Math.abs(adj.amount || 0);
+                    
+                    const adjustmentHTML = `
+                        <div class="card mb-2" id="edit_adjustment_${editPriceAdjustmentCount}" style="background-color: #fff3cd;">
+                            <div class="card-body p-2">
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm" 
+                                               id="edit_adjustment_name_${editPriceAdjustmentCount}" 
+                                               placeholder="항목명 (예: 조식 추가)"
+                                               value="${adj.description || ''}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <select class="form-select form-select-sm" 
+                                                id="edit_adjustment_type_${editPriceAdjustmentCount}" 
+                                                onchange="calculateEditTotalPrice()">
+                                            <option value="add" ${type === 'add' ? 'selected' : ''}>➕ 추가</option>
+                                            <option value="subtract" ${type === 'subtract' ? 'selected' : ''}>➖ 차감</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control form-control-sm" 
+                                               id="edit_adjustment_amount_${editPriceAdjustmentCount}" 
+                                               placeholder="금액"
+                                               value="${amount.toLocaleString()}"
+                                               oninput="formatEditNumber(this); calculateEditTotalPrice();">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-sm btn-danger w-100" 
+                                                onclick="document.getElementById('edit_adjustment_${editPriceAdjustmentCount}').remove(); calculateEditTotalPrice();">
+                                            <i class="fas fa-trash"></i> 삭제
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.insertAdjacentHTML('beforeend', adjustmentHTML);
+                });
+            }
+        }
+        
         // 금액 변동 추가 (수정 모달)
         function addEditPriceAdjustment() {
             editPriceAdjustmentCount++;
@@ -1896,7 +1951,7 @@
                     price_child: parseNumber(document.getElementById('edit_price_child').value),
                     price_infant: parseNumber(document.getElementById('edit_price_infant').value),
                     total_selling_price: parseNumber(document.getElementById('edit_total_selling_price').value),
-                    price_adjustments: (() => {
+                    adjustments: (() => {
                         const adjustments = [];
                         const adjustmentCards = document.querySelectorAll('#edit_price_adjustments_container .card');
                         adjustmentCards.forEach(card => {
@@ -1904,10 +1959,12 @@
                             const name = document.getElementById(`edit_adjustment_name_${id}`)?.value || '';
                             const type = document.getElementById(`edit_adjustment_type_${id}`)?.value || 'add';
                             const amount = parseNumber(document.getElementById(`edit_adjustment_amount_${id}`)?.value);
-                            const notes = document.getElementById(`edit_adjustment_notes_${id}`)?.value || '';
                             
                             if (name && amount) {
-                                adjustments.push({ name, type, amount, notes });
+                                adjustments.push({
+                                    description: name,
+                                    amount: type === 'subtract' ? -Math.abs(amount) : Math.abs(amount)
+                                });
                             }
                         });
                         return adjustments;
