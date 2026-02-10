@@ -1345,6 +1345,9 @@
             // 출발일 4일 지난 예약 필터링 (검색 중이 아닐 때만)
             const isSearching = currentSearch || currentStartDate || currentEndDate;
             
+            console.log('🔍 필터링 전 예약 수:', assignments.length);
+            console.log('🔍 검색 상태:', isSearching);
+            
             if (!isSearching) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -1353,6 +1356,11 @@
                 const fourDaysAgo = new Date(today);
                 fourDaysAgo.setDate(today.getDate() - 4);
                 
+                console.log('📅 오늘:', today.toISOString().split('T')[0]);
+                console.log('📅 4일 전:', fourDaysAgo.toISOString().split('T')[0]);
+                
+                const beforeCount = assignments.length;
+                
                 // 출발일이 4일 전보다 이전인 예약 제외
                 assignments = assignments.filter(reservation => {
                     if (!reservation.usage_date) return true; // 출발일 없으면 표시
@@ -1360,9 +1368,17 @@
                     const usageDate = new Date(reservation.usage_date);
                     usageDate.setHours(0, 0, 0, 0);
                     
+                    const show = usageDate >= fourDaysAgo;
+                    
+                    if (!show) {
+                        console.log('❌ 숨김:', reservation.reservation_number, '출발일:', usageDate.toISOString().split('T')[0]);
+                    }
+                    
                     // 출발일이 4일 전 날짜보다 같거나 이후면 표시
-                    return usageDate >= fourDaysAgo;
+                    return show;
                 });
+                
+                console.log('✅ 필터링 후 예약 수:', assignments.length, '(숨김:', beforeCount - assignments.length, '개)');
             }
             
             if (assignments.length === 0) {
