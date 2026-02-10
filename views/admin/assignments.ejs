@@ -1354,10 +1354,10 @@
                     if (!reservation.usage_date) return true; // 출발일 없으면 표시
                     const usageDate = new Date(reservation.usage_date);
                     usageDate.setHours(0, 0, 0, 0);
-                    return usageDate >= fourDaysAgo; // 4일 이내 예약만 표시
+                    return usageDate > fourDaysAgo; // 출발일이 4일 이전보다 나중이면 표시
                 });
                 
-                console.log('🔍 출발일 필터링 적용 - 4일 이내 예약만 표시');
+                console.log('🔍 출발일 필터링 적용 - 4일 지난 예약 숨김');
             }
             
             if (assignments.length === 0) {
