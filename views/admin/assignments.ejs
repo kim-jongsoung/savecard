@@ -1342,34 +1342,25 @@
             // 로딩 상태 숨기기
             loadingState.style.display = 'none';
             
-            // 출발일 4일 지난 예약 필터링 (검색 중이 아닐 때만)
+            // 출발 후 4일 경과한 예약 필터링 (검색 중이 아닐 때만)
             const isSearching = currentSearch || currentStartDate || currentEndDate;
-            console.log('🔍 검색 상태:', { isSearching, currentSearch, currentStartDate, currentEndDate });
-            console.log('📊 필터링 전 예약 수:', assignments.length);
             
             if (!isSearching) {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const fourDaysAgo = new Date(today);
-                fourDaysAgo.setDate(today.getDate() - 4);
                 
-                console.log('📅 오늘:', today.toLocaleDateString('ko-KR'));
-                console.log('📅 4일 전:', fourDaysAgo.toLocaleDateString('ko-KR'));
-                
-                const beforeFilter = assignments.length;
                 assignments = assignments.filter(reservation => {
-                    if (!reservation.usage_date) {
-                        console.log('✅ 출발일 없음 - 표시:', reservation.reservation_number);
-                        return true; // 출발일 없으면 표시
-                    }
+                    if (!reservation.usage_date) return true; // 출발일 없으면 표시
+                    
                     const usageDate = new Date(reservation.usage_date);
                     usageDate.setHours(0, 0, 0, 0);
-                    const show = usageDate > fourDaysAgo;
-                    console.log(show ? '✅' : '❌', '출발일:', usageDate.toLocaleDateString('ko-KR'), '예약번호:', reservation.reservation_number, '표시:', show);
-                    return show; // 출발일이 4일 이전보다 나중이면 표시
+                    
+                    // 출발일로부터 경과한 일수 계산
+                    const daysSinceDeparture = Math.floor((today - usageDate) / (1000 * 60 * 60 * 24));
+                    
+                    // 출발 후 4일 초과 경과한 예약만 숨김 (출발일 당일, 미래, 출발 후 1~4일은 표시)
+                    return daysSinceDeparture <= 4;
                 });
-                
-                console.log('🔍 출발일 필터링 적용 - 필터 전:', beforeFilter, '필터 후:', assignments.length);
             }
             
             if (assignments.length === 0) {
