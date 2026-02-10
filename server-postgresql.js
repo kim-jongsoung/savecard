@@ -12478,6 +12478,19 @@ app.get('/api/assignments', requireAuth, async (req, res) => {
             queryParams.push(`%${search}%`);
         }
         
+        // 출발일 4일 지난 예약 필터링 (검색/날짜필터 없을 때만)
+        if (!search && !dateType && !startDate && !endDate) {
+            // 오늘로부터 4일 전 날짜 계산
+            const fourDaysAgo = new Date();
+            fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+            const fourDaysAgoStr = fourDaysAgo.toISOString().split('T')[0];
+            
+            paramIndex++;
+            whereClause += ` AND (r.usage_date IS NULL OR r.usage_date >= $${paramIndex})`;
+            queryParams.push(fourDaysAgoStr);
+            console.log(`📅 출발일 필터: ${fourDaysAgoStr} 이후 예약만 표시 (4일 지난 예약 숨김)`);
+        }
+        
         // 총 개수 조회
         const countQuery = `
             SELECT COUNT(*) as total 
