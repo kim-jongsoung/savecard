@@ -282,6 +282,7 @@
             <th>DATE</th>
             <th>STATUS</th>
             <th>TIME</th>
+            <th>FLIGHT</th>
             <th>Pickup Loc</th>
             <th>PERSON</th>
             <th>DER</th>
@@ -290,7 +291,6 @@
             <th>NAME</th>
             <th>ENG NAME</th>
             <th>CONTACT</th>
-            <th>FLIGHT</th>
             <th>AGENCY</th>
             <th>PAY</th>
             <th>REQUEST</th>
@@ -496,6 +496,7 @@
           <td>${dateDisplay}</td>
           <td><span class="status-badge ${statusClass}">${statusText}</span></td>
           <td class="time-col">${timeDisplay.substring(0, 5)}</td>
+          <td>${flightNumber}</td>
           <td>${pickupLocation}</td>
           <td>${personDisplay}</td>
           <td>${rentalDuration}</td>
@@ -504,7 +505,6 @@
           <td>${pickup.customer_name || '-'}</td>
           <td>${pickup.english_name || '-'}</td>
           <td>${pickup.phone ? maskPhone(pickup.phone) : '-'}</td>
-          <td>${flightNumber}</td>
           <td>${agencyDisplay}</td>
           <td>${payDisplay}</td>
           <td>${requestDisplay}</td>

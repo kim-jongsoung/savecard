@@ -531,6 +531,7 @@
               <tr style="background: #6B8E23; color: white;">
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">DATE</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">TIME</th>
+                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">FLIGHT</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">Pickup Loc</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">PERSON</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">DER</th>
@@ -539,7 +540,6 @@
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">NAME</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">ENG NAME</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">CONTACT</th>
-                <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">FLIGHT</th>
                 <th style="padding: 8px 4px; text-align: left; white-space: nowrap; font-size: 10px;">REMARK</th>
               </tr>
             </thead>
@@ -547,6 +547,7 @@
               <tr>
                 <td style="padding: 4px;"><input type="date" id="manualDate" required style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
                 <td style="padding: 4px;"><input type="time" id="manualTime" required style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
+                <td style="padding: 4px;"><input type="text" id="manualFlight" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
                 <td style="padding: 4px;"><input type="text" id="manualHotel" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
                 <td style="padding: 4px;"><input type="number" id="manualPerson" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
                 <td style="padding: 4px;"><input type="text" id="manualDuration" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
@@ -555,7 +556,6 @@
                 <td style="padding: 4px;"><input type="text" id="manualName" required style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
                 <td style="padding: 4px;"><input type="text" id="manualEngName" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px; background: #e8f4f8;"></td>
                 <td style="padding: 4px;"><input type="text" id="manualPhone" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
-                <td style="padding: 4px;"><input type="text" id="manualFlight" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;"></td>
                 <td style="padding: 4px;">
                   <div style="display: flex; gap: 4px; align-items: center;">
                     <input type="text" id="manualRemark" style="flex: 1; padding: 4px; font-size: 11px; border: 1px solid #ddd; border-radius: 3px;">
@@ -1092,6 +1092,7 @@
             <th>DATE</th>
             <th>STATUS</th>
             <th>TIME</th>
+            <th>FLIGHT</th>
             <th>Pickup Loc</th>
             <th>PERSON</th>
             <th>DER</th>
@@ -1100,7 +1101,6 @@
             <th>NAME</th>
             <th>ENG NAME</th>
             <th>CONTACT</th>
-            <th>FLIGHT</th>
             <th>AGENCY</th>
             <th>PAY</th>
             <th>REQUEST</th>
@@ -1197,6 +1197,7 @@
             <span class="status-badge ${statusClass}">${statusText}</span>
           </td>
           <td class="time-col editable" data-field="actual_pickup_time">${timeDisplay.substring(0, 5)}</td>
+          <td>${flightNumber}</td>
           <td class="editable" data-field="hotel_name">${pickupLocation}</td>
           <td>${personDisplay}</td>
           <td class="editable" data-field="rental_duration">${rentalDuration}</td>
@@ -1205,7 +1206,6 @@
           <td class="editable" data-field="customer_name">${pickup.customer_name || '-'}</td>
           <td class="editable" data-field="english_name">${pickup.english_name || '-'}</td>
           <td class="editable" data-field="phone">${pickup.phone || '-'}</td>
-          <td>${flightNumber}</td>
           <td>${pickup.agency_name || (pickup.agency_id === null ? '고객직접예약' : '-')}</td>
           <td class="editable" data-field="payment_status">${pickup.payment_status || '-'}</td>
           <td>${pickup.special_request || '-'}</td>
@@ -1275,6 +1275,7 @@
                 <th>DATE</th>
                 <th>STATUS</th>
                 <th>TIME</th>
+                <th>FLIGHT</th>
                 <th>Pickup Loc</th>
                 <th>PERSON</th>
                 <th>DER</th>
@@ -1283,7 +1284,6 @@
                 <th>NAME</th>
                 <th>ENG NAME</th>
                 <th>CONTACT</th>
-                <th>FLIGHT</th>
                 <th>AGENCY</th>
                 <th>PAY</th>
                 <th>REQUEST</th>
@@ -1768,7 +1768,7 @@
       let csv = '\uFEFF'; // UTF-8 BOM for Excel
       
       // 헤더
-      csv += 'DATE,STATUS,TIME,HOTEL,PERSON,DER,VEHICLE,NUM,NAME,ENG NAME,CONTACT,FLIGHT,AGENCY,PAY,REQUEST,REMARK\n';
+      csv += 'DATE,STATUS,TIME,FLIGHT,HOTEL,PERSON,DER,VEHICLE,NUM,NAME,ENG NAME,CONTACT,AGENCY,PAY,REQUEST,REMARK\n';
       
       let totalRows = 0;
       
@@ -1789,15 +1789,15 @@
               dateTitle,                                                             // DATE
               cells[0]?.textContent.trim() || '',                                   // STATUS
               cells[1]?.textContent.trim() || '',                                   // TIME
-              cells[2]?.textContent.trim() || '',                                   // HOTEL
-              cells[3]?.textContent.trim() || '',                                   // PERSON
-              cells[4]?.textContent.trim() || '',                                   // DER
-              cells[5]?.textContent.replace(/✏️ Manual|System/g, '').trim() || '', // VEHICLE
-              cells[6]?.textContent.trim() || '',                                   // NUM
-              cells[7]?.textContent.trim() || '',                                   // NAME
-              cells[8]?.textContent.trim() || '',                                   // ENG NAME
-              cells[9]?.textContent.trim() || '',                                   // CONTACT
-              cells[10]?.textContent.trim() || '',                                  // FLIGHT
+              cells[2]?.textContent.trim() || '',                                   // FLIGHT
+              cells[3]?.textContent.trim() || '',                                   // HOTEL
+              cells[4]?.textContent.trim() || '',                                   // PERSON
+              cells[5]?.textContent.trim() || '',                                   // DER
+              cells[6]?.textContent.replace(/✏️ Manual|System/g, '').trim() || '', // VEHICLE
+              cells[7]?.textContent.trim() || '',                                   // NUM
+              cells[8]?.textContent.trim() || '',                                   // NAME
+              cells[9]?.textContent.trim() || '',                                   // ENG NAME
+              cells[10]?.textContent.trim() || '',                                  // CONTACT
               cells[11]?.textContent.trim() || '',                                  // AGENCY
               cells[12]?.textContent.trim() || '',                                  // PAY
               cells[13]?.textContent.trim() || '',                                  // REQUEST
