@@ -1342,6 +1342,29 @@
             // 로딩 상태 숨기기
             loadingState.style.display = 'none';
             
+            // 출발일 4일 지난 예약 필터링 (검색 중이 아닐 때만)
+            const isSearching = currentSearch || currentStartDate || currentEndDate;
+            
+            if (!isSearching) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // 오늘로부터 4일 전 날짜 계산
+                const fourDaysAgo = new Date(today);
+                fourDaysAgo.setDate(today.getDate() - 4);
+                
+                // 출발일이 4일 전보다 이전인 예약 제외
+                assignments = assignments.filter(reservation => {
+                    if (!reservation.usage_date) return true; // 출발일 없으면 표시
+                    
+                    const usageDate = new Date(reservation.usage_date);
+                    usageDate.setHours(0, 0, 0, 0);
+                    
+                    // 출발일이 4일 전 날짜보다 같거나 이후면 표시
+                    return usageDate >= fourDaysAgo;
+                });
+            }
+            
             if (assignments.length === 0) {
                 assignmentsList.style.display = 'none';
                 emptyState.style.display = 'block';
