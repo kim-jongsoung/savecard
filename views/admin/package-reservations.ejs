@@ -527,12 +527,12 @@
         </div>
     </div>
 
-    <!-- 정산관리 모달 -->
+    <!-- 입금관리 모달 -->
     <div class="modal fade" id="settlementModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title"><i class="fas fa-calculator me-2"></i>정산관리</h5>
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave me-2"></i>입금관리</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
@@ -594,52 +594,13 @@
                         </div>
                     </div>
 
-                    <!-- 매입 송금 관리 섹션 -->
-                    <div class="card mb-3">
-                        <div class="card-header" style="background-color: #fff3cd;">
-                            <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>매입 송금 관리 (송금해야 할 금액)</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div>
-                                    <strong>총 송금해야 할 금액:</strong> <span id="settle_total_cost" style="font-size: 1.2rem; font-weight: bold;"></span>
-                                </div>
-                                <div>
-                                    <button class="btn btn-sm btn-primary" onclick="bulkSendPayment()">
-                                        <i class="fas fa-check-double me-1"></i>선택 항목 일괄 송금완료
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 40px;">
-                                            <input type="checkbox" id="select_all_components" onchange="toggleAllComponents(this.checked)">
-                                        </th>
-                                        <th>구성요소</th>
-                                        <th>업체명</th>
-                                        <th>송금금액</th>
-                                        <th>송금일</th>
-                                        <th>상태</th>
-                                        <th>관리</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="settle_components_list">
-                                    <!-- 동적으로 생성 -->
-                                </tbody>
-                            </table>
-                            
-                            <div class="mt-2">
-                                <strong>송금 완료 금액:</strong> <span id="settle_sent_amount" class="text-success"></span> / 
-                                <strong>미송금 금액:</strong> <span id="settle_pending_cost" class="text-danger"></span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>닫기
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="sendToSettlementPage()" id="send_to_settlement_btn" style="display: none;">
+                        <i class="fas fa-arrow-right me-1"></i>정산관리 페이지로 전송
                     </button>
                 </div>
             </div>
@@ -3093,13 +3054,6 @@
                 // 입금 내역 렌더링
                 renderSettlementBillings(r.billings || [], totalAmount);
                 
-                // 총 송금해야 할 금액
-                const totalCost = r.settlement.total_cost_krw || 0;
-                document.getElementById('settle_total_cost').textContent = `₩${totalCost.toLocaleString()}`;
-                
-                // 매입 구성요소 렌더링
-                renderSettlementComponents(r.cost_components || []);
-                
                 // 모달 표시
                 const modal = new bootstrap.Modal(document.getElementById('settlementModal'));
                 modal.show();
@@ -3161,73 +3115,16 @@
             const pendingAmount = totalAmount - receivedAmount;
             document.getElementById('settle_received_amount').textContent = `₩${receivedAmount.toLocaleString()}`;
             document.getElementById('settle_pending_amount').textContent = `₩${pendingAmount.toLocaleString()}`;
+            
+            // 입금이 모두 완료되었는지 확인
+            const sendBtn = document.getElementById('send_to_settlement_btn');
+            if (pendingAmount === 0 && totalAmount > 0) {
+                sendBtn.style.display = 'inline-block';
+            } else {
+                sendBtn.style.display = 'none';
+            }
         }
         
-        // 매입 구성요소 렌더링
-        function renderSettlementComponents(components) {
-            const container = document.getElementById('settle_components_list');
-            container.innerHTML = '';
-            
-            let sentAmount = 0;
-            let pendingCost = 0;
-            
-            if (components.length === 0) {
-                container.innerHTML = '<tr><td colspan="7" class="text-center text-muted">등록된 매입 구성요소가 없습니다.</td></tr>';
-            } else {
-                components.forEach((comp, index) => {
-                    const typeIcon = comp.component_type === 'flight' ? '✈️' : 
-                                   comp.component_type === 'hotel' ? '🏨' : 
-                                   comp.component_type === 'tour' ? '🎯' : 
-                                   comp.component_type === 'ground' ? '🚗' : '📦';
-                    const typeName = comp.component_type === 'flight' ? '항공권' : 
-                                   comp.component_type === 'hotel' ? '호텔' : 
-                                   comp.component_type === 'tour' ? '투어' : 
-                                   comp.component_type === 'ground' ? '지상' : '기타';
-                    const hasSent = comp.payment_sent_date ? true : false;
-                    const statusBadge = hasSent 
-                        ? '<span class="badge bg-success">송금완료</span>' 
-                        : '<span class="badge bg-warning">미송금</span>';
-                    const dateStr = comp.payment_sent_date ? new Date(comp.payment_sent_date).toLocaleDateString('ko-KR') : '-';
-                    
-                    if (hasSent) {
-                        sentAmount += comp.cost_krw || 0;
-                    } else {
-                        pendingCost += comp.cost_krw || 0;
-                    }
-                    
-                    const row = `
-                        <tr>
-                            <td class="text-center">
-                                <input type="checkbox" class="component-checkbox" data-index="${index}" ${hasSent ? 'disabled' : ''}>
-                            </td>
-                            <td>${typeIcon} ${typeName}</td>
-                            <td>${comp.vendor_name}</td>
-                            <td class="text-end">₩${(comp.cost_krw || 0).toLocaleString()}</td>
-                            <td>
-                                <input type="date" class="form-control form-control-sm" 
-                                       value="${comp.payment_sent_date ? new Date(comp.payment_sent_date).toISOString().split('T')[0] : ''}" 
-                                       onchange="updateComponentSentDate(${index}, this.value)" 
-                                       ${hasSent ? 'readonly' : ''}>
-                            </td>
-                            <td>${statusBadge}</td>
-                            <td>
-                                ${!hasSent 
-                                    ? `<button class="btn btn-sm btn-primary" onclick="completeComponentPayment(${index})">
-                                        <i class="fas fa-paper-plane"></i> 송금완료
-                                       </button>` 
-                                    : `<button class="btn btn-sm btn-secondary" onclick="revertComponentPayment(${index})">
-                                        <i class="fas fa-undo"></i> 취소
-                                       </button>`}
-                            </td>
-                        </tr>
-                    `;
-                    container.insertAdjacentHTML('beforeend', row);
-                });
-            }
-            
-            document.getElementById('settle_sent_amount').textContent = `₩${sentAmount.toLocaleString()}`;
-            document.getElementById('settle_pending_cost').textContent = `₩${pendingCost.toLocaleString()}`;
-        }
         
         // 입금 날짜 업데이트
         function updateBillingDate(index, date) {
@@ -3308,150 +3205,23 @@
             }
         }
         
-        // 매입 송금일 업데이트
-        function updateComponentSentDate(index, date) {
-            console.log(`송금일 업데이트: ${index}, ${date}`);
-        }
-        
-        // 매입 송금 완료 처리
-        async function completeComponentPayment(index) {
-            const dateInput = document.querySelector(`input[onchange="updateComponentSentDate(${index}, this.value)"]`);
-            const sentDate = dateInput.value;
+        // 정산관리 페이지로 전송
+        async function sendToSettlementPage() {
+            const reservationId = document.getElementById('settlement_reservation_id').value;
             
-            if (!sentDate) {
-                alert('송금일을 먼저 입력해주세요.');
-                return;
-            }
-            
-            if (!confirm('송금 완료 처리하시겠습니까?')) return;
+            if (!confirm('입금이 완료된 이 예약을 정산관리 페이지로 전송하시겠습니까?')) return;
             
             try {
-                const reservationId = document.getElementById('settlement_reservation_id').value;
-                const response = await fetch(`/api/package-reservations/${reservationId}`);
-                const result = await response.json();
+                // TODO: 정산관리 페이지 API 구현 후 실제 전송 로직 추가
+                alert('정산관리 페이지가 아직 구현되지 않았습니다.\n\n다음 단계에서 정산관리 페이지를 만들고 연동하겠습니다.');
                 
-                if (!result.success) {
-                    alert('예약 정보를 불러오는데 실패했습니다.');
-                    return;
-                }
+                // 임시: 모달 닫기
+                const modal = bootstrap.Modal.getInstance(document.getElementById('settlementModal'));
+                modal.hide();
                 
-                const reservation = result.data;
-                reservation.cost_components[index].payment_sent_date = sentDate;
-                
-                const updateResponse = await fetch(`/api/package-reservations/${reservationId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cost_components: reservation.cost_components })
-                });
-                
-                const updateResult = await updateResponse.json();
-                
-                if (updateResult.success) {
-                    alert('송금 완료 처리되었습니다.');
-                    openSettlementModal(reservationId);
-                } else {
-                    alert('송금 완료 처리에 실패했습니다.');
-                }
             } catch (error) {
-                console.error('송금 완료 처리 실패:', error);
-                alert('송금 완료 처리 중 오류가 발생했습니다.');
-            }
-        }
-        
-        // 매입 송금 완료 취소
-        async function revertComponentPayment(index) {
-            if (!confirm('송금 완료를 취소하시겠습니까?')) return;
-            
-            try {
-                const reservationId = document.getElementById('settlement_reservation_id').value;
-                const response = await fetch(`/api/package-reservations/${reservationId}`);
-                const result = await response.json();
-                
-                if (!result.success) {
-                    alert('예약 정보를 불러오는데 실패했습니다.');
-                    return;
-                }
-                
-                const reservation = result.data;
-                reservation.cost_components[index].payment_sent_date = null;
-                
-                const updateResponse = await fetch(`/api/package-reservations/${reservationId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cost_components: reservation.cost_components })
-                });
-                
-                const updateResult = await updateResponse.json();
-                
-                if (updateResult.success) {
-                    alert('송금 완료가 취소되었습니다.');
-                    openSettlementModal(reservationId);
-                } else {
-                    alert('송금 완료 취소에 실패했습니다.');
-                }
-            } catch (error) {
-                console.error('송금 완료 취소 실패:', error);
-                alert('송금 완료 취소 중 오류가 발생했습니다.');
-            }
-        }
-        
-        // 전체 선택/해제
-        function toggleAllComponents(checked) {
-            document.querySelectorAll('.component-checkbox:not([disabled])').forEach(checkbox => {
-                checkbox.checked = checked;
-            });
-        }
-        
-        // 일괄 송금 완료
-        async function bulkSendPayment() {
-            const checkedBoxes = document.querySelectorAll('.component-checkbox:checked');
-            
-            if (checkedBoxes.length === 0) {
-                alert('송금 완료 처리할 항목을 선택해주세요.');
-                return;
-            }
-            
-            const today = new Date().toISOString().split('T')[0];
-            const sentDate = prompt('송금일을 입력하세요 (YYYY-MM-DD):', today);
-            
-            if (!sentDate) return;
-            
-            if (!confirm(`선택한 ${checkedBoxes.length}개 항목을 송금 완료 처리하시겠습니까?`)) return;
-            
-            try {
-                const reservationId = document.getElementById('settlement_reservation_id').value;
-                const response = await fetch(`/api/package-reservations/${reservationId}`);
-                const result = await response.json();
-                
-                if (!result.success) {
-                    alert('예약 정보를 불러오는데 실패했습니다.');
-                    return;
-                }
-                
-                const reservation = result.data;
-                
-                checkedBoxes.forEach(checkbox => {
-                    const index = parseInt(checkbox.dataset.index);
-                    reservation.cost_components[index].payment_sent_date = sentDate;
-                });
-                
-                const updateResponse = await fetch(`/api/package-reservations/${reservationId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cost_components: reservation.cost_components })
-                });
-                
-                const updateResult = await updateResponse.json();
-                
-                if (updateResult.success) {
-                    alert(`${checkedBoxes.length}개 항목이 송금 완료 처리되었습니다.`);
-                    openSettlementModal(reservationId);
-                } else {
-                    alert('일괄 송금 완료 처리에 실패했습니다.');
-                }
-            } catch (error) {
-                console.error('일괄 송금 완료 처리 실패:', error);
-                alert('일괄 송금 완료 처리 중 오류가 발생했습니다.');
+                console.error('정산관리 페이지 전송 실패:', error);
+                alert('정산관리 페이지로 전송 중 오류가 발생했습니다.');
             }
         }
 
