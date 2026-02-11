@@ -3209,15 +3209,15 @@
         async function sendToSettlementPage() {
             const reservationId = document.getElementById('settlement_reservation_id').value;
             
-            if (!confirm('입금이 완료된 이 예약을 정산관리 페이지로 전송하시겠습니까?')) return;
+            if (!confirm('입금이 완료된 이 예약을 정산관리 페이지로 전송하시겠습니까?\n\n정산관리 페이지에서 매입 송금을 관리할 수 있습니다.')) return;
             
             try {
-                // TODO: 정산관리 페이지 API 구현 후 실제 전송 로직 추가
-                alert('정산관리 페이지가 아직 구현되지 않았습니다.\n\n다음 단계에서 정산관리 페이지를 만들고 연동하겠습니다.');
-                
-                // 임시: 모달 닫기
+                // 모달 닫기
                 const modal = bootstrap.Modal.getInstance(document.getElementById('settlementModal'));
                 modal.hide();
+                
+                // 정산관리 페이지로 이동
+                window.location.href = '/admin/package-settlements';
                 
             } catch (error) {
                 console.error('정산관리 페이지 전송 실패:', error);

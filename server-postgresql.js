@@ -861,6 +861,16 @@ try {
     console.error('⚠️ 패키지 업체 관리 라우트 연결 실패:', error.message);
 }
 
+// 패키지 정산관리 라우트 연결
+try {
+    const packageSettlementsRouter = require('./routes/package-settlements');
+    app.use('/admin/package-settlements', packageSettlementsRouter);
+    app.use('/api/package-settlements', packageSettlementsRouter);
+    console.log('✅ 패키지 정산관리 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 패키지 정산관리 라우트 연결 실패:', error.message);
+}
+
 // 요금 RAG API 라우트 연결
 try {
     const pricingRouter = require('./routes/pricing')(pool);
