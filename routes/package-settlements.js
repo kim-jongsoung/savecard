@@ -19,7 +19,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // 정산 목록 API
-router.get('/api/list', requireAuth, async (req, res) => {
+router.get('/list', requireAuth, async (req, res) => {
     try {
         // 입금이 완료된 예약만 조회 (모든 billings의 status가 completed인 경우)
         const allReservations = await PackageReservation.find({

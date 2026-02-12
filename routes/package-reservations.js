@@ -72,9 +72,11 @@ router.get('/', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ 패키지 예약 목록 조회 실패:', error);
+        console.error('❌ 에러 스택:', error.stack);
         res.status(500).json({
             success: false,
-            message: '패키지 예약 목록 조회 중 오류가 발생했습니다.'
+            message: '패키지 예약 목록 조회 중 오류가 발생했습니다.',
+            error: error.message
         });
     }
 });
@@ -98,6 +100,7 @@ router.get('/:id', requireAuth, async (req, res) => {
         
     } catch (error) {
         console.error('❌ 패키지 예약 상세 조회 실패:', error);
+        console.error('❌ 에러 스택:', error.stack);
         res.status(500).json({
             success: false,
             message: '패키지 예약 상세 조회 중 오류가 발생했습니다.'

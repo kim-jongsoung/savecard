@@ -246,7 +246,7 @@
         // 정산 목록 로드
         async function loadSettlements() {
             try {
-                const response = await fetch('/api/package-settlements/api/list');
+                const response = await fetch('/api/package-settlements/list');
                 const result = await response.json();
                 
                 if (!result.success) {
