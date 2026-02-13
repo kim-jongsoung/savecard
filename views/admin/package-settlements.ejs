@@ -98,6 +98,60 @@
             </div>
         </div>
 
+        <!-- 통계 영역 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body">
+                        <h6><i class="fas fa-clock me-2"></i>송금전</h6>
+                        <h3 id="stat_pending_count">0</h3>
+                        <small>입금완료, 송금대기</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <h6><i class="fas fa-check-circle me-2"></i>송금완료</h6>
+                        <h3 id="stat_completed_count">0</h3>
+                        <small>정산완료</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <h6><i class="fas fa-money-bill-wave me-2"></i>미송금 총액</h6>
+                        <h3 id="stat_pending_amount">₩0</h3>
+                        <small>송금해야 할 금액</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <h6><i class="fas fa-paper-plane me-2"></i>송금완료 총액</h6>
+                        <h3 id="stat_completed_amount">₩0</h3>
+                        <small>이번 달 송금액</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 네비게이션 -->
+        <ul class="nav nav-tabs mb-3" id="settlementTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" onclick="currentTab='pending'; filterAndRender();">
+                    <i class="fas fa-clock me-2"></i>송금전 (<span id="pending_count">0</span>)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" onclick="currentTab='completed'; filterAndRender();">
+                    <i class="fas fa-check-circle me-2"></i>송금완료 (<span id="completed_count">0</span>)
+                </button>
+            </li>
+        </ul>
+
         <!-- 일괄 처리 버튼 -->
         <div class="card mb-3">
             <div class="card-body">
@@ -118,37 +172,24 @@
             </div>
         </div>
 
-        <!-- 정산 목록 테이블 -->
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th style="width: 40px;">
-                                    <input type="checkbox" id="select_all" onchange="toggleSelectAll(this.checked)">
-                                </th>
-                                <th>출발일</th>
-                                <th>채널</th>
-                                <th>예약번호</th>
-                                <th>고객명</th>
-                                <th>매입처</th>
-                                <th>구성요소</th>
-                                <th>매입액</th>
-                                <th>송금일</th>
-                                <th>상태</th>
-                            </tr>
-                        </thead>
-                        <tbody id="settlements_tbody">
-                            <tr>
-                                <td colspan="10" class="text-center py-5">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">로딩 중...</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <!-- 탭 컨텐츠 -->
+        <div class="tab-content" id="settlementTabContent">
+            <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                <div id="pending_list">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">로딩 중...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="completed" role="tabpanel">
+                <div id="completed_list">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">로딩 중...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -156,8 +197,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let allSettlements = [];
+        let allReservations = [];
         let selectedItems = new Set();
+        let currentTab = 'pending';
 
         // 정산 목록 로드
         async function loadSettlements() {
@@ -170,28 +212,19 @@
                     return;
                 }
                 
-                const { pending, completed } = result.data;
+                const { pending, completed, stats } = result.data;
                 
-                // 모든 예약을 평탄화하여 매입처별로 행 생성
-                allSettlements = [];
-                [...pending, ...completed].forEach(reservation => {
-                    const components = reservation.cost_components || [];
-                    components.forEach((component, index) => {
-                        allSettlements.push({
-                            reservation_id: reservation._id,
-                            component_index: index,
-                            departure_date: reservation.travel_period.departure_date,
-                            platform_name: reservation.platform_name,
-                            reservation_number: reservation.reservation_number,
-                            customer_name: reservation.customer.korean_name,
-                            vendor_name: component.vendor_name,
-                            component_type: component.component_type,
-                            cost_krw: component.cost_krw || 0,
-                            payment_sent_date: component.payment_sent_date,
-                            is_sent: !!component.payment_sent_date
-                        });
-                    });
-                });
+                // 통계 업데이트
+                document.getElementById('stat_pending_count').textContent = stats.pending_count;
+                document.getElementById('stat_completed_count').textContent = stats.completed_count;
+                document.getElementById('stat_pending_amount').textContent = `₩${stats.pending_amount.toLocaleString()}`;
+                document.getElementById('stat_completed_amount').textContent = `₩${stats.completed_amount.toLocaleString()}`;
+                
+                document.getElementById('pending_count').textContent = pending.length;
+                document.getElementById('completed_count').textContent = completed.length;
+                
+                // 예약 데이터 저장
+                allReservations = { pending, completed };
                 
                 // 채널 필터 옵션 업데이트
                 updatePlatformFilter();
@@ -207,7 +240,8 @@
 
         // 채널 필터 옵션 업데이트
         function updatePlatformFilter() {
-            const platforms = [...new Set(allSettlements.map(s => s.platform_name))];
+            const allItems = [...allReservations.pending, ...allReservations.completed];
+            const platforms = [...new Set(allItems.map(r => r.platform_name))];
             const select = document.getElementById('filter_platform');
             select.innerHTML = '<option value="">전체</option>' + 
                 platforms.map(p => `<option value="${p}">${p}</option>`).join('');
@@ -218,102 +252,166 @@
             const startDate = document.getElementById('filter_start_date').value;
             const endDate = document.getElementById('filter_end_date').value;
             const platform = document.getElementById('filter_platform').value;
-            const status = document.getElementById('filter_status').value;
             const search = document.getElementById('filter_search').value.toLowerCase();
 
-            let filtered = allSettlements.filter(item => {
+            // 현재 탭에 따라 데이터 선택
+            const items = currentTab === 'pending' ? allReservations.pending : allReservations.completed;
+
+            let filtered = items.filter(reservation => {
                 // 날짜 필터
-                if (startDate && new Date(item.departure_date) < new Date(startDate)) return false;
-                if (endDate && new Date(item.departure_date) > new Date(endDate)) return false;
+                if (startDate && new Date(reservation.travel_period.departure_date) < new Date(startDate)) return false;
+                if (endDate && new Date(reservation.travel_period.departure_date) > new Date(endDate)) return false;
                 
                 // 채널 필터
-                if (platform && item.platform_name !== platform) return false;
-                
-                // 상태 필터
-                if (status === 'pending' && item.is_sent) return false;
-                if (status === 'completed' && !item.is_sent) return false;
+                if (platform && reservation.platform_name !== platform) return false;
                 
                 // 검색
-                if (search && !item.reservation_number.toLowerCase().includes(search) && 
-                    !item.customer_name.toLowerCase().includes(search)) return false;
+                if (search && !reservation.reservation_number.toLowerCase().includes(search) && 
+                    !reservation.customer.korean_name.toLowerCase().includes(search)) return false;
                 
                 return true;
             });
 
-            renderSettlements(filtered);
+            renderReservations(filtered);
         }
 
-        // 정산 목록 렌더링
-        function renderSettlements(items) {
-            const tbody = document.getElementById('settlements_tbody');
+        // 예약 목록 렌더링 (예약별 그룹화)
+        function renderReservations(reservations) {
+            const container = currentTab === 'pending' ? document.getElementById('pending_list') : document.getElementById('completed_list');
             
-            if (items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-5">검색 결과가 없습니다.</td></tr>';
+            if (reservations.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-5">검색 결과가 없습니다.</div>';
                 return;
             }
 
-            tbody.innerHTML = items.map((item, idx) => {
-                const itemKey = `${item.reservation_id}_${item.component_index}`;
-                const isSelected = selectedItems.has(itemKey);
-                const isSent = item.is_sent;
-                const rowClass = isSent ? 'sent-row' : 'pending-row';
+            container.innerHTML = reservations.map(reservation => {
+                const components = reservation.cost_components || [];
+                const totalCost = components.reduce((sum, c) => sum + (c.cost_krw || 0), 0);
+                const sentCount = components.filter(c => c.payment_sent_date).length;
                 
-                const typeIcon = item.component_type === 'flight' ? '✈️' : 
-                               item.component_type === 'hotel' ? '🏨' : 
-                               item.component_type === 'tour' ? '🎯' : 
-                               item.component_type === 'ground' ? '🚗' : '📦';
-                const typeName = item.component_type === 'flight' ? '항공권' : 
-                               item.component_type === 'hotel' ? '호텔' : 
-                               item.component_type === 'tour' ? '투어' : 
-                               item.component_type === 'ground' ? '지상' : '기타';
-
                 return `
-                    <tr class="${rowClass} vendor-row">
-                        <td class="text-center">
-                            <input type="checkbox" 
-                                   data-item-key="${itemKey}"
-                                   ${isSent ? 'disabled' : ''}
-                                   ${isSelected ? 'checked' : ''}
-                                   onchange="toggleItemSelection('${itemKey}')">
-                        </td>
-                        <td>${new Date(item.departure_date).toLocaleDateString('ko-KR')}</td>
-                        <td>${item.platform_name}</td>
-                        <td>${item.reservation_number}</td>
-                        <td>${item.customer_name}</td>
-                        <td><strong>${item.vendor_name}</strong></td>
-                        <td>${typeIcon} ${typeName}</td>
-                        <td>
-                            <div class="editable-cell" 
-                                 onclick="editCost('${itemKey}', ${item.cost_krw})"
-                                 id="cost_${itemKey}">
-                                ₩${item.cost_krw.toLocaleString()}
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <strong>출발일:</strong> ${new Date(reservation.travel_period.departure_date).toLocaleDateString('ko-KR')}
+                                </div>
+                                <div class="col-md-2">
+                                    <strong>채널:</strong> ${reservation.platform_name}
+                                </div>
+                                <div class="col-md-2">
+                                    <strong>예약번호:</strong> ${reservation.reservation_number}
+                                </div>
+                                <div class="col-md-2">
+                                    <strong>고객명:</strong> ${reservation.customer.korean_name}
+                                </div>
+                                <div class="col-md-2">
+                                    <strong>총 매입액:</strong> <span class="text-primary">₩${totalCost.toLocaleString()}</span>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <span class="badge ${sentCount === components.length ? 'bg-success' : sentCount > 0 ? 'bg-warning' : 'bg-secondary'}">
+                                        ${sentCount}/${components.length} 송금완료
+                                    </span>
+                                </div>
                             </div>
-                        </td>
-                        <td>
-                            <input type="date" 
-                                   class="form-control form-control-sm" 
-                                   value="${item.payment_sent_date ? new Date(item.payment_sent_date).toISOString().split('T')[0] : ''}"
-                                   onchange="updateSentDate('${itemKey}', this.value)"
-                                   ${isSent ? 'readonly' : ''}>
-                        </td>
-                        <td>
-                            ${isSent 
-                                ? '<span class="badge bg-success">송금완료</span>' 
-                                : '<span class="badge bg-warning">미송금</span>'}
-                        </td>
-                    </tr>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;">
+                                            <input type="checkbox" onchange="toggleReservationAll('${reservation._id}', this.checked)">
+                                        </th>
+                                        <th>매입처</th>
+                                        <th>구성요소</th>
+                                        <th>매입액</th>
+                                        <th>송금일</th>
+                                        <th>상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${components.map((comp, idx) => {
+                                        const itemKey = `${reservation._id}_${idx}`;
+                                        const isSelected = selectedItems.has(itemKey);
+                                        const isSent = !!comp.payment_sent_date;
+                                        
+                                        const typeIcon = comp.component_type === 'flight' ? '✈️' : 
+                                                       comp.component_type === 'hotel' ? '🏨' : 
+                                                       comp.component_type === 'tour' ? '🎯' : 
+                                                       comp.component_type === 'ground' ? '🚗' : '📦';
+                                        const typeName = comp.component_type === 'flight' ? '항공권' : 
+                                                       comp.component_type === 'hotel' ? '호텔' : 
+                                                       comp.component_type === 'tour' ? '투어' : 
+                                                       comp.component_type === 'ground' ? '지상' : '기타';
+
+                                        return `
+                                            <tr class="${isSent ? 'sent-row' : 'pending-row'}">
+                                                <td class="text-center">
+                                                    <input type="checkbox" 
+                                                           class="vendor-checkbox"
+                                                           data-reservation-id="${reservation._id}"
+                                                           data-item-key="${itemKey}"
+                                                           ${isSent ? 'disabled' : ''}
+                                                           ${isSelected ? 'checked' : ''}
+                                                           onchange="toggleItemSelection('${itemKey}')">
+                                                </td>
+                                                <td><strong>${comp.vendor_name}</strong></td>
+                                                <td>${typeIcon} ${typeName}</td>
+                                                <td>
+                                                    <div class="editable-cell" 
+                                                         onclick="editCost('${itemKey}', ${comp.cost_krw || 0})"
+                                                         id="cost_${itemKey}">
+                                                        ₩${(comp.cost_krw || 0).toLocaleString()}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <input type="date" 
+                                                           class="form-control form-control-sm" 
+                                                           value="${comp.payment_sent_date ? new Date(comp.payment_sent_date).toISOString().split('T')[0] : ''}"
+                                                           onchange="updateSentDate('${itemKey}', this.value)"
+                                                           ${isSent ? 'readonly' : ''}>
+                                                </td>
+                                                <td>
+                                                    ${isSent 
+                                                        ? '<span class="badge bg-success">송금완료</span>' 
+                                                        : '<span class="badge bg-warning">미송금</span>'}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 `;
             }).join('');
 
             updateSelectionInfo();
         }
 
+        // 예약 전체 선택/해제
+        function toggleReservationAll(reservationId, checked) {
+            document.querySelectorAll(`input.vendor-checkbox[data-reservation-id="${reservationId}"]:not([disabled])`).forEach(checkbox => {
+                checkbox.checked = checked;
+                const itemKey = checkbox.dataset.itemKey;
+                if (checked) {
+                    selectedItems.add(itemKey);
+                } else {
+                    selectedItems.delete(itemKey);
+                }
+            });
+            updateSelectionInfo();
+        }
+
         // 매입액 인라인 편집
         function editCost(itemKey, currentCost) {
             const cell = document.getElementById(`cost_${itemKey}`);
-            const item = allSettlements.find(s => `${s.reservation_id}_${s.component_index}` === itemKey);
+            const [reservationId, componentIndex] = itemKey.split('_');
             
-            if (item.is_sent) {
+            // 송금 완료 여부 확인
+            const allItems = [...allReservations.pending, ...allReservations.completed];
+            const reservation = allItems.find(r => r._id === reservationId);
+            if (reservation && reservation.cost_components[parseInt(componentIndex)].payment_sent_date) {
                 alert('송금 완료된 항목은 수정할 수 없습니다.');
                 return;
             }
@@ -364,16 +462,8 @@
                 const updateResult = await updateResponse.json();
                 
                 if (updateResult.success) {
-                    // 로컬 데이터 업데이트
-                    const item = allSettlements.find(s => `${s.reservation_id}_${s.component_index}` === itemKey);
-                    item.cost_krw = newCost;
-                    
-                    // 셀 업데이트
-                    const cell = document.getElementById(`cost_${itemKey}`);
-                    cell.classList.remove('editing');
-                    cell.innerHTML = `₩${newCost.toLocaleString()}`;
-                    
                     alert('매입액이 수정되었습니다.');
+                    loadSettlements(); // 전체 새로고침
                 } else {
                     alert('매입액 수정에 실패했습니다.');
                     loadSettlements(); // 실패 시 새로고침
@@ -430,20 +520,9 @@
             updateSelectionInfo();
         }
 
-        // 전체 선택/해제
+        // 전체 선택/해제 (사용 안 함 - 예약별 체크박스 사용)
         function toggleSelectAll(checked) {
-            selectedItems.clear();
-            if (checked) {
-                document.querySelectorAll('input[data-item-key]:not([disabled])').forEach(checkbox => {
-                    selectedItems.add(checkbox.dataset.itemKey);
-                    checkbox.checked = true;
-                });
-            } else {
-                document.querySelectorAll('input[data-item-key]').forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-            }
-            updateSelectionInfo();
+            // 사용 안 함
         }
 
         // 선택 해제
@@ -461,9 +540,13 @@
             const count = selectedItems.size;
             let total = 0;
             
+            const allItems = [...allReservations.pending, ...allReservations.completed];
             selectedItems.forEach(itemKey => {
-                const item = allSettlements.find(s => `${s.reservation_id}_${s.component_index}` === itemKey);
-                if (item) total += item.cost_krw;
+                const [reservationId, componentIndex] = itemKey.split('_');
+                const reservation = allItems.find(r => r._id === reservationId);
+                if (reservation && reservation.cost_components[parseInt(componentIndex)]) {
+                    total += reservation.cost_components[parseInt(componentIndex)].cost_krw || 0;
+                }
             });
 
             document.getElementById('selected_count').textContent = count;
