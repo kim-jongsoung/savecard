@@ -40,6 +40,111 @@
         .pending-row {
             background-color: #fff3cd;
         }
+        
+        /* 정산서 인쇄 스타일 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #settlementDocument, #settlementDocument * {
+                visibility: visible;
+            }
+            #settlementDocument {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        .settlement-document {
+            background: white;
+            padding: 40px;
+            max-width: 210mm;
+            margin: 0 auto;
+        }
+        
+        .doc-header {
+            text-align: center;
+            border-bottom: 3px double #000;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .doc-title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .doc-number {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .doc-section {
+            margin-bottom: 30px;
+        }
+        
+        .doc-section-title {
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            margin-bottom: 15px;
+        }
+        
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .doc-table th,
+        .doc-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .doc-table th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        
+        .doc-table td.text-end {
+            text-align: right;
+        }
+        
+        .doc-summary {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .doc-summary-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .doc-footer {
+            margin-top: 50px;
+            text-align: right;
+        }
+        
+        .doc-stamp {
+            display: inline-block;
+            border: 2px solid #000;
+            padding: 20px 40px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -195,6 +300,29 @@
         </div>
     </div>
 
+    <!-- 정산서 미리보기 모달 -->
+    <div class="modal fade" id="settlementDocumentModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header no-print">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>정산서 (세무조사용)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="settlementDocument">
+                    <!-- 정산서 내용이 동적으로 생성됩니다 -->
+                </div>
+                <div class="modal-footer no-print">
+                    <button type="button" class="btn btn-primary" onclick="printSettlement()">
+                        <i class="fas fa-print me-1"></i>인쇄
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let allReservations = [];
@@ -312,6 +440,11 @@
                                     <span class="badge ${sentCount === components.length ? 'bg-success' : sentCount > 0 ? 'bg-warning' : 'bg-secondary'}">
                                         ${sentCount}/${components.length} 송금완료
                                     </span>
+                                    ${currentTab === 'completed' && sentCount === components.length ? `
+                                        <button class="btn btn-sm btn-outline-primary ms-2" onclick="openSettlementDocument('${reservation._id}')">
+                                            <i class="fas fa-file-invoice me-1"></i>정산서
+                                        </button>
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
@@ -607,6 +740,224 @@
             }
         }
 
+        // 정산서 열기
+        async function openSettlementDocument(reservationId) {
+            try {
+                const response = await fetch(`/api/package-reservations/${reservationId}`);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert('예약 정보를 불러오는데 실패했습니다.');
+                    return;
+                }
+                
+                const r = result.data;
+                
+                // 입금 내역 계산
+                const billings = r.billings || [];
+                const completedBillings = billings.filter(b => b.status === 'completed');
+                const totalReceived = completedBillings.reduce((sum, b) => sum + (b.amount || 0), 0);
+                
+                // 매입 내역 계산
+                const components = r.cost_components || [];
+                const totalCost = components.reduce((sum, c) => sum + (c.cost_krw || 0), 0);
+                
+                // 수익 계산
+                const profit = totalReceived - totalCost;
+                
+                // 부가세 계산 (수익의 10%)
+                const vat = Math.round(profit * 0.1);
+                
+                // 순수익 (수익 - 부가세)
+                const netProfit = profit - vat;
+                
+                // 정산서 HTML 생성
+                const documentHtml = `
+                    <div class="settlement-document">
+                        <div class="doc-header">
+                            <div class="doc-title">패키지 여행 정산서</div>
+                            <div class="doc-number">문서번호: PKG-${r.reservation_number}-${new Date().getFullYear()}</div>
+                            <div class="doc-number">발행일자: ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                        </div>
+                        
+                        <!-- 기본 정보 -->
+                        <div class="doc-section">
+                            <div class="doc-section-title">1. 예약 기본 정보</div>
+                            <table class="doc-table">
+                                <tr>
+                                    <th style="width: 150px;">예약번호</th>
+                                    <td>${r.reservation_number}</td>
+                                    <th style="width: 150px;">예약채널</th>
+                                    <td>${r.platform_name}</td>
+                                </tr>
+                                <tr>
+                                    <th>고객명</th>
+                                    <td>${r.customer.korean_name}</td>
+                                    <th>연락처</th>
+                                    <td>${r.customer.phone || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <th>출발일</th>
+                                    <td>${new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR')}</td>
+                                    <th>귀국일</th>
+                                    <td>${new Date(r.travel_period.return_date).toLocaleDateString('ko-KR')}</td>
+                                </tr>
+                                <tr>
+                                    <th>여행인원</th>
+                                    <td colspan="3">성인 ${r.traveler_count.adults}명, 소아 ${r.traveler_count.children}명, 유아 ${r.traveler_count.infants}명</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- 입금 내역 -->
+                        <div class="doc-section">
+                            <div class="doc-section-title">2. 입금 내역 (매출)</div>
+                            <table class="doc-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">번호</th>
+                                        <th>결제수단</th>
+                                        <th>입금일자</th>
+                                        <th style="width: 150px;" class="text-end">금액</th>
+                                        <th>비고</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${completedBillings.map((b, idx) => {
+                                        const typeIcon = b.type === 'cash' ? '💵' : b.type === 'card' ? '💳' : '🎁';
+                                        const typeName = b.type === 'cash' ? '현금' : b.type === 'card' ? '카드' : '할인';
+                                        return `
+                                            <tr>
+                                                <td class="text-center">${idx + 1}</td>
+                                                <td>${typeIcon} ${typeName}</td>
+                                                <td>${b.date ? new Date(b.date).toLocaleDateString('ko-KR') : '-'}</td>
+                                                <td class="text-end"><strong>₩${(b.amount || 0).toLocaleString()}</strong></td>
+                                                <td>${b.notes || '-'}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                    <tr style="background-color: #e9ecef;">
+                                        <td colspan="3" class="text-end"><strong>입금 총액 (매출액)</strong></td>
+                                        <td class="text-end"><strong style="font-size: 1.2em; color: #28a745;">₩${totalReceived.toLocaleString()}</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 매입 내역 -->
+                        <div class="doc-section">
+                            <div class="doc-section-title">3. 매입 내역 (원가)</div>
+                            <table class="doc-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">번호</th>
+                                        <th>구성요소</th>
+                                        <th>매입처</th>
+                                        <th>송금일자</th>
+                                        <th style="width: 150px;" class="text-end">매입액</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${components.map((c, idx) => {
+                                        const typeIcon = c.component_type === 'flight' ? '✈️' : 
+                                                       c.component_type === 'hotel' ? '🏨' : 
+                                                       c.component_type === 'tour' ? '🎯' : 
+                                                       c.component_type === 'ground' ? '🚗' : '📦';
+                                        const typeName = c.component_type === 'flight' ? '항공권' : 
+                                                       c.component_type === 'hotel' ? '호텔' : 
+                                                       c.component_type === 'tour' ? '투어' : 
+                                                       c.component_type === 'ground' ? '지상교통' : '기타';
+                                        return `
+                                            <tr>
+                                                <td class="text-center">${idx + 1}</td>
+                                                <td>${typeIcon} ${typeName}</td>
+                                                <td>${c.vendor_name}</td>
+                                                <td>${c.payment_sent_date ? new Date(c.payment_sent_date).toLocaleDateString('ko-KR') : '-'}</td>
+                                                <td class="text-end"><strong>₩${(c.cost_krw || 0).toLocaleString()}</strong></td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                    <tr style="background-color: #e9ecef;">
+                                        <td colspan="4" class="text-end"><strong>매입 총액 (원가)</strong></td>
+                                        <td class="text-end"><strong style="font-size: 1.2em; color: #dc3545;">₩${totalCost.toLocaleString()}</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 정산 요약 -->
+                        <div class="doc-summary">
+                            <div class="doc-summary-title">정산 요약</div>
+                            <table class="doc-table">
+                                <tr>
+                                    <th style="width: 200px;">항목</th>
+                                    <th class="text-end">금액</th>
+                                    <th style="width: 300px;">비고</th>
+                                </tr>
+                                <tr>
+                                    <td><strong>① 총 입금액 (매출)</strong></td>
+                                    <td class="text-end"><strong style="color: #28a745;">₩${totalReceived.toLocaleString()}</strong></td>
+                                    <td>고객으로부터 받은 총 금액</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>② 총 매입액 (원가)</strong></td>
+                                    <td class="text-end"><strong style="color: #dc3545;">₩${totalCost.toLocaleString()}</strong></td>
+                                    <td>매입처에 지급한 총 금액</td>
+                                </tr>
+                                <tr style="background-color: #fff;">
+                                    <td><strong>③ 총 수익 (① - ②)</strong></td>
+                                    <td class="text-end"><strong style="color: #007bff; font-size: 1.2em;">₩${profit.toLocaleString()}</strong></td>
+                                    <td>매출 - 원가</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>④ 부가가치세 (10%)</strong></td>
+                                    <td class="text-end"><strong style="color: #6c757d;">₩${vat.toLocaleString()}</strong></td>
+                                    <td>수익의 10% (국세청 신고용)</td>
+                                </tr>
+                                <tr style="background-color: #d4edda;">
+                                    <td><strong>⑤ 순수익 (③ - ④)</strong></td>
+                                    <td class="text-end"><strong style="color: #155724; font-size: 1.3em;">₩${netProfit.toLocaleString()}</strong></td>
+                                    <td>부가세 제외 실제 수익</td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- 문서 하단 -->
+                        <div class="doc-footer">
+                            <p style="margin-bottom: 30px;">위 내용은 사실과 다름없음을 확인합니다.</p>
+                            <p><strong>발행일자:</strong> ${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <div class="doc-stamp">
+                                <p style="margin: 0; font-size: 18px; font-weight: bold;">괌세이브카드</p>
+                                <p style="margin: 5px 0 0 0; font-size: 14px;">(직인 또는 서명)</p>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666;">
+                            <p><strong>※ 본 문서는 국세청 세무조사 시 제출용 정산서입니다.</strong></p>
+                            <p>- 모든 금액은 원화(KRW) 기준입니다.</p>
+                            <p>- 입금 및 송금 일자는 실제 거래 발생일 기준입니다.</p>
+                            <p>- 부가가치세는 수익의 10%로 계산되었습니다.</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('settlementDocument').innerHTML = documentHtml;
+                
+                const modal = new bootstrap.Modal(document.getElementById('settlementDocumentModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('정산서 생성 실패:', error);
+                alert('정산서를 생성하는 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 정산서 인쇄
+        function printSettlement() {
+            window.print();
+        }
+        
         // 페이지 로드 시 실행
         window.addEventListener('load', () => {
             loadSettlements();
