@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>패키지 정산관리 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .nav-tabs .nav-link {
+            color: #495057;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+        .settlement-card {
+            transition: all 0.3s;
+            cursor: pointer;
+            border-left: 4px solid #667eea;
+        }
+        .settlement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .badge-pending {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .badge-completed {
+            background-color: #28a745;
+            color: #fff;
+        }
+        .component-item {
+            border-left: 3px solid #17a2b8;
+            padding-left: 10px;
+            margin-bottom: 8px;
+        }
+        .stats-card {
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar', { currentPage: 'package-settlements', adminUsername: adminName || '관리자' }) %>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-calculator me-2"></i>패키지 정산관리</h2>
+                    <a href="/admin/package-reservations" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i>예약관리로 돌아가기
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 통계 영역 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card bg-warning text-dark">
+                    <h6><i class="fas fa-clock me-2"></i>매입전</h6>
+                    <h3 id="stat_pending_count">0</h3>
+                    <small>입금완료, 송금대기</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card bg-success text-white">
+                    <h6><i class="fas fa-check-circle me-2"></i>정산완료</h6>
+                    <h3 id="stat_completed_count">0</h3>
+                    <small>송금완료</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card bg-info text-white">
+                    <h6><i class="fas fa-money-bill-wave me-2"></i>미송금 총액</h6>
+                    <h3 id="stat_pending_amount">₩0</h3>
+                    <small>송금해야 할 금액</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card bg-primary text-white">
+                    <h6><i class="fas fa-paper-plane me-2"></i>송금완료 총액</h6>
+                    <h3 id="stat_completed_amount">₩0</h3>
+                    <small>이번 달 송금액</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 네비게이션 -->
+        <ul class="nav nav-tabs mb-3" id="settlementTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button">
+                    <i class="fas fa-clock me-2"></i>매입전 (<span id="pending_count">0</span>)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button">
+                    <i class="fas fa-check-circle me-2"></i>매입완료 (정산완료) (<span id="completed_count">0</span>)
+                </button>
+            </li>
+        </ul>
+
+        <!-- 탭 컨텐츠 -->
+        <div class="tab-content" id="settlementTabContent">
+            <!-- 매입전 탭 -->
+            <div class="tab-pane fade show active" id="pending" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="pending_list">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">로딩 중...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 매입완료 탭 -->
+            <div class="tab-pane fade" id="completed" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="completed_list">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">로딩 중...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 정산 상세 모달 -->
+    <div class="modal fade" id="settlementDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>정산 상세 및 송금 관리</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <input type="hidden" id="detail_reservation_id">
+                    
+                    <!-- 기본 예약 정보 -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>기본 예약 정보</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>출발일:</strong> <span id="detail_departure_date"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>예약채널:</strong> <span id="detail_platform_name"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>예약번호:</strong> <span id="detail_reservation_number"></span>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>고객명:</strong> <span id="detail_customer_name"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 입금 내역 (읽기 전용) -->
+                    <div class="card mb-3">
+                        <div class="card-header" style="background-color: #d1ecf1;">
+                            <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>입금 완료 내역</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-success mb-3">
+                                <strong>총 입금 완료 금액:</strong> <span id="detail_total_received" style="font-size: 1.2rem; font-weight: bold;"></span>
+                            </div>
+                            <div id="detail_billings_list"></div>
+                        </div>
+                    </div>
+
+                    <!-- 매입 송금 관리 -->
+                    <div class="card mb-3">
+                        <div class="card-header" style="background-color: #fff3cd;">
+                            <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>매입 송금 관리</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <strong>총 매입액:</strong> <span id="detail_total_cost" style="font-size: 1.2rem; font-weight: bold;"></span>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-primary" onclick="bulkCompletePayment()">
+                                        <i class="fas fa-check-double me-1"></i>선택 항목 일괄 송금완료
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40px;">
+                                            <input type="checkbox" id="select_all_items" onchange="toggleAllItems(this.checked)">
+                                        </th>
+                                        <th>구성요소</th>
+                                        <th>업체명</th>
+                                        <th>송금금액</th>
+                                        <th>송금일</th>
+                                        <th>상태</th>
+                                        <th>관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detail_components_list">
+                                    <!-- 동적으로 생성 -->
+                                </tbody>
+                            </table>
+                            
+                            <div class="mt-2">
+                                <strong>송금 완료 금액:</strong> <span id="detail_sent_amount" class="text-success"></span> / 
+                                <strong>미송금 금액:</strong> <span id="detail_pending_cost" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>닫기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 정산 목록 로드
+        async function loadSettlements() {
+            try {
+                const response = await fetch('/api/package-settlements/list');
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert('정산 목록을 불러오는데 실패했습니다.');
+                    return;
+                }
+                
+                const { pending, completed, stats } = result.data;
+                
+                // 통계 업데이트
+                document.getElementById('stat_pending_count').textContent = stats.pending_count;
+                document.getElementById('stat_completed_count').textContent = stats.completed_count;
+                document.getElementById('stat_pending_amount').textContent = `₩${stats.pending_amount.toLocaleString()}`;
+                document.getElementById('stat_completed_amount').textContent = `₩${stats.completed_amount.toLocaleString()}`;
+                
+                document.getElementById('pending_count').textContent = pending.length;
+                document.getElementById('completed_count').textContent = completed.length;
+                
+                // 목록 렌더링
+                renderPendingList(pending);
+                renderCompletedList(completed);
+                
+            } catch (error) {
+                console.error('정산 목록 로드 실패:', error);
+                alert('정산 목록을 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 매입전 목록 렌더링
+        function renderPendingList(items) {
+            const container = document.getElementById('pending_list');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-5">매입전 정산 건이 없습니다.</div>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="settlement-card card mb-3" onclick="openSettlementDetail('${item._id}')">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <strong>${new Date(item.travel_period.departure_date).toLocaleDateString('ko-KR')}</strong>
+                                <br><small class="text-muted">${item.platform_name}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <strong>${item.reservation_number}</strong>
+                                <br><small class="text-muted">${item.customer.korean_name}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">입금완료</small>
+                                <br><strong class="text-success">₩${(item.pricing.total_selling_price || 0).toLocaleString()}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">매입액 (미송금)</small>
+                                <br><strong class="text-danger">₩${(item.settlement.total_cost_krw || 0).toLocaleString()}</strong>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <span class="badge badge-pending">
+                                    <i class="fas fa-clock me-1"></i>송금대기
+                                </span>
+                                <br><small class="text-muted mt-1">${item.cost_components.length}개 구성요소</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 매입완료 목록 렌더링
+        function renderCompletedList(items) {
+            const container = document.getElementById('completed_list');
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-5">정산완료 건이 없습니다.</div>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => {
+                const allSent = item.cost_components.every(c => c.payment_sent_date);
+                return `
+                    <div class="settlement-card card mb-3" onclick="openSettlementDetail('${item._id}')">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <strong>${new Date(item.travel_period.departure_date).toLocaleDateString('ko-KR')}</strong>
+                                    <br><small class="text-muted">${item.platform_name}</small>
+                                </div>
+                                <div class="col-md-2">
+                                    <strong>${item.reservation_number}</strong>
+                                    <br><small class="text-muted">${item.customer.korean_name}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">입금완료</small>
+                                    <br><strong class="text-success">₩${(item.pricing.total_selling_price || 0).toLocaleString()}</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">매입액 (송금완료)</small>
+                                    <br><strong class="text-success">₩${(item.settlement.total_cost_krw || 0).toLocaleString()}</strong>
+                                </div>
+                                <div class="col-md-2 text-end">
+                                    <span class="badge badge-completed">
+                                        <i class="fas fa-check-circle me-1"></i>정산완료
+                                    </span>
+                                    <br><small class="text-muted mt-1">${item.cost_components.length}개 구성요소</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 정산 상세 모달 열기
+        async function openSettlementDetail(id) {
+            try {
+                const response = await fetch(`/api/package-reservations/${id}`);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert('정산 정보를 불러오는데 실패했습니다.');
+                    return;
+                }
+                
+                const r = result.data;
+                
+                // 기본 정보
+                document.getElementById('detail_reservation_id').value = r._id;
+                document.getElementById('detail_departure_date').textContent = new Date(r.travel_period.departure_date).toLocaleDateString('ko-KR');
+                document.getElementById('detail_platform_name').textContent = r.platform_name;
+                document.getElementById('detail_reservation_number').textContent = r.reservation_number;
+                document.getElementById('detail_customer_name').textContent = r.customer.korean_name;
+                
+                // 입금 내역
+                const totalReceived = (r.billings || [])
+                    .filter(b => b.status === 'completed')
+                    .reduce((sum, b) => sum + (b.amount || 0), 0);
+                document.getElementById('detail_total_received').textContent = `₩${totalReceived.toLocaleString()}`;
+                
+                const billingsHtml = (r.billings || [])
+                    .filter(b => b.status === 'completed')
+                    .map(b => {
+                        const typeIcon = b.type === 'cash' ? '💵' : b.type === 'card' ? '💳' : '🎁';
+                        const typeName = b.type === 'cash' ? '현금' : b.type === 'card' ? '카드' : '할인';
+                        return `
+                            <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                <span>${typeIcon} ${typeName}</span>
+                                <span><strong>₩${(b.amount || 0).toLocaleString()}</strong></span>
+                                <span class="text-muted">${b.date ? new Date(b.date).toLocaleDateString('ko-KR') : '-'}</span>
+                            </div>
+                        `;
+                    }).join('');
+                document.getElementById('detail_billings_list').innerHTML = billingsHtml || '<p class="text-muted">입금 내역이 없습니다.</p>';
+                
+                // 매입 구성요소
+                document.getElementById('detail_total_cost').textContent = `₩${(r.settlement.total_cost_krw || 0).toLocaleString()}`;
+                renderComponentsList(r.cost_components || []);
+                
+                // 모달 표시
+                const modal = new bootstrap.Modal(document.getElementById('settlementDetailModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('정산 상세 로드 실패:', error);
+                alert('정산 상세를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 매입 구성요소 렌더링
+        function renderComponentsList(components) {
+            const container = document.getElementById('detail_components_list');
+            
+            let sentAmount = 0;
+            let pendingCost = 0;
+            
+            if (components.length === 0) {
+                container.innerHTML = '<tr><td colspan="7" class="text-center text-muted">매입 구성요소가 없습니다.</td></tr>';
+                return;
+            }
+            
+            container.innerHTML = components.map((comp, index) => {
+                const typeIcon = comp.component_type === 'flight' ? '✈️' : 
+                               comp.component_type === 'hotel' ? '🏨' : 
+                               comp.component_type === 'tour' ? '🎯' : 
+                               comp.component_type === 'ground' ? '🚗' : '📦';
+                const typeName = comp.component_type === 'flight' ? '항공권' : 
+                               comp.component_type === 'hotel' ? '호텔' : 
+                               comp.component_type === 'tour' ? '투어' : 
+                               comp.component_type === 'ground' ? '지상' : '기타';
+                const hasSent = comp.payment_sent_date ? true : false;
+                const statusBadge = hasSent 
+                    ? '<span class="badge bg-success">송금완료</span>' 
+                    : '<span class="badge bg-warning">미송금</span>';
+                
+                if (hasSent) {
+                    sentAmount += comp.cost_krw || 0;
+                } else {
+                    pendingCost += comp.cost_krw || 0;
+                }
+                
+                return `
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox" class="item-checkbox" data-index="${index}" ${hasSent ? 'disabled' : ''}>
+                        </td>
+                        <td>${typeIcon} ${typeName}</td>
+                        <td>${comp.vendor_name}</td>
+                        <td class="text-end">₩${(comp.cost_krw || 0).toLocaleString()}</td>
+                        <td>
+                            <input type="date" class="form-control form-control-sm" 
+                                   value="${comp.payment_sent_date ? new Date(comp.payment_sent_date).toISOString().split('T')[0] : ''}" 
+                                   onchange="updateSentDate(${index}, this.value)" 
+                                   ${hasSent ? 'readonly' : ''}>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            ${!hasSent 
+                                ? `<button class="btn btn-sm btn-primary" onclick="completePayment(${index})">
+                                    <i class="fas fa-paper-plane"></i> 송금완료
+                                   </button>` 
+                                : `<button class="btn btn-sm btn-secondary" onclick="revertPayment(${index})">
+                                    <i class="fas fa-undo"></i> 취소
+                                   </button>`}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('detail_sent_amount').textContent = `₩${sentAmount.toLocaleString()}`;
+            document.getElementById('detail_pending_cost').textContent = `₩${pendingCost.toLocaleString()}`;
+        }
+        
+        // 송금일 업데이트
+        function updateSentDate(index, date) {
+            console.log(`송금일 업데이트: ${index}, ${date}`);
+        }
+        
+        // 개별 송금 완료
+        async function completePayment(index) {
+            const dateInput = document.querySelector(`input[onchange="updateSentDate(${index}, this.value)"]`);
+            const sentDate = dateInput.value;
+            
+            if (!sentDate) {
+                alert('송금일을 먼저 입력해주세요.');
+                return;
+            }
+            
+            if (!confirm('송금 완료 처리하시겠습니까?')) return;
+            
+            await updateComponentPayment([index], sentDate);
+        }
+        
+        // 송금 완료 취소
+        async function revertPayment(index) {
+            if (!confirm('송금 완료를 취소하시겠습니까?')) return;
+            
+            await updateComponentPayment([index], null);
+        }
+        
+        // 전체 선택/해제
+        function toggleAllItems(checked) {
+            document.querySelectorAll('.item-checkbox:not([disabled])').forEach(checkbox => {
+                checkbox.checked = checked;
+            });
+        }
+        
+        // 일괄 송금 완료
+        async function bulkCompletePayment() {
+            const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+            
+            if (checkedBoxes.length === 0) {
+                alert('송금 완료 처리할 항목을 선택해주세요.');
+                return;
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            const sentDate = prompt('송금일을 입력하세요 (YYYY-MM-DD):', today);
+            
+            if (!sentDate) return;
+            
+            if (!confirm(`선택한 ${checkedBoxes.length}개 항목을 송금 완료 처리하시겠습니까?`)) return;
+            
+            const indices = Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.index));
+            await updateComponentPayment(indices, sentDate);
+        }
+        
+        // 매입 구성요소 송금 상태 업데이트
+        async function updateComponentPayment(indices, sentDate) {
+            try {
+                const reservationId = document.getElementById('detail_reservation_id').value;
+                const response = await fetch(`/api/package-reservations/${reservationId}`);
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert('예약 정보를 불러오는데 실패했습니다.');
+                    return;
+                }
+                
+                const reservation = result.data;
+                
+                indices.forEach(index => {
+                    reservation.cost_components[index].payment_sent_date = sentDate;
+                });
+                
+                const updateResponse = await fetch(`/api/package-reservations/${reservationId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cost_components: reservation.cost_components })
+                });
+                
+                const updateResult = await updateResponse.json();
+                
+                if (updateResult.success) {
+                    alert(sentDate ? '송금 완료 처리되었습니다.' : '송금 완료가 취소되었습니다.');
+                    
+                    // 모달 닫기
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('settlementDetailModal'));
+                    modal.hide();
+                    
+                    // 목록 새로고침
+                    loadSettlements();
+                } else {
+                    alert('송금 상태 업데이트에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('송금 상태 업데이트 실패:', error);
+                alert('송금 상태 업데이트 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 페이지 로드 시 실행
+        window.addEventListener('load', () => {
+            loadSettlements();
+        });
+    </script>
+</body>
+</html>
