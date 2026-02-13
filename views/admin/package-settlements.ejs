@@ -804,7 +804,7 @@
                                 </tr>
                                 <tr>
                                     <th>여행인원</th>
-                                    <td colspan="3">성인 ${r.traveler_count.adults}명, 소아 ${r.traveler_count.children}명, 유아 ${r.traveler_count.infants}명</td>
+                                    <td colspan="3">성인 ${r.traveler_count?.adults || 0}명, 소아 ${r.traveler_count?.children || 0}명, 유아 ${r.traveler_count?.infants || 0}명</td>
                                 </tr>
                             </table>
                         </div>
