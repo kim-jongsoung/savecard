@@ -366,11 +366,39 @@
                         <span class="me-3">선택: <strong id="selected_count">0</strong>건</span>
                         <span class="me-3">총 매입액: <strong id="selected_total">₩0</strong></span>
                     </div>
-                    <div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <!-- 일괄선택 드롭다운 -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-check-square me-1"></i>일괄선택
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="selectByVendorFilter(); return false;">
+                                    <i class="fas fa-filter me-2 text-primary"></i>현재 검색결과 전체선택
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="selectByType('flight'); return false;">
+                                    <i class="me-2">✈️</i>항공권 전체선택
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="selectByType('hotel'); return false;">
+                                    <i class="me-2">🏨</i>호텔 전체선택
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="selectByType('tour'); return false;">
+                                    <i class="me-2">🎯</i>투어 전체선택
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" onclick="selectByType('ground'); return false;">
+                                    <i class="me-2">🚗</i>지상교통 전체선택
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" onclick="selectAllVisible(); return false;">
+                                    <i class="fas fa-check-double me-2 text-success"></i>화면 전체선택
+                                </a></li>
+                            </ul>
+                        </div>
                         <button class="btn btn-success" onclick="bulkSendPayment()">
                             <i class="fas fa-paper-plane me-1"></i>선택 항목 일괄 송금완료
                         </button>
-                        <button class="btn btn-outline-secondary ms-2" onclick="clearSelection()">
+                        <button class="btn btn-outline-secondary" onclick="clearSelection()">
                             <i class="fas fa-times me-1"></i>선택 해제
                         </button>
                     </div>
@@ -602,12 +630,14 @@
                                                        comp.component_type === 'tour' ? '투어' : 
                                                        comp.component_type === 'ground' ? '지상' : '기타';
 
-                                        // 매입처 검색 하이라이트
+                                        // 매입처 검색 하이라이트 및 숨김
                                         const isVendorMatch = vendorSearch && (
                                             (comp.vendor_name || '').toLowerCase().includes(vendorSearch) ||
                                             (comp.component_type || '').toLowerCase().includes(vendorSearch) ||
                                             typeName.includes(vendorSearch)
                                         );
+                                        // 검색어 있을 때 불일치 행 숨김
+                                        if (vendorSearch && !isVendorMatch) return '';
                                         const rowClass = isVendorMatch ? 'table-info' : (isSent ? 'sent-row' : 'pending-row');
 
                                         return `
@@ -774,6 +804,58 @@
                 console.error('송금일 업데이트 실패:', error);
                 alert('송금일 업데이트 중 오류가 발생했습니다.');
             }
+        }
+
+        // 현재 검색결과(필터_vendor 기준) 전체선택
+        function selectByVendorFilter() {
+            const vendorSearch = document.getElementById('filter_vendor').value.toLowerCase().trim();
+            document.querySelectorAll('input.vendor-checkbox:not([disabled])').forEach(cb => {
+                const itemKey = cb.dataset.itemKey;
+                const [reservationId, idx] = itemKey.split('_');
+                const allItems = [...allReservations.pending, ...allReservations.completed];
+                const reservation = allItems.find(r => r._id === reservationId);
+                if (!reservation) return;
+                const comp = reservation.cost_components[parseInt(idx)];
+                if (!comp) return;
+                const typeNames = { flight: '항공권', hotel: '호텔', tour: '투어', ground: '지상교통' };
+                const typeName = typeNames[comp.component_type] || '';
+                const matches = !vendorSearch || (
+                    (comp.vendor_name || '').toLowerCase().includes(vendorSearch) ||
+                    (comp.component_type || '').toLowerCase().includes(vendorSearch) ||
+                    typeName.includes(vendorSearch)
+                );
+                if (matches) {
+                    cb.checked = true;
+                    selectedItems.add(itemKey);
+                }
+            });
+            updateSelectionInfo();
+        }
+
+        // 구성요소 타입별 전체선택
+        function selectByType(type) {
+            const allItems = [...allReservations.pending, ...allReservations.completed];
+            document.querySelectorAll('input.vendor-checkbox:not([disabled])').forEach(cb => {
+                const itemKey = cb.dataset.itemKey;
+                const [reservationId, idx] = itemKey.split('_');
+                const reservation = allItems.find(r => r._id === reservationId);
+                if (!reservation) return;
+                const comp = reservation.cost_components[parseInt(idx)];
+                if (comp && comp.component_type === type) {
+                    cb.checked = true;
+                    selectedItems.add(itemKey);
+                }
+            });
+            updateSelectionInfo();
+        }
+
+        // 화면에 보이는 체크박스 전체선택
+        function selectAllVisible() {
+            document.querySelectorAll('input.vendor-checkbox:not([disabled])').forEach(cb => {
+                cb.checked = true;
+                selectedItems.add(cb.dataset.itemKey);
+            });
+            updateSelectionInfo();
         }
 
         // 항목 선택/해제
