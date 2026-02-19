@@ -664,12 +664,14 @@
                                                     <input type="date" 
                                                            class="form-control form-control-sm" 
                                                            value="${comp.payment_sent_date ? new Date(comp.payment_sent_date).toISOString().split('T')[0] : ''}"
-                                                           onchange="updateSentDate('${itemKey}', this.value)"
-                                                           ${isSent ? 'readonly' : ''}>
+                                                           onchange="updateSentDate('${itemKey}', this.value, ${isSent})">
                                                 </td>
                                                 <td>
                                                     ${isSent 
-                                                        ? '<span class="badge bg-success">송금완료</span>' 
+                                                        ? `<span class="badge bg-success">송금완료</span>
+                                                           <button class="btn btn-xs btn-outline-danger ms-1" style="font-size:11px;padding:1px 5px;" onclick="cancelPayment('${itemKey}')">
+                                                               <i class="fas fa-undo"></i> 취소
+                                                           </button>` 
                                                         : '<span class="badge bg-warning">미송금</span>'}
                                                 </td>
                                             </tr>
@@ -704,12 +706,18 @@
             const cell = document.getElementById(`cost_${itemKey}`);
             const [reservationId, componentIndex] = itemKey.split('_');
             
-            // 송금 완료 여부 확인
+            // 송금 완료 여부 확인 - 완료된 건도 수정 허용 (이력 기록)
             const allItems = [...allReservations.pending, ...allReservations.completed];
             const reservation = allItems.find(r => r._id === reservationId);
-            if (reservation && reservation.cost_components[parseInt(componentIndex)].payment_sent_date) {
-                alert('송금 완료된 항목은 수정할 수 없습니다.');
-                return;
+            const isSentItem = reservation && reservation.cost_components[parseInt(componentIndex)].payment_sent_date;
+            if (isSentItem) {
+                const reason = prompt('⚠️ 송금완료된 항목입니다.\n금액 변경 사유를 입력하세요:');
+                if (!reason || !reason.trim()) {
+                    alert('수정 사유를 입력해야 합니다.');
+                    return;
+                }
+                cell.dataset.changeReason = reason.trim();
+                cell.dataset.originalCost = currentCost;
             }
 
             cell.classList.add('editing');
@@ -724,10 +732,25 @@
             document.getElementById(`input_${itemKey}`).focus();
         }
 
+        // 변경이력 추가 헬퍼
+        function addChangeLog(component, type, before, after, reason) {
+            if (!component.change_logs) component.change_logs = [];
+            component.change_logs.push({
+                type,           // 'cost' | 'date' | 'cancel'
+                before: String(before),
+                after: String(after),
+                reason,
+                changed_at: new Date().toISOString()
+            });
+        }
+
         // 매입액 저장
         async function saveCost(itemKey) {
             const input = document.getElementById(`input_${itemKey}`);
             const newCost = parseInt(input.value) || 0;
+            const cell = document.getElementById(`cost_${itemKey}`);
+            const changeReason = cell?.dataset.changeReason || null;
+            const originalCost = parseInt(cell?.dataset.originalCost) || null;
             const [reservationId, componentIndex] = itemKey.split('_');
 
             try {
@@ -740,7 +763,15 @@
                 }
 
                 const reservation = result.data;
-                reservation.cost_components[parseInt(componentIndex)].cost_krw = newCost;
+                const comp = reservation.cost_components[parseInt(componentIndex)];
+                const prevCost = originalCost ?? comp.cost_krw ?? 0;
+
+                // 이력 기록 (사유가 있을 때 = 송금완료 건 수정)
+                if (changeReason) {
+                    addChangeLog(comp, 'cost', `₩${prevCost.toLocaleString()}`, `₩${newCost.toLocaleString()}`, changeReason);
+                }
+
+                comp.cost_krw = newCost;
 
                 // 총 매입액 재계산
                 const totalCost = reservation.cost_components.reduce((sum, c) => sum + (c.cost_krw || 0), 0);
@@ -758,11 +789,12 @@
                 const updateResult = await updateResponse.json();
                 
                 if (updateResult.success) {
-                    alert('매입액이 수정되었습니다.');
-                    loadSettlements(); // 전체 새로고침
+                    if (changeReason) alert(`✅ 금액이 수정되었습니다.\n변경이력이 기록되었습니다.`);
+                    else alert('매입액이 수정되었습니다.');
+                    loadSettlements();
                 } else {
                     alert('매입액 수정에 실패했습니다.');
-                    loadSettlements(); // 실패 시 새로고침
+                    loadSettlements();
                 }
             } catch (error) {
                 console.error('매입액 수정 실패:', error);
@@ -772,8 +804,19 @@
         }
 
         // 송금일 업데이트
-        async function updateSentDate(itemKey, date) {
+        async function updateSentDate(itemKey, date, isSentAlready) {
             const [reservationId, componentIndex] = itemKey.split('_');
+
+            let reason = null;
+            if (isSentAlready && date) {
+                reason = prompt('⚠️ 송금완료된 항목의 날짜를 변경합니다.\n변경 사유를 입력하세요:');
+                if (!reason || !reason.trim()) {
+                    alert('수정 사유를 입력해야 합니다.');
+                    loadSettlements();
+                    return;
+                }
+                reason = reason.trim();
+            }
 
             try {
                 const response = await fetch(`/api/package-reservations/${reservationId}`);
@@ -785,7 +828,15 @@
                 }
 
                 const reservation = result.data;
-                reservation.cost_components[parseInt(componentIndex)].payment_sent_date = date || null;
+                const comp = reservation.cost_components[parseInt(componentIndex)];
+                const prevDate = comp.payment_sent_date ? new Date(comp.payment_sent_date).toLocaleDateString('ko-KR') : '없음';
+
+                // 이력 기록
+                if (reason) {
+                    addChangeLog(comp, 'date', prevDate, date ? new Date(date).toLocaleDateString('ko-KR') : '없음', reason);
+                }
+
+                comp.payment_sent_date = date || null;
 
                 const updateResponse = await fetch(`/api/package-reservations/${reservationId}`, {
                     method: 'PUT',
@@ -796,13 +847,64 @@
                 const updateResult = await updateResponse.json();
                 
                 if (updateResult.success) {
-                    loadSettlements(); // 새로고침
+                    if (reason) alert('✅ 송금일이 수정되었습니다.\n변경이력이 기록되었습니다.');
+                    loadSettlements();
                 } else {
                     alert('송금일 업데이트에 실패했습니다.');
                 }
             } catch (error) {
                 console.error('송금일 업데이트 실패:', error);
                 alert('송금일 업데이트 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 송금 취소 (송금전으로 복귀)
+        async function cancelPayment(itemKey) {
+            const [reservationId, componentIndex] = itemKey.split('_');
+            const allItems = [...allReservations.pending, ...allReservations.completed];
+            const reservation = allItems.find(r => r._id === reservationId);
+            const comp = reservation?.cost_components[parseInt(componentIndex)];
+            const vendorName = comp?.vendor_name || '해당 항목';
+
+            const reason = prompt(`⚠️ [${vendorName}] 송금을 취소하고 송금전으로 되돌립니다.\n취소 사유를 입력하세요:`);
+            if (!reason || !reason.trim()) {
+                alert('취소 사유를 입력해야 합니다.');
+                return;
+            }
+
+            if (!confirm(`[${vendorName}] 송금취소 처리하시겠습니까?\n사유: ${reason.trim()}`)) return;
+
+            try {
+                const response = await fetch(`/api/package-reservations/${reservationId}`);
+                const result = await response.json();
+                if (!result.success) { alert('예약 정보를 불러오는데 실패했습니다.'); return; }
+
+                const resData = result.data;
+                const targetComp = resData.cost_components[parseInt(componentIndex)];
+                const prevDate = targetComp.payment_sent_date ? new Date(targetComp.payment_sent_date).toLocaleDateString('ko-KR') : '없음';
+
+                // 이력 기록
+                addChangeLog(targetComp, 'cancel', prevDate, '취소', reason.trim());
+
+                // 송금일 초기화
+                targetComp.payment_sent_date = null;
+
+                const updateResponse = await fetch(`/api/package-reservations/${reservationId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cost_components: resData.cost_components })
+                });
+
+                const updateResult = await updateResponse.json();
+                if (updateResult.success) {
+                    alert(`✅ 송금취소 완료\n[${vendorName}]이 송금전 탭으로 이동되었습니다.\n취소이력이 기록되었습니다.`);
+                    loadSettlements();
+                } else {
+                    alert('송금취소 처리에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('송금취소 실패:', error);
+                alert('송금취소 중 오류가 발생했습니다.');
             }
         }
 
@@ -1101,6 +1203,50 @@
                             </table>
                         </div>
                         
+                        <!-- 변경이력 (있을 경우에만 표시) -->
+                        ${(() => {
+                            const allLogs = components.flatMap((c, idx) => 
+                                (c.change_logs || []).map(log => ({
+                                    ...log,
+                                    vendor: c.vendor_name,
+                                    component_type: c.component_type
+                                }))
+                            );
+                            if (allLogs.length === 0) return '';
+                            const typeLabel = { cost: '금액변경', date: '날짜변경', cancel: '송금취소' };
+                            return `
+                            <div class="doc-section">
+                                <div class="doc-section-title" style="border-left-color: #dc3545;">4. 변경이력</div>
+                                <table class="doc-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:40px;">번호</th>
+                                            <th style="width:80px;">구분</th>
+                                            <th>매입처</th>
+                                            <th>변경전</th>
+                                            <th>변경후</th>
+                                            <th>사유</th>
+                                            <th style="width:120px;">변경일시</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${allLogs.map((log, i) => `
+                                            <tr style="background-color: #fff3cd;">
+                                                <td class="text-center">${i + 1}</td>
+                                                <td><span style="color:#dc3545;font-weight:bold;">${typeLabel[log.type] || log.type}</span></td>
+                                                <td>${log.vendor}</td>
+                                                <td>${log.before}</td>
+                                                <td>${log.after}</td>
+                                                <td>${log.reason}</td>
+                                                <td>${new Date(log.changed_at).toLocaleString('ko-KR')}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            `;
+                        })()}
+
                         <!-- 정산 요약 -->
                         <div class="doc-summary">
                             <div class="doc-summary-title">정산 요약</div>
