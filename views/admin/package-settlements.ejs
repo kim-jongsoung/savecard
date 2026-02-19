@@ -289,9 +289,15 @@
                         <input type="text" class="form-control" id="filter_search" placeholder="예약번호, 고객명">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">&nbsp;</label>
-                        <button class="btn btn-primary w-100" onclick="loadSettlements()">
+                        <label class="form-label">매입처 / 구성요소</label>
+                        <input type="text" class="form-control" id="filter_vendor" placeholder="매입처명, 항공권...">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end gap-2">
+                        <button class="btn btn-primary flex-grow-1" onclick="filterAndRender()">
                             <i class="fas fa-search me-1"></i>검색
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetFilters()" title="필터 초기화">
+                            <i class="fas fa-undo"></i>
                         </button>
                     </div>
                 </div>
@@ -470,12 +476,24 @@
                 platforms.map(p => `<option value="${p}">${p}</option>`).join('');
         }
 
+        // 필터 초기화
+        function resetFilters() {
+            document.getElementById('filter_start_date').value = '';
+            document.getElementById('filter_end_date').value = '';
+            document.getElementById('filter_platform').value = '';
+            document.getElementById('filter_status').value = 'all';
+            document.getElementById('filter_search').value = '';
+            document.getElementById('filter_vendor').value = '';
+            filterAndRender();
+        }
+
         // 필터링 및 렌더링
         function filterAndRender() {
             const startDate = document.getElementById('filter_start_date').value;
             const endDate = document.getElementById('filter_end_date').value;
             const platform = document.getElementById('filter_platform').value;
-            const search = document.getElementById('filter_search').value.toLowerCase();
+            const search = document.getElementById('filter_search').value.toLowerCase().trim();
+            const vendorSearch = document.getElementById('filter_vendor').value.toLowerCase().trim();
 
             // 현재 탭에 따라 데이터 선택
             const items = currentTab === 'pending' ? allReservations.pending : allReservations.completed;
@@ -485,21 +503,33 @@
                 if (startDate && new Date(reservation.travel_period.departure_date) < new Date(startDate)) return false;
                 if (endDate && new Date(reservation.travel_period.departure_date) > new Date(endDate)) return false;
                 
-                // 채널 필터
+                // 쉡널 필터
                 if (platform && reservation.platform_name !== platform) return false;
                 
-                // 검색
+                // 예약번호/고객명 검색
                 if (search && !reservation.reservation_number.toLowerCase().includes(search) && 
                     !reservation.customer.korean_name.toLowerCase().includes(search)) return false;
+                
+                // 매입처/구성요소 검색 - 해당 예약에 일치하는 매입처가 하나라도 있으면 포함
+                if (vendorSearch) {
+                    const components = reservation.cost_components || [];
+                    const typeNames = { flight: '항공권', hotel: '호텔', tour: '투어', ground: '지상교통' };
+                    const hasMatch = components.some(c =>
+                        (c.vendor_name || '').toLowerCase().includes(vendorSearch) ||
+                        (c.component_type || '').toLowerCase().includes(vendorSearch) ||
+                        (typeNames[c.component_type] || '').includes(vendorSearch)
+                    );
+                    if (!hasMatch) return false;
+                }
                 
                 return true;
             });
 
-            renderReservations(filtered);
+            renderReservations(filtered, vendorSearch);
         }
 
         // 예약 목록 렌더링 (예약별 그룹화)
-        function renderReservations(reservations) {
+        function renderReservations(reservations, vendorSearch = '') {
             const container = currentTab === 'pending' ? document.getElementById('pending_list') : document.getElementById('completed_list');
             
             if (reservations.length === 0) {
@@ -572,8 +602,16 @@
                                                        comp.component_type === 'tour' ? '투어' : 
                                                        comp.component_type === 'ground' ? '지상' : '기타';
 
+                                        // 매입처 검색 하이라이트
+                                        const isVendorMatch = vendorSearch && (
+                                            (comp.vendor_name || '').toLowerCase().includes(vendorSearch) ||
+                                            (comp.component_type || '').toLowerCase().includes(vendorSearch) ||
+                                            typeName.includes(vendorSearch)
+                                        );
+                                        const rowClass = isVendorMatch ? 'table-info' : (isSent ? 'sent-row' : 'pending-row');
+
                                         return `
-                                            <tr class="${isSent ? 'sent-row' : 'pending-row'}">
+                                            <tr class="${rowClass}" ${isVendorMatch ? 'style="outline: 2px solid #0d6efd;"' : ''}>
                                                 <td class="text-center">
                                                     <input type="checkbox" 
                                                            class="vendor-checkbox"
@@ -1043,6 +1081,13 @@
             window.print();
         }
         
+        // Enter 키 검색 이벤트
+        ['filter_search', 'filter_vendor'].forEach(id => {
+            document.getElementById(id)?.addEventListener('keydown', e => {
+                if (e.key === 'Enter') filterAndRender();
+            });
+        });
+
         // 페이지 로드 시 실행
         window.addEventListener('load', () => {
             loadSettlements();
