@@ -45,7 +45,7 @@
         @media print {
             @page {
                 size: A4;
-                margin: 10mm;
+                margin: 8mm;
             }
             
             body * {
@@ -65,46 +65,50 @@
             }
             
             .settlement-document {
-                padding: 5mm !important;
+                padding: 0 !important;
                 max-width: 100% !important;
             }
             
             .doc-header {
-                padding-bottom: 8px !important;
-                margin-bottom: 12px !important;
-                border-bottom: 2px solid #000 !important;
+                padding-bottom: 4px !important;
+                margin-bottom: 6px !important;
+                border-bottom: 1px solid #000 !important;
             }
             
             .doc-title {
-                font-size: 20px !important;
-                margin-bottom: 4px !important;
+                font-size: 16px !important;
+                margin-bottom: 2px !important;
+                line-height: 1.2 !important;
             }
             
             .doc-number {
-                font-size: 10px !important;
+                font-size: 8px !important;
+                line-height: 1.2 !important;
             }
             
             .doc-section {
-                margin-bottom: 12px !important;
+                margin-bottom: 6px !important;
             }
             
             .doc-section-title {
-                font-size: 13px !important;
-                padding: 4px 6px !important;
-                margin-bottom: 6px !important;
-                border-left: 3px solid #000 !important;
+                font-size: 11px !important;
+                padding: 2px 4px !important;
+                margin-bottom: 3px !important;
+                border-left: 2px solid #000 !important;
                 background-color: #f0f0f0 !important;
+                line-height: 1.2 !important;
             }
             
             .doc-table {
-                margin-bottom: 8px !important;
-                font-size: 10px !important;
+                margin-bottom: 4px !important;
+                font-size: 8px !important;
             }
             
             .doc-table th,
             .doc-table td {
-                padding: 3px 4px !important;
+                padding: 1px 2px !important;
                 border: 1px solid #000 !important;
+                line-height: 1.1 !important;
             }
             
             .doc-table th {
@@ -113,19 +117,29 @@
             
             .doc-summary {
                 background-color: #f0f0f0 !important;
-                border: 2px solid #000 !important;
-                padding: 8px !important;
-                margin-top: 12px !important;
+                border: 1px solid #000 !important;
+                padding: 4px !important;
+                margin-top: 6px !important;
             }
             
             .doc-summary-title {
-                font-size: 14px !important;
-                margin-bottom: 6px !important;
+                font-size: 11px !important;
+                margin-bottom: 3px !important;
+                line-height: 1.2 !important;
+            }
+            
+            .doc-summary .doc-table {
+                font-size: 8px !important;
             }
             
             .doc-footer {
-                margin-top: 12px !important;
-                font-size: 10px !important;
+                margin-top: 6px !important;
+                font-size: 8px !important;
+                line-height: 1.2 !important;
+            }
+            
+            .doc-footer p {
+                margin-bottom: 2px !important;
             }
             
             * {
