@@ -361,7 +361,7 @@
 
     async function loadPayrollData() {
         try {
-            const res = await fetch('/api/payroll/payroll/' + currentYear + '/' + currentMonth);
+            const res = await fetch('/api/payroll/records/' + currentYear + '/' + currentMonth);
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             payrollRecords = {};
@@ -519,11 +519,8 @@
         if (!selectedEmpId) return;
         try {
             const fd = getPayrollFormData();
-            const body = { employee_id: selectedEmpId, year: currentYear, month: currentMonth, ...fd };
-            const rec = payrollRecords[selectedEmpId];
-            const method = rec ? 'PUT' : 'POST';
-            const url = rec ? '/api/payroll/payroll/' + rec._id : '/api/payroll/payroll';
-            const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            const body = { employee_id: selectedEmpId, year: currentYear, month: currentMonth, overrides: fd };
+            const res = await fetch('/api/payroll/save', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             showAlert('저장 완료', 'success');
@@ -537,7 +534,7 @@
         if (!rec) { showAlert('먼저 저장하세요', 'warning'); return; }
         if (!confirm('급여를 확정하시겠습니까? 확정 후 수정이 제한됩니다.')) return;
         try {
-            const res = await fetch('/api/payroll/payroll/' + rec._id + '/confirm', { method: 'POST' });
+            const res = await fetch('/api/payroll/confirm/' + rec._id, { method: 'POST' });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             showAlert('확정 완료', 'success');
@@ -551,7 +548,7 @@
         if (!rec) return;
         if (!confirm('확정을 취소하시겠습니까?')) return;
         try {
-            const res = await fetch('/api/payroll/payroll/' + rec._id + '/unconfirm', { method: 'POST' });
+            const res = await fetch('/api/payroll/unconfirm/' + rec._id, { method: 'POST' });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             showAlert('확정 취소됨', 'info');
@@ -562,7 +559,7 @@
     async function generatePayroll() {
         if (!confirm(currentYear + '년 ' + currentMonth + '월 전직원 급여를 자동생성합니까?')) return;
         try {
-            const res = await fetch('/api/payroll/payroll/generate', {
+            const res = await fetch('/api/payroll/generate', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ year: currentYear, month: currentMonth })
@@ -577,7 +574,7 @@
     async function confirmAllPayroll() {
         if (!confirm(currentYear + '년 ' + currentMonth + '월 전체 확정하시겠습니까?')) return;
         try {
-            const res = await fetch('/api/payroll/payroll/confirm-all', {
+            const res = await fetch('/api/payroll/confirm-all', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ year: currentYear, month: currentMonth })
@@ -750,7 +747,7 @@
 
     async function openPayslipById(recId) {
         try {
-            const res = await fetch('/api/payroll/payroll/' + recId);
+            const res = await fetch('/api/payroll/record/' + recId);
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
             const r = data.data;

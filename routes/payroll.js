@@ -199,7 +199,7 @@ router.delete('/employees/:id', async (req, res) => {
 });
 
 // ==================== 4대보험 자동계산 미리보기 ====================
-router.post('/payroll/calculate', async (req, res) => {
+router.post('/calculate', async (req, res) => {
     try {
         const { employee_id, overrides } = req.body;
         const emp = await Employee.findById(employee_id);
@@ -214,7 +214,7 @@ router.post('/payroll/calculate', async (req, res) => {
 // ==================== 급여 기록 API ====================
 
 // 특정 월 급여 목록 조회
-router.get('/payroll/:year/:month', async (req, res) => {
+router.get('/records/:year/:month', async (req, res) => {
     try {
         const { year, month } = req.params;
         const records = await PayrollRecord.find({
@@ -228,7 +228,7 @@ router.get('/payroll/:year/:month', async (req, res) => {
 });
 
 // 직원별 급여이력 조회
-router.get('/payroll/history/:employee_id', async (req, res) => {
+router.get('/history/:employee_id', async (req, res) => {
     try {
         const records = await PayrollRecord.find({ employee_id: req.params.employee_id })
             .sort({ pay_year: -1, pay_month: -1 });
@@ -239,7 +239,7 @@ router.get('/payroll/history/:employee_id', async (req, res) => {
 });
 
 // 특정 월 급여 단건 조회
-router.get('/payroll/record/:id', async (req, res) => {
+router.get('/record/:id', async (req, res) => {
     try {
         const record = await PayrollRecord.findById(req.params.id).populate('employee_id');
         if (!record) return res.status(404).json({ success: false, error: '급여 기록을 찾을 수 없습니다.' });
@@ -250,7 +250,7 @@ router.get('/payroll/record/:id', async (req, res) => {
 });
 
 // 월 급여 일괄 생성 (해당 월 전체 직원 자동계산)
-router.post('/payroll/generate', async (req, res) => {
+router.post('/generate', async (req, res) => {
     try {
         const { year, month } = req.body;
         if (!year || !month) return res.status(400).json({ success: false, error: 'year, month 필수' });
@@ -293,7 +293,7 @@ router.post('/payroll/generate', async (req, res) => {
 });
 
 // 급여 기록 저장/수정 (수동 입력 포함)
-router.post('/payroll/save', async (req, res) => {
+router.post('/save', async (req, res) => {
     try {
         const { employee_id, year, month, overrides } = req.body;
         const emp = await Employee.findById(employee_id);
@@ -331,7 +331,7 @@ router.post('/payroll/save', async (req, res) => {
 });
 
 // 급여 확정 처리
-router.post('/payroll/confirm/:id', async (req, res) => {
+router.post('/confirm/:id', async (req, res) => {
     try {
         const record = await PayrollRecord.findByIdAndUpdate(req.params.id, { is_confirmed: true }, { new: true });
         if (!record) return res.status(404).json({ success: false, error: '급여 기록을 찾을 수 없습니다.' });
@@ -342,7 +342,7 @@ router.post('/payroll/confirm/:id', async (req, res) => {
 });
 
 // 급여 확정 취소
-router.post('/payroll/unconfirm/:id', async (req, res) => {
+router.post('/unconfirm/:id', async (req, res) => {
     try {
         const record = await PayrollRecord.findByIdAndUpdate(req.params.id, { is_confirmed: false }, { new: true });
         if (!record) return res.status(404).json({ success: false, error: '급여 기록을 찾을 수 없습니다.' });
@@ -353,7 +353,7 @@ router.post('/payroll/unconfirm/:id', async (req, res) => {
 });
 
 // 급여 기록 삭제 (미확정만)
-router.delete('/payroll/record/:id', async (req, res) => {
+router.delete('/record/:id', async (req, res) => {
     try {
         const record = await PayrollRecord.findById(req.params.id);
         if (!record) return res.status(404).json({ success: false, error: '급여 기록을 찾을 수 없습니다.' });
