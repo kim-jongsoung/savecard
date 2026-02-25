@@ -209,6 +209,91 @@ app.get('/run-migrations', async (req, res) => {
     }
 });
 
+// ==================== 직원 계정 관리 API ====================
+
+// admin_users 테이블 자동 생성
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                role VARCHAR(20) DEFAULT 'staff',
+                is_active BOOLEAN DEFAULT true,
+                last_login TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+    } catch (e) {
+        console.error('admin_users 테이블 생성 오류:', e.message);
+    }
+})();
+
+// 직원 목록 조회
+app.get('/api/admin-users', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, username, full_name, email, phone, role, is_active, last_login, created_at FROM admin_users ORDER BY id');
+        res.json({ success: true, data: rows });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// 직원 등록
+app.post('/api/admin-users', async (req, res) => {
+    try {
+        const { username, password, full_name, email, phone, role, is_active } = req.body;
+        if (!username || !password || !full_name) {
+            return res.status(400).json({ success: false, message: '아이디, 비밀번호, 이름은 필수입니다.' });
+        }
+        const { rows } = await pool.query(
+            `INSERT INTO admin_users (username, password, full_name, email, phone, role, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, username, full_name, role, is_active`,
+            [username, password, full_name, email || null, phone || null, role || 'staff', is_active !== false]
+        );
+        res.json({ success: true, message: '직원이 등록되었습니다.', data: rows[0] });
+    } catch (e) {
+        if (e.code === '23505') return res.status(400).json({ success: false, message: '이미 사용 중인 아이디입니다.' });
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// 직원 수정
+app.put('/api/admin-users/:id', async (req, res) => {
+    try {
+        const { username, password, full_name, email, phone, role, is_active } = req.body;
+        let query, params;
+        if (password) {
+            query = `UPDATE admin_users SET full_name=$1, email=$2, phone=$3, role=$4, is_active=$5, password=$6, updated_at=NOW() WHERE id=$7 RETURNING id, username, full_name, role, is_active`;
+            params = [full_name, email || null, phone || null, role || 'staff', is_active !== false, password, req.params.id];
+        } else {
+            query = `UPDATE admin_users SET full_name=$1, email=$2, phone=$3, role=$4, is_active=$5, updated_at=NOW() WHERE id=$6 RETURNING id, username, full_name, role, is_active`;
+            params = [full_name, email || null, phone || null, role || 'staff', is_active !== false, req.params.id];
+        }
+        const { rows } = await pool.query(query, params);
+        if (!rows.length) return res.status(404).json({ success: false, message: '직원을 찾을 수 없습니다.' });
+        res.json({ success: true, message: '직원 정보가 수정되었습니다.', data: rows[0] });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// 직원 삭제
+app.delete('/api/admin-users/:id', async (req, res) => {
+    try {
+        const { rows } = await pool.query('DELETE FROM admin_users WHERE id=$1 RETURNING id', [req.params.id]);
+        if (!rows.length) return res.status(404).json({ success: false, message: '직원을 찾을 수 없습니다.' });
+        res.json({ success: true, message: '직원이 삭제되었습니다.' });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // 404 에러 핸들링
 app.use((req, res) => {
     res.status(404).render('error', {
