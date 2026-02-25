@@ -20640,6 +20640,15 @@ try {
     console.error('급여 라우트 연결 오류:', e.message);
 }
 
+// ==================== 계좌 입출금 API 라우트 ====================
+try {
+    const bankRouter = require('./routes/bank');
+    app.use('/api/bank', bankRouter);
+    console.log('✅ 계좌 입출금 API 라우트 연결 완료');
+} catch (e) {
+    console.error('bank 라우트 연결 오류:', e.message);
+}
+
 // ==================== 직원 계정 관리 API ====================
 (async () => {
     try {

@@ -186,4 +186,19 @@ router.get('/payroll', requireAuth, (req, res) => {
     });
 });
 
+// 계좌 입출금 페이지
+router.get('/bank', requireAuth, (req, res) => {
+    const allowedUsers = ['luxfind01', 'kmtour'];
+    if (!allowedUsers.includes(req.session.adminUsername)) {
+        return res.status(403).render('admin/login', {
+            title: '접근 거부',
+            error: '접근 권한이 없습니다.'
+        });
+    }
+    res.render('admin/bank', {
+        title: '계좌 입출금',
+        adminUsername: req.session.adminUsername || 'admin'
+    });
+});
+
 module.exports = router;

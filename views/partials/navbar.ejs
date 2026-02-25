@@ -4,7 +4,7 @@ const savecardPages = ['savecard-dashboard', 'users', 'agencies', 'stores', 'usa
 const activityPages = ['dashboard', 'inbox', 'reservations', 'assignments', 'settlements', 'pricing', 'rag-manager', 'settings', 'pickup'];
 const hotelPages = ['hotel-inbox', 'hotel-assignments', 'hotel-settlements', 'hotels', 'room-types', 'room-inventory', 'season-calendar', 'season-rates', 'promotions', 'booking-agencies', 'agency-fees'];
 const packagePages = ['package-inbox', 'package-reservations', 'package-settlements'];
-const accountingPages = ['payroll', 'bank-transactions', 'integrated-settlement', 'vat-report', 'accounting-ledger'];
+const accountingPages = ['payroll', 'bank', 'bank-transactions', 'integrated-settlement', 'vat-report', 'accounting-ledger'];
 
 let currentErp = 'activity'; // 기본값: 즐길거리
 if (savecardPages.includes(currentPage)) currentErp = 'savecard';
@@ -100,7 +100,7 @@ else if (accountingPages.includes(currentPage)) currentErp = 'accounting';
             <div class="d-flex align-items-center" style="padding: 0.3rem 0;">
                 <ul class="navbar-nav flex-row">
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'payroll' ? 'active' : '' %>" href="/admin/payroll">급여명세서</a></li>
-                    <li class="nav-item"><a class="nav-link <%= currentPage === 'bank-transactions' ? 'active' : '' %>" href="/admin/bank-transactions">계좌입출금</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'bank' ? 'active' : '' %>" href="/admin/bank">계좌입출금</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'integrated-settlement' ? 'active' : '' %>" href="/admin/integrated-settlement">통합정산회계</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'vat-report' ? 'active' : '' %>" href="/admin/vat-report">부가세신고</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'accounting-ledger' ? 'active' : '' %>" href="/admin/accounting-ledger">회계장부(법인세)</a></li>
