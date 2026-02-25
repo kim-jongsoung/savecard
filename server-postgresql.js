@@ -20722,7 +20722,7 @@ app.get('/run-seed-employees', async (req, res) => {
         const Employee = require('./models/Employee');
         const employees = [
             { employee_number:'001', name:'김종성', position:'대표이사', department:'경영', is_ceo:true, base_salary:1450000, meal_allowance:100000, car_allowance:100000, other_allowance:0, reported_monthly_income:1450000, dependents:1 },
-            { employee_number:'002', name:'정광재', position:'사원', department:'영업', is_ceo:false, base_salary:2900000, meal_allowance:200000, car_allowance:200000, other_allowance:0, reported_monthly_income:2760000, dependents:2 }
+            { employee_number:'002', name:'정광재', position:'사원', department:'영업', is_ceo:false, base_salary:2900000, meal_allowance:200000, car_allowance:200000, other_allowance:0, reported_monthly_income:2760000, dependents:4 }
         ];
         const results = [];
         for (const empData of employees) {
