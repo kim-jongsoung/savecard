@@ -4,11 +4,13 @@ const savecardPages = ['savecard-dashboard', 'users', 'agencies', 'stores', 'usa
 const activityPages = ['dashboard', 'inbox', 'reservations', 'assignments', 'settlements', 'pricing', 'rag-manager', 'settings', 'pickup'];
 const hotelPages = ['hotel-inbox', 'hotel-assignments', 'hotel-settlements', 'hotels', 'room-types', 'room-inventory', 'season-calendar', 'season-rates', 'promotions', 'booking-agencies', 'agency-fees'];
 const packagePages = ['package-inbox', 'package-reservations', 'package-settlements'];
+const accountingPages = ['payroll', 'bank-transactions', 'integrated-settlement', 'vat-report', 'accounting-ledger'];
 
 let currentErp = 'activity'; // 기본값: 즐길거리
 if (savecardPages.includes(currentPage)) currentErp = 'savecard';
 else if (hotelPages.includes(currentPage)) currentErp = 'hotel';
 else if (packagePages.includes(currentPage)) currentErp = 'package';
+else if (accountingPages.includes(currentPage)) currentErp = 'accounting';
 %>
 
 <!-- 네비게이션 - 2단 탭 구조 -->
@@ -28,6 +30,7 @@ else if (packagePages.includes(currentPage)) currentErp = 'package';
                     <a href="/admin/dashboard" class="erp-tab <%= currentErp === 'activity' ? 'active' : '' %>" style="background: #c8e6c9; color: #2e7d32;">즐길거리 ERP</a>
                     <a href="/admin/hotel-inbox" class="erp-tab <%= currentErp === 'hotel' ? 'active' : '' %>" style="background: #ffe0b2; color: #e65100;">호텔예약 ERP</a>
                     <a href="/admin/package-inbox" class="erp-tab <%= currentErp === 'package' ? 'active' : '' %>" style="background: #f3e5f5; color: #6a1b9a;">패키지상품 ERP</a>
+                    <a href="/admin/payroll" class="erp-tab <%= currentErp === 'accounting' ? 'active' : '' %>" style="background: #fce4ec; color: #880e4f;">회계장부 ERP</a>
                 </div>
                 
                 <!-- 사용자 + 로그아웃 -->
@@ -89,6 +92,16 @@ else if (packagePages.includes(currentPage)) currentErp = 'package';
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'package-inbox' ? 'active' : '' %>" href="/admin/package-inbox">예약등록</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'package-reservations' ? 'active' : '' %>" href="/admin/package-reservations">예약관리</a></li>
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'package-settlements' ? 'active' : '' %>" href="/admin/package-settlements">정산관리</a></li>
+                </ul>
+            </div>
+            <% } else if (currentErp === 'accounting') { %>
+            <div class="d-flex align-items-center" style="padding: 0.3rem 0;">
+                <ul class="navbar-nav flex-row">
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'payroll' ? 'active' : '' %>" href="/admin/payroll">급여명세서</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'bank-transactions' ? 'active' : '' %>" href="/admin/bank-transactions">계좌입출금</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'integrated-settlement' ? 'active' : '' %>" href="/admin/integrated-settlement">통합정산회계</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'vat-report' ? 'active' : '' %>" href="/admin/vat-report">부가세신고</a></li>
+                    <li class="nav-item"><a class="nav-link <%= currentPage === 'accounting-ledger' ? 'active' : '' %>" href="/admin/accounting-ledger">회계장부(법인세)</a></li>
                 </ul>
             </div>
             <% } %>

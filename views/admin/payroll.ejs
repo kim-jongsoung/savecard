@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>급여명세서 - 괌세이브카드 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background: #f8f9fa; }
+        @media (min-width:1200px){ .container-fluid{ max-width:1400px!important; margin:0 auto; } }
+        .page-header{ background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; padding:20px 0; margin-bottom:24px; }
+        .section-card{ background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:20px; overflow:hidden; }
+        .section-header{ background:#f8f9fa; border-bottom:1px solid #e9ecef; padding:14px 20px; font-weight:600; font-size:.95rem; display:flex; align-items:center; gap:8px; }
+        .section-body{ padding:20px; }
+        .emp-card{ border:2px solid #e9ecef; border-radius:10px; padding:12px 14px; cursor:pointer; transition:all .2s; position:relative; margin-bottom:8px; }
+        .emp-card:hover{ border-color:#667eea; background:#f0f0ff; }
+        .emp-card.active{ border-color:#667eea; background:#ede9ff; }
+        .emp-card .emp-name{ font-weight:700; font-size:.95rem; }
+        .emp-card .emp-pos{ font-size:.78rem; color:#666; }
+        .ceo-badge{ background:#764ba2; color:white; font-size:.68rem; padding:2px 7px; border-radius:20px; }
+        .payroll-table{ width:100%; border-collapse:collapse; }
+        .payroll-table th{ background:#667eea; color:white; padding:9px 14px; font-size:.83rem; font-weight:600; text-align:left; white-space:nowrap; }
+        .payroll-table td{ padding:8px 14px; border-bottom:1px solid #f0f0f0; font-size:.875rem; vertical-align:middle; }
+        .payroll-table .amount{ text-align:right; font-family:monospace; }
+        .payroll-table .total-row td{ font-weight:700; background:#f8f9fa!important; border-top:2px solid #dee2e6; }
+        .payroll-table .net-row td{ font-weight:700; font-size:1rem; background:#e8f5e9!important; color:#2e7d32; }
+        .input-amt{ width:130px; text-align:right; font-size:.875rem; border:1px solid #ced4da; border-radius:4px; padding:4px 8px; }
+        .input-amt:focus{ border-color:#667eea; outline:none; box-shadow:0 0 0 2px rgba(102,126,234,.2); }
+        .stat-box{ background:white; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,.08); text-align:center; }
+        .stat-box .stat-label{ font-size:.8rem; color:#666; margin-bottom:4px; }
+        .stat-box .stat-value{ font-size:1.3rem; font-weight:700; }
+        .stat-box.blue .stat-value{ color:#667eea; }
+        .stat-box.red .stat-value{ color:#dc3545; }
+        .stat-box.green .stat-value{ color:#28a745; }
+        .stat-box.purple .stat-value{ color:#764ba2; }
+        .empty-state{ text-align:center; padding:40px; color:#aaa; }
+        .empty-state i{ font-size:2.5rem; margin-bottom:12px; opacity:.4; display:block; }
+        .month-btn{ border:1px solid #dee2e6; background:white; border-radius:6px; padding:5px 12px; font-size:.83rem; cursor:pointer; transition:all .15s; }
+        .month-btn:hover, .month-btn.active{ background:#667eea; color:white; border-color:#667eea; }
+        @media print{ .no-print{ display:none!important; } }
+    </style>
+</head>
+<body>
+<%- include('../partials/navbar', { currentPage: 'payroll', currentErp: 'accounting' }) %>
+
+<div class="page-header no-print">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h4 class="mb-1"><i class="fas fa-money-check-alt me-2"></i>급여명세서 관리</h4>
+                <small class="opacity-75">4대보험 자동계산 · 직원별 급여 관리</small>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-light btn-sm" id="btnAddEmp"><i class="fas fa-user-plus me-1"></i>직원 등록</button>
+                <button class="btn btn-warning btn-sm" id="btnGenerate"><i class="fas fa-magic me-1"></i>일괄 자동생성</button>
+                <button class="btn btn-success btn-sm" id="btnConfirmAll"><i class="fas fa-check-double me-1"></i>전체 확정</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid no-print">
+
+    <!-- 기간 선택 -->
+    <div class="section-card">
+        <div class="section-header"><i class="fas fa-calendar-alt" style="color:#667eea"></i> 급여 기간 선택</div>
+        <div class="section-body">
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <select id="selYear" class="form-select form-select-sm" style="width:100px"></select>
+                <span class="fw-bold">년</span>
+                <div id="monthBtns" class="d-flex gap-1 flex-wrap"></div>
+                <button class="btn btn-outline-secondary btn-sm" id="btnToday"><i class="fas fa-undo me-1"></i>이번 달</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 요약 통계 -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3"><div class="stat-box blue"><div class="stat-label">직원 수</div><div class="stat-value" id="statEmpCount">-</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box green"><div class="stat-label">총 지급액</div><div class="stat-value" id="statTotalGross">-</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box red"><div class="stat-label">총 공제액</div><div class="stat-value" id="statTotalDeduction">-</div></div></div>
+        <div class="col-6 col-md-3"><div class="stat-box purple"><div class="stat-label">총 실수령액</div><div class="stat-value" id="statTotalNet">-</div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <!-- 직원 목록 -->
+        <div class="col-12 col-md-3">
+            <div class="section-card">
+                <div class="section-header"><i class="fas fa-users" style="color:#667eea"></i> 직원 목록</div>
+                <div class="section-body p-2" id="empList">
+                    <div class="empty-state"><i class="fas fa-user-slash"></i>직원 없음</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 급여 상세 -->
+        <div class="col-12 col-md-9">
+            <div class="section-card">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-file-invoice-dollar" style="color:#667eea"></i> 급여 상세 입력</span>
+                    <span id="payrollStatusBadge"></span>
+                </div>
+                <div class="section-body" id="payrollDetail">
+                    <div class="empty-state">
+                        <i class="fas fa-hand-point-left"></i>
+                        <p>왼쪽에서 직원을 선택하세요</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 월별 급여 현황 테이블 -->
+    <div class="section-card">
+        <div class="section-header d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-table" style="color:#667eea"></i> 월별 급여 현황</span>
+            <button class="btn btn-outline-primary btn-sm" id="btnPrint"><i class="fas fa-print me-1"></i>인쇄</button>
+        </div>
+        <div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" style="font-size:.82rem">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>직원명</th><th>직급</th>
+                            <th class="text-end">기본급</th><th class="text-end">식대</th><th class="text-end">차량</th>
+                            <th class="text-end">총지급</th><th class="text-end">국민연금</th>
+                            <th class="text-end">건강보험</th><th class="text-end">장기요양</th>
+                            <th class="text-end">고용보험</th><th class="text-end">소득세</th>
+                            <th class="text-end">지방세</th><th class="text-end">공제합계</th>
+                            <th class="text-end">실수령액</th><th>상태</th><th>작업</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlyTable">
+                        <tr><td colspan="16" class="text-center py-4 text-muted">데이터 없음</td></tr>
+                    </tbody>
+                    <tfoot id="monthlyFoot"></tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /container -->
+
+<!-- ============ 직원 등록/수정 모달 ============ -->
+<div class="modal fade" id="empModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:white;">
+                <h5 class="modal-title"><i class="fas fa-user me-2"></i><span id="empModalTitle">직원 등록</span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="empId">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">사원번호 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="empNumber" placeholder="EMP001">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">성명 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="empName" placeholder="홍길동">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">직급</label>
+                        <input type="text" class="form-control" id="empPosition" placeholder="대리">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">부서</label>
+                        <input type="text" class="form-control" id="empDepartment" placeholder="영업팀">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">입사일</label>
+                        <input type="date" class="form-control" id="empHireDate">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">대표이사 여부</label>
+                        <div class="form-check mt-2">
+                            <input type="checkbox" class="form-check-input" id="empIsCeo">
+                            <label class="form-check-label" for="empIsCeo">대표이사 (CEO)</label>
+                        </div>
+                    </div>
+                    <div class="col-12"><hr class="my-1"><small class="text-muted fw-bold">기본 급여 항목</small></div>
+                    <div class="col-md-3">
+                        <label class="form-label">기본급</label>
+                        <input type="number" class="form-control" id="empBaseSalary" placeholder="3000000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">식대</label>
+                        <input type="number" class="form-control" id="empMealAllowance" placeholder="200000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">자가운전보조금</label>
+                        <input type="number" class="form-control" id="empCarAllowance" placeholder="200000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">기타수당</label>
+                        <input type="number" class="form-control" id="empOtherAllowance" placeholder="0">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">신고소득월액 <small class="text-muted">(4대보험 산정기준, CEO 적용)</small></label>
+                        <input type="number" class="form-control" id="empReportedIncome" placeholder="비워두면 기본급 기준">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">비고</label>
+                        <input type="text" class="form-control" id="empNotes" placeholder="">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <button type="button" class="btn btn-danger d-none" id="btnDeleteEmp">퇴사 처리</button>
+                <button type="button" class="btn btn-primary" id="btnSaveEmp">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 급여명세서 인쇄 모달 ============ -->
+<div class="modal fade" id="payslipModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-alt me-2"></i>급여명세서</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="payslipContent"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary" id="btnPrintSlip"><i class="fas fa-print me-1"></i>인쇄</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    let allEmployees = [];
+    let payrollRecords = {};
+    let selectedEmpId = null;
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth() + 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initYearSelect();
+        initMonthBtns();
+        loadEmployees();
+        document.getElementById('btnToday').addEventListener('click', goToday);
+        document.getElementById('btnAddEmp').addEventListener('click', openAddEmp);
+        document.getElementById('btnGenerate').addEventListener('click', generatePayroll);
+        document.getElementById('btnConfirmAll').addEventListener('click', confirmAllPayroll);
+        document.getElementById('btnSaveEmp').addEventListener('click', saveEmployee);
+        document.getElementById('btnDeleteEmp').addEventListener('click', deleteEmployee);
+        document.getElementById('btnPrint').addEventListener('click', () => window.print());
+        document.getElementById('btnPrintSlip').addEventListener('click', () => {
+            const content = document.getElementById('payslipContent').innerHTML;
+            const w = window.open('', '_blank');
+            w.document.write('<html><head><title>급여명세서</title><style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px}th{background:#f0f0f0}</style></head><body>' + content + '</body></html>');
+            w.document.close(); w.print();
+        });
+    });
+
+    function initYearSelect() {
+        const sel = document.getElementById('selYear');
+        for (let y = currentYear + 1; y >= 2023; y--) {
+            const opt = document.createElement('option');
+            opt.value = y; opt.textContent = y;
+            if (y === currentYear) opt.selected = true;
+            sel.appendChild(opt);
+        }
+        sel.addEventListener('change', () => { currentYear = parseInt(sel.value); loadPayrollData(); });
+    }
+
+    function initMonthBtns() {
+        const container = document.getElementById('monthBtns');
+        for (let m = 1; m <= 12; m++) {
+            const btn = document.createElement('button');
+            btn.className = 'month-btn' + (m === currentMonth ? ' active' : '');
+            btn.textContent = m + '월';
+            btn.dataset.month = m;
+            btn.addEventListener('click', () => { currentMonth = m; updateMonthBtns(); loadPayrollData(); });
+            container.appendChild(btn);
+        }
+    }
+
+    function updateMonthBtns() {
+        document.querySelectorAll('.month-btn').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.month) === currentMonth);
+        });
+    }
+
+    function goToday() {
+        const now = new Date();
+        currentYear = now.getFullYear();
+        currentMonth = now.getMonth() + 1;
+        document.getElementById('selYear').value = currentYear;
+        updateMonthBtns();
+        loadPayrollData();
+    }
+
+    function fmt(n) {
+        if (n == null || isNaN(n)) return '0';
+        return Math.round(n).toLocaleString('ko-KR');
+    }
+
+    function showAlert(msg, type) {
+        const div = document.createElement('div');
+        div.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
+        div.style.cssText = 'top:80px;right:20px;z-index:9999;min-width:280px';
+        div.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 3500);
+    }
+
+    async function loadEmployees() {
+        try {
+            const res = await fetch('/api/payroll/employees');
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            allEmployees = data.data;
+            renderEmpList();
+            loadPayrollData();
+        } catch (e) { showAlert('직원 목록 로드 실패: ' + e.message, 'danger'); }
+    }
+
+    function renderEmpList() {
+        const el = document.getElementById('empList');
+        if (!allEmployees.length) {
+            el.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i>직원 없음<br><small>직원 등록 버튼으로 추가하세요</small></div>';
+            return;
+        }
+        el.innerHTML = allEmployees.map(emp => {
+            const rec = payrollRecords[emp._id];
+            const statusHtml = rec
+                ? (rec.is_confirmed ? '<span style="color:#28a745;font-size:.72rem">● 확정</span>' : '<span style="color:#ffc107;font-size:.72rem">● 임시저장</span>')
+                : '<span style="color:#ccc;font-size:.72rem">● 미생성</span>';
+            return `<div class="emp-card ${selectedEmpId === emp._id ? 'active' : ''}" data-id="${emp._id}">
+                ${emp.is_ceo ? '<span class="ceo-badge">CEO</span>' : ''}
+                <div class="emp-name">${emp.name}</div>
+                <div class="emp-pos">${emp.position || ''}${emp.department ? ' · ' + emp.department : ''}</div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                    ${statusHtml}
+                    <button class="btn btn-link btn-sm p-0" style="font-size:.72rem;color:#667eea" data-edit-emp="${emp._id}">수정</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        el.querySelectorAll('.emp-card').forEach(card => {
+            card.addEventListener('click', e => {
+                if (e.target.closest('[data-edit-emp]')) return;
+                selectedEmpId = card.dataset.id;
+                document.querySelectorAll('.emp-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                renderPayrollDetail();
+            });
+        });
+        el.querySelectorAll('[data-edit-emp]').forEach(btn => {
+            btn.addEventListener('click', () => openEditEmp(btn.dataset.editEmp));
+        });
+    }
+
+    async function loadPayrollData() {
+        try {
+            const res = await fetch('/api/payroll/payroll/' + currentYear + '/' + currentMonth);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            payrollRecords = {};
+            data.data.forEach(r => {
+                const eid = r.employee_id && r.employee_id._id ? r.employee_id._id : r.employee_id;
+                payrollRecords[eid] = r;
+            });
+            renderEmpList();
+            renderPayrollDetail();
+            renderMonthlyTable(data.data);
+            renderSummary(data.data);
+        } catch (e) { showAlert('급여 데이터 로드 실패: ' + e.message, 'danger'); }
+    }
+
+    function renderSummary(records) {
+        document.getElementById('statEmpCount').textContent = allEmployees.length + '명';
+        const gross = records.reduce((s, r) => s + (r.gross_pay || 0), 0);
+        const ded = records.reduce((s, r) => s + (r.total_deduction || 0), 0);
+        const net = records.reduce((s, r) => s + (r.net_pay || 0), 0);
+        document.getElementById('statTotalGross').textContent = fmt(gross) + '원';
+        document.getElementById('statTotalDeduction').textContent = fmt(ded) + '원';
+        document.getElementById('statTotalNet').textContent = fmt(net) + '원';
+    }
+
+    function renderPayrollDetail() {
+        const el = document.getElementById('payrollDetail');
+        const badge = document.getElementById('payrollStatusBadge');
+        if (!selectedEmpId) {
+            el.innerHTML = '<div class="empty-state"><i class="fas fa-hand-point-left"></i><p>왼쪽에서 직원을 선택하세요</p></div>';
+            badge.innerHTML = ''; return;
+        }
+        const emp = allEmployees.find(e => e._id === selectedEmpId);
+        if (!emp) return;
+        const rec = payrollRecords[selectedEmpId];
+        const confirmed = rec && rec.is_confirmed;
+        badge.innerHTML = confirmed
+            ? '<span class="badge bg-success">확정완료</span>'
+            : (rec ? '<span class="badge bg-warning text-dark">임시저장</span>' : '<span class="badge bg-secondary">미생성</span>');
+        const v = (f, d=0) => rec ? (rec[f] ?? d) : (emp[f] ?? d);
+        const inp = (id, val) => `<input type="number" class="input-amt" id="${id}" value="${val}">`;
+        el.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <strong style="font-size:1.05rem">${emp.name}</strong>
+                <span class="text-muted ms-2">${emp.position||''}</span>
+                ${emp.is_ceo?'<span class="ceo-badge ms-2">CEO</span>':''}
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                ${!confirmed?'<button class="btn btn-outline-secondary btn-sm" id="btnCalc">자동계산</button>':''}
+                ${!confirmed?'<button class="btn btn-primary btn-sm" id="btnSavePayroll">저장</button>':''}
+                ${rec&&!confirmed?'<button class="btn btn-success btn-sm" id="btnConfirm">확정</button>':''}
+                ${confirmed?'<button class="btn btn-outline-warning btn-sm" id="btnUnconfirm">확정취소</button>':''}
+                ${rec?'<button class="btn btn-outline-info btn-sm" id="btnPayslip">명세서</button>':''}
+            </div>
+        </div>
+        <table class="payroll-table">
+            <thead><tr><th style="width:42%">항목</th><th style="width:28%">금액 (원)</th><th>비고</th></tr></thead>
+            <tbody>
+            <tr><td colspan="3" style="background:#f0f4ff;font-weight:700;font-size:.82rem;padding:6px 14px;color:#667eea">▶ 지급 항목</td></tr>
+            <tr><td>기본급</td><td class="amount">${!confirmed?inp('f_base',v('base_salary')):fmt(v('base_salary'))}</td><td></td></tr>
+            <tr><td>식대 <small class="text-muted">(20만원 비과세)</small></td><td class="amount">${!confirmed?inp('f_meal',v('meal_allowance')):fmt(v('meal_allowance'))}</td><td></td></tr>
+            <tr><td>자가운전보조금 <small class="text-muted">(20만원 비과세)</small></td><td class="amount">${!confirmed?inp('f_car',v('car_allowance')):fmt(v('car_allowance'))}</td><td></td></tr>
+            <tr><td>기타수당</td><td class="amount">${!confirmed?inp('f_other',v('other_allowance')):fmt(v('other_allowance'))}</td><td></td></tr>
+            <tr class="total-row"><td>지급 합계</td><td class="amount" id="d_gross">${fmt(v('gross_pay'))}</td><td></td></tr>
+            <tr><td colspan="3" style="background:#fff0f0;font-weight:700;font-size:.82rem;padding:6px 14px;color:#dc3545">▶ 공제 항목</td></tr>
+            <tr>
+                <td>국민연금 <small class="text-muted">(4.5%)</small></td>
+                <td class="amount" style="color:#dc3545">
+                    ${!confirmed?`<div class="d-flex align-items-center gap-1 justify-content-end">${inp('f_np',v('national_pension'))}<input type="checkbox" id="ov_np" title="수동입력"${rec&&rec.national_pension_override?' checked':''}></div>`:fmt(v('national_pension'))}
+                </td>
+                <td><small class="text-muted">${emp.reported_monthly_income?'신고소득 '+fmt(emp.reported_monthly_income)+'원':'기본급 기준'}</small></td>
+            </tr>
+            <tr>
+                <td>건강보험 <small class="text-muted">(3.545%)</small></td>
+                <td class="amount" style="color:#dc3545">
+                    ${!confirmed?`<div class="d-flex align-items-center gap-1 justify-content-end">${inp('f_hi',v('health_insurance'))}<input type="checkbox" id="ov_hi" title="수동입력"${rec&&rec.health_insurance_override?' checked':''}></div>`:fmt(v('health_insurance'))}
+                </td><td></td>
+            </tr>
+            <tr><td>장기요양보험 <small class="text-muted">(건강보험×12.95%)</small></td><td class="amount" style="color:#dc3545" id="d_ltc">${fmt(v('long_term_care'))}</td><td></td></tr>
+            <tr><td>고용보험 <small class="text-muted">(0.9%)</small></td><td class="amount" style="color:#dc3545" id="d_ei">${emp.is_ceo?'<span class="text-muted">0 (대표이사 제외)</span>':fmt(v('employment_insurance'))}</td><td></td></tr>
+            <tr><td>소득세</td><td class="amount" style="color:#dc3545" id="d_it">${fmt(v('income_tax'))}</td><td></td></tr>
+            <tr><td>지방소득세 <small class="text-muted">(소득세×10%)</small></td><td class="amount" style="color:#dc3545" id="d_lit">${fmt(v('local_income_tax'))}</td><td></td></tr>
+            <tr class="total-row"><td style="color:#dc3545">공제 합계</td><td class="amount" style="color:#dc3545" id="d_ded">${fmt(v('total_deduction'))}</td><td></td></tr>
+            <tr class="net-row"><td>실수령액</td><td class="amount" id="d_net">${fmt(v('net_pay'))}</td><td></td></tr>
+            </tbody>
+        </table>
+        ${!confirmed?'<div class="mt-3"><label class="form-label fw-bold">비고</label><input type="text" class="form-control form-control-sm" id="f_notes" value="'+(rec?rec.notes||'':'')+'"></div>':''}
+        `;
+        if (!confirmed) {
+            const bc = document.getElementById('btnCalc');
+            const bs = document.getElementById('btnSavePayroll');
+            const bcf = document.getElementById('btnConfirm');
+            if (bc) bc.addEventListener('click', calcPayroll);
+            if (bs) bs.addEventListener('click', savePayroll);
+            if (bcf) bcf.addEventListener('click', confirmPayroll);
+            ['f_base','f_meal','f_car','f_other'].forEach(id => {
+                const el2 = document.getElementById(id);
+                if (el2) el2.addEventListener('input', updateGrossPreview);
+            });
+        }
+        const bu = document.getElementById('btnUnconfirm');
+        const bp = document.getElementById('btnPayslip');
+        if (bu) bu.addEventListener('click', unconfirmPayroll);
+        if (bp) bp.addEventListener('click', openPayslip);
+    }
+
+    function updateGrossPreview() {
+        const g = (id) => parseInt(document.getElementById(id)?.value)||0;
+        const gross = g('f_base')+g('f_meal')+g('f_car')+g('f_other');
+        const el = document.getElementById('d_gross');
+        if (el) el.textContent = fmt(gross);
+    }
+
+    function getPayrollFormData() {
+        const g = (id) => { const e = document.getElementById(id); return e ? (parseInt(e.value)||0) : null; };
+        const gc = (id) => { const e = document.getElementById(id); return e ? e.checked : false; };
+        const gs = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+        return {
+            base_salary: g('f_base'), meal_allowance: g('f_meal'),
+            car_allowance: g('f_car'), other_allowance: g('f_other'),
+            national_pension: g('f_np'), health_insurance: g('f_hi'),
+            national_pension_override: gc('ov_np'), health_insurance_override: gc('ov_hi'),
+            notes: gs('f_notes')
+        };
+    }
+
+    async function calcPayroll() {
+        if (!selectedEmpId) return;
+        const emp = allEmployees.find(e => e._id === selectedEmpId);
+        if (!emp) return;
+        try {
+            const fd = getPayrollFormData();
+            const res = await fetch('/api/payroll/calculate', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ employee_id: selectedEmpId, overrides: fd })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            const r = data.data;
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmt(val); };
+            const setInp = (id, val) => { const el = document.getElementById(id); if (el) el.value = val||0; };
+            setInp('f_base', r.base_salary); setInp('f_meal', r.meal_allowance);
+            setInp('f_car', r.car_allowance); setInp('f_other', r.other_allowance);
+            setInp('f_np', r.national_pension); setInp('f_hi', r.health_insurance);
+            set('d_gross', r.gross_pay); set('d_ltc', r.long_term_care);
+            set('d_ei', r.employment_insurance); set('d_it', r.income_tax);
+            set('d_lit', r.local_income_tax); set('d_ded', r.total_deduction);
+            set('d_net', r.net_pay);
+            showAlert('자동계산 완료', 'success');
+        } catch(e) { showAlert('계산 실패: ' + e.message, 'danger'); }
+    }
+
+    async function savePayroll() {
+        if (!selectedEmpId) return;
+        try {
+            const fd = getPayrollFormData();
+            const body = { employee_id: selectedEmpId, year: currentYear, month: currentMonth, ...fd };
+            const rec = payrollRecords[selectedEmpId];
+            const method = rec ? 'PUT' : 'POST';
+            const url = rec ? '/api/payroll/payroll/' + rec._id : '/api/payroll/payroll';
+            const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            showAlert('저장 완료', 'success');
+            await loadPayrollData();
+        } catch(e) { showAlert('저장 실패: ' + e.message, 'danger'); }
+    }
+
+    async function confirmPayroll() {
+        if (!selectedEmpId) return;
+        const rec = payrollRecords[selectedEmpId];
+        if (!rec) { showAlert('먼저 저장하세요', 'warning'); return; }
+        if (!confirm('급여를 확정하시겠습니까? 확정 후 수정이 제한됩니다.')) return;
+        try {
+            const res = await fetch('/api/payroll/payroll/' + rec._id + '/confirm', { method: 'POST' });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            showAlert('확정 완료', 'success');
+            await loadPayrollData();
+        } catch(e) { showAlert('확정 실패: ' + e.message, 'danger'); }
+    }
+
+    async function unconfirmPayroll() {
+        if (!selectedEmpId) return;
+        const rec = payrollRecords[selectedEmpId];
+        if (!rec) return;
+        if (!confirm('확정을 취소하시겠습니까?')) return;
+        try {
+            const res = await fetch('/api/payroll/payroll/' + rec._id + '/unconfirm', { method: 'POST' });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            showAlert('확정 취소됨', 'info');
+            await loadPayrollData();
+        } catch(e) { showAlert('확정취소 실패: ' + e.message, 'danger'); }
+    }
+
+    async function generatePayroll() {
+        if (!confirm(currentYear + '년 ' + currentMonth + '월 전직원 급여를 자동생성합니까?')) return;
+        try {
+            const res = await fetch('/api/payroll/payroll/generate', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ year: currentYear, month: currentMonth })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            showAlert('자동생성 완료: ' + (data.created||0) + '건 생성, ' + (data.skipped||0) + '건 건너뜀', 'success');
+            await loadPayrollData();
+        } catch(e) { showAlert('자동생성 실패: ' + e.message, 'danger'); }
+    }
+
+    async function confirmAllPayroll() {
+        if (!confirm(currentYear + '년 ' + currentMonth + '월 전체 확정하시겠습니까?')) return;
+        try {
+            const res = await fetch('/api/payroll/payroll/confirm-all', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ year: currentYear, month: currentMonth })
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            showAlert('전체 확정 완료: ' + (data.confirmed||0) + '건', 'success');
+            await loadPayrollData();
+        } catch(e) { showAlert('전체확정 실패: ' + e.message, 'danger'); }
+    }
+
+    function renderMonthlyTable(records) {
+        const tbody = document.getElementById('monthlyTable');
+        const tfoot = document.getElementById('monthlyFoot');
+        if (!records || !records.length) {
+            tbody.innerHTML = '<tr><td colspan="16" class="text-center py-4 text-muted">데이터 없음</td></tr>';
+            tfoot.innerHTML = ''; return;
+        }
+        tbody.innerHTML = records.map(r => {
+            const emp = r.employee_id && r.employee_id.name ? r.employee_id : allEmployees.find(e => e._id === r.employee_id) || {};
+            const statusBadge = r.is_confirmed
+                ? '<span class="badge bg-success">확정</span>'
+                : '<span class="badge bg-warning text-dark">임시</span>';
+            return `<tr style="cursor:pointer" data-emp-id="${emp._id||r.employee_id}">
+                <td><strong>${emp.name||'-'}</strong>${emp.is_ceo?'<span class="ceo-badge ms-1">CEO</span>':''}</td>
+                <td>${emp.position||''}</td>
+                <td class="text-end">${fmt(r.base_salary)}</td>
+                <td class="text-end">${fmt(r.meal_allowance)}</td>
+                <td class="text-end">${fmt(r.car_allowance)}</td>
+                <td class="text-end fw-bold">${fmt(r.gross_pay)}</td>
+                <td class="text-end text-danger">${fmt(r.national_pension)}</td>
+                <td class="text-end text-danger">${fmt(r.health_insurance)}</td>
+                <td class="text-end text-danger">${fmt(r.long_term_care)}</td>
+                <td class="text-end text-danger">${fmt(r.employment_insurance)}</td>
+                <td class="text-end text-danger">${fmt(r.income_tax)}</td>
+                <td class="text-end text-danger">${fmt(r.local_income_tax)}</td>
+                <td class="text-end text-danger fw-bold">${fmt(r.total_deduction)}</td>
+                <td class="text-end fw-bold text-success">${fmt(r.net_pay)}</td>
+                <td>${statusBadge}</td>
+                <td><button class="btn btn-outline-secondary btn-sm py-0" data-slip-id="${r._id}">명세서</button></td>
+            </tr>`;
+        }).join('');
+
+        const totals = records.reduce((acc, r) => {
+            ['gross_pay','national_pension','health_insurance','long_term_care','employment_insurance','income_tax','local_income_tax','total_deduction','net_pay'].forEach(k => { acc[k] = (acc[k]||0) + (r[k]||0); });
+            return acc;
+        }, {});
+        tfoot.innerHTML = `<tr class="table-dark fw-bold">
+            <td colspan="5">합계 (${records.length}명)</td>
+            <td class="text-end">${fmt(totals.gross_pay)}</td>
+            <td class="text-end">${fmt(totals.national_pension)}</td>
+            <td class="text-end">${fmt(totals.health_insurance)}</td>
+            <td class="text-end">${fmt(totals.long_term_care)}</td>
+            <td class="text-end">${fmt(totals.employment_insurance)}</td>
+            <td class="text-end">${fmt(totals.income_tax)}</td>
+            <td class="text-end">${fmt(totals.local_income_tax)}</td>
+            <td class="text-end">${fmt(totals.total_deduction)}</td>
+            <td class="text-end text-warning">${fmt(totals.net_pay)}</td>
+            <td colspan="2"></td>
+        </tr>`;
+
+        tbody.querySelectorAll('tr[data-emp-id]').forEach(row => {
+            row.addEventListener('click', e => {
+                if (e.target.closest('[data-slip-id]')) return;
+                selectedEmpId = row.dataset.empId;
+                document.querySelectorAll('.emp-card').forEach(c => c.classList.remove('active'));
+                const card = document.querySelector(`.emp-card[data-id="${selectedEmpId}"]`);
+                if (card) card.classList.add('active');
+                renderPayrollDetail();
+                window.scrollTo({top: 0, behavior: 'smooth'});
+            });
+        });
+        tbody.querySelectorAll('[data-slip-id]').forEach(btn => {
+            btn.addEventListener('click', () => openPayslipById(btn.dataset.slipId));
+        });
+    }
+
+    function openAddEmp() {
+        document.getElementById('empModalTitle').textContent = '직원 등록';
+        document.getElementById('empId').value = '';
+        document.getElementById('empNumber').value = '';
+        document.getElementById('empName').value = '';
+        document.getElementById('empPosition').value = '';
+        document.getElementById('empDepartment').value = '';
+        document.getElementById('empHireDate').value = '';
+        document.getElementById('empIsCeo').checked = false;
+        document.getElementById('empBaseSalary').value = '';
+        document.getElementById('empMealAllowance').value = '';
+        document.getElementById('empCarAllowance').value = '';
+        document.getElementById('empOtherAllowance').value = '';
+        document.getElementById('empReportedIncome').value = '';
+        document.getElementById('empNotes').value = '';
+        document.getElementById('btnDeleteEmp').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('empModal')).show();
+    }
+
+    function openEditEmp(id) {
+        const emp = allEmployees.find(e => e._id === id);
+        if (!emp) return;
+        document.getElementById('empModalTitle').textContent = '직원 수정';
+        document.getElementById('empId').value = emp._id;
+        document.getElementById('empNumber').value = emp.employee_number || '';
+        document.getElementById('empName').value = emp.name || '';
+        document.getElementById('empPosition').value = emp.position || '';
+        document.getElementById('empDepartment').value = emp.department || '';
+        document.getElementById('empHireDate').value = emp.hire_date ? emp.hire_date.substring(0,10) : '';
+        document.getElementById('empIsCeo').checked = !!emp.is_ceo;
+        document.getElementById('empBaseSalary').value = emp.base_salary || '';
+        document.getElementById('empMealAllowance').value = emp.meal_allowance || '';
+        document.getElementById('empCarAllowance').value = emp.car_allowance || '';
+        document.getElementById('empOtherAllowance').value = emp.other_allowance || '';
+        document.getElementById('empReportedIncome').value = emp.reported_monthly_income || '';
+        document.getElementById('empNotes').value = emp.notes || '';
+        document.getElementById('btnDeleteEmp').classList.remove('d-none');
+        new bootstrap.Modal(document.getElementById('empModal')).show();
+    }
+
+    async function saveEmployee() {
+        const name = document.getElementById('empName').value.trim();
+        const empNumber = document.getElementById('empNumber').value.trim();
+        if (!name || !empNumber) { showAlert('사원번호와 성명은 필수입니다.', 'warning'); return; }
+        const body = {
+            employee_number: empNumber, name,
+            position: document.getElementById('empPosition').value,
+            department: document.getElementById('empDepartment').value,
+            hire_date: document.getElementById('empHireDate').value || null,
+            is_ceo: document.getElementById('empIsCeo').checked,
+            base_salary: parseInt(document.getElementById('empBaseSalary').value)||0,
+            meal_allowance: parseInt(document.getElementById('empMealAllowance').value)||0,
+            car_allowance: parseInt(document.getElementById('empCarAllowance').value)||0,
+            other_allowance: parseInt(document.getElementById('empOtherAllowance').value)||0,
+            reported_monthly_income: parseInt(document.getElementById('empReportedIncome').value)||null,
+            notes: document.getElementById('empNotes').value
+        };
+        const id = document.getElementById('empId').value;
+        try {
+            const res = await fetch(id ? '/api/payroll/employees/' + id : '/api/payroll/employees', {
+                method: id ? 'PUT' : 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            bootstrap.Modal.getInstance(document.getElementById('empModal')).hide();
+            showAlert(id ? '직원 정보 수정 완료' : '직원 등록 완료', 'success');
+            await loadEmployees();
+        } catch(e) { showAlert('저장 실패: ' + e.message, 'danger'); }
+    }
+
+    async function deleteEmployee() {
+        const id = document.getElementById('empId').value;
+        if (!id) return;
+        if (!confirm('퇴사 처리하시겠습니까?')) return;
+        try {
+            const res = await fetch('/api/payroll/employees/' + id, { method: 'DELETE' });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            bootstrap.Modal.getInstance(document.getElementById('empModal')).hide();
+            showAlert('퇴사 처리 완료', 'info');
+            if (selectedEmpId === id) { selectedEmpId = null; renderPayrollDetail(); }
+            await loadEmployees();
+        } catch(e) { showAlert('삭제 실패: ' + e.message, 'danger'); }
+    }
+
+    function openPayslip() {
+        const rec = payrollRecords[selectedEmpId];
+        if (!rec) return;
+        openPayslipById(rec._id);
+    }
+
+    async function openPayslipById(recId) {
+        try {
+            const res = await fetch('/api/payroll/payroll/' + recId);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            const r = data.data;
+            const emp = r.employee_id || {};
+            const empName = emp.name || '-';
+            const empPos = emp.position || '';
+            document.getElementById('payslipContent').innerHTML = `
+            <div style="font-family:'Noto Sans KR',sans-serif;padding:10px">
+                <div style="text-align:center;margin-bottom:16px">
+                    <h5 style="margin:0;font-weight:700">급 여 명 세 서</h5>
+                    <p style="margin:4px 0;color:#666">${r.year}년 ${r.month}월분</p>
+                </div>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.88rem">
+                    <tr><td style="padding:5px 10px;border:1px solid #ddd;background:#f8f9fa;width:100px">성명</td><td style="padding:5px 10px;border:1px solid #ddd"><strong>${empName}</strong></td>
+                        <td style="padding:5px 10px;border:1px solid #ddd;background:#f8f9fa;width:100px">직급</td><td style="padding:5px 10px;border:1px solid #ddd">${empPos}</td></tr>
+                </table>
+                <table style="width:100%;border-collapse:collapse;font-size:.88rem">
+                    <thead><tr><th style="background:#667eea;color:white;padding:8px 12px;text-align:left">지급 항목</th><th style="background:#667eea;color:white;padding:8px 12px;text-align:right">금액</th>
+                        <th style="background:#dc3545;color:white;padding:8px 12px;text-align:left">공제 항목</th><th style="background:#dc3545;color:white;padding:8px 12px;text-align:right">금액</th></tr></thead>
+                    <tbody>
+                    <tr><td style="padding:6px 12px;border:1px solid #eee">기본급</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.base_salary)}원</td>
+                        <td style="padding:6px 12px;border:1px solid #eee">국민연금</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.national_pension)}원</td></tr>
+                    <tr><td style="padding:6px 12px;border:1px solid #eee">식대</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.meal_allowance)}원</td>
+                        <td style="padding:6px 12px;border:1px solid #eee">건강보험</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.health_insurance)}원</td></tr>
+                    <tr><td style="padding:6px 12px;border:1px solid #eee">자가운전보조금</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.car_allowance)}원</td>
+                        <td style="padding:6px 12px;border:1px solid #eee">장기요양보험</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.long_term_care)}원</td></tr>
+                    <tr><td style="padding:6px 12px;border:1px solid #eee">기타수당</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.other_allowance)}원</td>
+                        <td style="padding:6px 12px;border:1px solid #eee">고용보험</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.employment_insurance)}원</td></tr>
+                    <tr><td style="padding:6px 12px;border:1px solid #eee"></td><td style="padding:6px 12px;border:1px solid #eee"></td>
+                        <td style="padding:6px 12px;border:1px solid #eee">소득세</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.income_tax)}원</td></tr>
+                    <tr><td style="padding:6px 12px;border:1px solid #eee"></td><td style="padding:6px 12px;border:1px solid #eee"></td>
+                        <td style="padding:6px 12px;border:1px solid #eee">지방소득세</td><td style="padding:6px 12px;border:1px solid #eee;text-align:right">${fmt(r.local_income_tax)}원</td></tr>
+                    <tr style="font-weight:700;background:#f8f9fa">
+                        <td style="padding:8px 12px;border:1px solid #ddd">지급 합계</td><td style="padding:8px 12px;border:1px solid #ddd;text-align:right">${fmt(r.gross_pay)}원</td>
+                        <td style="padding:8px 12px;border:1px solid #ddd">공제 합계</td><td style="padding:8px 12px;border:1px solid #ddd;text-align:right">${fmt(r.total_deduction)}원</td></tr>
+                    </tbody>
+                </table>
+                <div style="background:#e8f5e9;border:2px solid #28a745;border-radius:8px;padding:14px 20px;margin-top:16px;text-align:center">
+                    <span style="font-size:.9rem;color:#555">실수령액</span><br>
+                    <strong style="font-size:1.5rem;color:#2e7d32">${fmt(r.net_pay)}원</strong>
+                </div>
+                ${r.notes?'<p style="margin-top:12px;color:#666;font-size:.85rem">비고: '+r.notes+'</p>':''}
+            </div>`;
+            new bootstrap.Modal(document.getElementById('payslipModal')).show();
+        } catch(e) { showAlert('명세서 로드 실패: ' + e.message, 'danger'); }
+    }
+    </script>
+</body>
+</html>

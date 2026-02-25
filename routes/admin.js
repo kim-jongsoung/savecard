@@ -174,4 +174,12 @@ router.get('/settings', requireAuth, (req, res) => {
     });
 });
 
+// 급여 관리 페이지
+router.get('/payroll', requireAuth, (req, res) => {
+    res.render('admin/payroll', {
+        title: '급여 관리',
+        adminUsername: req.session.adminUsername || 'admin'
+    });
+});
+
 module.exports = router;
