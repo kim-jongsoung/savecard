@@ -197,11 +197,21 @@
                         <label class="form-label">기타수당</label>
                         <input type="number" class="form-control" id="empOtherAllowance" placeholder="0">
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">신고소득월액 <small class="text-muted">(4대보험 산정기준, CEO 적용)</small></label>
+                    <div class="col-md-4">
+                        <label class="form-label">신고소득월액 <small class="text-muted">(4대보험 산정기준)</small></label>
                         <input type="number" class="form-control" id="empReportedIncome" placeholder="비워두면 기본급 기준">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">부양가족 수 <small class="text-muted">(본인 포함)</small></label>
+                        <select class="form-select" id="empDependents">
+                            <option value="1">1인 (본인만)</option>
+                            <option value="2">2인</option>
+                            <option value="3">3인</option>
+                            <option value="4">4인</option>
+                            <option value="5">5인</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
                         <label class="form-label">비고</label>
                         <input type="text" class="form-control" id="empNotes" placeholder="">
                     </div>
@@ -666,6 +676,7 @@
         document.getElementById('empCarAllowance').value = '';
         document.getElementById('empOtherAllowance').value = '';
         document.getElementById('empReportedIncome').value = '';
+        document.getElementById('empDependents').value = '1';
         document.getElementById('empNotes').value = '';
         document.getElementById('btnDeleteEmp').classList.add('d-none');
         new bootstrap.Modal(document.getElementById('empModal')).show();
@@ -687,6 +698,7 @@
         document.getElementById('empCarAllowance').value = emp.car_allowance || '';
         document.getElementById('empOtherAllowance').value = emp.other_allowance || '';
         document.getElementById('empReportedIncome').value = emp.reported_monthly_income || '';
+        document.getElementById('empDependents').value = emp.dependents || '1';
         document.getElementById('empNotes').value = emp.notes || '';
         document.getElementById('btnDeleteEmp').classList.remove('d-none');
         new bootstrap.Modal(document.getElementById('empModal')).show();
@@ -707,6 +719,7 @@
             car_allowance: parseInt(document.getElementById('empCarAllowance').value)||0,
             other_allowance: parseInt(document.getElementById('empOtherAllowance').value)||0,
             reported_monthly_income: parseInt(document.getElementById('empReportedIncome').value)||null,
+            dependents: parseInt(document.getElementById('empDependents').value)||1,
             notes: document.getElementById('empNotes').value
         };
         const id = document.getElementById('empId').value;
