@@ -1354,7 +1354,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    staffList = data.users;
+                    staffList = data.data || data.users || [];
                     renderStaff();
                 } else {
                     showAlert('danger', '직원 목록을 불러오는데 실패했습니다.', 'staffAlertArea');
