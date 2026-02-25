@@ -84,8 +84,8 @@ function calcIncomeTax(taxableIncome, dependents = 1) {
             break;
         }
     }
-    // 국세청 간이세액표 세액의 90% 적용 (근로소득세액공제 등 반영)
-    return Math.floor(row[depIdx + 1] * 0.9);
+    // 국세청 간이세액표 세액의 70% 적용
+    return Math.floor(row[depIdx + 1] * 0.7);
 }
 
 function calcPayroll(emp, overrides = {}) {
