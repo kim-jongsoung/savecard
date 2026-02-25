@@ -144,10 +144,12 @@ router.post('/webhook', async (req, res) => {
 
         const parsed = parseShinhanSMS(raw);
         if (!parsed) {
-            logEntry.result = '파싱 실패';
+            logEntry.result = '파싱 실패 (raw 저장됨)';
             webhookLog.unshift(logEntry);
             if (webhookLog.length > 20) webhookLog.pop();
-            return res.status(400).json({ success: false, message: '파싱 실패', raw });
+            console.log('[BANK WEBHOOK] 파싱 실패 raw:', raw);
+            // 400 대신 200 반환 (매크로드로이드가 재시도 안 하도록)
+            return res.json({ success: false, message: '파싱 실패', raw });
         }
 
         const tx = await BankTransaction.create(parsed);
