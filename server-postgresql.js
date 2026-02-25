@@ -20629,6 +20629,118 @@ async function startServer() {
     }
 }
 
+// ==================== 급여 관리 API 라우트 ====================
+try {
+    const { connectMongoDB } = require('./config/mongodb');
+    connectMongoDB().catch(err => console.error('MongoDB 연결 실패:', err.message));
+    const payrollRouter = require('./routes/payroll');
+    app.use('/api/payroll', payrollRouter);
+    console.log('✅ 급여 관리 API 라우트 연결 완료');
+} catch (e) {
+    console.error('급여 라우트 연결 오류:', e.message);
+}
+
+// ==================== 직원 계정 관리 API ====================
+(async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                role VARCHAR(20) DEFAULT 'staff',
+                is_active BOOLEAN DEFAULT true,
+                last_login TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+    } catch (e) {
+        console.error('admin_users 테이블 생성 오류:', e.message);
+    }
+})();
+
+app.get('/api/admin-users', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, username, full_name, email, phone, role, is_active, last_login, created_at FROM admin_users ORDER BY id');
+        res.json({ success: true, data: rows });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.post('/api/admin-users', async (req, res) => {
+    try {
+        const { username, password, full_name, email, phone, role, is_active } = req.body;
+        if (!username || !password || !full_name) return res.status(400).json({ success: false, message: '아이디, 비밀번호, 이름은 필수입니다.' });
+        const { rows } = await pool.query(
+            `INSERT INTO admin_users (username, password, full_name, email, phone, role, is_active) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, username, full_name, role, is_active`,
+            [username, password, full_name, email||null, phone||null, role||'staff', is_active!==false]
+        );
+        res.json({ success: true, message: '직원이 등록되었습니다.', data: rows[0] });
+    } catch (e) {
+        if (e.code === '23505') return res.status(400).json({ success: false, message: '이미 사용 중인 아이디입니다.' });
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.put('/api/admin-users/:id', async (req, res) => {
+    try {
+        const { password, full_name, email, phone, role, is_active } = req.body;
+        let query, params;
+        if (password) {
+            query = `UPDATE admin_users SET full_name=$1,email=$2,phone=$3,role=$4,is_active=$5,password=$6,updated_at=NOW() WHERE id=$7 RETURNING id,username,full_name,role,is_active`;
+            params = [full_name, email||null, phone||null, role||'staff', is_active!==false, password, req.params.id];
+        } else {
+            query = `UPDATE admin_users SET full_name=$1,email=$2,phone=$3,role=$4,is_active=$5,updated_at=NOW() WHERE id=$6 RETURNING id,username,full_name,role,is_active`;
+            params = [full_name, email||null, phone||null, role||'staff', is_active!==false, req.params.id];
+        }
+        const { rows } = await pool.query(query, params);
+        if (!rows.length) return res.status(404).json({ success: false, message: '직원을 찾을 수 없습니다.' });
+        res.json({ success: true, message: '직원 정보가 수정되었습니다.', data: rows[0] });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+app.delete('/api/admin-users/:id', async (req, res) => {
+    try {
+        const { rows } = await pool.query('DELETE FROM admin_users WHERE id=$1 RETURNING id', [req.params.id]);
+        if (!rows.length) return res.status(404).json({ success: false, message: '직원을 찾을 수 없습니다.' });
+        res.json({ success: true, message: '직원이 삭제되었습니다.' });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 직원 시드 데이터 ====================
+app.get('/run-seed-employees', async (req, res) => {
+    try {
+        const Employee = require('./models/Employee');
+        const employees = [
+            { employee_number:'001', name:'김종성', position:'대표이사', department:'경영', is_ceo:true, base_salary:1450000, meal_allowance:100000, car_allowance:100000, other_allowance:0, reported_monthly_income:1450000, dependents:1 },
+            { employee_number:'002', name:'정광재', position:'사원', department:'영업', is_ceo:false, base_salary:2900000, meal_allowance:200000, car_allowance:200000, other_allowance:0, reported_monthly_income:2760000, dependents:2 }
+        ];
+        const results = [];
+        for (const empData of employees) {
+            const existing = await Employee.findOne({ employee_number: empData.employee_number });
+            if (existing) {
+                await Employee.updateOne({ employee_number: empData.employee_number }, empData);
+                results.push(`업데이트: ${empData.name}`);
+            } else {
+                await Employee.create(empData);
+                results.push(`등록: ${empData.name}`);
+            }
+        }
+        res.json({ success: true, results });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // 서버 시작 및 에러 핸들링
 startServer().then(serverInstance => {
     console.log('✅ 서버 초기화 및 시작 완료');
