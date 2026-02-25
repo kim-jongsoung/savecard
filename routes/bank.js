@@ -38,23 +38,26 @@ const AUTO_CATEGORY_RULES = [
 // 형식: [web발신]신한MM/DD HH:MM 계좌번호입금/출금 금액 적요
 function parseShinhanSMS(msg) {
     try {
+        // 줄바꿈 정규화 (줄바꿈을 공백으로 변환하여 파싱 용이하게)
+        const flat = msg.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+
         // 계좌번호 추출 (xxx-xxx-xxxxxx 패턴)
-        const accountMatch = msg.match(/(\d{3}-\d{3}-\d{6})/);
+        const accountMatch = flat.match(/(\d{3}-\d{3}-\d{6})/);
         if (!accountMatch) return null;
         const account_number = accountMatch[1];
 
-        // 입금/출금 구분
-        const typeMatch = msg.match(/(\d{3}-\d{3}-\d{6})(입금|출금)/);
+        // 입금/출금 구분 (계좌번호 뒤 또는 별도 줄에 있을 수 있음)
+        const typeMatch = flat.match(/(입금|출금)/);
         if (!typeMatch) return null;
-        const type = typeMatch[2] === '입금' ? 'in' : 'out';
+        const type = typeMatch[1] === '입금' ? 'in' : 'out';
 
-        // 금액 추출 (콤마 포함 숫자)
-        const amountMatch = msg.match(/(입금|출금)\s*([\d,]+)/);
+        // 금액 추출 (입금/출금 뒤 숫자, 콤마 포함)
+        const amountMatch = flat.match(/(입금|출금)\s*([\d,]+)/);
         if (!amountMatch) return null;
         const amount = parseInt(amountMatch[2].replace(/,/g, ''), 10);
 
         // 날짜 추출 (MM/DD HH:MM)
-        const dateMatch = msg.match(/신한(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+        const dateMatch = flat.match(/신한(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
         let transaction_at = new Date();
         if (dateMatch) {
             const now = new Date();
@@ -65,8 +68,8 @@ function parseShinhanSMS(msg) {
             transaction_at = new Date(now.getFullYear(), month, day, hour, min, 0);
         }
 
-        // 적요 (금액 뒤 텍스트)
-        const memoMatch = msg.match(/(입금|출금)\s*[\d,]+\s*(.+)/);
+        // 적요: 금액 뒤 텍스트 (이름/메모)
+        const memoMatch = flat.match(/(입금|출금)\s*[\d,]+\s*(.+)/);
         const memo = memoMatch ? memoMatch[2].trim() : '';
 
         // 자동 분류
