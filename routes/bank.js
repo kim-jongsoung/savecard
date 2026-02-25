@@ -109,15 +109,19 @@ router.post('/webhook', async (req, res) => {
         // body 전체에서 문자 찾기 (키 이름 무관, plain text도 처리)
         let raw = '';
         if (typeof req.body === 'string') {
-            // plain text로 온 경우
             raw = req.body;
         } else if (req.body && typeof req.body === 'object') {
-            // JSON으로 온 경우 - 가능한 모든 키 시도
             raw = req.body.message || req.body.msg || req.body.sms || req.body.text || req.body.body || req.body.content || req.body.data || '';
-            // 값이 없으면 body 전체를 문자열로
             if (!raw) raw = JSON.stringify(req.body);
         }
-        // raw string에서 JSON 파싱 시도 (SMS Forwarder가 JSON 문자열로 보낼 경우)
+        // 한글 인코딩 깨짐 복구 (ISO-8859-1로 잘못 파싱된 경우 UTF-8로 재디코딩)
+        if (raw && raw.includes('?')) {
+            try {
+                const reencoded = Buffer.from(raw, 'latin1').toString('utf8');
+                if (!reencoded.includes('?') || reencoded.length === raw.length) raw = reencoded;
+            } catch (e) { /* 무시 */ }
+        }
+        // raw string에서 JSON 파싱 시도
         if (raw && raw.startsWith('{')) {
             try {
                 const parsed = JSON.parse(raw);
