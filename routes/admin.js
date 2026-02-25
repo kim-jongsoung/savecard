@@ -30,18 +30,15 @@ router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // 기본 관리자 계정 (환경변수 또는 하드코딩)
-        const adminUsername = process.env.ADMIN_USERNAME || 'luxfind01';
-        const adminPassword = process.env.ADMIN_PASSWORD || 'vasco01@';
+        // 관리자 계정 목록
+        const adminAccounts = [
+            { username: process.env.ADMIN_USERNAME || 'luxfind01', password: process.env.ADMIN_PASSWORD || 'vasco01@' },
+            { username: process.env.ADMIN_USERNAME2 || 'kmtour', password: process.env.ADMIN_PASSWORD2 || 'mstour0610@' },
+        ];
         
-        console.log('인증 시도:', { 
-            입력아이디: username, 
-            입력비밀번호: password,
-            설정아이디: adminUsername,
-            설정비밀번호: adminPassword 
-        });
+        const matched = adminAccounts.find(a => a.username === username && a.password === password);
         
-        if (username === adminUsername && password === adminPassword) {
+        if (matched) {
             req.session.adminId = 'admin';
             req.session.adminUsername = username;
             
@@ -176,7 +173,8 @@ router.get('/settings', requireAuth, (req, res) => {
 
 // 급여 관리 페이지 (luxfind01 전용)
 router.get('/payroll', requireAuth, (req, res) => {
-    if (req.session.adminUsername !== 'luxfind01') {
+    const allowedUsers = ['luxfind01', 'kmtour'];
+    if (!allowedUsers.includes(req.session.adminUsername)) {
         return res.status(403).render('admin/login', {
             title: '접근 거부',
             error: '접근 권한이 없습니다.'
