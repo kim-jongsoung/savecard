@@ -174,8 +174,14 @@ router.get('/settings', requireAuth, (req, res) => {
     });
 });
 
-// 급여 관리 페이지
+// 급여 관리 페이지 (luxfind01 전용)
 router.get('/payroll', requireAuth, (req, res) => {
+    if (req.session.adminUsername !== 'luxfind01') {
+        return res.status(403).render('admin/login', {
+            title: '접근 거부',
+            error: '접근 권한이 없습니다.'
+        });
+    }
     res.render('admin/payroll', {
         title: '급여 관리',
         adminUsername: req.session.adminUsername || 'admin'
