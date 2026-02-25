@@ -98,27 +98,75 @@ function parseShinhanSMS(msg) {
     }
 }
 
+// 웹훅 수신 로그 (메모리 임시 저장, 최근 20건)
+const webhookLog = [];
+
 // ==================== 웹훅 수신 ====================
 // 매크로드로이드에서 POST로 문자 전송
 router.post('/webhook', async (req, res) => {
+    const logEntry = { time: new Date().toISOString(), body: req.body, result: null };
     try {
-        const { message, msg, sms, text } = req.body;
-        const raw = message || msg || sms || text || '';
-        if (!raw) return res.status(400).json({ success: false, message: '메세지 없음' });
+        // body 전체에서 문자 찾기 (키 이름 무관)
+        let raw = '';
+        if (req.body && typeof req.body === 'object') {
+            raw = req.body.message || req.body.msg || req.body.sms || req.body.text || req.body.body || '';
+            // 값이 없으면 body 전체를 문자열로
+            if (!raw) raw = JSON.stringify(req.body);
+        } else if (typeof req.body === 'string') {
+            raw = req.body;
+        }
+
+        logEntry.raw = raw;
+
+        if (!raw) {
+            logEntry.result = 'empty body';
+            webhookLog.unshift(logEntry);
+            if (webhookLog.length > 20) webhookLog.pop();
+            return res.status(400).json({ success: false, message: '메세지 없음' });
+        }
 
         // 신한 문자가 아니면 무시
         if (!raw.includes('신한') && !raw.includes('Shinhan')) {
+            logEntry.result = '신한 아님 - 무시';
+            webhookLog.unshift(logEntry);
+            if (webhookLog.length > 20) webhookLog.pop();
             return res.json({ success: true, message: '신한 문자 아님, 무시' });
         }
 
         const parsed = parseShinhanSMS(raw);
-        if (!parsed) return res.status(400).json({ success: false, message: '파싱 실패', raw });
+        if (!parsed) {
+            logEntry.result = '파싱 실패';
+            webhookLog.unshift(logEntry);
+            if (webhookLog.length > 20) webhookLog.pop();
+            return res.status(400).json({ success: false, message: '파싱 실패', raw });
+        }
 
         const tx = await BankTransaction.create(parsed);
+        logEntry.result = '저장 완료';
+        logEntry.tx_id = tx._id;
+        webhookLog.unshift(logEntry);
+        if (webhookLog.length > 20) webhookLog.pop();
+        console.log('[BANK WEBHOOK] 저장 완료:', tx._id, tx.memo, tx.amount);
         res.json({ success: true, message: '저장 완료', data: tx });
     } catch (e) {
+        logEntry.result = '오류: ' + e.message;
+        webhookLog.unshift(logEntry);
+        if (webhookLog.length > 20) webhookLog.pop();
+        console.error('[BANK WEBHOOK] 오류:', e.message);
         res.status(500).json({ success: false, message: e.message });
     }
+});
+
+// ==================== 웹훅 진단 (브라우저에서 확인) ====================
+router.get('/webhook-log', (req, res) => {
+    res.json({ success: true, count: webhookLog.length, logs: webhookLog });
+});
+
+// ==================== 파싱 테스트 ====================
+router.get('/webhook-test', (req, res) => {
+    const msg = req.query.msg || '[web발신]신한02/25 17:18 140-013-623890출금 2,957,683 2월급여정광재';
+    const result = parseShinhanSMS(msg);
+    res.json({ success: true, input: msg, parsed: result });
 });
 
 // ==================== 거래 내역 조회 ====================
