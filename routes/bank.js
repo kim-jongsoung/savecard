@@ -106,14 +106,23 @@ const webhookLog = [];
 router.post('/webhook', async (req, res) => {
     const logEntry = { time: new Date().toISOString(), body: req.body, result: null };
     try {
-        // body 전체에서 문자 찾기 (키 이름 무관)
+        // body 전체에서 문자 찾기 (키 이름 무관, plain text도 처리)
         let raw = '';
-        if (req.body && typeof req.body === 'object') {
-            raw = req.body.message || req.body.msg || req.body.sms || req.body.text || req.body.body || '';
+        if (typeof req.body === 'string') {
+            // plain text로 온 경우
+            raw = req.body;
+        } else if (req.body && typeof req.body === 'object') {
+            // JSON으로 온 경우 - 가능한 모든 키 시도
+            raw = req.body.message || req.body.msg || req.body.sms || req.body.text || req.body.body || req.body.content || req.body.data || '';
             // 값이 없으면 body 전체를 문자열로
             if (!raw) raw = JSON.stringify(req.body);
-        } else if (typeof req.body === 'string') {
-            raw = req.body;
+        }
+        // raw string에서 JSON 파싱 시도 (SMS Forwarder가 JSON 문자열로 보낼 경우)
+        if (raw && raw.startsWith('{')) {
+            try {
+                const parsed = JSON.parse(raw);
+                raw = parsed.message || parsed.msg || parsed.sms || parsed.text || raw;
+            } catch (e) { /* JSON 아님, 그대로 사용 */ }
         }
 
         logEntry.raw = raw;
