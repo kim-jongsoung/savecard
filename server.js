@@ -6,6 +6,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 const { testConnection } = require('./config/database');
+const { connectMongoDB } = require('./config/mongodb');
+
+// MongoDB 연결
+connectMongoDB().catch(err => console.error('MongoDB 연결 실패:', err.message));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
