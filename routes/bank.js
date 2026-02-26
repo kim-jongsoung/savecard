@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const BankTransaction = require('../models/BankTransaction');
 
+// text/plain body 파싱 지원
+router.use(express.text({ type: 'text/plain' }));
+
 // 등록된 계좌 목록 (계좌번호 → 별칭/통화)
 const ACCOUNTS = {
     '140-013-623890': { alias: '신한원화1', currency: 'KRW' },
