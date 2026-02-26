@@ -42,29 +42,49 @@ router.post('/login', async (req, res) => {
             req.session.adminId = 'admin';
             req.session.adminUsername = username;
             req.session.adminRole = 'admin';
-            
-            console.log('로그인 성공, 세션 설정됨:', req.session);
-            
-            // AJAX 요청인지 확인 (Content-Type 헤더로 판단)
-            if (req.headers['content-type']?.includes('application/json')) {
-                console.log('JSON 응답 전송');
-                return res.json({ success: true });
-            } else {
-                console.log('리다이렉트 응답 전송');
-                return res.redirect('/admin');
-            }
         } else {
-            const errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
-            console.log('로그인 실패:', errorMsg);
-            
-            if (req.headers['content-type']?.includes('application/json')) {
-                return res.json({ success: false, message: errorMsg });
-            } else {
-                return res.render('admin/login', {
-                    title: '관리자 로그인',
-                    error: errorMsg
-                });
+            // 하드코딩 계정에 없으면 DB에서 확인
+            const { Pool } = require('pg');
+            const dbPool = new Pool({
+                connectionString: process.env.DATABASE_URL,
+                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+            });
+            const result = await dbPool.query(
+                'SELECT * FROM admin_users WHERE username = $1 AND is_active = true',
+                [username]
+            );
+            dbPool.end();
+
+            if (result.rows.length === 0) {
+                const errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
+                if (req.headers['content-type']?.includes('application/json')) {
+                    return res.json({ success: false, message: errorMsg });
+                } else {
+                    return res.render('admin/login', { title: '관리자 로그인', error: errorMsg });
+                }
             }
+
+            const user = result.rows[0];
+            const isValid = await bcrypt.compare(password, user.password_hash);
+            if (!isValid) {
+                const errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
+                if (req.headers['content-type']?.includes('application/json')) {
+                    return res.json({ success: false, message: errorMsg });
+                } else {
+                    return res.render('admin/login', { title: '관리자 로그인', error: errorMsg });
+                }
+            }
+
+            req.session.adminId = user.id;
+            req.session.adminUsername = user.username;
+            req.session.adminRole = user.role;
+        }
+
+        console.log('로그인 성공, 세션 설정됨:', req.session.adminUsername);
+        if (req.headers['content-type']?.includes('application/json')) {
+            return res.json({ success: true });
+        } else {
+            return res.redirect('/admin');
         }
 
     } catch (error) {
