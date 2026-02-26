@@ -133,27 +133,23 @@ router.post('/webhook', async (req, res) => {
         }
 
         logEntry.raw = raw;
+        webhookLog.unshift(logEntry);
+        if (webhookLog.length > 20) webhookLog.pop();
 
         if (!raw) {
             logEntry.result = 'empty body';
-            webhookLog.unshift(logEntry);
-            if (webhookLog.length > 20) webhookLog.pop();
             return res.status(400).json({ success: false, message: '메세지 없음' });
         }
 
         // 신한 문자가 아니면 무시
         if (!raw.includes('신한') && !raw.includes('Shinhan')) {
             logEntry.result = '신한 아님 - 무시';
-            webhookLog.unshift(logEntry);
-            if (webhookLog.length > 20) webhookLog.pop();
             return res.json({ success: true, message: '신한 문자 아님, 무시' });
         }
 
         const parsed = parseShinhanSMS(raw);
         if (!parsed) {
             logEntry.result = '파싱 실패 (raw 저장됨)';
-            webhookLog.unshift(logEntry);
-            if (webhookLog.length > 20) webhookLog.pop();
             console.log('[BANK WEBHOOK] 파싱 실패 raw:', raw);
             // 400 대신 200 반환 (매크로드로이드가 재시도 안 하도록)
             return res.json({ success: false, message: '파싱 실패', raw });
@@ -162,8 +158,6 @@ router.post('/webhook', async (req, res) => {
         const tx = await BankTransaction.create(parsed);
         logEntry.result = '저장 완료';
         logEntry.tx_id = tx._id;
-        webhookLog.unshift(logEntry);
-        if (webhookLog.length > 20) webhookLog.pop();
         console.log('[BANK WEBHOOK] 저장 완료:', tx._id, tx.memo, tx.amount);
         res.json({ success: true, message: '저장 완료', data: tx });
     } catch (e) {
