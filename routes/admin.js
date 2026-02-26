@@ -34,6 +34,7 @@ router.post('/login', async (req, res) => {
         const adminAccounts = [
             { username: process.env.ADMIN_USERNAME || 'luxfind01', password: process.env.ADMIN_PASSWORD || 'vasco01@' },
             { username: process.env.ADMIN_USERNAME2 || 'kmtour', password: process.env.ADMIN_PASSWORD2 || 'mstour0610@' },
+            { username: 'luxfind', password: 'mstour0610@' },
         ];
         
         const matched = adminAccounts.find(a => a.username === username && a.password === password);
@@ -65,7 +66,8 @@ router.post('/login', async (req, res) => {
             }
 
             const user = result.rows[0];
-            const isValid = await bcrypt.compare(password, user.password_hash);
+            // admin_users 테이블은 평문 비밀번호 저장
+            const isValid = (password === user.password) || (user.password_hash && await bcrypt.compare(password, user.password_hash));
             if (!isValid) {
                 const errorMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
                 if (req.headers['content-type']?.includes('application/json')) {
