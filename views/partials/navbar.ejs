@@ -96,7 +96,7 @@ else if (accountingPages.includes(currentPage)) currentErp = 'accounting';
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'package-settlements' ? 'active' : '' %>" href="/admin/package-settlements">정산관리</a></li>
                 </ul>
             </div>
-            <% } else if (currentErp === 'accounting' && (adminUsername === 'luxfind01' || adminUsername === 'kmtour')) { %>
+            <% } else if (currentErp === 'accounting' && (adminUsername === 'luxfind01' || adminUsername === 'luxfind' || adminUsername === 'kmtour')) { %>
             <div class="d-flex align-items-center" style="padding: 0.3rem 0;">
                 <ul class="navbar-nav flex-row">
                     <li class="nav-item"><a class="nav-link <%= currentPage === 'payroll' ? 'active' : '' %>" href="/admin/payroll">급여명세서</a></li>
