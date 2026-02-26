@@ -182,9 +182,14 @@ app.post('/admin/login', async (req, res) => {
         
         const user = result.rows[0];
         
-        // 비밀번호 확인
-        const bcrypt = require('bcryptjs');
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        // 비밀번호 확인 (평문 비교, 또는 password_hash가 있으면 bcrypt)
+        let isPasswordValid = false;
+        if (user.password_hash) {
+            const bcrypt = require('bcryptjs');
+            isPasswordValid = await bcrypt.compare(password, user.password_hash);
+        } else {
+            isPasswordValid = (password === user.password);
+        }
         
         if (!isPasswordValid) {
             return res.status(401).json({
