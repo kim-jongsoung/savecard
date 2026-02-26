@@ -188,7 +188,7 @@ router.get('/payroll', requireAuth, (req, res) => {
 
 // 계좌 입출금 페이지
 router.get('/bank', requireAuth, (req, res) => {
-    const allowedUsers = ['luxfind01', 'kmtour'];
+    const allowedUsers = ['luxfind01', 'luxfind', 'kmtour'];
     if (!allowedUsers.includes(req.session.adminUsername)) {
         return res.status(403).render('admin/login', {
             title: '접근 거부',
