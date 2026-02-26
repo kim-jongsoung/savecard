@@ -147,19 +147,24 @@ router.post('/webhook', async (req, res) => {
             return res.json({ success: true, message: '신한 문자 아님, 무시' });
         }
 
-        const parsed = parseShinhanSMS(raw);
-        if (!parsed) {
-            logEntry.result = '파싱 실패 (raw 저장됨)';
-            console.log('[BANK WEBHOOK] 파싱 실패 raw:', raw);
-            // 400 대신 200 반환 (매크로드로이드가 재시도 안 하도록)
-            return res.json({ success: false, message: '파싱 실패', raw });
-        }
-
-        const tx = await BankTransaction.create(parsed);
-        logEntry.result = '저장 완료';
+        // 파싱 시도 후 성공하면 저장, 실패해도 raw_message만으로 저장
+        const parsed = parseShinhanSMS(raw) || {};
+        const tx = await BankTransaction.create({
+            account_number: parsed.account_number || '미파싱',
+            account_alias: parsed.account_alias || '미파싱',
+            currency: parsed.currency || 'KRW',
+            type: parsed.type || 'unknown',
+            amount: parsed.amount || 0,
+            memo: parsed.memo || '',
+            transaction_at: parsed.transaction_at || new Date(),
+            category: parsed.category || 'uncategorized',
+            raw_message: raw,
+            source: 'webhook',
+        });
+        logEntry.result = parsed.account_number ? '저장 완료' : '파싱 실패 - raw만 저장';
         logEntry.tx_id = tx._id;
-        console.log('[BANK WEBHOOK] 저장 완료:', tx._id, tx.memo, tx.amount);
-        res.json({ success: true, message: '저장 완료', data: tx });
+        console.log('[BANK WEBHOOK] 저장:', tx._id, raw.substring(0, 50));
+        res.json({ success: true, message: logEntry.result, data: tx });
     } catch (e) {
         logEntry.result = '오류: ' + e.message;
         webhookLog.unshift(logEntry);
