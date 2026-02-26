@@ -41,6 +41,7 @@ router.post('/login', async (req, res) => {
         if (matched) {
             req.session.adminId = 'admin';
             req.session.adminUsername = username;
+            req.session.adminRole = 'admin';
             
             console.log('로그인 성공, 세션 설정됨:', req.session);
             
@@ -186,16 +187,8 @@ router.get('/payroll', requireAuth, (req, res) => {
     });
 });
 
-// 계좌 입출금 페이지
+// 계좌 입출금 페이지 (로그인한 관리자 누구나 접근 가능, navbar에서 표시 여부로 제어)
 router.get('/bank', requireAuth, (req, res) => {
-    const allowedUsers = ['luxfind01', 'luxfind', 'kmtour'];
-    const allowedRoles = ['manager', 'admin', 'superadmin'];
-    if (!allowedUsers.includes(req.session.adminUsername) && !allowedRoles.includes(req.session.adminRole)) {
-        return res.status(403).render('admin/login', {
-            title: '접근 거부',
-            error: '접근 권한이 없습니다.'
-        });
-    }
     res.render('admin/bank', {
         title: '계좌 입출금',
         adminUsername: req.session.adminUsername || 'admin'
