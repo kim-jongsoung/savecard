@@ -30,7 +30,7 @@ else if (accountingPages.includes(currentPage)) currentErp = 'accounting';
                     <a href="/admin/dashboard" class="erp-tab <%= currentErp === 'activity' ? 'active' : '' %>" style="background: #c8e6c9; color: #2e7d32;">즐길거리 ERP</a>
                     <a href="/admin/hotel-inbox" class="erp-tab <%= currentErp === 'hotel' ? 'active' : '' %>" style="background: #ffe0b2; color: #e65100;">호텔예약 ERP</a>
                     <a href="/admin/package-inbox" class="erp-tab <%= currentErp === 'package' ? 'active' : '' %>" style="background: #f3e5f5; color: #6a1b9a;">패키지상품 ERP</a>
-                    <% if (adminUsername === 'luxfind01' || adminUsername === 'kmtour') { %>
+                    <% if (adminUsername === 'luxfind01' || adminUsername === 'luxfind' || adminUsername === 'kmtour') { %>
                     <a href="/admin/payroll" class="erp-tab <%= currentErp === 'accounting' ? 'active' : '' %>" style="background: #fce4ec; color: #880e4f;">회계장부 ERP</a>
                     <% } %>
                 </div>
