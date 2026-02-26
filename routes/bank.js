@@ -41,26 +41,39 @@ const AUTO_CATEGORY_RULES = [
 // 형식: [web발신]신한MM/DD HH:MM 계좌번호입금/출금 금액 적요
 function parseShinhanSMS(msg) {
     try {
-        // 줄바꿈 정규화 (줄바꿈을 공백으로 변환하여 파싱 용이하게)
+        // 줄바꿈 정규화
         const flat = msg.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
 
-        // 계좌번호 추출 (xxx-xxx-xxxxxx 패턴)
-        const accountMatch = flat.match(/(\d{3}-\d{3}-\d{6})/);
-        if (!accountMatch) return null;
-        const account_number = accountMatch[1];
+        // 계좌번호 추출
+        // 원화: 140-013-623890 (xxx-xxx-xxxxxx)
+        // 외화: 180*678887[USD] → 180-011-678887 로 매핑
+        let account_number = null;
+        const wonAccMatch = flat.match(/(\d{3}-\d{3}-\d{6})/);
+        const usdAccMatch = flat.match(/(\d{3})\*(\d{6})\[(\w+)\]/);
+        if (wonAccMatch) {
+            account_number = wonAccMatch[1];
+        } else if (usdAccMatch) {
+            // 180*678887 → ACCOUNTS에서 끝 6자리로 매칭
+            const suffix = usdAccMatch[2];
+            account_number = Object.keys(ACCOUNTS).find(k => k.replace(/-/g, '').endsWith(suffix)) || `외화-${suffix}`;
+        } else {
+            return null;
+        }
 
-        // 입금/출금 구분 (계좌번호 뒤 또는 별도 줄에 있을 수 있음)
+        // 입금/출금 구분
         const typeMatch = flat.match(/(입금|출금)/);
         if (!typeMatch) return null;
         const type = typeMatch[1] === '입금' ? 'in' : 'out';
 
-        // 금액 추출 (입금/출금 뒤 숫자, 콤마 포함)
-        const amountMatch = flat.match(/(입금|출금)\s*([\d,]+)/);
+        // 금액 추출 (소수점 포함, 콤마 포함)
+        const amountMatch = flat.match(/(입금|출금)\s*([\d,]+\.?\d*)/);
         if (!amountMatch) return null;
-        const amount = parseInt(amountMatch[2].replace(/,/g, ''), 10);
+        const amount = parseFloat(amountMatch[2].replace(/,/g, ''));
 
-        // 날짜 추출 (MM/DD HH:MM)
-        const dateMatch = flat.match(/신한(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+        // 날짜 추출 - 두 가지 형식 지원
+        // 원화: 신한02/26 15:02  (공백 구분)
+        // 외화: 신한02/26-14:25  (- 구분)
+        const dateMatch = flat.match(/신한(\d{2})\/(\d{2})[-\s](\d{2}):(\d{2})/);
         let transaction_at = new Date();
         if (dateMatch) {
             const now = new Date();
@@ -71,9 +84,9 @@ function parseShinhanSMS(msg) {
             transaction_at = new Date(now.getFullYear(), month, day, hour, min, 0);
         }
 
-        // 적요: 금액 뒤 텍스트 (이름/메모)
-        const memoMatch = flat.match(/(입금|출금)\s*[\d,]+\s*(.+)/);
-        const memo = memoMatch ? memoMatch[2].trim() : '';
+        // 적요: 금액 뒤 텍스트 (잔액 줄 제외)
+        const memoMatch = flat.match(/(입금|출금)\s*[\d,.]+\s*(잔액.+?)?([A-Z].+|[가-힣].+)/);
+        const memo = memoMatch ? memoMatch[3].trim() : '';
 
         // 자동 분류
         let category = 'uncategorized';
@@ -85,7 +98,7 @@ function parseShinhanSMS(msg) {
             }
         }
 
-        const accountInfo = ACCOUNTS[account_number] || { alias: '알수없음', currency: 'KRW' };
+        const accountInfo = ACCOUNTS[account_number] || { alias: '알수없음', currency: usdAccMatch ? 'USD' : 'KRW' };
 
         return {
             account_number,
