@@ -345,7 +345,7 @@ router.get('/card-test', (req, res) => {
 router.get('/transactions', async (req, res) => {
     try {
         const { account, type, category, start, end, page = 1, limit = 50 } = req.query;
-        const filter = {};
+        const filter = { source: { $ne: 'card' } };
         if (account && account !== 'all') filter.account_number = account;
         if (type && type !== 'all') filter.type = type;
         if (category && category !== 'all') filter.category = category;
