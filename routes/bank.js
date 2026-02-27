@@ -191,6 +191,105 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
+// ==================== 카드승인 파싱 함수 ====================
+// 형식: 신한법인해외승인 9073 02/27 10:53 2,640.00 달러 (GU)DUSIT THANI
+function parseShinhanCard(msg) {
+    try {
+        const flat = msg.replace(/\r?\n/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!flat.includes('신한법인해외승인')) return null;
+
+        // 카드번호 끝 4자리
+        const cardMatch = flat.match(/신한법인해외승인\s+(\d{4})/);
+        const card_number = cardMatch ? cardMatch[1] : '****';
+
+        // 날짜: MM/DD HH:MM
+        const dateMatch = flat.match(/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+        let transaction_at = new Date();
+        if (dateMatch) {
+            const now = new Date();
+            const month = parseInt(dateMatch[1], 10) - 1;
+            const day   = parseInt(dateMatch[2], 10);
+            const hour  = parseInt(dateMatch[3], 10);
+            const min   = parseInt(dateMatch[4], 10);
+            transaction_at = new Date(Date.UTC(now.getUTCFullYear(), month, day, hour - 9, min, 0));
+        }
+
+        // 금액: 숫자,숫자.숫자
+        const amountMatch = flat.match(/([\d,]+\.?\d*)\s*달러/);
+        if (!amountMatch) return null;
+        const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
+
+        // 가맹점명: 달러 이후 텍스트
+        const memoMatch = flat.match(/달러\s+(.+)$/);
+        const memo = memoMatch ? memoMatch[1].trim() : '';
+
+        return { card_number, transaction_at, amount, memo, currency: 'USD' };
+    } catch (e) {
+        return null;
+    }
+}
+
+// ==================== 카드승인 웹훅 ====================
+router.post('/card-webhook', async (req, res) => {
+    let raw = '';
+    try {
+        if (typeof req.body === 'string') {
+            raw = req.body;
+        } else if (req.body && typeof req.body === 'object') {
+            raw = req.body.message || req.body.msg || req.body.sms || req.body.text || JSON.stringify(req.body);
+        }
+        raw = raw.trim();
+
+        if (!raw.includes('신한법인해외승인')) {
+            return res.json({ success: true, message: '카드승인 문자 아님, 무시' });
+        }
+
+        const parsed = parseShinhanCard(raw);
+        if (!parsed) {
+            return res.status(400).json({ success: false, message: '파싱 실패', raw });
+        }
+
+        const tx = await BankTransaction.create({
+            account_number: 'CARD-' + parsed.card_number,
+            account_alias: '신한해외카드(' + parsed.card_number + ')',
+            currency: 'USD',
+            type: 'out',
+            amount: parsed.amount,
+            memo: parsed.memo,
+            transaction_at: parsed.transaction_at,
+            category: 'uncategorized',
+            raw_message: raw,
+            source: 'card',
+        });
+        console.log('[CARD WEBHOOK] 저장:', tx._id, raw.substring(0, 60));
+        res.json({ success: true, message: '카드승인 저장 완료', data: tx });
+    } catch (e) {
+        console.error('[CARD WEBHOOK] 오류:', e.message);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 카드 내역 조회 ====================
+router.get('/card-transactions', async (req, res) => {
+    try {
+        const { start, end, page = 1, limit = 50 } = req.query;
+        const filter = { source: 'card' };
+        if (start || end) {
+            filter.transaction_at = {};
+            if (start) filter.transaction_at.$gte = new Date(start);
+            if (end)   filter.transaction_at.$lte = new Date(end + 'T23:59:59');
+        }
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const [data, total] = await Promise.all([
+            BankTransaction.find(filter).sort({ transaction_at: -1 }).skip(skip).limit(parseInt(limit)),
+            BankTransaction.countDocuments(filter),
+        ]);
+        res.json({ success: true, data, total, page: parseInt(page), limit: parseInt(limit) });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // ==================== 웹훅 진단 (브라우저에서 확인) ====================
 router.get('/webhook-log', (req, res) => {
     res.json({ success: true, count: webhookLog.length, logs: webhookLog });

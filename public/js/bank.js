@@ -362,6 +362,52 @@ async function saveManual() {
     } catch (e) { showAlert('등록 실패: ' + e.message, 'danger'); }
 }
 
+// ==================== 신한해외카드 승인내역 모달 ====================
+function openCardModal() {
+    const n = new Date();
+    const y = n.getFullYear();
+    const m = String(n.getMonth() + 1).padStart(2, '0');
+    const last = new Date(y, n.getMonth() + 1, 0).getDate();
+    document.getElementById('cardFilterStart').value = `${y}-${m}-01`;
+    document.getElementById('cardFilterEnd').value   = `${y}-${m}-${String(last).padStart(2, '0')}`;
+    new bootstrap.Modal(document.getElementById('cardModal')).show();
+    loadCardTransactions();
+}
+
+async function loadCardTransactions() {
+    const start = document.getElementById('cardFilterStart').value;
+    const end   = document.getElementById('cardFilterEnd').value;
+    const p = new URLSearchParams({ limit: 100 });
+    if (start) p.set('start', start);
+    if (end)   p.set('end', end);
+    const tbody = document.getElementById('cardTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">조회 중...</td></tr>';
+    try {
+        const res  = await fetch('/api/bank/card-transactions?' + p.toString());
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        document.getElementById('cardTxCount').textContent = `총 ${data.total}건`;
+        if (!data.data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">내역 없음</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.data.map(tx => {
+            const dt = new Date(new Date(tx.transaction_at).getTime() + 9 * 60 * 60 * 1000);
+            const ds = `${dt.getUTCMonth()+1}/${dt.getUTCDate()} ${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
+            const cardNo = tx.account_alias || tx.account_number;
+            return `<tr>
+                <td style="white-space:nowrap;font-size:.78rem">${ds}</td>
+                <td><small>${cardNo}</small></td>
+                <td class="text-end fw-bold c-red">${tx.amount.toLocaleString('en-US', {minimumFractionDigits:2})} USD</td>
+                <td>${tx.memo || '-'}</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem;color:#888" title="${tx.raw_message||''}">${tx.raw_message||''}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-danger">로드 실패: ${e.message}</td></tr>`;
+    }
+}
+
 // ==================== 웹훅 안내 모달 ====================
 function openWebhookModal() {
     document.getElementById('webhookUrl').value = window.location.origin + '/api/bank/webhook';

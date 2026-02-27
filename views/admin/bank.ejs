@@ -56,6 +56,11 @@
             <div class="acc-num">모든 계좌</div>
         </div>
     </div>
+    <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-warning btn-sm fw-bold" id="btnCardList" onclick="openCardModal()">
+            <i class="fas fa-credit-card me-1"></i>신한해외카드 승인내역
+        </button>
+    </div>
 
 
     <!-- 필터 -->
@@ -230,6 +235,50 @@
     </div></div>
 </div>
 
+<!-- ===== 신한해외카드 승인내역 모달 ===== -->
+<div class="modal fade" id="cardModal" tabindex="-1">
+    <div class="modal-dialog modal-xl"><div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#f7971e,#ffd200);color:#333;">
+            <h5 class="modal-title fw-bold"><i class="fas fa-credit-card me-2"></i>신한해외카드 승인내역</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="d-flex gap-2 mb-3 flex-wrap align-items-end">
+                <div>
+                    <label class="form-label small fw-bold mb-1">기간 시작</label>
+                    <input type="date" class="form-control form-control-sm" id="cardFilterStart" style="width:140px">
+                </div>
+                <div>
+                    <label class="form-label small fw-bold mb-1">기간 종료</label>
+                    <input type="date" class="form-control form-control-sm" id="cardFilterEnd" style="width:140px">
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="loadCardTransactions()"><i class="fas fa-search me-1"></i>조회</button>
+                <span class="ms-auto text-muted small" id="cardTxCount"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>일시</th>
+                            <th>카드번호</th>
+                            <th class="text-end">금액(USD)</th>
+                            <th>가맹점</th>
+                            <th>원문</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cardTableBody">
+                        <tr><td colspan="5" class="text-center py-4 text-muted">조회 버튼을 눌러주세요</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <small class="text-muted me-auto">웹훅: <code>https://www.guamsavecard.com/api/bank/card-webhook</code></small>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+    </div></div>
+</div>
+
 <!-- ===== 웹훅 안내 모달 ===== -->
 <div class="modal fade" id="webhookModal" tabindex="-1">
     <div class="modal-dialog"><div class="modal-content">
@@ -239,10 +288,17 @@
         </div>
         <div class="modal-body">
             <div class="mb-3">
-                <label class="form-label fw-bold">웹훅 URL (매크로드로이드에 입력)</label>
+                <label class="form-label fw-bold">계좌입출금 웹훅 URL</label>
                 <div class="input-group">
                     <input type="text" class="form-control font-monospace small" id="webhookUrl" readonly>
                     <button class="btn btn-outline-secondary" id="btnCopyWebhook"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">카드승인 웹훅 URL</label>
+                <div class="input-group">
+                    <input type="text" class="form-control font-monospace small" id="cardWebhookUrl" value="https://www.guamsavecard.com/api/bank/card-webhook" readonly>
+                    <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('cardWebhookUrl').value);this.innerHTML='<i class=\'fas fa-check\'></i>'"><i class="fas fa-copy"></i></button>
                 </div>
             </div>
             <div class="alert alert-info small mb-2">
@@ -254,8 +310,8 @@
                 5. Body: <code>{"message": "%SMS_BODY%"}</code>
             </div>
             <div class="alert alert-warning small mb-0">
-                <strong>문자 예시:</strong><br>
-                <code>[web발신]신한02/25 17:18 140-013-623890출금 2,957,683 2월급여정광재</code>
+                <strong>카드승인 문자 예시:</strong><br>
+                <code>신한법인해외승인 9073 02/27 10:53 2,640.00 달러 (GU)DUSIT THANI</code>
             </div>
         </div>
         <div class="modal-footer">
