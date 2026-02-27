@@ -371,7 +371,26 @@ function openCardModal() {
     document.getElementById('cardFilterStart').value = `${y}-${m}-01`;
     document.getElementById('cardFilterEnd').value   = `${y}-${m}-${String(last).padStart(2, '0')}`;
     new bootstrap.Modal(document.getElementById('cardModal')).show();
+    loadCardLimit();
     loadCardTransactions();
+}
+
+async function loadCardLimit() {
+    const usd = v => 'USD ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    try {
+        const res  = await fetch('/api/bank/card-limit');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        document.getElementById('limitBase').textContent  = usd(data.base_limit);
+        document.getElementById('limitIn').textContent    = usd(data.total_in);
+        document.getElementById('limitUsed').textContent  = usd(data.total_card_used);
+        const avail = data.available;
+        const el = document.getElementById('limitAvail');
+        el.textContent = usd(avail);
+        el.style.color = avail >= 0 ? '#667eea' : '#dc3545';
+    } catch (e) {
+        document.getElementById('limitAvail').textContent = '로드 실패';
+    }
 }
 
 async function loadCardTransactions() {

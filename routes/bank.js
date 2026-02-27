@@ -290,6 +290,39 @@ router.get('/card-transactions', async (req, res) => {
     }
 });
 
+// ==================== 카드 승인가능한도 조회 ====================
+// 가능한도 = 기존한도(400) + 신한외환계좌 입금합계 - 카드승인 출금합계
+router.get('/card-limit', async (req, res) => {
+    try {
+        const BASE_LIMIT = 400; // USD 기존 고정 한도
+
+        // 신한외환 계좌 입금 합계
+        const inAgg = await BankTransaction.aggregate([
+            { $match: { account_number: '180-011-678887', type: 'in', currency: 'USD' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        const totalIn = inAgg.length ? inAgg[0].total : 0;
+
+        // 카드승인 출금 합계
+        const cardAgg = await BankTransaction.aggregate([
+            { $match: { source: 'card', type: 'out', currency: 'USD' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        const totalCard = cardAgg.length ? cardAgg[0].total : 0;
+
+        const available = BASE_LIMIT + totalIn - totalCard;
+        res.json({
+            success: true,
+            base_limit: BASE_LIMIT,
+            total_in: totalIn,
+            total_card_used: totalCard,
+            available,
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // ==================== 웹훅 진단 (브라우저에서 확인) ====================
 router.get('/webhook-log', (req, res) => {
     res.json({ success: true, count: webhookLog.length, logs: webhookLog });

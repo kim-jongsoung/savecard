@@ -243,6 +243,29 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
+            <!-- 승인가능한도 표시 -->
+            <div id="cardLimitBox" class="rounded p-3 mb-3 d-flex flex-wrap gap-3 align-items-center" style="background:#fff8e1;border:1px solid #ffc107;">
+                <div>
+                    <span style="font-size:.78rem;color:#888;">기존 한도</span><br>
+                    <span class="fw-bold" id="limitBase" style="font-size:1rem;color:#555;">-</span>
+                </div>
+                <div style="font-size:1.2rem;color:#ccc;">+</div>
+                <div>
+                    <span style="font-size:.78rem;color:#888;">달러계좌 입금누계</span><br>
+                    <span class="fw-bold" id="limitIn" style="font-size:1rem;color:#11998e;">-</span>
+                </div>
+                <div style="font-size:1.2rem;color:#ccc;">−</div>
+                <div>
+                    <span style="font-size:.78rem;color:#888;">카드 사용합계</span><br>
+                    <span class="fw-bold" id="limitUsed" style="font-size:1rem;color:#dc3545;">-</span>
+                </div>
+                <div style="font-size:1.2rem;color:#ccc;">=</div>
+                <div>
+                    <span style="font-size:.78rem;color:#888;font-weight:600;">현재 승인가능한도</span><br>
+                    <span class="fw-bold" id="limitAvail" style="font-size:1.4rem;color:#667eea;">-</span>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadCardLimit()" title="새로고침"><i class="fas fa-sync-alt"></i></button>
+            </div>
             <div class="d-flex gap-2 mb-3 flex-wrap align-items-end">
                 <div>
                     <label class="form-label small fw-bold mb-1">기간 시작</label>
