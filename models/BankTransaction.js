@@ -58,7 +58,7 @@ const bankTransactionSchema = new mongoose.Schema({
     notes: { type: String, default: '' },             // 메모
 
     // 입력 방법
-    source: { type: String, enum: ['webhook', 'manual'], default: 'webhook' },
+    source: { type: String, enum: ['webhook', 'manual', 'card'], default: 'webhook' },
 }, {
     timestamps: true
 });
