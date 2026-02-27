@@ -151,7 +151,7 @@ function renderTable(list) {
     tbody.innerHTML = list.map(tx => {
         const isIn  = tx.type === 'in';
         const dt    = new Date(tx.transaction_at);
-        const ds    = `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+        const ds    = `${dt.getUTCMonth()+1}/${dt.getUTCDate()} ${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
         const label = CATEGORY_LABELS[tx.category] || tx.category;
         const uncat = tx.category === 'uncategorized';
         const conf  = tx.is_confirmed;

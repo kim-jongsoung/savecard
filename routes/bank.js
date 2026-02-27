@@ -81,7 +81,8 @@ function parseShinhanSMS(msg) {
             const day   = parseInt(dateMatch[2], 10);
             const hour  = parseInt(dateMatch[3], 10);
             const min   = parseInt(dateMatch[4], 10);
-            transaction_at = new Date(now.getFullYear(), month, day, hour, min, 0);
+            // SMS 시간은 KST(UTC+9) → UTC로 저장 (9시간 빼기)
+            transaction_at = new Date(Date.UTC(now.getUTCFullYear(), month, day, hour - 9, min, 0));
         }
 
         // 적요: 금액 뒤 텍스트 (잔액 줄 제외)
@@ -363,6 +364,22 @@ router.get('/categories', (req, res) => {
         ],
     };
     res.json({ success: true, data: categories });
+});
+
+// 기존 데이터 시간 보정 (KST→UTC, -9시간) - 한 번만 실행
+router.post('/fix-timezone', async (req, res) => {
+    try {
+        const docs = await BankTransaction.find({});
+        let count = 0;
+        for (const doc of docs) {
+            const fixed = new Date(doc.transaction_at.getTime() - 9 * 60 * 60 * 1000);
+            await BankTransaction.updateOne({ _id: doc._id }, { transaction_at: fixed });
+            count++;
+        }
+        res.json({ success: true, message: `${count}건 시간 보정 완료 (-9시간)` });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
 });
 
 module.exports = router;
