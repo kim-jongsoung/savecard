@@ -335,6 +335,12 @@ router.get('/webhook-test', (req, res) => {
     res.json({ success: true, input: msg, parsed: result });
 });
 
+router.get('/card-test', (req, res) => {
+    const msg = req.query.msg || '신한법인해외승인 9073 02/27 10:53 5.00 달러 (GU)DUSIT THANI';
+    const result = parseShinhanCard(msg);
+    res.json({ success: true, input: msg, parsed: result });
+});
+
 // ==================== 거래 내역 조회 ====================
 router.get('/transactions', async (req, res) => {
     try {
