@@ -1191,7 +1191,6 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             INNER JOIN settlements s ON s.reservation_id = r.id
             WHERE r.payment_status IN ('payment_completed', 'settlement_completed')
               AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
-              AND (s.payment_received_date IS NOT NULL OR s.payment_sent_date IS NOT NULL)
             ORDER BY r.usage_date DESC
         `);
 
@@ -1251,7 +1250,6 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
             WHERE hr.status NOT IN ('cancelled', 'pending', 'draft')
-              AND (hr.payment_received_date IS NOT NULL OR hr.payment_sent_date IS NOT NULL)
             ORDER BY hr.check_in_date DESC
         `);
 
