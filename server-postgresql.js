@@ -1172,16 +1172,21 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
         const now = new Date();
 
         // ===== 즐길거리 (PostgreSQL reservations) =====
+        // 정산전(입금 이력 없음) 완전 제외 → 입금완료/정산완료 건만
+        // total_amount가 NULL인 경우 단가×인원으로 계산
         const activityResult = await pool.query(`
             SELECT
                 id, reservation_number, platform_name, korean_name,
                 usage_date as departure_date,
-                total_amount as total_selling,
                 payment_status,
                 updated_at as payment_date,
-                CASE WHEN payment_status IN ('payment_completed','settlement_completed') THEN total_amount ELSE 0 END as received_amount
+                COALESCE(
+                    NULLIF(total_amount, 0),
+                    (COALESCE(adult_unit_price, 0) * COALESCE(people_adult, 0)) +
+                    (COALESCE(child_unit_price, 0) * COALESCE(people_child, 0))
+                ) as total_selling
             FROM reservations
-            WHERE payment_status != '취소'
+            WHERE payment_status IN ('payment_completed', 'settlement_completed')
               AND (assigned_to IS NULL OR assigned_to NOT ILIKE '%바스코%')
             ORDER BY usage_date DESC
         `);
@@ -1190,9 +1195,9 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             const departure = r.departure_date ? new Date(r.departure_date) : null;
             const departed = departure ? departure < now : false;
             const totalSelling = parseFloat(r.total_selling) || 0;
-            const receivedAmount = parseFloat(r.received_amount) || 0;
-            const unpaid = Math.max(0, totalSelling - receivedAmount);
-            const isReceived = ['payment_completed','settlement_completed'].includes(r.payment_status);
+            // 입금완료/정산완료 상태이므로 전액 입금된 것으로 처리
+            const receivedAmount = totalSelling;
+            const unpaid = 0;
             return {
                 erp: 'activity',
                 erp_label: '즐길거리',
@@ -1203,7 +1208,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 departed,
                 total_selling: totalSelling,
                 received_amount: receivedAmount,
-                payment_date: isReceived ? r.payment_date : null,
+                payment_date: r.payment_date,
                 transfer_date: null,
                 deposit: !departed && receivedAmount > 0 ? receivedAmount : 0,
                 receivable: departed && unpaid > 0 ? unpaid : 0,
@@ -1231,6 +1236,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
             WHERE hr.status NOT IN ('cancelled')
+              AND (hr.payment_date IS NOT NULL OR hr.transfer_date IS NOT NULL)
             ORDER BY hr.check_in_date DESC
         `);
 

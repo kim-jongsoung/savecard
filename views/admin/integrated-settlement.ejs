@@ -79,7 +79,6 @@
                         <label class="form-label small mb-1">상태</label>
                         <select class="form-select form-select-sm" id="filterStatus" style="width:130px">
                             <option value="">전체</option>
-                            <option value="not_started">정산전</option>
                             <option value="receivable">미수금</option>
                             <option value="deposit">수탁액</option>
                             <option value="payable">미지급금</option>
@@ -190,14 +189,12 @@
 
             let filtered = allData.filter(r => {
                 const noPending = !(r.receivable > 0) && !(r.deposit > 0) && !(r.payable > 0) && !(r.prepaid > 0);
-                const notStarted = (r.total_selling > 0) && (r.received_amount === 0) && noPending;
                 if (erp && r.erp !== erp) return false;
-                if (status === 'not_started' && !notStarted) return false;
                 if (status === 'receivable' && !(r.receivable > 0)) return false;
                 if (status === 'deposit'    && !(r.deposit > 0)) return false;
                 if (status === 'payable'    && !(r.payable > 0)) return false;
                 if (status === 'prepaid'    && !(r.prepaid > 0)) return false;
-                if (status === 'settled' && (!noPending || notStarted)) return false;
+                if (status === 'settled'    && !noPending) return false;
                 if (start && r.departure_date && new Date(r.departure_date) < new Date(start)) return false;
                 if (end   && r.departure_date && new Date(r.departure_date) > new Date(end + 'T23:59:59')) return false;
                 if (search && !(
@@ -239,22 +236,19 @@
                 const erpBadge = `<span class="badge erp-badge-${r.erp}">${r.erp_label}</span>`;
                 const marginColor = (r.margin || 0) >= 0 ? 'text-success' : 'text-danger';
 
-                // 상태 판단
+                // 상태 판단 (API에서 정산전은 이미 제외됨)
                 const hasReceivable = r.receivable > 0;
                 const hasDeposit    = r.deposit > 0;
                 const hasPayable    = r.payable > 0;
                 const hasPrepaid    = r.prepaid > 0;
                 const noPending     = !hasReceivable && !hasDeposit && !hasPayable && !hasPrepaid;
-                // 정산전: 판매금액이 있는데 입금도 없고 수탁도 없는 경우
-                const notStarted    = (r.total_selling > 0) && (r.received_amount === 0) && noPending;
 
                 let statusBadge = '';
                 if (hasReceivable) statusBadge += '<span class="badge bg-danger me-1">미수금</span>';
                 if (hasDeposit)    statusBadge += '<span class="badge bg-success me-1">수탁</span>';
                 if (hasPayable)    statusBadge += '<span class="badge bg-warning text-dark me-1">미지급</span>';
                 if (hasPrepaid)    statusBadge += '<span class="badge bg-primary me-1">선급</span>';
-                if (notStarted)    statusBadge  = '<span class="badge bg-light text-dark border">정산전</span>';
-                if (noPending && !notStarted) statusBadge = '<span class="badge bg-secondary">정산완료</span>';
+                if (noPending)     statusBadge  = '<span class="badge bg-secondary">정산완료</span>';
 
                 return `<tr class="${r.departed ? '' : 'table-light'}">
                     <td>${erpBadge}</td>

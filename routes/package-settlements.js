@@ -100,6 +100,7 @@ router.get('/status', requireAuth, async (req, res) => {
         }).sort({ 'travel_period.departure_date': -1 });
 
         const list = reservations.map(r => {
+            // 정산전 제외 판단용 플래그는 아래 filter에서 처리
             const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
             const departed = departure ? departure < now : false;
 
@@ -164,7 +165,8 @@ router.get('/status', requireAuth, async (req, res) => {
                 margin: receivedAmount - sentAmount,
                 currency: r.pricing?.currency || 'KRW'
             };
-        });
+        // 정산전 완전 제외: 입금 또는 송금 이력이 있는 것만
+        }).filter(r => r.received_amount > 0 || r.sent_amount > 0);
 
         // 합계
         const summary = {
