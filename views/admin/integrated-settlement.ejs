@@ -372,21 +372,23 @@
                 const payDt   = fmtDate(r.payment_date);
                 const transDt = fmtDate(r.transfer_date);
 
-                const inAmt  = r.received_amount || 0;
-                const outAmt = r.sent_amount || r.total_cost || 0;
+                const inExp  = r.total_selling || r.received_amount || 0;   // 입금예정액 (항상)
+                const inAmt  = r.received_amount || 0;                         // 입금확정액 (입금일 있는 경우만)
+                const outExp = r.total_cost || 0;                              // 송금예정액 (항상)
+                const outAmt = r.sent_amount || 0;                             // 송금확정액 (송금일 있는 경우만)
 
                 // 입금 컬럼 값
                 const sutak      = s.inKey === 'sutak'        ? inAmt : 0;
                 const inConfirm  = s.inKey === 'in_confirmed' ? inAmt : 0;
-                const receivable = s.inKey === 'receivable'   ? inAmt : 0;
+                const receivable = s.inKey === 'receivable'   ? inExp  : 0;
 
                 // 송금 컬럼 값
                 const prepaid    = s.outKey === 'prepaid'      ? outAmt : 0;
                 const outConfirm = s.outKey === 'out_confirmed'? outAmt : 0;
-                const payable    = s.outKey === 'payable'      ? outAmt : 0;
+                const payable    = s.outKey === 'payable'      ? outExp  : 0;
 
                 // 손익
-                const estPnl  = inAmt - outAmt;
+                const estPnl  = inExp - outExp;
                 const confPnl = inConfirm - outConfirm;
                 const estColor  = estPnl  >= 0 ? 'text-success' : 'text-danger';
                 const confColor = confPnl >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
@@ -418,14 +420,14 @@
                     </td>
 
                     <!-- 입금 구역 -->
-                    <td class="num">${inAmt > 0 ? krw(inAmt) : '<span class="amt-zero">-</span>'}</td>
+                    <td class="num">${inExp > 0 ? krw(inExp) : '<span class="amt-zero">-</span>'}</td>
                     <td class="text-center date-cell ${payDt ? 'date-present' : ''}">${payDt || '-'}</td>
                     <td class="num"><span class="${inConfirm > 0 ? 'amt-confirmed' : 'amt-zero'}">${inConfirm > 0 ? krw(inConfirm) : '-'}</span></td>
                     <td class="num"><span class="${sutak > 0 ? 'amt-sutak' : 'amt-zero'}">${sutak > 0 ? krw(sutak) : '-'}</span></td>
                     <td class="num"><span class="${receivable > 0 ? 'amt-receivable' : 'amt-zero'}">${receivable > 0 ? krw(receivable) : '-'}</span></td>
 
                     <!-- 송금 구역 -->
-                    <td class="num">${outAmt > 0 ? krw(outAmt) : '<span class="amt-zero">-</span>'}</td>
+                    <td class="num">${outExp > 0 ? krw(outExp) : '<span class="amt-zero">-</span>'}</td>
                     <td class="text-center date-cell ${transDt ? 'date-present' : ''}">${transDt || '-'}</td>
                     <td class="num"><span class="${outConfirm > 0 ? 'amt-out-confirmed' : 'amt-zero'}">${outConfirm > 0 ? krw(outConfirm) : '-'}</span></td>
                     <td class="num"><span class="${prepaid > 0 ? 'amt-prepaid' : 'amt-zero'}">${prepaid > 0 ? krw(prepaid) : '-'}</span></td>
@@ -445,19 +447,21 @@
             let estPnl=0, confPnl=0;
             list.forEach(r => {
                 const s = getStatus(r);
-                const inAmt  = r.received_amount || 0;
-                const outAmt = r.sent_amount || r.total_cost || 0;
-                inExp  += inAmt;
-                outExp += outAmt;
-                if (s.inKey  === 'in_confirmed')  { inConf  += inAmt;  }
-                if (s.inKey  === 'sutak')         { sutak   += inAmt;  }
-                if (s.inKey  === 'receivable')    { recv    += inAmt;  }
-                if (s.outKey === 'out_confirmed') { outConf += outAmt; }
-                if (s.outKey === 'prepaid')       { prepaid += outAmt; }
-                if (s.outKey === 'payable')       { payable += outAmt; }
-                estPnl  += inAmt - outAmt;
+                const rInExp  = r.total_selling || r.received_amount || 0;
+                const rInAmt  = r.received_amount || 0;
+                const rOutExp = r.total_cost || 0;
+                const rOutAmt = r.sent_amount || 0;
+                inExp  += rInExp;
+                outExp += rOutExp;
+                if (s.inKey  === 'in_confirmed')  { inConf  += rInAmt;  }
+                if (s.inKey  === 'sutak')         { sutak   += rInAmt;  }
+                if (s.inKey  === 'receivable')    { recv    += rInExp;  }
+                if (s.outKey === 'out_confirmed') { outConf += rOutAmt; }
+                if (s.outKey === 'prepaid')       { prepaid += rOutAmt; }
+                if (s.outKey === 'payable')       { payable += rOutExp; }
+                estPnl  += rInExp - rOutExp;
                 if (s.inKey === 'in_confirmed' || s.outKey === 'out_confirmed') {
-                    confPnl += (s.inKey === 'in_confirmed' ? inAmt : 0) - (s.outKey === 'out_confirmed' ? outAmt : 0);
+                    confPnl += (s.inKey === 'in_confirmed' ? rInAmt : 0) - (s.outKey === 'out_confirmed' ? rOutAmt : 0);
                 }
             });
             const set = (id, v, colored) => {
