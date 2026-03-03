@@ -194,6 +194,24 @@
                 <tbody id="mainTableBody">
                     <tr><td colspan="17" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
                 </tbody>
+                <tfoot id="mainTableFoot" style="font-size:.8rem">
+                    <tr style="background:#f0f0f0;font-weight:700">
+                        <td colspan="4" class="text-end" style="background:#e0e0e0">합 계</td>
+                        <td class="num" id="ft_in_exp">-</td>
+                        <td class="text-center" style="color:#999;font-weight:400">-</td>
+                        <td class="num" id="ft_in_conf" style="color:#1b5e20">-</td>
+                        <td class="num" id="ft_sutak" style="color:#1565c0">-</td>
+                        <td class="num" id="ft_recv" style="color:#c62828">-</td>
+                        <td class="num" id="ft_out_exp">-</td>
+                        <td class="text-center" style="color:#999;font-weight:400">-</td>
+                        <td class="num" id="ft_out_conf" style="color:#1b5e20">-</td>
+                        <td class="num" id="ft_prepaid" style="color:#1565c0">-</td>
+                        <td class="num" id="ft_payable" style="color:#bf360c">-</td>
+                        <td class="num" id="ft_est_pnl">-</td>
+                        <td class="num" id="ft_conf_pnl">-</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>
@@ -336,9 +354,11 @@
             const tbody = document.getElementById('mainTableBody');
             if (!list.length) {
                 tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
+                updateFoot([]);
                 return;
             }
 
+            updateFoot(list);
             tbody.innerHTML = list.map(r => {
                 const s = getStatus(r);
                 const depStr  = fmtDate(r.departure_date) || '-';
@@ -410,6 +430,47 @@
                     <td class="text-center">${badge}</td>
                 </tr>`;
             }).join('');
+        }
+
+        function updateFoot(list) {
+            let inExp=0, inConf=0, sutak=0, recv=0;
+            let outExp=0, outConf=0, prepaid=0, payable=0;
+            let estPnl=0, confPnl=0;
+            list.forEach(r => {
+                const s = getStatus(r);
+                const inAmt  = r.received_amount || 0;
+                const outAmt = r.sent_amount || r.total_cost || 0;
+                inExp  += inAmt;
+                outExp += outAmt;
+                if (s.inKey  === 'in_confirmed')  { inConf  += inAmt;  }
+                if (s.inKey  === 'sutak')         { sutak   += inAmt;  }
+                if (s.inKey  === 'receivable')    { recv    += inAmt;  }
+                if (s.outKey === 'out_confirmed') { outConf += outAmt; }
+                if (s.outKey === 'prepaid')       { prepaid += outAmt; }
+                if (s.outKey === 'payable')       { payable += outAmt; }
+                estPnl  += inAmt - outAmt;
+                if (s.inKey === 'in_confirmed' || s.outKey === 'out_confirmed') {
+                    confPnl += (s.inKey === 'in_confirmed' ? inAmt : 0) - (s.outKey === 'out_confirmed' ? outAmt : 0);
+                }
+            });
+            const set = (id, v, colored) => {
+                const el = document.getElementById(id);
+                el.textContent = v !== 0 ? krw0(v) : '-';
+            };
+            set('ft_in_exp',   inExp);
+            set('ft_in_conf',  inConf);
+            set('ft_sutak',    sutak);
+            set('ft_recv',     recv);
+            set('ft_out_exp',  outExp);
+            set('ft_out_conf', outConf);
+            set('ft_prepaid',  prepaid);
+            set('ft_payable',  payable);
+            const epEl = document.getElementById('ft_est_pnl');
+            epEl.textContent = krw0(estPnl);
+            epEl.style.color = estPnl >= 0 ? '#1b5e20' : '#c62828';
+            const cpEl = document.getElementById('ft_conf_pnl');
+            cpEl.textContent = confPnl !== 0 ? krw0(confPnl) : '-';
+            cpEl.style.color = confPnl >= 0 ? '#1b5e20' : '#c62828';
         }
 
         document.getElementById('filterSearch').addEventListener('keydown', e => {
