@@ -97,6 +97,12 @@
                     완료
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="hotelstatus-tab" data-bs-toggle="tab" data-bs-target="#hotelStatusPane"
+                        type="button" role="tab" onclick="loadHotelStatus()">
+                    <i class="fas fa-chart-bar me-1"></i>정산현황
+                </button>
+            </li>
         </ul>
 
         <!-- 일괄 처리 버튼 (미완료 탭에만 표시) -->
@@ -257,6 +263,48 @@
                                 </td>
                             </tr>
                         </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- 정산현황 탭 패널 -->
+            <div class="tab-pane fade" id="hotelStatusPane" role="tabpanel">
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="card border-success"><div class="card-body py-2 px-3">
+                            <div class="small text-muted">수탁액 <span class="badge bg-success ms-1">출발전 입금</span></div>
+                            <div class="fw-bold fs-6 text-success" id="hotel_sum_deposit">-</div>
+                        </div></div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-danger"><div class="card-body py-2 px-3">
+                            <div class="small text-muted">미수금 <span class="badge bg-danger ms-1">출발후 미입금</span></div>
+                            <div class="fw-bold fs-6 text-danger" id="hotel_sum_receivable">-</div>
+                        </div></div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-primary"><div class="card-body py-2 px-3">
+                            <div class="small text-muted">선급금 <span class="badge bg-primary ms-1">출발전 송금</span></div>
+                            <div class="fw-bold fs-6 text-primary" id="hotel_sum_prepaid">-</div>
+                        </div></div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-warning"><div class="card-body py-2 px-3">
+                            <div class="small text-muted">미지급금 <span class="badge bg-warning text-dark ms-1">출발후 미송금</span></div>
+                            <div class="fw-bold fs-6 text-warning" id="hotel_sum_payable">-</div>
+                        </div></div>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
+                        <thead class="table-dark"><tr>
+                            <th>체크인</th><th>예약번호</th><th>예약업체</th><th>투숙객명</th>
+                            <th class="text-end">판매(KRW)</th><th class="text-end">입금액</th>
+                            <th class="text-end text-success">수탁액</th><th class="text-end text-danger">미수금</th>
+                            <th class="text-end">매입(KRW)</th><th class="text-end">송금액</th>
+                            <th class="text-end text-primary">선급금</th><th class="text-end text-warning">미지급금</th>
+                            <th class="text-end">손익</th><th>상태</th>
+                        </tr></thead>
+                        <tbody id="hotelStatusBody"><tr><td colspan="14" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -1000,6 +1048,52 @@
             } catch (error) {
                 console.error('엑셀 다운로드 실패:', error);
                 alert('엑셀 다운로드 중 오류가 발생했습니다.');
+            }
+        }
+
+        // ===== 정산현황 탭 =====
+        const htKrw = v => '₩' + Math.round(v || 0).toLocaleString();
+        async function loadHotelStatus() {
+            const tbody = document.getElementById('hotelStatusBody');
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+            try {
+                const res = await fetch('/api/integrated-settlement/status');
+                const d = await res.json();
+                if (!d.success) throw new Error(d.message);
+                const list = d.list.filter(r => r.erp === 'hotel');
+                document.getElementById('hotel_sum_deposit').textContent    = htKrw(list.reduce((s,r) => s+r.deposit, 0));
+                document.getElementById('hotel_sum_receivable').textContent = htKrw(list.reduce((s,r) => s+r.receivable, 0));
+                document.getElementById('hotel_sum_prepaid').textContent    = htKrw(list.reduce((s,r) => s+r.prepaid, 0));
+                document.getElementById('hotel_sum_payable').textContent    = htKrw(list.reduce((s,r) => s+r.payable, 0));
+                if (!list.length) { tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>'; return; }
+                tbody.innerHTML = list.map(r => {
+                    const dep = r.departure_date ? new Date(r.departure_date).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}) : '-';
+                    const mc = (r.margin||0) >= 0 ? 'text-success' : 'text-danger';
+                    let badge = '';
+                    if (r.receivable > 0) badge += '<span class="badge bg-danger me-1">미수금</span>';
+                    if (r.deposit > 0)    badge += '<span class="badge bg-success me-1">수탁</span>';
+                    if (r.payable > 0)    badge += '<span class="badge bg-warning text-dark me-1">미지급</span>';
+                    if (r.prepaid > 0)    badge += '<span class="badge bg-primary me-1">선급</span>';
+                    if (!badge)           badge  = '<span class="badge bg-secondary">완료</span>';
+                    return `<tr class="${r.departed ? '' : 'table-light'}">
+                        <td>${dep}</td>
+                        <td><small>${r.reservation_number||'-'}</small></td>
+                        <td><small>${r.platform_name||'-'}</small></td>
+                        <td>${r.customer_name||'-'}</td>
+                        <td class="text-end">${htKrw(r.total_selling)}</td>
+                        <td class="text-end">${htKrw(r.received_amount)}</td>
+                        <td class="text-end text-success fw-bold">${r.deposit>0?htKrw(r.deposit):'-'}</td>
+                        <td class="text-end text-danger fw-bold">${r.receivable>0?htKrw(r.receivable):'-'}</td>
+                        <td class="text-end">${r.total_cost>0?htKrw(r.total_cost):'-'}</td>
+                        <td class="text-end">${r.sent_amount>0?htKrw(r.sent_amount):'-'}</td>
+                        <td class="text-end text-primary fw-bold">${r.prepaid>0?htKrw(r.prepaid):'-'}</td>
+                        <td class="text-end text-warning fw-bold">${r.payable>0?htKrw(r.payable):'-'}</td>
+                        <td class="text-end fw-bold ${mc}">${htKrw(r.margin)}</td>
+                        <td>${badge}</td>
+                    </tr>`;
+                }).join('');
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-4 text-danger">로드 실패: ${e.message}</td></tr>`;
             }
         }
     </script>
