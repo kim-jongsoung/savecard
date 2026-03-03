@@ -255,7 +255,7 @@
                     <td>${dep}</td>
                     <td><small>${r.reservation_number || '-'}</small></td>
                     <td><small>${r.platform_name || '-'}</small></td>
-                    <td>${r.customer_name || '-'}</td>
+                    <td>${r.customer_name || '-'}${r.detail_label ? `<br><small class="text-muted">${r.detail_label}</small>` : ''}</td>
                     <td class="text-end">${krw(r.total_selling)}</td>
                     <td class="text-end">${r.received_amount > 0 ? krw(r.received_amount) : '-'}</td>
                     <td class="text-center small ${payDt !== '-' ? 'text-success' : 'text-muted'}">${payDt}</td>

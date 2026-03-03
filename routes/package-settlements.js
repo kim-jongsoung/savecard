@@ -99,51 +99,23 @@ router.get('/status', requireAuth, async (req, res) => {
             reservation_status: { $ne: 'cancelled' }
         }).sort({ 'travel_period.departure_date': -1 });
 
-        const list = reservations.map(r => {
-            // 정산전 제외 판단용 플래그는 아래 filter에서 처리
+        const list = [];
+
+        for (const r of reservations) {
             const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
             const departed = departure ? departure < now : false;
 
-            // 판매금액
             const totalSelling = (r.pricing?.total_selling_price || 0) +
                 ((r.pricing?.adjustments || []).reduce((s, a) => s + (a.amount || 0), 0));
-
-            // 입금액 (billings completed 합계)
-            const receivedAmount = (r.billings || [])
-                .filter(b => b.status === 'completed')
-                .reduce((s, b) => s + (b.amount || 0), 0);
-
-            // 미수금 / 수탁액
-            const unpaidAmount = Math.max(0, totalSelling - receivedAmount);
-            const receivable = departed && unpaidAmount > 0 ? unpaidAmount : 0;   // 미수금
-            const deposit = !departed && receivedAmount > 0 ? receivedAmount : 0; // 수탁액
-
-            // 매입 총액
             const totalCost = (r.cost_components || []).reduce((s, c) => s + (c.cost_krw || 0), 0);
 
-            // 송금액 (payment_sent_date 있는 것)
-            const sentAmount = (r.cost_components || [])
-                .filter(c => c.payment_sent_date)
-                .reduce((s, c) => s + (c.payment_sent_amount_krw || c.cost_krw || 0), 0);
+            const completedBillings = (r.billings || []).filter(b => b.status === 'completed');
+            const sentCosts = (r.cost_components || []).filter(c => c.payment_sent_date);
 
-            // 미지급금 / 선급금
-            const unsettledCost = Math.max(0, totalCost - sentAmount);
-            const payable = departed && unsettledCost > 0 ? unsettledCost : 0;    // 미지급금
-            const prepaid = !departed && sentAmount > 0 ? sentAmount : 0;          // 선급금
+            // 정산전 완전 제외: 입금/송금 이력 없으면 skip
+            if (completedBillings.length === 0 && sentCosts.length === 0) continue;
 
-            // 최근 입금일 (billings completed 중 가장 최근)
-            const lastPaymentDate = (r.billings || [])
-                .filter(b => b.status === 'completed' && b.paid_at)
-                .map(b => new Date(b.paid_at))
-                .sort((a, b) => b - a)[0] || null;
-
-            // 최근 송금일 (cost_components 중 payment_sent_date 가장 최근)
-            const lastTransferDate = (r.cost_components || [])
-                .filter(c => c.payment_sent_date)
-                .map(c => new Date(c.payment_sent_date))
-                .sort((a, b) => b - a)[0] || null;
-
-            return {
+            const base = {
                 _id: r._id,
                 reservation_number: r.reservation_number,
                 platform_name: r.platform_name,
@@ -151,22 +123,48 @@ router.get('/status', requireAuth, async (req, res) => {
                 departure_date: departure,
                 departed,
                 total_selling: totalSelling,
-                received_amount: receivedAmount,
-                payment_date: lastPaymentDate,
-                transfer_date: lastTransferDate,
-                unpaid_amount: unpaidAmount,
-                receivable,
-                deposit,
                 total_cost: totalCost,
-                sent_amount: sentAmount,
-                unsettled_cost: unsettledCost,
-                payable,
-                prepaid,
-                margin: receivedAmount - sentAmount,
                 currency: r.pricing?.currency || 'KRW'
             };
-        // 정산전 완전 제외: 입금 또는 송금 이력이 있는 것만
-        }).filter(r => r.received_amount > 0 || r.sent_amount > 0);
+
+            // billings completed → 입금 행 생성
+            for (const b of completedBillings) {
+                const amt = b.amount || 0;
+                list.push({
+                    ...base,
+                    row_type: 'billing',
+                    detail_label: b.description || '입금',
+                    received_amount: amt,
+                    payment_date: b.paid_at || null,
+                    transfer_date: null,
+                    sent_amount: 0,
+                    deposit: !departed && amt > 0 ? amt : 0,
+                    receivable: 0,
+                    prepaid: 0,
+                    payable: 0,
+                    margin: amt,
+                });
+            }
+
+            // cost_components with payment_sent_date → 송금 행 생성
+            for (const c of sentCosts) {
+                const amt = c.payment_sent_amount_krw || c.cost_krw || 0;
+                list.push({
+                    ...base,
+                    row_type: 'cost',
+                    detail_label: c.vendor_name || c.description || '송금',
+                    received_amount: 0,
+                    payment_date: null,
+                    transfer_date: c.payment_sent_date || null,
+                    sent_amount: amt,
+                    deposit: 0,
+                    receivable: 0,
+                    prepaid: !departed && amt > 0 ? amt : 0,
+                    payable: departed && amt > 0 ? amt : 0,
+                    margin: -amt,
+                });
+            }
+        }
 
         // 합계
         const summary = {

@@ -1225,7 +1225,14 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             SELECT
                 hr.id, hr.reservation_number,
                 ba.agency_name as platform_name,
-                (SELECT g->>'name' FROM jsonb_array_elements(hr.guests) g LIMIT 1) as customer_name,
+                (
+                    SELECT hrg.guest_name_ko
+                    FROM hotel_reservation_guests hrg
+                    INNER JOIN hotel_reservation_rooms hrr ON hrg.reservation_room_id = hrr.id
+                    WHERE hrr.reservation_id = hr.id
+                      AND hrg.guest_type = 'primary'
+                    LIMIT 1
+                ) as customer_name,
                 hr.check_in_date as departure_date,
                 hr.grand_total * COALESCE(hr.exchange_rate, 1300) as total_selling,
                 hr.total_cost_price * COALESCE(hr.exchange_rate, 1300) as total_cost,
