@@ -7,77 +7,112 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #f8f9fa; }
-        .erp-badge-activity { background: #c8e6c9; color: #2e7d32; font-size:.75rem; }
-        .erp-badge-hotel    { background: #ffe0b2; color: #e65100; font-size:.75rem; }
-        .erp-badge-package  { background: #f3e5f5; color: #6a1b9a; font-size:.75rem; }
-        .status-cell { min-width: 120px; }
-        .in-status-sutak    { color: #1565c0; font-weight:600; }
-        .in-status-completed { color: #2e7d32; font-weight:600; }
-        .in-status-receivable { color: #c62828; font-weight:600; }
-        .out-status-prepaid   { color: #1565c0; font-weight:600; }
-        .out-status-completed { color: #2e7d32; font-weight:600; }
-        .out-status-payable   { color: #e65100; font-weight:600; }
-        .tbl-departed td { background: #fff; }
-        .tbl-notdep td  { background: #f0f7ff; }
+        body { background: #f4f6fb; font-size: .82rem; }
+
+        /* ERP 배지 */
+        .erp-badge-activity { background:#c8e6c9; color:#2e7d32; }
+        .erp-badge-hotel    { background:#ffe0b2; color:#e65100; }
+        .erp-badge-package  { background:#f3e5f5; color:#6a1b9a; }
+
+        /* 테이블 구역 구분 */
+        .thead-in  { background:#1565c0; color:#fff; }
+        .thead-out { background:#2e7d32; color:#fff; }
+        .thead-pnl { background:#37474f; color:#fff; }
+        .thead-info { background:#424242; color:#fff; }
+
+        /* 금액 셀 색상 */
+        .amt-sutak     { color:#1565c0; font-weight:700; }
+        .amt-receivable{ color:#c62828; font-weight:700; }
+        .amt-confirmed { color:#1b5e20; font-weight:700; }
+        .amt-prepaid   { color:#1565c0; font-weight:700; }
+        .amt-payable   { color:#bf360c; font-weight:700; }
+        .amt-out-confirmed { color:#1b5e20; font-weight:700; }
+        .amt-zero      { color:#bbb; }
+
+        /* 날짜 셀 */
+        .date-cell { color:#555; font-size:.78rem; white-space:nowrap; }
+        .date-present { color:#1976d2; font-weight:600; }
+
+        /* 출발전 행 배경 */
+        .tbl-notdep td { background:#eef4ff !important; }
+        .tbl-departed td { background:#fff !important; }
+
+        /* 확정손익 배지 */
+        .badge-settled { background:#1b5e20; color:#fff; font-size:.73rem; }
+        .badge-partial { background:#f57f17; color:#fff; font-size:.73rem; }
+
+        /* 요약 카드 */
+        .summary-card { border-radius:10px; padding:12px 16px; color:#fff; }
+        .sc-deposit    { background: linear-gradient(135deg,#1565c0,#1976d2); }
+        .sc-receivable { background: linear-gradient(135deg,#c62828,#e53935); }
+        .sc-prepaid    { background: linear-gradient(135deg,#00695c,#00897b); }
+        .sc-payable    { background: linear-gradient(135deg,#bf360c,#e64a19); }
+        .sc-pnl        { background: linear-gradient(135deg,#37474f,#546e7a); }
+
+        th { white-space:nowrap; font-size:.78rem; padding:6px 8px !important; }
+        td { padding:5px 8px !important; vertical-align:middle; }
+        .num { text-align:right; }
     </style>
 </head>
 <body>
     <%- include('../partials/navbar', { currentPage: 'integrated-settlement', adminUsername: adminUsername || '관리자' }) %>
 
-    <div class="container-fluid mt-3">
+    <div class="container-fluid mt-3 pb-4">
+
+        <!-- 헤더 -->
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <h4 class="mb-0"><i class="fas fa-chart-pie me-2"></i>통합정산회계</h4>
-            <button class="btn btn-sm btn-outline-primary" onclick="loadAll()"><i class="fas fa-sync-alt me-1"></i>새로고침</button>
+            <h4 class="mb-0 fw-bold"><i class="fas fa-book me-2 text-primary"></i>통합정산회계장부</h4>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadAll()">
+                <i class="fas fa-sync-alt me-1"></i>새로고침
+            </button>
         </div>
 
-        <!-- 요약 카드 -->
-        <div class="row g-3 mb-3">
-            <div class="col-6 col-md-3">
-                <div class="card border-primary h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="small text-muted">수탁액 <span class="badge bg-primary ms-1">출발전 입금</span></div>
-                        <div class="fw-bold fs-5 text-primary" id="sum_deposit">-</div>
-                        <div class="small text-muted mt-1">즐길 <span id="dep_activity">-</span> / 호텔 <span id="dep_hotel">-</span> / 패키지 <span id="dep_package">-</span></div>
-                    </div>
+        <!-- 요약 카드 5개 -->
+        <div class="row g-2 mb-3">
+            <div class="col-6 col-md">
+                <div class="summary-card sc-deposit h-100">
+                    <div class="small opacity-75">수탁액 <span class="badge bg-white text-primary ms-1" style="font-size:.68rem">출발전 입금</span></div>
+                    <div class="fw-bold fs-5" id="sum_deposit">-</div>
+                    <div class="small opacity-75 mt-1">즐길 <span id="dep_activity">-</span> / 호텔 <span id="dep_hotel">-</span> / 패키지 <span id="dep_package">-</span></div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="card border-danger h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="small text-muted">미수금 <span class="badge bg-danger ms-1">출발후 미입금</span></div>
-                        <div class="fw-bold fs-5 text-danger" id="sum_receivable">-</div>
-                        <div class="small text-muted mt-1">즐길 <span id="rec_activity">-</span> / 호텔 <span id="rec_hotel">-</span> / 패키지 <span id="rec_package">-</span></div>
-                    </div>
+            <div class="col-6 col-md">
+                <div class="summary-card sc-receivable h-100">
+                    <div class="small opacity-75">미수금 <span class="badge bg-white text-danger ms-1" style="font-size:.68rem">출발후 미입금</span></div>
+                    <div class="fw-bold fs-5" id="sum_receivable">-</div>
+                    <div class="small opacity-75 mt-1">즐길 <span id="rec_activity">-</span> / 호텔 <span id="rec_hotel">-</span> / 패키지 <span id="rec_package">-</span></div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="card border-warning h-100">
-                    <div class="card-body py-2 px-3">
-                        <div class="small text-muted">선급금 <span class="badge bg-warning text-dark ms-1">출발전 송금</span></div>
-                        <div class="fw-bold fs-5 text-warning" id="sum_prepaid">-</div>
-                        <div class="small text-muted mt-1">호텔 <span id="pre_hotel">-</span> / 패키지 <span id="pre_package">-</span></div>
-                    </div>
+            <div class="col-6 col-md">
+                <div class="summary-card sc-prepaid h-100">
+                    <div class="small opacity-75">선급금 <span class="badge bg-white text-success ms-1" style="font-size:.68rem">출발전 송금</span></div>
+                    <div class="fw-bold fs-5" id="sum_prepaid">-</div>
+                    <div class="small opacity-75 mt-1">호텔 <span id="pre_hotel">-</span> / 패키지 <span id="pre_package">-</span></div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
-                <div class="card border-danger h-100" style="border-color:#e65100!important">
-                    <div class="card-body py-2 px-3">
-                        <div class="small text-muted">미지급금 <span class="badge ms-1" style="background:#e65100">출발후 미송금</span></div>
-                        <div class="fw-bold fs-5" style="color:#e65100" id="sum_payable">-</div>
-                        <div class="small text-muted mt-1">호텔 <span id="pay_hotel">-</span> / 패키지 <span id="pay_package">-</span></div>
-                    </div>
+            <div class="col-6 col-md">
+                <div class="summary-card sc-payable h-100">
+                    <div class="small opacity-75">미지급금 <span class="badge bg-white ms-1" style="font-size:.68rem;color:#bf360c">출발후 미송금</span></div>
+                    <div class="fw-bold fs-5" id="sum_payable">-</div>
+                    <div class="small opacity-75 mt-1">호텔 <span id="pay_hotel">-</span> / 패키지 <span id="pay_package">-</span></div>
+                </div>
+            </div>
+            <div class="col-6 col-md">
+                <div class="summary-card sc-pnl h-100">
+                    <div class="small opacity-75">예상손익 합계</div>
+                    <div class="fw-bold fs-5" id="sum_est_pnl">-</div>
+                    <div class="small opacity-75 mt-1">확정손익 <span id="sum_conf_pnl">-</span></div>
                 </div>
             </div>
         </div>
 
         <!-- 필터 -->
-        <div class="card mb-3">
+        <div class="card mb-3 shadow-sm">
             <div class="card-body py-2">
                 <div class="d-flex gap-2 flex-wrap align-items-end">
                     <div>
-                        <label class="form-label small mb-1">ERP 구분</label>
-                        <select class="form-select form-select-sm" id="filterErp" style="width:120px">
+                        <label class="form-label small mb-1">ERP</label>
+                        <select class="form-select form-select-sm" id="filterErp" style="width:110px">
                             <option value="">전체</option>
                             <option value="activity">즐길거리</option>
                             <option value="hotel">호텔</option>
@@ -86,60 +121,78 @@
                     </div>
                     <div>
                         <label class="form-label small mb-1">입금상태</label>
-                        <select class="form-select form-select-sm" id="filterInStatus" style="width:120px">
+                        <select class="form-select form-select-sm" id="filterInStatus" style="width:110px">
                             <option value="">전체</option>
                             <option value="sutak">수탁액</option>
-                            <option value="in_completed">입금완료</option>
+                            <option value="in_confirmed">입금확정</option>
                             <option value="receivable">미수금</option>
                         </select>
                     </div>
                     <div>
                         <label class="form-label small mb-1">송금상태</label>
-                        <select class="form-select form-select-sm" id="filterOutStatus" style="width:120px">
+                        <select class="form-select form-select-sm" id="filterOutStatus" style="width:110px">
                             <option value="">전체</option>
                             <option value="prepaid">선급금</option>
-                            <option value="out_completed">송금완료</option>
+                            <option value="out_confirmed">송금확정</option>
                             <option value="payable">미지급금</option>
                         </select>
                     </div>
                     <div>
                         <label class="form-label small mb-1">출발일 시작</label>
-                        <input type="date" class="form-control form-control-sm" id="filterStart" style="width:140px">
+                        <input type="date" class="form-control form-control-sm" id="filterStart" style="width:135px">
                     </div>
                     <div>
                         <label class="form-label small mb-1">출발일 종료</label>
-                        <input type="date" class="form-control form-control-sm" id="filterEnd" style="width:140px">
+                        <input type="date" class="form-control form-control-sm" id="filterEnd" style="width:135px">
                     </div>
                     <div>
                         <label class="form-label small mb-1">검색</label>
-                        <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="예약번호, 고객명" style="width:160px">
+                        <input type="text" class="form-control form-control-sm" id="filterSearch" placeholder="예약번호·고객명·채널" style="width:170px">
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="applyFilter()"><i class="fas fa-search me-1"></i>검색</button>
                     <button class="btn btn-outline-secondary btn-sm" onclick="resetFilter()"><i class="fas fa-undo"></i></button>
-                    <span class="ms-auto small text-muted" id="rowCount"></span>
+                    <span class="ms-auto small text-muted align-self-center" id="rowCount"></span>
                 </div>
             </div>
         </div>
 
         <!-- 테이블 -->
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
-                <thead class="table-dark">
+        <div class="table-responsive shadow-sm" style="border-radius:8px;overflow:hidden">
+            <table class="table table-bordered table-hover align-middle mb-0" style="font-size:.8rem;min-width:1400px">
+                <thead>
                     <tr>
-                        <th>ERP</th>
-                        <th>출발일</th>
-                        <th>예약번호</th>
-                        <th>채널</th>
-                        <th>고객명</th>
-                        <th class="text-end">입금액</th>
-                        <th class="text-center status-cell">입금상태</th>
-                        <th class="text-end">매입금액</th>
-                        <th class="text-center status-cell">송금상태</th>
-                        <th class="text-end">손익</th>
+                        <!-- 기본정보 -->
+                        <th class="thead-info text-center" rowspan="2">ERP</th>
+                        <th class="thead-info text-center" rowspan="2">출발일</th>
+                        <th class="thead-info" rowspan="2">예약번호<br><span style="font-weight:400;opacity:.8">판매처(채널)</span></th>
+                        <th class="thead-info" rowspan="2">고객명</th>
+                        <!-- 입금 구역 -->
+                        <th class="thead-in text-center" colspan="5">입금</th>
+                        <!-- 송금 구역 -->
+                        <th class="thead-out text-center" colspan="5">송금</th>
+                        <!-- 손익 구역 -->
+                        <th class="thead-pnl text-center" colspan="3">손익</th>
+                    </tr>
+                    <tr>
+                        <th class="thead-in num">입금예정액</th>
+                        <th class="thead-in text-center">입금일</th>
+                        <th class="thead-in num">입금확정액</th>
+                        <th class="thead-in num">수탁액</th>
+                        <th class="thead-in num">미수금</th>
+
+                        <th class="thead-out num">송금예정액</th>
+                        <th class="thead-out text-center">송금일</th>
+                        <th class="thead-out num">송금확정금</th>
+                        <th class="thead-out num">선급금</th>
+                        <th class="thead-out num">미지급금</th>
+
+                        <th class="thead-pnl num">예상손익</th>
+                        <th class="thead-pnl num">확정손익</th>
+                        <th class="thead-pnl text-center">상태</th>
                     </tr>
                 </thead>
                 <tbody id="mainTableBody">
-                    <tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                    <tr><td colspan="17" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -147,45 +200,55 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const krw = v => v ? '₩' + Math.round(v).toLocaleString() : '-';
+        const krw  = v => (v || v === 0) && v !== 0 ? '₩' + Math.round(v).toLocaleString() : '-';
+        const krw0 = v => '₩' + Math.round(v || 0).toLocaleString();
         let allData = [];
         const now = new Date();
 
-        // 입금상태 동적 계산: payment_date + departure_date 기준
-        // payment_date 있고 출발전 → 수탁액
-        // payment_date 있고 출발후 → 입금완료
-        // payment_date 없고 출발후 → 미수금
-        // payment_date 없고 출발전 → (없음)
-        function calcInStatus(r) {
-            const dep = r.departure_date ? new Date(r.departure_date) : null;
-            const departed = dep ? dep < now : false;
-            const hasPay = !!r.payment_date;
-            const amt = r.received_amount || 0;
-            if (hasPay && !departed)  return { key: 'sutak',        label: '수탁액',   cls: 'in-status-sutak',      amt };
-            if (hasPay && departed)   return { key: 'in_completed', label: '입금완료', cls: 'in-status-completed',  amt };
-            if (!hasPay && departed)  return { key: 'receivable',   label: '미수금',   cls: 'in-status-receivable', amt };
-            return null;
-        }
+        const fmtDate = v => {
+            if (!v) return null;
+            const d = new Date(v);
+            if (isNaN(d)) return null;
+            return `${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+        };
 
-        // 송금상태 동적 계산: transfer_date + departure_date 기준
-        // transfer_date 있고 출발전 → 선급금
-        // transfer_date 있고 출발후 → 송금완료
-        // transfer_date 없고 출발후 → 미지급금
-        // transfer_date 없고 출발전 → (없음)
-        function calcOutStatus(r) {
+        /*
+         * 입금상태:
+         *   payment_date 있고 출발전 → 수탁액(sutak)
+         *   payment_date 있고 출발후 → 입금확정(in_confirmed)
+         *   payment_date 없고 출발후 → 미수금(receivable)
+         *   payment_date 없고 출발전 → null
+         *
+         * 송금상태:
+         *   transfer_date 있고 출발전 → 선급금(prepaid)
+         *   transfer_date 있고 출발후 → 송금확정(out_confirmed)
+         *   transfer_date 없고 출발후 → 미지급금(payable)
+         *   transfer_date 없고 출발전 → null
+         */
+        function getStatus(r) {
             const dep = r.departure_date ? new Date(r.departure_date) : null;
             const departed = dep ? dep < now : false;
+            const hasPay   = !!r.payment_date;
             const hasTrans = !!r.transfer_date;
-            const amt = r.sent_amount || r.total_cost || 0;
-            if (hasTrans && !departed)  return { key: 'prepaid',      label: '선급금',   cls: 'out-status-prepaid',   amt };
-            if (hasTrans && departed)   return { key: 'out_completed', label: '송금완료',  cls: 'out-status-completed', amt };
-            if (!hasTrans && departed)  return { key: 'payable',       label: '미지급금', cls: 'out-status-payable',   amt };
-            return null;
+            const inAmt  = r.received_amount || 0;
+            const outAmt = r.sent_amount || r.total_cost || 0;
+
+            let inKey = null;
+            if (hasPay && !departed)  inKey = 'sutak';
+            else if (hasPay && departed)   inKey = 'in_confirmed';
+            else if (!hasPay && departed)  inKey = 'receivable';
+
+            let outKey = null;
+            if (hasTrans && !departed)  outKey = 'prepaid';
+            else if (hasTrans && departed)   outKey = 'out_confirmed';
+            else if (!hasTrans && departed)  outKey = 'payable';
+
+            return { departed, inKey, outKey, inAmt, outAmt };
         }
 
         async function loadAll() {
             document.getElementById('mainTableBody').innerHTML =
-                '<tr><td colspan="10" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+                '<tr><td colspan="17" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
 
             const [r1, r2] = await Promise.all([
                 fetch('/api/integrated-settlement/status').then(r => r.json()),
@@ -200,36 +263,41 @@
                     return new Date(b.departure_date) - new Date(a.departure_date);
                 });
 
-            // 요약: 실시간 calcInStatus/calcOutStatus 기준으로 계산
-            const sumByKey = (key, erpFilter) => allData
-                .filter(r => !erpFilter || r.erp === erpFilter)
-                .reduce((s, r) => {
-                    const inS  = calcInStatus(r);
-                    const outS = calcOutStatus(r);
-                    if (key === 'deposit'    && inS?.key  === 'sutak')        return s + (inS.amt  || 0);
-                    if (key === 'receivable' && inS?.key  === 'receivable')   return s + (inS.amt  || 0);
-                    if (key === 'prepaid'    && outS?.key === 'prepaid')      return s + (outS.amt || 0);
-                    if (key === 'payable'    && outS?.key === 'payable')      return s + (outS.amt || 0);
-                    return s;
-                }, 0);
-
-            document.getElementById('sum_deposit').textContent    = krw(sumByKey('deposit'));
-            document.getElementById('sum_receivable').textContent = krw(sumByKey('receivable'));
-            document.getElementById('sum_prepaid').textContent    = krw(sumByKey('prepaid'));
-            document.getElementById('sum_payable').textContent    = krw(sumByKey('payable'));
-
-            document.getElementById('dep_activity').textContent = krw(sumByKey('deposit',    'activity'));
-            document.getElementById('dep_hotel').textContent    = krw(sumByKey('deposit',    'hotel'));
-            document.getElementById('dep_package').textContent  = krw(sumByKey('deposit',    'package'));
-            document.getElementById('rec_activity').textContent = krw(sumByKey('receivable', 'activity'));
-            document.getElementById('rec_hotel').textContent    = krw(sumByKey('receivable', 'hotel'));
-            document.getElementById('rec_package').textContent  = krw(sumByKey('receivable', 'package'));
-            document.getElementById('pre_hotel').textContent    = krw(sumByKey('prepaid',    'hotel'));
-            document.getElementById('pre_package').textContent  = krw(sumByKey('prepaid',    'package'));
-            document.getElementById('pay_hotel').textContent    = krw(sumByKey('payable',    'hotel'));
-            document.getElementById('pay_package').textContent  = krw(sumByKey('payable',    'package'));
-
+            updateSummary();
             renderTable(allData);
+        }
+
+        function updateSummary() {
+            const sum = (keyFn, erpFilter) => allData
+                .filter(r => !erpFilter || r.erp === erpFilter)
+                .reduce((s, r) => s + (keyFn(r) || 0), 0);
+
+            const depositAmt    = r => getStatus(r).inKey === 'sutak'        ? (r.received_amount||0) : 0;
+            const receivableAmt = r => getStatus(r).inKey === 'receivable'   ? (r.received_amount||0) : 0;
+            const prepaidAmt    = r => getStatus(r).outKey === 'prepaid'     ? (r.sent_amount||r.total_cost||0) : 0;
+            const payableAmt    = r => getStatus(r).outKey === 'payable'     ? (r.sent_amount||r.total_cost||0) : 0;
+            const estPnl        = r => (r.received_amount||0) - (r.sent_amount||r.total_cost||0);
+            const confInAmt     = r => getStatus(r).inKey === 'in_confirmed' ? (r.received_amount||0) : 0;
+            const confOutAmt    = r => getStatus(r).outKey === 'out_confirmed'? (r.sent_amount||r.total_cost||0) : 0;
+            const confPnl       = r => confInAmt(r) - confOutAmt(r);
+
+            document.getElementById('sum_deposit').textContent    = krw0(sum(depositAmt));
+            document.getElementById('sum_receivable').textContent = krw0(sum(receivableAmt));
+            document.getElementById('sum_prepaid').textContent    = krw0(sum(prepaidAmt));
+            document.getElementById('sum_payable').textContent    = krw0(sum(payableAmt));
+            document.getElementById('sum_est_pnl').textContent    = krw0(sum(estPnl));
+            document.getElementById('sum_conf_pnl').textContent   = krw0(sum(confPnl));
+
+            document.getElementById('dep_activity').textContent = krw0(sum(depositAmt,    'activity'));
+            document.getElementById('dep_hotel').textContent    = krw0(sum(depositAmt,    'hotel'));
+            document.getElementById('dep_package').textContent  = krw0(sum(depositAmt,    'package'));
+            document.getElementById('rec_activity').textContent = krw0(sum(receivableAmt, 'activity'));
+            document.getElementById('rec_hotel').textContent    = krw0(sum(receivableAmt, 'hotel'));
+            document.getElementById('rec_package').textContent  = krw0(sum(receivableAmt, 'package'));
+            document.getElementById('pre_hotel').textContent    = krw0(sum(prepaidAmt,    'hotel'));
+            document.getElementById('pre_package').textContent  = krw0(sum(prepaidAmt,    'package'));
+            document.getElementById('pay_hotel').textContent    = krw0(sum(payableAmt,    'hotel'));
+            document.getElementById('pay_package').textContent  = krw0(sum(payableAmt,    'package'));
         }
 
         function applyFilter() {
@@ -241,21 +309,16 @@
             const search    = document.getElementById('filterSearch').value.toLowerCase();
 
             const filtered = allData.filter(r => {
+                const s = getStatus(r);
                 if (erp && r.erp !== erp) return false;
-                if (inStatus) {
-                    const s = calcInStatus(r);
-                    if (!s || s.key !== inStatus) return false;
-                }
-                if (outStatus) {
-                    const s = calcOutStatus(r);
-                    if (!s || s.key !== outStatus) return false;
-                }
+                if (inStatus  && s.inKey  !== inStatus)  return false;
+                if (outStatus && s.outKey !== outStatus) return false;
                 if (start && r.departure_date && new Date(r.departure_date) < new Date(start)) return false;
                 if (end   && r.departure_date && new Date(r.departure_date) > new Date(end + 'T23:59:59')) return false;
                 if (search && !(
                     (r.reservation_number || '').toLowerCase().includes(search) ||
-                    (r.customer_name || '').toLowerCase().includes(search) ||
-                    (r.platform_name || '').toLowerCase().includes(search)
+                    (r.customer_name      || '').toLowerCase().includes(search) ||
+                    (r.platform_name      || '').toLowerCase().includes(search)
                 )) return false;
                 return true;
             });
@@ -268,66 +331,83 @@
             renderTable(allData);
         }
 
-        const fmtDate = v => {
-            if (!v) return null;
-            const d = new Date(v);
-            if (isNaN(d)) return null;
-            return `${d.getFullYear().toString().slice(-2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-        };
-
         function renderTable(list) {
             document.getElementById('rowCount').textContent = `총 ${list.length}건`;
             const tbody = document.getElementById('mainTableBody');
             if (!list.length) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
                 return;
             }
+
             tbody.innerHTML = list.map(r => {
-                const dep = r.departure_date ? new Date(r.departure_date) : null;
-                const departed = dep ? dep < now : false;
-                const depStr = fmtDate(r.departure_date) || '-';
-                const erpBadge = `<span class="badge erp-badge-${r.erp} px-2 py-1">${r.erp_label}</span>`;
+                const s = getStatus(r);
+                const depStr  = fmtDate(r.departure_date) || '-';
+                const payDt   = fmtDate(r.payment_date);
+                const transDt = fmtDate(r.transfer_date);
 
-                const inS  = calcInStatus(r);
-                const outS = calcOutStatus(r);
+                const inAmt  = r.received_amount || 0;
+                const outAmt = r.sent_amount || r.total_cost || 0;
 
-                // 입금상태 셀
-                let inCell = '<span class="text-muted">-</span>';
-                if (inS) {
-                    const dtStr = fmtDate(r.payment_date);
-                    inCell = `<div class="${inS.cls}">${inS.label}</div>` +
-                             `<div class="small fw-bold">${krw(inS.amt)}</div>` +
-                             (dtStr ? `<div class="small text-muted">${dtStr}</div>` : '');
-                }
+                // 입금 컬럼 값
+                const sutak      = s.inKey === 'sutak'        ? inAmt : 0;
+                const inConfirm  = s.inKey === 'in_confirmed' ? inAmt : 0;
+                const receivable = s.inKey === 'receivable'   ? inAmt : 0;
 
-                // 송금상태 셀
-                let outCell = '<span class="text-muted">-</span>';
-                if (outS) {
-                    const dtStr = fmtDate(r.transfer_date);
-                    outCell = `<div class="${outS.cls}">${outS.label}</div>` +
-                              `<div class="small fw-bold">${krw(outS.amt)}</div>` +
-                              (dtStr ? `<div class="small text-muted">${dtStr}</div>` : '');
-                }
+                // 송금 컬럼 값
+                const prepaid    = s.outKey === 'prepaid'      ? outAmt : 0;
+                const outConfirm = s.outKey === 'out_confirmed'? outAmt : 0;
+                const payable    = s.outKey === 'payable'      ? outAmt : 0;
 
                 // 손익
-                const inAmt  = inS  ? (inS.amt  || 0) : 0;
-                const outAmt = outS ? (outS.amt || 0) : 0;
-                const margin = (r.received_amount || 0) - (r.sent_amount || r.total_cost || 0);
-                const marginColor = margin >= 0 ? 'text-success' : 'text-danger';
+                const estPnl  = inAmt - outAmt;
+                const confPnl = inConfirm - outConfirm;
+                const estColor  = estPnl  >= 0 ? 'text-success' : 'text-danger';
+                const confColor = confPnl >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 
-                const trCls = departed ? 'tbl-departed' : 'tbl-notdep';
+                // 상태 배지
+                const inDone  = s.inKey  === 'in_confirmed';
+                const outDone = s.outKey === 'out_confirmed';
+                let badge = '';
+                if (inDone && outDone)   badge = '<span class="badge badge-settled">확정완료</span>';
+                else if (inDone || outDone) badge = '<span class="badge badge-partial">부분확정</span>';
+                else if (s.inKey === 'receivable' || s.outKey === 'payable')
+                    badge = '<span class="badge bg-danger">미처리</span>';
+                else if (s.inKey === 'sutak' || s.outKey === 'prepaid')
+                    badge = '<span class="badge bg-primary">진행중</span>';
+
+                const trCls = s.departed ? 'tbl-departed' : 'tbl-notdep';
+                const erpBadge = `<span class="badge erp-badge-${r.erp} px-2 py-1">${r.erp_label}</span>`;
 
                 return `<tr class="${trCls}">
-                    <td>${erpBadge}</td>
-                    <td class="text-nowrap">${depStr}</td>
-                    <td><small class="text-muted">${r.reservation_number || '-'}</small></td>
-                    <td><small>${r.platform_name || '-'}</small></td>
-                    <td>${r.customer_name || '-'}${r.detail_label ? `<br><small class="text-muted">${r.detail_label}</small>` : ''}</td>
-                    <td class="text-end">${r.received_amount > 0 ? krw(r.received_amount) : '-'}</td>
-                    <td class="text-center status-cell">${inCell}</td>
-                    <td class="text-end">${(r.sent_amount || r.total_cost) > 0 ? krw(r.sent_amount || r.total_cost) : '-'}</td>
-                    <td class="text-center status-cell">${outCell}</td>
-                    <td class="text-end fw-bold ${marginColor}">${krw(margin)}</td>
+                    <td class="text-center">${erpBadge}</td>
+                    <td class="text-center fw-bold" style="font-size:.8rem">${depStr}</td>
+                    <td>
+                        <div style="font-size:.78rem;font-weight:600">${r.reservation_number || '-'}</div>
+                        <div class="text-muted" style="font-size:.73rem">${r.platform_name || '-'}</div>
+                    </td>
+                    <td>
+                        <div>${r.customer_name || '-'}</div>
+                        ${r.detail_label ? `<div class="text-muted" style="font-size:.72rem">${r.detail_label}</div>` : ''}
+                    </td>
+
+                    <!-- 입금 구역 -->
+                    <td class="num">${inAmt > 0 ? krw(inAmt) : '<span class="amt-zero">-</span>'}</td>
+                    <td class="text-center date-cell ${payDt ? 'date-present' : ''}">${payDt || '-'}</td>
+                    <td class="num"><span class="${inConfirm > 0 ? 'amt-confirmed' : 'amt-zero'}">${inConfirm > 0 ? krw(inConfirm) : '-'}</span></td>
+                    <td class="num"><span class="${sutak > 0 ? 'amt-sutak' : 'amt-zero'}">${sutak > 0 ? krw(sutak) : '-'}</span></td>
+                    <td class="num"><span class="${receivable > 0 ? 'amt-receivable' : 'amt-zero'}">${receivable > 0 ? krw(receivable) : '-'}</span></td>
+
+                    <!-- 송금 구역 -->
+                    <td class="num">${outAmt > 0 ? krw(outAmt) : '<span class="amt-zero">-</span>'}</td>
+                    <td class="text-center date-cell ${transDt ? 'date-present' : ''}">${transDt || '-'}</td>
+                    <td class="num"><span class="${outConfirm > 0 ? 'amt-out-confirmed' : 'amt-zero'}">${outConfirm > 0 ? krw(outConfirm) : '-'}</span></td>
+                    <td class="num"><span class="${prepaid > 0 ? 'amt-prepaid' : 'amt-zero'}">${prepaid > 0 ? krw(prepaid) : '-'}</span></td>
+                    <td class="num"><span class="${payable > 0 ? 'amt-payable' : 'amt-zero'}">${payable > 0 ? krw(payable) : '-'}</span></td>
+
+                    <!-- 손익 구역 -->
+                    <td class="num ${estColor}" style="font-size:.79rem">${krw(estPnl)}</td>
+                    <td class="num ${confColor}" style="font-size:.79rem">${(inDone || outDone) ? krw(confPnl) : '<span class="amt-zero">-</span>'}</td>
+                    <td class="text-center">${badge}</td>
                 </tr>`;
             }).join('');
         }
