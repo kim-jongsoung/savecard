@@ -1171,33 +1171,34 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
     try {
         const now = new Date();
 
-        // ===== 즐길거리 (PostgreSQL reservations) =====
-        // 정산전(입금 이력 없음) 완전 제외 → 입금완료/정산완료 건만
-        // total_amount가 NULL인 경우 단가×인원으로 계산
+        // ===== 즐길거리 (PostgreSQL reservations + settlements JOIN) =====
+        // settlements 테이블에서 실제 입금일/송금일/금액 가져옴
         const activityResult = await pool.query(`
             SELECT
-                id, reservation_number, platform_name, korean_name,
-                usage_date as departure_date,
-                payment_status,
-                updated_at as payment_date,
-                COALESCE(
-                    NULLIF(total_amount, 0),
-                    (COALESCE(adult_unit_price, 0) * COALESCE(people_adult, 0)) +
-                    (COALESCE(child_unit_price, 0) * COALESCE(people_child, 0))
-                ) as total_selling
-            FROM reservations
-            WHERE payment_status IN ('payment_completed', 'settlement_completed')
-              AND (assigned_to IS NULL OR assigned_to NOT ILIKE '%바스코%')
-            ORDER BY usage_date DESC
+                r.id, r.reservation_number, r.platform_name, r.korean_name,
+                r.usage_date as departure_date,
+                r.payment_status,
+                s.total_sale,
+                s.cost_krw,
+                s.payment_received_date,
+                s.payment_sent_date,
+                s.payment_sent_cost_krw
+            FROM reservations r
+            INNER JOIN settlements s ON s.reservation_id = r.id
+            WHERE r.payment_status IN ('payment_completed', 'settlement_completed')
+              AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
+              AND (s.payment_received_date IS NOT NULL OR s.payment_sent_date IS NOT NULL)
+            ORDER BY r.usage_date DESC
         `);
 
         const activityList = activityResult.rows.map(r => {
             const departure = r.departure_date ? new Date(r.departure_date) : null;
             const departed = departure ? departure < now : false;
-            const totalSelling = parseFloat(r.total_selling) || 0;
-            // 입금완료/정산완료 상태이므로 전액 입금된 것으로 처리
-            const receivedAmount = totalSelling;
-            const unpaid = 0;
+            const receivedAmount = parseFloat(r.total_sale) || 0;
+            const totalCost = parseFloat(r.cost_krw) || 0;
+            const sentAmount = parseFloat(r.payment_sent_cost_krw) || totalCost;
+            const unpaid = r.payment_received_date ? 0 : receivedAmount;
+            const unsettledCost = r.payment_sent_date ? 0 : totalCost;
             return {
                 erp: 'activity',
                 erp_label: '즐길거리',
@@ -1206,17 +1207,16 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 customer_name: r.korean_name || '-',
                 departure_date: departure,
                 departed,
-                total_selling: totalSelling,
                 received_amount: receivedAmount,
-                payment_date: r.payment_date,
-                transfer_date: null,
-                deposit: !departed && receivedAmount > 0 ? receivedAmount : 0,
-                receivable: departed && unpaid > 0 ? unpaid : 0,
-                total_cost: 0,
-                sent_amount: 0,
-                prepaid: 0,
-                payable: 0,
-                margin: receivedAmount,
+                payment_date: r.payment_received_date || null,
+                transfer_date: r.payment_sent_date || null,
+                deposit: !departed && r.payment_received_date && receivedAmount > 0 ? receivedAmount : 0,
+                receivable: departed && !r.payment_received_date && receivedAmount > 0 ? receivedAmount : 0,
+                total_cost: totalCost,
+                sent_amount: r.payment_sent_date ? sentAmount : 0,
+                prepaid: !departed && r.payment_sent_date && sentAmount > 0 ? sentAmount : 0,
+                payable: departed && !r.payment_sent_date && totalCost > 0 ? totalCost : 0,
+                margin: (r.payment_received_date ? receivedAmount : 0) - (r.payment_sent_date ? sentAmount : 0),
             };
         });
 
