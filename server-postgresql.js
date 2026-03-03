@@ -1285,7 +1285,78 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             };
         });
 
-        const allList = [...activityList, ...hotelList].sort((a, b) => {
+        // ===== 패키지 (MongoDB PackageReservation) =====
+        const packageReservations = await PackageReservation.find({
+            reservation_status: { $ne: 'cancelled' }
+        }).sort({ 'travel_period.departure_date': -1 });
+
+        const packageList = packageReservations.map(r => {
+            const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
+            const departed = departure ? departure < now : false;
+
+            // 입금예정 = 총 판매액 + 조정액
+            const totalSelling = (r.pricing?.total_selling_price || 0) +
+                ((r.pricing?.adjustments || []).reduce((s, a) => s + (a.amount || 0), 0));
+
+            // 입금확정 = billings 중 completed 합계
+            const completedBillings = (r.billings || []).filter(b => b.status === 'completed');
+            const receivedAmount = completedBillings.reduce((s, b) => s + (b.actual_amount || b.amount || 0), 0);
+
+            // 마지막 입금일 (completed billings 중 최신)
+            const lastPaymentDate = completedBillings.length > 0
+                ? completedBillings.slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))[0].date
+                : null;
+
+            // 송금예정 = cost_components 전체 cost_krw 합계
+            const totalCost = (r.cost_components || []).reduce((s, c) => s + (c.cost_krw || 0), 0);
+
+            // 송금확정 = payment_sent_date 있는 components 합계
+            const sentComponents = (r.cost_components || []).filter(c => c.payment_sent_date);
+            const sentAmount = sentComponents.reduce((s, c) => s + (c.payment_sent_amount_krw || c.cost_krw || 0), 0);
+
+            // 마지막 송금일
+            const lastTransferDate = sentComponents.length > 0
+                ? sentComponents.slice().sort((a, b) => new Date(b.payment_sent_date) - new Date(a.payment_sent_date))[0].payment_sent_date
+                : null;
+
+            const unpaid = Math.max(0, totalSelling - receivedAmount);
+            const unsettledCost = Math.max(0, totalCost - sentAmount);
+
+            return {
+                erp: 'package',
+                erp_label: '패키지',
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name || '-',
+                customer_name: r.customer?.korean_name || '-',
+                departure_date: departure,
+                departed,
+                total_selling: totalSelling,
+                received_amount: receivedAmount,
+                payment_date: lastPaymentDate || null,
+                transfer_date: lastTransferDate || null,
+                total_cost: totalCost,
+                sent_amount: sentAmount,
+                deposit:    !departed && receivedAmount > 0 ? receivedAmount : 0,
+                receivable:  departed && unpaid > 0        ? unpaid         : 0,
+                prepaid:    !departed && sentAmount > 0    ? sentAmount     : 0,
+                payable:     departed && unsettledCost > 0 ? unsettledCost  : 0,
+                margin: receivedAmount - sentAmount,
+                billings: (r.billings || []).map(b => ({
+                    description: b.notes || b.type || '입금',
+                    amount: b.actual_amount || b.amount || 0,
+                    date: b.date || null,
+                    status: b.status
+                })),
+                cost_components: (r.cost_components || []).map(c => ({
+                    vendor_name: c.vendor_name || '-',
+                    component_type: c.component_type || '-',
+                    cost_krw: c.payment_sent_amount_krw || c.cost_krw || 0,
+                    payment_sent_date: c.payment_sent_date || null
+                }))
+            };
+        });
+
+        const allList = [...activityList, ...hotelList, ...packageList].sort((a, b) => {
             if (!a.departure_date) return 1;
             if (!b.departure_date) return -1;
             return new Date(b.departure_date) - new Date(a.departure_date);
