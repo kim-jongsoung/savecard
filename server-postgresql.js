@@ -1181,6 +1181,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 CASE WHEN payment_status IN ('payment_completed','settlement_completed') THEN total_amount ELSE 0 END as received_amount
             FROM reservations
             WHERE payment_status != '취소'
+              AND (assigned_to IS NULL OR assigned_to NOT ILIKE '%바스코%')
             ORDER BY usage_date DESC
         `);
 
