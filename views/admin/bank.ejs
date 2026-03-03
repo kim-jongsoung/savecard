@@ -266,6 +266,18 @@
                 </div>
                 <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadCardLimit()" title="새로고침"><i class="fas fa-sync-alt"></i></button>
             </div>
+            <!-- 문자 수동 등록 -->
+            <div class="rounded p-3 mb-3" style="background:#f0f4ff;border:1px solid #c5cff5;">
+                <div class="fw-bold small mb-2"><i class="fas fa-keyboard me-1"></i>문자 수동 등록 (미수신 건 붙여넣기)</div>
+                <div class="d-flex gap-2 align-items-start">
+                    <textarea id="cardManualMsg" class="form-control form-control-sm font-monospace" rows="2" placeholder="신한법인해외승인 9073 02/27 14:43 729.00 달러 (GU)DUSIT BEACH" style="font-size:.8rem;resize:none;"></textarea>
+                    <div class="d-flex flex-column gap-1">
+                        <button class="btn btn-sm btn-outline-primary" onclick="previewCardManual()" style="white-space:nowrap"><i class="fas fa-search me-1"></i>파싱확인</button>
+                        <button class="btn btn-sm btn-success" onclick="submitCardManual()" style="white-space:nowrap"><i class="fas fa-plus me-1"></i>등록</button>
+                    </div>
+                </div>
+                <div id="cardManualPreview" class="mt-2 small" style="display:none;"></div>
+            </div>
             <div class="d-flex gap-2 mb-3 flex-wrap align-items-end">
                 <div>
                     <label class="form-label small fw-bold mb-1">기간 시작</label>

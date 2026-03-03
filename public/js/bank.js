@@ -427,6 +427,55 @@ async function loadCardTransactions() {
     }
 }
 
+// ==================== 카드 수동 등록 ====================
+async function previewCardManual() {
+    const msg = document.getElementById('cardManualMsg').value.trim();
+    const preview = document.getElementById('cardManualPreview');
+    if (!msg) { preview.style.display = 'none'; return; }
+    try {
+        const r = await fetch('/api/bank/card-test?msg=' + encodeURIComponent(msg));
+        const d = await r.json();
+        if (!d.parsed) {
+            preview.style.display = 'block';
+            preview.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>파싱 실패 - 신한법인해외승인 문자 형식 확인 필요</span>';
+            return;
+        }
+        const p = d.parsed;
+        const dt = new Date(new Date(p.transaction_at).getTime() + 9 * 60 * 60 * 1000);
+        const ds = `${dt.getUTCMonth()+1}/${dt.getUTCDate()} ${String(dt.getUTCHours()).padStart(2,'0')}:${String(dt.getUTCMinutes()).padStart(2,'0')}`;
+        preview.style.display = 'block';
+        preview.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i>파싱 성공</span>
+            &nbsp;|&nbsp; 일시: <strong>${ds}</strong>
+            &nbsp;|&nbsp; 카드: <strong>${p.card_number}</strong>
+            &nbsp;|&nbsp; 금액: <strong class="text-danger">USD ${p.amount.toLocaleString('en-US',{minimumFractionDigits:2})}</strong>
+            &nbsp;|&nbsp; 가맹점: <strong>${p.memo}</strong>`;
+    } catch (e) {
+        preview.style.display = 'block';
+        preview.innerHTML = '<span class="text-danger">오류: ' + e.message + '</span>';
+    }
+}
+
+async function submitCardManual() {
+    const msg = document.getElementById('cardManualMsg').value.trim();
+    if (!msg) { alert('문자 내용을 입력하세요.'); return; }
+    if (!msg.includes('신한법인해외승인')) { alert('신한법인해외승인 문자만 등록 가능합니다.'); return; }
+    if (!confirm('카드승인 내역으로 등록하시겠습니까?')) return;
+    try {
+        const r = await fetch('/api/bank/card-webhook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+            body: msg
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.message);
+        document.getElementById('cardManualMsg').value = '';
+        document.getElementById('cardManualPreview').style.display = 'none';
+        showAlert('카드승인 내역이 등록되었습니다.');
+        loadCardLimit();
+        loadCardTransactions();
+    } catch (e) { showAlert('등록 실패: ' + e.message, 'danger'); }
+}
+
 // ==================== 웹훅 안내 모달 ====================
 function openWebhookModal() {
     document.getElementById('webhookUrl').value = window.location.origin + '/api/bank/webhook';
