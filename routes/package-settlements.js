@@ -130,6 +130,18 @@ router.get('/status', requireAuth, async (req, res) => {
             const payable = departed && unsettledCost > 0 ? unsettledCost : 0;    // 미지급금
             const prepaid = !departed && sentAmount > 0 ? sentAmount : 0;          // 선급금
 
+            // 최근 입금일 (billings completed 중 가장 최근)
+            const lastPaymentDate = (r.billings || [])
+                .filter(b => b.status === 'completed' && b.paid_at)
+                .map(b => new Date(b.paid_at))
+                .sort((a, b) => b - a)[0] || null;
+
+            // 최근 송금일 (cost_components 중 payment_sent_date 가장 최근)
+            const lastTransferDate = (r.cost_components || [])
+                .filter(c => c.payment_sent_date)
+                .map(c => new Date(c.payment_sent_date))
+                .sort((a, b) => b - a)[0] || null;
+
             return {
                 _id: r._id,
                 reservation_number: r.reservation_number,
@@ -139,14 +151,16 @@ router.get('/status', requireAuth, async (req, res) => {
                 departed,
                 total_selling: totalSelling,
                 received_amount: receivedAmount,
+                payment_date: lastPaymentDate,
+                transfer_date: lastTransferDate,
                 unpaid_amount: unpaidAmount,
-                receivable,   // 미수금
-                deposit,      // 수탁액
+                receivable,
+                deposit,
                 total_cost: totalCost,
                 sent_amount: sentAmount,
                 unsettled_cost: unsettledCost,
-                payable,      // 미지급금
-                prepaid,      // 선급금
+                payable,
+                prepaid,
                 margin: receivedAmount - sentAmount,
                 currency: r.pricing?.currency || 'KRW'
             };

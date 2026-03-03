@@ -1178,6 +1178,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 usage_date as departure_date,
                 total_amount as total_selling,
                 payment_status,
+                updated_at as payment_date,
                 CASE WHEN payment_status IN ('payment_completed','settlement_completed') THEN total_amount ELSE 0 END as received_amount
             FROM reservations
             WHERE payment_status != '취소'
@@ -1191,6 +1192,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             const totalSelling = parseFloat(r.total_selling) || 0;
             const receivedAmount = parseFloat(r.received_amount) || 0;
             const unpaid = Math.max(0, totalSelling - receivedAmount);
+            const isReceived = ['payment_completed','settlement_completed'].includes(r.payment_status);
             return {
                 erp: 'activity',
                 erp_label: '즐길거리',
@@ -1201,6 +1203,8 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 departed,
                 total_selling: totalSelling,
                 received_amount: receivedAmount,
+                payment_date: isReceived ? r.payment_date : null,
+                transfer_date: null,
                 deposit: !departed && receivedAmount > 0 ? receivedAmount : 0,
                 receivable: departed && unpaid > 0 ? unpaid : 0,
                 total_cost: 0,
@@ -1249,6 +1253,8 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 departed,
                 total_selling: totalSelling,
                 received_amount: receivedAmount,
+                payment_date: r.payment_date || null,
+                transfer_date: r.transfer_date || null,
                 deposit: !departed && receivedAmount > 0 ? receivedAmount : 0,
                 receivable: departed && unpaid > 0 ? unpaid : 0,
                 total_cost: totalCost,

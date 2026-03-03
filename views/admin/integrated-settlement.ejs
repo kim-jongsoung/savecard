@@ -79,6 +79,7 @@
                         <label class="form-label small mb-1">상태</label>
                         <select class="form-select form-select-sm" id="filterStatus" style="width:130px">
                             <option value="">전체</option>
+                            <option value="not_started">정산전</option>
                             <option value="receivable">미수금</option>
                             <option value="deposit">수탁액</option>
                             <option value="payable">미지급금</option>
@@ -117,10 +118,12 @@
                         <th>고객명</th>
                         <th class="text-end">판매금액</th>
                         <th class="text-end">입금액</th>
+                        <th class="text-center">입금일</th>
                         <th class="text-end text-success">수탁액</th>
                         <th class="text-end text-danger">미수금</th>
                         <th class="text-end">매입총액</th>
                         <th class="text-end">송금액</th>
+                        <th class="text-center">송금일</th>
                         <th class="text-end text-primary">선급금</th>
                         <th class="text-end text-warning">미지급금</th>
                         <th class="text-end">손익</th>
@@ -128,7 +131,7 @@
                     </tr>
                 </thead>
                 <tbody id="mainTableBody">
-                    <tr><td colspan="15" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                    <tr><td colspan="17" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -186,12 +189,15 @@
             const search = document.getElementById('filterSearch').value.toLowerCase();
 
             let filtered = allData.filter(r => {
+                const noPending = !(r.receivable > 0) && !(r.deposit > 0) && !(r.payable > 0) && !(r.prepaid > 0);
+                const notStarted = (r.total_selling > 0) && (r.received_amount === 0) && noPending;
                 if (erp && r.erp !== erp) return false;
+                if (status === 'not_started' && !notStarted) return false;
                 if (status === 'receivable' && !(r.receivable > 0)) return false;
                 if (status === 'deposit'    && !(r.deposit > 0)) return false;
                 if (status === 'payable'    && !(r.payable > 0)) return false;
                 if (status === 'prepaid'    && !(r.prepaid > 0)) return false;
-                if (status === 'settled' && (r.receivable > 0 || r.deposit > 0 || r.payable > 0 || r.prepaid > 0)) return false;
+                if (status === 'settled' && (!noPending || notStarted)) return false;
                 if (start && r.departure_date && new Date(r.departure_date) < new Date(start)) return false;
                 if (end   && r.departure_date && new Date(r.departure_date) > new Date(end + 'T23:59:59')) return false;
                 if (search && !(
@@ -212,25 +218,44 @@
             renderTable(allData);
         }
 
+        const fmtDate = v => {
+            if (!v) return '-';
+            const d = new Date(v);
+            if (isNaN(d)) return '-';
+            return d.toLocaleDateString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit'});
+        };
+
         function renderTable(list) {
             document.getElementById('rowCount').textContent = `총 ${list.length}건`;
             const tbody = document.getElementById('mainTableBody');
             if (!list.length) {
-                tbody.innerHTML = '<tr><td colspan="15" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
                 return;
             }
             tbody.innerHTML = list.map(r => {
-                const dep = r.departure_date
-                    ? new Date(r.departure_date).toLocaleDateString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit'})
-                    : '-';
+                const dep = fmtDate(r.departure_date);
+                const payDt  = fmtDate(r.payment_date);
+                const sendDt = fmtDate(r.transfer_date);
                 const erpBadge = `<span class="badge erp-badge-${r.erp}">${r.erp_label}</span>`;
                 const marginColor = (r.margin || 0) >= 0 ? 'text-success' : 'text-danger';
+
+                // 상태 판단
+                const hasReceivable = r.receivable > 0;
+                const hasDeposit    = r.deposit > 0;
+                const hasPayable    = r.payable > 0;
+                const hasPrepaid    = r.prepaid > 0;
+                const noPending     = !hasReceivable && !hasDeposit && !hasPayable && !hasPrepaid;
+                // 정산전: 판매금액이 있는데 입금도 없고 수탁도 없는 경우
+                const notStarted    = (r.total_selling > 0) && (r.received_amount === 0) && noPending;
+
                 let statusBadge = '';
-                if (r.receivable > 0) statusBadge += '<span class="badge bg-danger me-1">미수금</span>';
-                if (r.deposit > 0)    statusBadge += '<span class="badge bg-success me-1">수탁</span>';
-                if (r.payable > 0)    statusBadge += '<span class="badge bg-warning text-dark me-1">미지급</span>';
-                if (r.prepaid > 0)    statusBadge += '<span class="badge bg-primary me-1">선급</span>';
-                if (!statusBadge)     statusBadge  = '<span class="badge bg-secondary">정산완료</span>';
+                if (hasReceivable) statusBadge += '<span class="badge bg-danger me-1">미수금</span>';
+                if (hasDeposit)    statusBadge += '<span class="badge bg-success me-1">수탁</span>';
+                if (hasPayable)    statusBadge += '<span class="badge bg-warning text-dark me-1">미지급</span>';
+                if (hasPrepaid)    statusBadge += '<span class="badge bg-primary me-1">선급</span>';
+                if (notStarted)    statusBadge  = '<span class="badge bg-light text-dark border">정산전</span>';
+                if (noPending && !notStarted) statusBadge = '<span class="badge bg-secondary">정산완료</span>';
+
                 return `<tr class="${r.departed ? '' : 'table-light'}">
                     <td>${erpBadge}</td>
                     <td>${dep}</td>
@@ -238,13 +263,15 @@
                     <td><small>${r.platform_name || '-'}</small></td>
                     <td>${r.customer_name || '-'}</td>
                     <td class="text-end">${krw(r.total_selling)}</td>
-                    <td class="text-end">${krw(r.received_amount)}</td>
-                    <td class="text-end text-success fw-bold">${r.deposit > 0 ? krw(r.deposit) : '-'}</td>
-                    <td class="text-end text-danger fw-bold">${r.receivable > 0 ? krw(r.receivable) : '-'}</td>
+                    <td class="text-end">${r.received_amount > 0 ? krw(r.received_amount) : '-'}</td>
+                    <td class="text-center small ${payDt !== '-' ? 'text-success' : 'text-muted'}">${payDt}</td>
+                    <td class="text-end text-success fw-bold">${hasDeposit ? krw(r.deposit) : '-'}</td>
+                    <td class="text-end text-danger fw-bold">${hasReceivable ? krw(r.receivable) : '-'}</td>
                     <td class="text-end">${r.total_cost > 0 ? krw(r.total_cost) : '-'}</td>
                     <td class="text-end">${r.sent_amount > 0 ? krw(r.sent_amount) : '-'}</td>
-                    <td class="text-end text-primary fw-bold">${r.prepaid > 0 ? krw(r.prepaid) : '-'}</td>
-                    <td class="text-end text-warning fw-bold">${r.payable > 0 ? krw(r.payable) : '-'}</td>
+                    <td class="text-center small ${sendDt !== '-' ? 'text-primary' : 'text-muted'}">${sendDt}</td>
+                    <td class="text-end text-primary fw-bold">${hasPrepaid ? krw(r.prepaid) : '-'}</td>
+                    <td class="text-end text-warning fw-bold">${hasPayable ? krw(r.payable) : '-'}</td>
                     <td class="text-end fw-bold ${marginColor}">${krw(r.margin)}</td>
                     <td>${statusBadge}</td>
                 </tr>`;
