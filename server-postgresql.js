@@ -1157,6 +1157,127 @@ app.get('/admin/hotel-settlements', requireAuth, (req, res) => {
     });
 });
 
+// 통합정산회계 페이지
+app.get('/admin/integrated-settlement', requireAuth, (req, res) => {
+    res.render('admin/integrated-settlement', {
+        title: '통합정산회계',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'integrated-settlement'
+    });
+});
+
+// 통합정산 API - 즐길거리+호텔 정산현황 (출발일 기준 수탁/미수/선급/미지급)
+app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
+    try {
+        const now = new Date();
+
+        // ===== 즐길거리 (PostgreSQL reservations) =====
+        const activityResult = await pool.query(`
+            SELECT
+                id, reservation_number, platform_name, korean_name,
+                usage_date as departure_date,
+                total_amount as total_selling,
+                payment_status,
+                CASE WHEN payment_status IN ('payment_completed','settlement_completed') THEN total_amount ELSE 0 END as received_amount
+            FROM reservations
+            WHERE payment_status != '취소'
+            ORDER BY usage_date DESC
+        `);
+
+        const activityList = activityResult.rows.map(r => {
+            const departure = r.departure_date ? new Date(r.departure_date) : null;
+            const departed = departure ? departure < now : false;
+            const totalSelling = parseFloat(r.total_selling) || 0;
+            const receivedAmount = parseFloat(r.received_amount) || 0;
+            const unpaid = Math.max(0, totalSelling - receivedAmount);
+            return {
+                erp: 'activity',
+                erp_label: '즐길거리',
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name || '-',
+                customer_name: r.korean_name || '-',
+                departure_date: departure,
+                departed,
+                total_selling: totalSelling,
+                received_amount: receivedAmount,
+                deposit: !departed && receivedAmount > 0 ? receivedAmount : 0,
+                receivable: departed && unpaid > 0 ? unpaid : 0,
+                total_cost: 0,
+                sent_amount: 0,
+                prepaid: 0,
+                payable: 0,
+                margin: receivedAmount,
+            };
+        });
+
+        // ===== 호텔 (PostgreSQL hotel_reservations) =====
+        const hotelResult = await pool.query(`
+            SELECT
+                hr.id, hr.reservation_number,
+                ba.agency_name as platform_name,
+                (SELECT g->>'name' FROM jsonb_array_elements(hr.guests) g LIMIT 1) as customer_name,
+                hr.check_in_date as departure_date,
+                hr.grand_total * COALESCE(hr.exchange_rate, 1300) as total_selling,
+                hr.total_cost_price * COALESCE(hr.exchange_rate, 1300) as total_cost,
+                hr.payment_date,
+                hr.transfer_date,
+                CASE WHEN hr.payment_date IS NOT NULL THEN hr.grand_total * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as received_amount,
+                CASE WHEN hr.transfer_date IS NOT NULL THEN hr.total_cost_price * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as sent_amount
+            FROM hotel_reservations hr
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            WHERE hr.status NOT IN ('cancelled')
+            ORDER BY hr.check_in_date DESC
+        `);
+
+        const hotelList = hotelResult.rows.map(r => {
+            const departure = r.departure_date ? new Date(r.departure_date) : null;
+            const departed = departure ? departure < now : false;
+            const totalSelling = parseFloat(r.total_selling) || 0;
+            const totalCost = parseFloat(r.total_cost) || 0;
+            const receivedAmount = parseFloat(r.received_amount) || 0;
+            const sentAmount = parseFloat(r.sent_amount) || 0;
+            const unpaid = Math.max(0, totalSelling - receivedAmount);
+            const unsettledCost = Math.max(0, totalCost - sentAmount);
+            return {
+                erp: 'hotel',
+                erp_label: '호텔',
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name || '-',
+                customer_name: r.customer_name || '-',
+                departure_date: departure,
+                departed,
+                total_selling: totalSelling,
+                received_amount: receivedAmount,
+                deposit: !departed && receivedAmount > 0 ? receivedAmount : 0,
+                receivable: departed && unpaid > 0 ? unpaid : 0,
+                total_cost: totalCost,
+                sent_amount: sentAmount,
+                prepaid: !departed && sentAmount > 0 ? sentAmount : 0,
+                payable: departed && unsettledCost > 0 ? unsettledCost : 0,
+                margin: receivedAmount - sentAmount,
+            };
+        });
+
+        const allList = [...activityList, ...hotelList].sort((a, b) => {
+            if (!a.departure_date) return 1;
+            if (!b.departure_date) return -1;
+            return new Date(b.departure_date) - new Date(a.departure_date);
+        });
+
+        const summary = {
+            total_deposit:    allList.reduce((s, r) => s + r.deposit, 0),
+            total_receivable: allList.reduce((s, r) => s + r.receivable, 0),
+            total_prepaid:    allList.reduce((s, r) => s + r.prepaid, 0),
+            total_payable:    allList.reduce((s, r) => s + r.payable, 0),
+        };
+
+        res.json({ success: true, list: allList, summary });
+    } catch (e) {
+        console.error('❌ 통합정산 API 오류:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // 패키지 예약 등록 페이지
 app.get('/admin/package-inbox', requireAuth, (req, res) => {
     res.render('admin/package-inbox', {
