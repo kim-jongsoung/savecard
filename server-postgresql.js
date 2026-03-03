@@ -1179,7 +1179,10 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 r.usage_date as departure_date,
                 r.payment_status,
                 s.total_sale,
+                s.sale_currency,
                 s.cost_krw,
+                s.cost_currency,
+                s.exchange_rate,
                 s.payment_received_date,
                 s.payment_sent_date,
                 s.payment_sent_cost_krw
@@ -1194,9 +1197,12 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
         const activityList = activityResult.rows.map(r => {
             const departure = r.departure_date ? new Date(r.departure_date) : null;
             const departed = departure ? departure < now : false;
-            const receivedAmount = parseFloat(r.total_sale) || 0;
+            const exRate = parseFloat(r.exchange_rate) || 1300;
+            const rawSale = parseFloat(r.total_sale) || 0;
+            const receivedAmount = (r.sale_currency === 'USD') ? Math.round(rawSale * exRate) : rawSale;
             const totalCost = parseFloat(r.cost_krw) || 0;
-            const sentAmount = parseFloat(r.payment_sent_cost_krw) || totalCost;
+            const rawSentCost = parseFloat(r.payment_sent_cost_krw) || 0;
+            const sentAmount = rawSentCost || totalCost;
             const unpaid = r.payment_received_date ? 0 : receivedAmount;
             const unsettledCost = r.payment_sent_date ? 0 : totalCost;
             return {
