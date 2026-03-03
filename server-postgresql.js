@@ -1179,6 +1179,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 r.usage_date as departure_date,
                 r.payment_status,
                 s.total_sale,
+                s.net_revenue,
                 s.sale_currency,
                 s.cost_krw,
                 s.cost_currency,
@@ -1199,7 +1200,8 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
             const departed = departure ? departure < now : false;
             const exRate = parseFloat(r.exchange_rate) || 1300;
             const rawSale = parseFloat(r.total_sale) || 0;
-            const receivedAmount = (r.sale_currency === 'USD') ? Math.round(rawSale * exRate) : rawSale;
+            const rawNet  = (r.net_revenue != null) ? parseFloat(r.net_revenue) : rawSale;
+            const receivedAmount = (r.sale_currency === 'USD') ? Math.round(rawNet * exRate) : rawNet;
             const totalCost = parseFloat(r.cost_krw) || 0;
             const rawSentCost = parseFloat(r.payment_sent_cost_krw) || 0;
             const sentAmount = rawSentCost || totalCost;
