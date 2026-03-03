@@ -1319,8 +1319,24 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 ? sentComponents.slice().sort((a, b) => new Date(b.payment_sent_date) - new Date(a.payment_sent_date))[0].payment_sent_date
                 : null;
 
+            // 출발일 기준: billing 건별 → 수탁(출발전 입금) / 미수금(출발후 미입금)
+            const sutak = completedBillings.reduce((s, b) => {
+                const bDate = b.date ? new Date(b.date) : null;
+                const bAmt  = b.actual_amount || b.amount || 0;
+                // 입금일이 출발일 이전이거나 아직 출발 안 했으면 수탁
+                return s + (!departed || (bDate && bDate < departure) ? bAmt : 0);
+            }, 0);
             const unpaid = Math.max(0, totalSelling - receivedAmount);
+            const receivable = departed && unpaid > 0 ? unpaid : 0;
+
+            // 출발일 기준: cost 건별 → 선급금(출발전 송금) / 미지급금(출발후 미송금)
+            const prepaid = sentComponents.reduce((s, c) => {
+                const cDate = c.payment_sent_date ? new Date(c.payment_sent_date) : null;
+                const cAmt  = c.payment_sent_amount_krw || c.cost_krw || 0;
+                return s + (!departed || (cDate && cDate < departure) ? cAmt : 0);
+            }, 0);
             const unsettledCost = Math.max(0, totalCost - sentAmount);
+            const payable = departed && unsettledCost > 0 ? unsettledCost : 0;
 
             return {
                 erp: 'package',
@@ -1336,10 +1352,10 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 transfer_date: lastTransferDate || null,
                 total_cost: totalCost,
                 sent_amount: sentAmount,
-                deposit:    !departed && receivedAmount > 0 ? receivedAmount : 0,
-                receivable:  departed && unpaid > 0        ? unpaid         : 0,
-                prepaid:    !departed && sentAmount > 0    ? sentAmount     : 0,
-                payable:     departed && unsettledCost > 0 ? unsettledCost  : 0,
+                deposit:    sutak,
+                receivable: receivable,
+                prepaid:    prepaid,
+                payable:    payable,
                 margin: receivedAmount - sentAmount,
                 billings: (r.billings || []).map(b => ({
                     description: b.notes || b.type || '입금',
