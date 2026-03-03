@@ -229,6 +229,13 @@
             if (isNaN(d)) return null;
             return `${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
         };
+        const fmtDateFull = v => {
+            if (!v) return null;
+            const d = new Date(v);
+            if (isNaN(d)) return null;
+            const yy = String(d.getFullYear()).slice(2);
+            return `${yy}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+        };
 
         /*
          * 입금상태:
@@ -361,7 +368,7 @@
             updateFoot(list);
             tbody.innerHTML = list.map(r => {
                 const s = getStatus(r);
-                const depStr  = fmtDate(r.departure_date) || '-';
+                const depStr  = fmtDateFull(r.departure_date) || '-';
                 const payDt   = fmtDate(r.payment_date);
                 const transDt = fmtDate(r.transfer_date);
 
