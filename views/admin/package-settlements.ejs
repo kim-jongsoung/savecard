@@ -356,6 +356,11 @@
                     <i class="fas fa-check-circle me-2"></i>송금완료 (<span id="completed_count">0</span>)
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#statusPanel" type="button" onclick="currentTab='status'; loadSettlementStatus();">
+                    <i class="fas fa-chart-bar me-2"></i>정산현황
+                </button>
+            </li>
         </ul>
 
         <!-- 일괄 처리 버튼 -->
@@ -424,6 +429,70 @@
                             <span class="visually-hidden">로딩 중...</span>
                         </div>
                     </div>
+                </div>
+            </div>
+            <!-- 정산현황 탭 패널 -->
+            <div class="tab-pane fade" id="statusPanel" role="tabpanel">
+                <!-- 요약 카드 -->
+                <div class="row g-3 mb-3" id="statusSummary">
+                    <div class="col-6 col-md-3">
+                        <div class="card border-success">
+                            <div class="card-body py-2 px-3">
+                                <div class="small text-muted">수탁액 <span class="badge bg-success ms-1">출발전 입금</span></div>
+                                <div class="fw-bold fs-6 text-success" id="sum_deposit">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-danger">
+                            <div class="card-body py-2 px-3">
+                                <div class="small text-muted">미수금 <span class="badge bg-danger ms-1">출발후 미입금</span></div>
+                                <div class="fw-bold fs-6 text-danger" id="sum_receivable">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-primary">
+                            <div class="card-body py-2 px-3">
+                                <div class="small text-muted">선급금 <span class="badge bg-primary ms-1">출발전 송금</span></div>
+                                <div class="fw-bold fs-6 text-primary" id="sum_prepaid">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-warning">
+                            <div class="card-body py-2 px-3">
+                                <div class="small text-muted">미지급금 <span class="badge bg-warning text-dark ms-1">출발후 미송금</span></div>
+                                <div class="fw-bold fs-6 text-warning" id="sum_payable">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 테이블 -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="font-size:.82rem">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>출발일</th>
+                                <th>예약번호</th>
+                                <th>채널</th>
+                                <th>고객명</th>
+                                <th class="text-end">판매금액</th>
+                                <th class="text-end">입금액</th>
+                                <th class="text-end text-success">수탁액</th>
+                                <th class="text-end text-danger">미수금</th>
+                                <th class="text-end">매입총액</th>
+                                <th class="text-end">송금액</th>
+                                <th class="text-end text-primary">선급금</th>
+                                <th class="text-end text-warning">미지급금</th>
+                                <th class="text-end">손익</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statusTableBody">
+                            <tr><td colspan="14" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1307,6 +1376,60 @@
         // 정산서 인쇄
         function printSettlement() {
             window.print();
+        }
+
+        // ===== 정산현황 탭 =====
+        const krw = v => '₩' + Math.round(v).toLocaleString();
+
+        async function loadSettlementStatus() {
+            const tbody = document.getElementById('statusTableBody');
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>';
+            try {
+                const res = await fetch('/api/package-settlements/status');
+                const d = await res.json();
+                if (!d.success) throw new Error(d.message);
+
+                // 요약
+                document.getElementById('sum_deposit').textContent = krw(d.summary.total_deposit);
+                document.getElementById('sum_receivable').textContent = krw(d.summary.total_receivable);
+                document.getElementById('sum_prepaid').textContent = krw(d.summary.total_prepaid);
+                document.getElementById('sum_payable').textContent = krw(d.summary.total_payable);
+
+                if (!d.list.length) {
+                    tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = d.list.map(r => {
+                    const dep = r.departure_date ? new Date(r.departure_date).toLocaleDateString('ko-KR', {month:'2-digit',day:'2-digit'}) : '-';
+                    const depFull = r.departure_date ? new Date(r.departure_date).toLocaleDateString('ko-KR') : '-';
+                    const marginColor = r.margin >= 0 ? 'text-success' : 'text-danger';
+                    let statusBadge = '';
+                    if (r.receivable > 0) statusBadge += '<span class="badge bg-danger me-1">미수금</span>';
+                    if (r.deposit > 0) statusBadge += '<span class="badge bg-success me-1">수탁</span>';
+                    if (r.payable > 0) statusBadge += '<span class="badge bg-warning text-dark me-1">미지급</span>';
+                    if (r.prepaid > 0) statusBadge += '<span class="badge bg-primary me-1">선급</span>';
+                    if (!statusBadge) statusBadge = '<span class="badge bg-secondary">정산완료</span>';
+                    return `<tr class="${r.departed ? '' : 'table-light'}">
+                        <td title="${depFull}">${dep}</td>
+                        <td><small>${r.reservation_number}</small></td>
+                        <td><small>${r.platform_name}</small></td>
+                        <td>${r.customer_name}</td>
+                        <td class="text-end">${krw(r.total_selling)}</td>
+                        <td class="text-end">${krw(r.received_amount)}</td>
+                        <td class="text-end text-success fw-bold">${r.deposit > 0 ? krw(r.deposit) : '-'}</td>
+                        <td class="text-end text-danger fw-bold">${r.receivable > 0 ? krw(r.receivable) : '-'}</td>
+                        <td class="text-end">${krw(r.total_cost)}</td>
+                        <td class="text-end">${krw(r.sent_amount)}</td>
+                        <td class="text-end text-primary fw-bold">${r.prepaid > 0 ? krw(r.prepaid) : '-'}</td>
+                        <td class="text-end text-warning fw-bold">${r.payable > 0 ? krw(r.payable) : '-'}</td>
+                        <td class="text-end fw-bold ${marginColor}">${krw(r.margin)}</td>
+                        <td>${statusBadge}</td>
+                    </tr>`;
+                }).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-4 text-danger">로드 실패: ${e.message}</td></tr>`;
+            }
         }
         
         // Enter 키 검색 이벤트

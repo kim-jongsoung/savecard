@@ -91,4 +91,79 @@ router.get('/list', requireAuth, async (req, res) => {
     }
 });
 
+// 정산현황 API - 출발일 기준 수탁/미수/선급/미지급 분류
+router.get('/status', requireAuth, async (req, res) => {
+    try {
+        const now = new Date();
+        const reservations = await PackageReservation.find({
+            reservation_status: { $ne: 'cancelled' }
+        }).sort({ 'travel_period.departure_date': -1 });
+
+        const list = reservations.map(r => {
+            const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
+            const departed = departure ? departure < now : false;
+
+            // 판매금액
+            const totalSelling = (r.pricing?.total_selling_price || 0) +
+                ((r.pricing?.adjustments || []).reduce((s, a) => s + (a.amount || 0), 0));
+
+            // 입금액 (billings completed 합계)
+            const receivedAmount = (r.billings || [])
+                .filter(b => b.status === 'completed')
+                .reduce((s, b) => s + (b.amount || 0), 0);
+
+            // 미수금 / 수탁액
+            const unpaidAmount = Math.max(0, totalSelling - receivedAmount);
+            const receivable = departed && unpaidAmount > 0 ? unpaidAmount : 0;   // 미수금
+            const deposit = !departed && receivedAmount > 0 ? receivedAmount : 0; // 수탁액
+
+            // 매입 총액
+            const totalCost = (r.cost_components || []).reduce((s, c) => s + (c.cost_krw || 0), 0);
+
+            // 송금액 (payment_sent_date 있는 것)
+            const sentAmount = (r.cost_components || [])
+                .filter(c => c.payment_sent_date)
+                .reduce((s, c) => s + (c.payment_sent_amount_krw || c.cost_krw || 0), 0);
+
+            // 미지급금 / 선급금
+            const unsettledCost = Math.max(0, totalCost - sentAmount);
+            const payable = departed && unsettledCost > 0 ? unsettledCost : 0;    // 미지급금
+            const prepaid = !departed && sentAmount > 0 ? sentAmount : 0;          // 선급금
+
+            return {
+                _id: r._id,
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name,
+                customer_name: r.customer?.korean_name || '-',
+                departure_date: departure,
+                departed,
+                total_selling: totalSelling,
+                received_amount: receivedAmount,
+                unpaid_amount: unpaidAmount,
+                receivable,   // 미수금
+                deposit,      // 수탁액
+                total_cost: totalCost,
+                sent_amount: sentAmount,
+                unsettled_cost: unsettledCost,
+                payable,      // 미지급금
+                prepaid,      // 선급금
+                margin: receivedAmount - sentAmount,
+                currency: r.pricing?.currency || 'KRW'
+            };
+        });
+
+        // 합계
+        const summary = {
+            total_receivable: list.reduce((s, r) => s + r.receivable, 0),
+            total_deposit: list.reduce((s, r) => s + r.deposit, 0),
+            total_payable: list.reduce((s, r) => s + r.payable, 0),
+            total_prepaid: list.reduce((s, r) => s + r.prepaid, 0),
+        };
+
+        res.json({ success: true, list, summary });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 module.exports = router;
