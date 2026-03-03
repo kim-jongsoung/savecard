@@ -161,9 +161,9 @@
             const departed = dep ? dep < now : false;
             const hasPay = !!r.payment_date;
             const amt = r.received_amount || 0;
-            if (hasPay && !departed)  return { key: 'sutak',        label: '수탁액',  cls: 'in-status-sutak',     amt };
-            if (hasPay && departed)   return { key: 'in_completed', label: '입금완료', cls: 'in-status-completed', amt };
-            if (!hasPay && departed && amt > 0) return { key: 'receivable',   label: '미수금',  cls: 'in-status-receivable', amt };
+            if (hasPay && !departed)  return { key: 'sutak',        label: '수탁액',   cls: 'in-status-sutak',      amt };
+            if (hasPay && departed)   return { key: 'in_completed', label: '입금완료', cls: 'in-status-completed',  amt };
+            if (!hasPay && departed)  return { key: 'receivable',   label: '미수금',   cls: 'in-status-receivable', amt };
             return null;
         }
 
@@ -177,9 +177,9 @@
             const departed = dep ? dep < now : false;
             const hasTrans = !!r.transfer_date;
             const amt = r.sent_amount || r.total_cost || 0;
-            if (hasTrans && !departed)  return { key: 'prepaid',       label: '선급금',   cls: 'out-status-prepaid',   amt };
-            if (hasTrans && departed)   return { key: 'out_completed',  label: '송금완료',  cls: 'out-status-completed', amt };
-            if (!hasTrans && departed && amt > 0) return { key: 'payable', label: '미지급금', cls: 'out-status-payable', amt };
+            if (hasTrans && !departed)  return { key: 'prepaid',      label: '선급금',   cls: 'out-status-prepaid',   amt };
+            if (hasTrans && departed)   return { key: 'out_completed', label: '송금완료',  cls: 'out-status-completed', amt };
+            if (!hasTrans && departed)  return { key: 'payable',       label: '미지급금', cls: 'out-status-payable',   amt };
             return null;
         }
 

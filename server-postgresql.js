@@ -1234,15 +1234,15 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                     LIMIT 1
                 ) as customer_name,
                 hr.check_in_date as departure_date,
-                hr.grand_total * COALESCE(hr.exchange_rate, 1300) as total_selling,
-                hr.total_cost_price * COALESCE(hr.exchange_rate, 1300) as total_cost,
+                COALESCE(hr.grand_total, 0) * COALESCE(hr.exchange_rate, 1300) as total_selling,
+                COALESCE(hr.total_cost_price, 0) * COALESCE(hr.exchange_rate, 1300) as total_cost,
                 hr.payment_date,
                 hr.transfer_date,
-                CASE WHEN hr.payment_date IS NOT NULL THEN hr.grand_total * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as received_amount,
-                CASE WHEN hr.transfer_date IS NOT NULL THEN hr.total_cost_price * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as sent_amount
+                CASE WHEN hr.payment_date IS NOT NULL THEN COALESCE(hr.grand_total, 0) * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as received_amount,
+                CASE WHEN hr.transfer_date IS NOT NULL THEN COALESCE(hr.total_cost_price, 0) * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as sent_amount
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
-            WHERE hr.status NOT IN ('cancelled')
+            WHERE hr.status NOT IN ('cancelled', 'pending', 'draft')
               AND (hr.payment_date IS NOT NULL OR hr.transfer_date IS NOT NULL)
             ORDER BY hr.check_in_date DESC
         `);
