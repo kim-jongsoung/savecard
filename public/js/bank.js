@@ -94,14 +94,14 @@ async function loadCategories() {
         const data = await res.json();
         if (!data.success) return;
         allCategories = data.data;
-        [...allCategories.in, ...allCategories.out, ...allCategories.common].forEach(c => {
+        (allCategories.all || []).forEach(c => {
             CATEGORY_LABELS[c.value] = c.label;
         });
         const fSel = document.getElementById('filterCategory');
         fSel.innerHTML  = '<option value="all">전체</option>';
-        fSel.innerHTML += '<optgroup label="─ 입금">'  + allCategories.in.map(c  => `<option value="${c.value}">${c.label}</option>`).join('') + '</optgroup>';
-        fSel.innerHTML += '<optgroup label="─ 출금">'  + allCategories.out.map(c => `<option value="${c.value}">${c.label}</option>`).join('') + '</optgroup>';
-        fSel.innerHTML += allCategories.common.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
+        fSel.innerHTML += '<optgroup label="─ 입금">'  + (allCategories.in  || []).map(c => `<option value="${c.value}">${c.label}</option>`).join('') + '</optgroup>';
+        fSel.innerHTML += '<optgroup label="─ 출금">'  + (allCategories.out || []).map(c => `<option value="${c.value}">${c.label}</option>`).join('') + '</optgroup>';
+        fSel.innerHTML += (allCategories.both || []).map(c => `<option value="${c.value}">${c.label}</option>`).join('');
         updateManualCats();
     } catch (e) { console.error('loadCategories:', e); }
 }
@@ -109,8 +109,8 @@ async function loadCategories() {
 function updateManualCats() {
     const type = document.getElementById('mType').value;
     const cats = type === 'in'
-        ? [...allCategories.in,  ...allCategories.common]
-        : [...allCategories.out, ...allCategories.common];
+        ? [...(allCategories.in || []),  ...(allCategories.both || [])]
+        : [...(allCategories.out || []), ...(allCategories.both || [])];
     document.getElementById('mCategory').innerHTML = cats.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
 }
 
@@ -271,8 +271,8 @@ async function openCatModal(txId) {
             `<strong>${isIn ? '입금' : '출금'}</strong> ${fmt(tx.amount)}원 &nbsp;|&nbsp; ${dt.toLocaleString('ko-KR')} &nbsp;|&nbsp; ${tx.memo || '-'}`;
 
         const cats = isIn
-            ? [...allCategories.in,  ...allCategories.common]
-            : [...allCategories.out, ...allCategories.common];
+            ? [...(allCategories.in || []),  ...(allCategories.both || [])]
+            : [...(allCategories.out || []), ...(allCategories.both || [])];
         document.getElementById('catSelect').innerHTML = cats.map(c =>
             `<option value="${c.value}" ${c.value === tx.category ? 'selected' : ''}>${c.label}</option>`
         ).join('');
