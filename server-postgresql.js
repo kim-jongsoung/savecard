@@ -1319,24 +1319,35 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 ? sentComponents.slice().sort((a, b) => new Date(b.payment_sent_date) - new Date(a.payment_sent_date))[0].payment_sent_date
                 : null;
 
-            // 출발일 기준: billing 건별 → 수탁(출발전 입금) / 미수금(출발후 미입금)
-            const sutak = completedBillings.reduce((s, b) => {
-                const bDate = b.date ? new Date(b.date) : null;
-                const bAmt  = b.actual_amount || b.amount || 0;
-                // 입금일이 출발일 이전이거나 아직 출발 안 했으면 수탁
-                return s + (!departed || (bDate && bDate < departure) ? bAmt : 0);
-            }, 0);
-            const unpaid = Math.max(0, totalSelling - receivedAmount);
-            const receivable = departed && unpaid > 0 ? unpaid : 0;
+            // billing 건별: 입금일이 출발일 이전 → 수탁, 미완료+출발후 → 미수금
+            let sutak = 0;
+            let receivable = 0;
+            (r.billings || []).forEach(b => {
+                const bAmt = b.actual_amount || b.amount || 0;
+                if (b.status === 'completed') {
+                    const bDate = b.date ? new Date(b.date) : null;
+                    if (!departure || !bDate || bDate < departure) {
+                        sutak += bAmt;
+                    }
+                } else {
+                    if (departed) receivable += bAmt;
+                }
+            });
 
-            // 출발일 기준: cost 건별 → 선급금(출발전 송금) / 미지급금(출발후 미송금)
-            const prepaid = sentComponents.reduce((s, c) => {
-                const cDate = c.payment_sent_date ? new Date(c.payment_sent_date) : null;
-                const cAmt  = c.payment_sent_amount_krw || c.cost_krw || 0;
-                return s + (!departed || (cDate && cDate < departure) ? cAmt : 0);
-            }, 0);
-            const unsettledCost = Math.max(0, totalCost - sentAmount);
-            const payable = departed && unsettledCost > 0 ? unsettledCost : 0;
+            // cost_component 건별: 송금일이 출발일 이전 → 선급금, 미송금+출발후 → 미지급금
+            let prepaid = 0;
+            let payable = 0;
+            (r.cost_components || []).forEach(c => {
+                const cAmt = c.payment_sent_amount_krw || c.cost_krw || 0;
+                if (c.payment_sent_date) {
+                    const cDate = new Date(c.payment_sent_date);
+                    if (!departure || cDate < departure) {
+                        prepaid += cAmt;
+                    }
+                } else {
+                    if (departed) payable += cAmt;
+                }
+            });
 
             return {
                 erp: 'package',
