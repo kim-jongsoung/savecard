@@ -18,43 +18,8 @@ const bankTransactionSchema = new mongoose.Schema({
     // 원본 문자메세지
     raw_message: { type: String, default: '' },
 
-    // 회계 분류
-    category: {
-        type: String,
-        enum: [
-            // 입금
-            'deposit_trust',        // 수탁액 (출발 전 계약금/잔금)
-            'deposit_receivable',   // 미수금 회수 (출발 후 수취)
-            'deposit_refund',       // 환불 입금
-            'deposit_insurance',    // 보험금 수령
-            'deposit_other',        // 기타 입금
-            // 출금
-            'expense_salary',       // 급여
-            'expense_ground',       // 지상비 (현지 행사비)
-            'expense_prepaid',      // 선급금 (출발 전 지상비)
-            'expense_unpaid',       // 미지급금 (출발 후 지상비)
-            'expense_airfare',      // 항공료
-            'expense_hotel',        // 숙박비
-            'expense_transport',    // 차량/교통비
-            'expense_meal',         // 식대
-            'expense_entertainment',// 접대비
-            'expense_insurance',    // 여행자보험
-            'expense_marketing',     // 광고/마케팅비
-            'expense_dev',          // 개발수수료
-            'expense_marketing_fee',// 마케팅대행료
-            'expense_advance',      // 가지급금
-            'expense_office',       // 사무용품/장비구매
-            'expense_communication',// 통신비
-            'expense_tax',          // 세금/공과금
-            'expense_other',        // 기타경비
-            // 입금 추가항목
-            'deposit_event',        // 행사비 수탁액
-            'deposit_advance_refund',// 가지급금 상환
-            'deposit_tax_refund',   // 세금 환급
-            'uncategorized',        // 미분류
-        ],
-        default: 'uncategorized'
-    },
+    // 회계 분류 (BankCategory.code 참조, enum 제약 없음 - DB에서 동적 관리)
+    category: { type: String, default: 'uncategorized' },
 
     // ERP 정산 연동 (차후 개발)
     linked_erp_type: { type: String, enum: ['hotel', 'package', 'none'], default: 'none' },

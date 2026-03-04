@@ -488,6 +488,164 @@ function copyWebhook() {
     showAlert('웹훅 URL이 복사되었습니다');
 }
 
+// ==================== 분류 항목 관리 ====================
+let catMgmtData = [];   // 전체 카테고리 목록 (비활성 포함)
+let catMgmtCurrentType = 'in';
+
+async function openCatMgmtModal() {
+    new bootstrap.Modal(document.getElementById('catMgmtModal')).show();
+    resetCatForm();
+    await loadCatMgmtList();
+}
+
+async function loadCatMgmtList() {
+    document.getElementById('catMgmtTableBody').innerHTML =
+        '<tr><td colspan="8" class="text-center py-3 text-muted">불러오는 중...</td></tr>';
+    try {
+        const res  = await fetch('/api/bank/categories/all');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        catMgmtData = data.data;
+        renderCatMgmtTable(catMgmtCurrentType);
+    } catch (e) {
+        document.getElementById('catMgmtTableBody').innerHTML =
+            `<tr><td colspan="8" class="text-center text-danger py-3">로드 실패: ${e.message}</td></tr>`;
+    }
+}
+
+function switchCatTab(type, btn) {
+    catMgmtCurrentType = type;
+    document.querySelectorAll('#catMgmtTab .nav-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // 폼 구분도 변경
+    document.getElementById('catFormType').value = type;
+    renderCatMgmtTable(type);
+}
+
+function renderCatMgmtTable(type) {
+    const filtered = catMgmtData.filter(c => c.type === type || c.type === 'both');
+    const tbody = document.getElementById('catMgmtTableBody');
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">항목 없음</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filtered.map(c => {
+        const activeBtn = c.is_active
+            ? `<span class="badge bg-success">활성</span>`
+            : `<span class="badge bg-secondary">비활성</span>`;
+        const vatTax  = c.vat_taxable   ? '<span class="badge bg-success">🟢 과세</span>' : '-';
+        const vatDed  = c.vat_deductible? '<span class="badge bg-primary">🔵 공제</span>' : '-';
+        const keywords = (c.keywords || []).filter(Boolean).join(', ') || '-';
+        const isDefault = c.code === 'uncategorized';
+        return `<tr class="${c.is_active ? '' : 'table-secondary text-muted'}">
+            <td><code style="font-size:.75rem">${c.code}</code></td>
+            <td class="fw-bold">${c.label}</td>
+            <td class="text-center">${vatTax}</td>
+            <td class="text-center">${vatDed}</td>
+            <td style="max-width:180px;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${keywords}">${keywords}</td>
+            <td style="font-size:.75rem">${c.description || '-'}</td>
+            <td class="text-center">${activeBtn}</td>
+            <td class="text-center">
+                <button class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.72rem" onclick="editCatMgmt('${c._id}')">수정</button>
+                ${!isDefault ? `<button class="btn btn-outline-${c.is_active ? 'danger' : 'success'} btn-sm py-0 px-2 ms-1" style="font-size:.72rem" onclick="toggleCatActive('${c._id}', ${!c.is_active})">${c.is_active ? '비활성' : '복원'}</button>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function editCatMgmt(id) {
+    const cat = catMgmtData.find(c => c._id === id);
+    if (!cat) return;
+    document.getElementById('catEditId').value         = cat._id;
+    document.getElementById('catFormCode').value       = cat.code;
+    document.getElementById('catFormCode').disabled    = true;  // 코드는 수정 불가
+    document.getElementById('catFormLabel').value      = cat.label;
+    document.getElementById('catFormType').value       = cat.type;
+    document.getElementById('catFormSort').value       = cat.sort_order || 0;
+    document.getElementById('catFormVatTaxable').checked = !!cat.vat_taxable;
+    document.getElementById('catFormVatDeduct').checked  = !!cat.vat_deductible;
+    document.getElementById('catFormKeywords').value   = (cat.keywords || []).join(', ');
+    document.getElementById('catFormDesc').value       = cat.description || '';
+    document.getElementById('catFormTitle').innerHTML  = '<i class="fas fa-edit me-2"></i>분류 항목 수정';
+    document.getElementById('catFormTitle').style.background = '#fff3cd';
+    // 폼으로 스크롤
+    document.getElementById('catFormCode').closest('.section-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetCatForm() {
+    document.getElementById('catEditId').value         = '';
+    document.getElementById('catFormCode').value       = '';
+    document.getElementById('catFormCode').disabled    = false;
+    document.getElementById('catFormLabel').value      = '';
+    document.getElementById('catFormType').value       = catMgmtCurrentType;
+    document.getElementById('catFormSort').value       = '0';
+    document.getElementById('catFormVatTaxable').checked = false;
+    document.getElementById('catFormVatDeduct').checked  = false;
+    document.getElementById('catFormKeywords').value   = '';
+    document.getElementById('catFormDesc').value       = '';
+    document.getElementById('catFormTitle').innerHTML  = '<i class="fas fa-plus me-2"></i>새 분류 항목 추가';
+    document.getElementById('catFormTitle').style.background = '';
+}
+
+async function saveCatMgmt() {
+    const id       = document.getElementById('catEditId').value;
+    const code     = document.getElementById('catFormCode').value.trim();
+    const label    = document.getElementById('catFormLabel').value.trim();
+    const type     = document.getElementById('catFormType').value;
+    const sort     = parseInt(document.getElementById('catFormSort').value) || 0;
+    const vatTax   = document.getElementById('catFormVatTaxable').checked;
+    const vatDed   = document.getElementById('catFormVatDeduct').checked;
+    const keywords = document.getElementById('catFormKeywords').value;
+    const desc     = document.getElementById('catFormDesc').value.trim();
+
+    if (!label || !type) { showAlert('표시명과 구분은 필수입니다.', 'warning'); return; }
+    if (!id && !code)    { showAlert('코드를 입력하세요.', 'warning'); return; }
+
+    const payload = { label, type, sort_order: sort, vat_taxable: vatTax, vat_deductible: vatDed, keywords, description: desc };
+
+    try {
+        let res;
+        if (id) {
+            res = await fetch(`/api/bank/categories/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } else {
+            res = await fetch('/api/bank/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...payload, code }),
+            });
+        }
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        showAlert(id ? '수정 완료!' : '추가 완료!');
+        resetCatForm();
+        await loadCatMgmtList();
+        // 거래 분류 선택 셀렉트 갱신
+        await loadCategories();
+    } catch (e) { showAlert('저장 실패: ' + e.message, 'danger'); }
+}
+
+async function toggleCatActive(id, activate) {
+    const cat = catMgmtData.find(c => c._id === id);
+    const action = activate ? '복원' : '비활성화';
+    if (!confirm(`"${cat?.label}" 항목을 ${action}하시겠습니까?`)) return;
+    try {
+        const res  = await fetch(`/api/bank/categories/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: activate }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        showAlert(`${action} 완료`);
+        await loadCatMgmtList();
+        await loadCategories();
+    } catch (e) { showAlert('처리 실패: ' + e.message, 'danger'); }
+}
+
 // ==================== 엑셀 일괄 등록 ====================
 let excelPreviewData = []; // 미리보기 파싱 결과 임시 저장
 

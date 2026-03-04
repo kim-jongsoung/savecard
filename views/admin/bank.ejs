@@ -43,6 +43,7 @@
             <div class="d-flex gap-2 flex-wrap">
                 <button class="btn btn-light btn-sm fw-bold" id="btnAddManual"><i class="fas fa-plus me-1"></i>수동 등록</button>
                 <button class="btn btn-warning btn-sm fw-bold" id="btnExcelImport" onclick="openExcelModal()"><i class="fas fa-file-excel me-1"></i>엑셀 일괄 등록</button>
+                <button class="btn btn-info btn-sm fw-bold text-white" onclick="openCatMgmtModal()"><i class="fas fa-tags me-1"></i>분류 항목 관리</button>
                 <button class="btn btn-outline-light btn-sm" id="btnWebhookInfo"><i class="fas fa-link me-1"></i>웹훅 주소</button>
             </div>
         </div>
@@ -310,6 +311,106 @@
         </div>
         <div class="modal-footer">
             <small class="text-muted me-auto">웹훅: <code>https://www.guamsavecard.com/api/bank/card-webhook</code></small>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+    </div></div>
+</div>
+
+<!-- ===== 분류 항목 관리 모달 ===== -->
+<div class="modal fade" id="catMgmtModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#0ea5e9,#6366f1);color:white;">
+            <h5 class="modal-title fw-bold"><i class="fas fa-tags me-2"></i>분류 항목 관리</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-info small mb-3">
+                <i class="fas fa-info-circle me-1"></i>
+                <strong>부가세 기준:</strong>
+                <span class="ms-2">🟢 <strong>매출과세</strong> = 입금 항목 중 부가세 신고 대상</span>
+                <span class="ms-3">🔵 <strong>매입공제</strong> = 출금 항목 중 세금계산서 수취 시 공제 가능</span>
+            </div>
+
+            <!-- 탭: 입금 / 출금 -->
+            <ul class="nav nav-tabs mb-3" id="catMgmtTab">
+                <li class="nav-item"><button class="nav-link active fw-bold" data-type="in" onclick="switchCatTab('in',this)"><i class="fas fa-arrow-down me-1 text-success"></i>입금 분류</button></li>
+                <li class="nav-item"><button class="nav-link fw-bold" data-type="out" onclick="switchCatTab('out',this)"><i class="fas fa-arrow-up me-1 text-danger"></i>출금 분류</button></li>
+            </ul>
+
+            <!-- 목록 테이블 -->
+            <div class="table-responsive mb-3">
+                <table class="table table-hover table-sm align-middle mb-0" style="font-size:.83rem;">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>코드</th>
+                            <th>표시명</th>
+                            <th class="text-center">매출과세</th>
+                            <th class="text-center">매입공제</th>
+                            <th>자동분류 키워드</th>
+                            <th>비고</th>
+                            <th class="text-center">상태</th>
+                            <th class="text-center">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="catMgmtTableBody">
+                        <tr><td colspan="8" class="text-center py-4 text-muted">불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 추가 / 수정 폼 -->
+            <div class="section-card">
+                <div class="section-header fw-bold" id="catFormTitle"><i class="fas fa-plus me-2"></i>새 분류 항목 추가</div>
+                <div class="p-3">
+                    <input type="hidden" id="catEditId">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">코드 <span class="text-danger">*</span> <small class="text-muted">(영문_)</small></label>
+                            <input type="text" class="form-control form-control-sm" id="catFormCode" placeholder="예: expense_visa">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">표시명 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="catFormLabel" placeholder="예: 비자수수료">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">구분 <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="catFormType">
+                                <option value="in">입금</option>
+                                <option value="out">출금</option>
+                                <option value="both">공통</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold">정렬순서</label>
+                            <input type="number" class="form-control form-control-sm" id="catFormSort" value="0" min="0">
+                        </div>
+                        <div class="col-md-2 d-flex flex-column gap-1 justify-content-end">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="catFormVatTaxable">
+                                <label class="form-check-label small fw-bold" for="catFormVatTaxable">🟢 매출과세</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="catFormVatDeduct">
+                                <label class="form-check-label small fw-bold" for="catFormVatDeduct">🔵 매입공제</label>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">자동분류 키워드 <small class="text-muted">(쉼표로 구분)</small></label>
+                            <input type="text" class="form-control form-control-sm" id="catFormKeywords" placeholder="예: 비자, visa, 사증">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">비고</label>
+                            <input type="text" class="form-control form-control-sm" id="catFormDesc" placeholder="설명">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-primary btn-sm px-4" onclick="saveCatMgmt()"><i class="fas fa-save me-1"></i>저장</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetCatForm()"><i class="fas fa-undo me-1"></i>초기화</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
         </div>
     </div></div>

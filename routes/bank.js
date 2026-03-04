@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const BankTransaction = require('../models/BankTransaction');
+const BankCategory = require('../models/BankCategory');
 const multer = require('multer');
 const XLSX = require('xlsx');
 
@@ -473,40 +474,132 @@ router.get('/accounts', (req, res) => {
     res.json({ success: true, data: list });
 });
 
-// ==================== 카테고리 목록 ====================
-router.get('/categories', (req, res) => {
-    const categories = {
-        in: [
-            { value: 'deposit_trust',        label: '행사비 (수탁액)' },
-            { value: 'deposit_refund',       label: '환불 입금' },
-            { value: 'deposit_insurance',    label: '보험금 수령' },
-            { value: 'deposit_advance_back', label: '가지급금 상환' },
-            { value: 'deposit_tax_refund',   label: '세금 환급' },
-            { value: 'deposit_other',        label: '기타 입금' },
-        ],
-        out: [
-            { value: 'expense_salary',        label: '급여' },
-            { value: 'expense_ground',        label: '지상비' },
-            { value: 'expense_airfare',       label: '항공료' },
-            { value: 'expense_hotel',         label: '숙박비' },
-            { value: 'expense_transport',     label: '차량/교통비' },
-            { value: 'expense_meal',          label: '식대' },
-            { value: 'expense_entertainment', label: '접대비' },
-            { value: 'expense_insurance',     label: '여행자보험' },
-            { value: 'expense_dev',           label: '개발수수료' },
-            { value: 'expense_marketing_fee', label: '마케팅대행료' },
-            { value: 'expense_marketing',     label: '광고/마케팅비' },
-            { value: 'expense_advance',       label: '가지급금' },
-            { value: 'expense_office',        label: '사무용품/장비' },
-            { value: 'expense_communication', label: '통신비' },
-            { value: 'expense_tax',           label: '세금/공과금' },
-            { value: 'expense_other',         label: '기타경비' },
-        ],
-        common: [
-            { value: 'uncategorized', label: '미분류' },
-        ],
-    };
-    res.json({ success: true, data: categories });
+// ==================== 카테고리 초기 데이터 시드 ====================
+const DEFAULT_CATEGORIES = [
+    // 입금
+    { code:'deposit_trust',         label:'행사비 (수탁액)',   type:'in',  vat_taxable:true,  vat_deductible:false, keywords:['계약금','예약금','입금확인','입금완료'], sort_order:1 },
+    { code:'deposit_receivable',    label:'미수금 회수',       type:'in',  vat_taxable:true,  vat_deductible:false, keywords:['미수','잔금수령'], sort_order:2 },
+    { code:'deposit_refund',        label:'환불 입금',         type:'in',  vat_taxable:false, vat_deductible:false, keywords:['환불','반환'], sort_order:3 },
+    { code:'deposit_insurance',     label:'보험금 수령',       type:'in',  vat_taxable:false, vat_deductible:false, keywords:['보험금','보상금'], sort_order:4 },
+    { code:'deposit_advance_refund',label:'가지급금 상환',     type:'in',  vat_taxable:false, vat_deductible:false, keywords:[], sort_order:5 },
+    { code:'deposit_tax_refund',    label:'세금 환급',         type:'in',  vat_taxable:false, vat_deductible:false, keywords:[], sort_order:6 },
+    { code:'deposit_other',         label:'기타 입금',         type:'in',  vat_taxable:false, vat_deductible:false, keywords:[], sort_order:7 },
+    // 출금
+    { code:'expense_salary',        label:'급여',              type:'out', vat_deductible:false, vat_taxable:false, keywords:['급여','salary','페이'], sort_order:10 },
+    { code:'expense_ground',        label:'지상비',            type:'out', vat_deductible:true,  vat_taxable:false, keywords:['지상비','랜드','행사비'], sort_order:11 },
+    { code:'expense_airfare',       label:'항공료',            type:'out', vat_deductible:false, vat_taxable:false, keywords:['항공','airfare','대한항공','아시아나','제주항공'], sort_order:12 },
+    { code:'expense_hotel',         label:'숙박비',            type:'out', vat_deductible:true,  vat_taxable:false, keywords:['호텔','hotel','숙박','리조트'], sort_order:13 },
+    { code:'expense_transport',     label:'차량/교통비',       type:'out', vat_deductible:true,  vat_taxable:false, keywords:['교통','차량','택시','버스'], sort_order:14 },
+    { code:'expense_meal',          label:'식대',              type:'out', vat_deductible:true,  vat_taxable:false, keywords:['식대','점심','저녁','밥','커피','카페'], sort_order:15 },
+    { code:'expense_entertainment', label:'접대비',            type:'out', vat_deductible:false, vat_taxable:false, keywords:['접대','골프','선물'], sort_order:16 },
+    { code:'expense_insurance',     label:'여행자보험',        type:'out', vat_deductible:false, vat_taxable:false, keywords:['보험','여행자보험'], sort_order:17 },
+    { code:'expense_dev',           label:'개발수수료',        type:'out', vat_deductible:true,  vat_taxable:false, keywords:[], sort_order:18 },
+    { code:'expense_marketing_fee', label:'마케팅대행료',      type:'out', vat_deductible:true,  vat_taxable:false, keywords:[], sort_order:19 },
+    { code:'expense_marketing',     label:'광고/마케팅비',     type:'out', vat_deductible:true,  vat_taxable:false, keywords:['광고','마케팅','sns','블로그'], sort_order:20 },
+    { code:'expense_advance',       label:'가지급금',          type:'out', vat_deductible:false, vat_taxable:false, keywords:[], sort_order:21 },
+    { code:'expense_office',        label:'사무용품/장비',     type:'out', vat_deductible:true,  vat_taxable:false, keywords:['사무','문구','장비','컴퓨터','소모품'], sort_order:22 },
+    { code:'expense_communication', label:'통신비',            type:'out', vat_deductible:true,  vat_taxable:false, keywords:['통신','전화','인터넷','kt','skt','lg'], sort_order:23 },
+    { code:'expense_tax',           label:'세금/공과금',       type:'out', vat_deductible:false, vat_taxable:false, keywords:['세금','부가세','소득세','공과금'], sort_order:24 },
+    { code:'expense_other',         label:'기타경비',          type:'out', vat_deductible:false, vat_taxable:false, keywords:[], sort_order:25 },
+    { code:'uncategorized',         label:'미분류',            type:'both',vat_deductible:false, vat_taxable:false, keywords:[], sort_order:99 },
+];
+
+async function seedCategories() {
+    try {
+        const count = await BankCategory.countDocuments();
+        if (count === 0) {
+            await BankCategory.insertMany(DEFAULT_CATEGORIES);
+            console.log('[BankCategory] 기본 카테고리 시드 완료:', DEFAULT_CATEGORIES.length, '개');
+        }
+    } catch (e) {
+        console.error('[BankCategory] 시드 오류:', e.message);
+    }
+}
+seedCategories();
+
+// ==================== 카테고리 목록 (DB 기반) ====================
+router.get('/categories', async (req, res) => {
+    try {
+        const cats = await BankCategory.find({ is_active: true }).sort({ type:1, sort_order:1 });
+        const result = { in: [], out: [], both: [], all: [] };
+        cats.forEach(c => {
+            const item = { value: c.code, label: c.label, vat_deductible: c.vat_deductible, vat_taxable: c.vat_taxable, keywords: c.keywords, _id: c._id };
+            result.all.push(item);
+            if (c.type === 'in')   result.in.push(item);
+            else if (c.type === 'out')  result.out.push(item);
+            else { result.in.push(item); result.out.push(item); result.both.push(item); }
+        });
+        res.json({ success: true, data: result });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 카테고리 전체 목록 (관리용, 비활성 포함) ====================
+router.get('/categories/all', async (req, res) => {
+    try {
+        const cats = await BankCategory.find().sort({ type:1, sort_order:1 });
+        res.json({ success: true, data: cats });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 카테고리 추가 ====================
+router.post('/categories', async (req, res) => {
+    try {
+        const { code, label, type, vat_deductible, vat_taxable, keywords, description, sort_order } = req.body;
+        if (!code || !label || !type) return res.status(400).json({ success: false, message: 'code, label, type 필수' });
+        const exists = await BankCategory.findOne({ code });
+        if (exists) return res.status(400).json({ success: false, message: `코드 "${code}" 이미 존재합니다.` });
+        const cat = await BankCategory.create({
+            code: code.trim().toLowerCase().replace(/\s+/g, '_'),
+            label: label.trim(),
+            type,
+            vat_deductible: !!vat_deductible,
+            vat_taxable: !!vat_taxable,
+            keywords: Array.isArray(keywords) ? keywords : (keywords || '').split(',').map(k => k.trim()).filter(Boolean),
+            description: description || '',
+            sort_order: sort_order || 0,
+        });
+        res.json({ success: true, data: cat });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 카테고리 수정 ====================
+router.put('/categories/:id', async (req, res) => {
+    try {
+        const { label, type, vat_deductible, vat_taxable, keywords, description, sort_order, is_active } = req.body;
+        const update = {};
+        if (label !== undefined)          update.label = label.trim();
+        if (type !== undefined)           update.type = type;
+        if (vat_deductible !== undefined) update.vat_deductible = !!vat_deductible;
+        if (vat_taxable !== undefined)    update.vat_taxable = !!vat_taxable;
+        if (keywords !== undefined)       update.keywords = Array.isArray(keywords) ? keywords : keywords.split(',').map(k => k.trim()).filter(Boolean);
+        if (description !== undefined)    update.description = description;
+        if (sort_order !== undefined)     update.sort_order = sort_order;
+        if (is_active !== undefined)      update.is_active = !!is_active;
+        const cat = await BankCategory.findByIdAndUpdate(req.params.id, update, { new: true });
+        if (!cat) return res.status(404).json({ success: false, message: '없음' });
+        res.json({ success: true, data: cat });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 카테고리 삭제 (소프트) ====================
+router.delete('/categories/:id', async (req, res) => {
+    try {
+        const cat = await BankCategory.findById(req.params.id);
+        if (!cat) return res.status(404).json({ success: false, message: '없음' });
+        if (cat.code === 'uncategorized') return res.status(400).json({ success: false, message: '기본 미분류 항목은 삭제할 수 없습니다.' });
+        await BankCategory.findByIdAndUpdate(req.params.id, { is_active: false });
+        res.json({ success: true, message: '비활성화 완료' });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
 });
 
 // ==================== 엑셀 파싱 유틸 ====================
@@ -543,17 +636,28 @@ function parseExcelAmount(raw) {
     return isNaN(n) ? 0 : Math.abs(n);
 }
 
-function autoClassify(memo, type) {
-    const lower = (memo || '').toLowerCase();
-    for (const rule of AUTO_CATEGORY_RULES) {
-        if (rule.type === type && rule.keywords.some(k => lower.includes(k.toLowerCase()))) {
-            return rule.category;
+async function autoClassifyFromDB(memo, type) {
+    try {
+        const lower = (memo || '').toLowerCase();
+        const cats = await BankCategory.find({ is_active: true, type: { $in: [type, 'both'] } }).sort({ sort_order: 1 });
+        for (const cat of cats) {
+            if (cat.keywords && cat.keywords.some(k => k && lower.includes(k.toLowerCase()))) {
+                return cat.code;
+            }
+        }
+    } catch (e) {
+        // DB 오류 시 하드코딩 룰 폴백
+        const lower = (memo || '').toLowerCase();
+        for (const rule of AUTO_CATEGORY_RULES) {
+            if (rule.type === type && rule.keywords.some(k => lower.includes(k.toLowerCase()))) {
+                return rule.category;
+            }
         }
     }
     return 'uncategorized';
 }
 
-function parseExcelRows(buffer, accountNumber) {
+async function parseExcelRows(buffer, accountNumber) {
     const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
@@ -593,20 +697,20 @@ function parseExcelRows(buffer, accountNumber) {
     const errors  = [];
 
     const dataRows = allRows.slice(headerIdx + 1);
-    dataRows.forEach((row, i) => {
+    for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
         const rawDate = row[colMap.date];
         const rawIn   = row[colMap.in];
         const rawOut  = row[colMap.out];
         const rawMemo = String(row[colMap.memo] || '').trim();
-        const rawBal  = colMap.balance >= 0 ? row[colMap.balance] : null;
 
         // 빈 행 스킵
-        if (!rawDate && !rawIn && !rawOut) return;
+        if (!rawDate && !rawIn && !rawOut) continue;
 
         const transaction_at = parseExcelDate(rawDate);
         if (!transaction_at) {
             errors.push({ row: headerIdx + i + 2, reason: `날짜 파싱 실패: "${rawDate}"` });
-            return;
+            continue;
         }
 
         const inAmt  = parseExcelAmount(rawIn);
@@ -619,8 +723,10 @@ function parseExcelRows(buffer, accountNumber) {
         else if (outAmt > 0)                 { type = 'out'; amount = outAmt; }
         else {
             errors.push({ row: headerIdx + i + 2, reason: `금액 없음 (입금:${rawIn}, 출금:${rawOut})` });
-            return;
+            continue;
         }
+
+        const category = await autoClassifyFromDB(rawMemo, type);
 
         results.push({
             account_number: accountNumber,
@@ -630,11 +736,11 @@ function parseExcelRows(buffer, accountNumber) {
             amount,
             memo:           rawMemo,
             transaction_at,
-            category:       autoClassify(rawMemo, type),
+            category,
             source:         'manual',
             raw_message:    '',
         });
-    });
+    }
 
     return { rows: results, errors, colMap, headerIdx };
 }
