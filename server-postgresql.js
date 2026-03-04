@@ -1186,9 +1186,12 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 s.exchange_rate,
                 s.payment_received_date,
                 s.payment_sent_date,
-                s.payment_sent_cost_krw
+                s.payment_sent_cost_krw,
+                v.vendor_name
             FROM reservations r
             INNER JOIN settlements s ON s.reservation_id = r.id
+            LEFT JOIN assignments a ON a.reservation_id = r.id
+            LEFT JOIN vendors v ON a.vendor_id = v.id
             WHERE r.payment_status IN ('payment_completed', 'settlement_completed')
               AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
             ORDER BY r.usage_date DESC
@@ -1212,7 +1215,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 reservation_number: r.reservation_number,
                 platform_name: r.platform_name || '-',
                 customer_name: r.korean_name || '-',
-                vendor_name: r.platform_name || '-',
+                vendor_name: r.vendor_name || '-',
                 departure_date: departure,
                 departed,
                 total_selling: receivedAmount,
@@ -1248,9 +1251,11 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 hr.payment_received_date as payment_date,
                 hr.payment_sent_date as transfer_date,
                 CASE WHEN hr.payment_received_date IS NOT NULL THEN COALESCE(hr.grand_total, 0) * COALESCE(hr.exchange_rate, 1300) ELSE 0 END as received_amount,
-                CASE WHEN hr.payment_sent_date IS NOT NULL THEN COALESCE(hr.total_cost_price, 0) * COALESCE(hr.remittance_rate, hr.exchange_rate, 1300) ELSE 0 END as sent_amount
+                CASE WHEN hr.payment_sent_date IS NOT NULL THEN COALESCE(hr.total_cost_price, 0) * COALESCE(hr.remittance_rate, hr.exchange_rate, 1300) ELSE 0 END as sent_amount,
+                h.hotel_name
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            LEFT JOIN hotels h ON hr.hotel_id = h.id
             WHERE hr.status NOT IN ('cancelled', 'pending', 'draft')
             ORDER BY hr.check_in_date DESC
         `);
@@ -1270,7 +1275,7 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 reservation_number: r.reservation_number,
                 platform_name: r.platform_name || '-',
                 customer_name: r.customer_name || '-',
-                vendor_name: r.platform_name || '-',
+                vendor_name: r.hotel_name || '-',
                 departure_date: departure,
                 departed,
                 total_selling: totalSelling,
