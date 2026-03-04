@@ -237,7 +237,7 @@
             if (!v) return null;
             const d = new Date(v);
             if (isNaN(d)) return null;
-            return `${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+            return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
         };
         const fmtDateFull = v => {
             if (!v) return null;
