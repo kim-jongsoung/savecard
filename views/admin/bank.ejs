@@ -42,6 +42,7 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <button class="btn btn-light btn-sm fw-bold" id="btnAddManual"><i class="fas fa-plus me-1"></i>수동 등록</button>
+                <button class="btn btn-warning btn-sm fw-bold" id="btnExcelImport" onclick="openExcelModal()"><i class="fas fa-file-excel me-1"></i>엑셀 일괄 등록</button>
                 <button class="btn btn-outline-light btn-sm" id="btnWebhookInfo"><i class="fas fa-link me-1"></i>웹훅 주소</button>
             </div>
         </div>
@@ -310,6 +311,118 @@
         <div class="modal-footer">
             <small class="text-muted me-auto">웹훅: <code>https://www.guamsavecard.com/api/bank/card-webhook</code></small>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+        </div>
+    </div></div>
+</div>
+
+<!-- ===== 엑셀 일괄 등록 모달 ===== -->
+<div class="modal fade" id="excelModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#1a7c3e,#38ef7d);color:white;">
+            <h5 class="modal-title fw-bold"><i class="fas fa-file-excel me-2"></i>엑셀 거래내역 일괄 등록</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+
+            <!-- STEP 1: 파일 선택 -->
+            <div id="excelStep1">
+                <div class="alert alert-info small mb-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>사용 방법:</strong> ① 계좌 선택 → ② 엑셀 파일 선택 → ③ 미리보기 확인 → ④ 최종 등록<br>
+                    <span class="text-danger fw-bold">⚠ 미리보기에서 내용을 반드시 확인 후 등록하세요!</span>
+                </div>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">계좌 선택 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="excelAccount">
+                            <option value="">-- 계좌를 선택하세요 --</option>
+                            <option value="140-013-623890">신한원화1 (140-013-623890) · KRW</option>
+                            <option value="140-014-014440">신한원화2 (140-014-014440) · KRW</option>
+                            <option value="140-014-174143">신한원화3 (140-014-174143) · KRW</option>
+                            <option value="180-011-678887">신한외환 (180-011-678887) · USD</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold">엑셀 파일 <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="excelFile" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="previewExcel()">
+                            <i class="fas fa-search me-1"></i>미리보기
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <i class="fas fa-table me-1"></i>지원 형식: 신한은행 거래내역 엑셀 (.xlsx / .xls)<br>
+                    컬럼 순서: <code>거래일시 | 입금액 | 출금액 | 내용(적요) | 잔액</code>
+                </div>
+            </div>
+
+            <!-- STEP 2: 미리보기 결과 (파싱 후 표시) -->
+            <div id="excelStep2" style="display:none;">
+                <!-- 요약 배너 -->
+                <div id="excelSummaryBar" class="rounded p-3 mb-3 d-flex flex-wrap gap-3 align-items-center" style="background:#e8f5e9;border:1px solid #a5d6a7;">
+                    <div><span class="small text-muted">계좌</span><br><strong id="exSumAccount"></strong></div>
+                    <div><span class="small text-muted">전체 건수</span><br><strong id="exSumTotal" class="text-primary"></strong></div>
+                    <div><span class="small text-muted">입금</span><br><strong id="exSumIn" class="text-success"></strong></div>
+                    <div><span class="small text-muted">출금</span><br><strong id="exSumOut" class="text-danger"></strong></div>
+                    <div><span class="small text-muted">파싱 오류</span><br><strong id="exSumErr" class="text-warning"></strong></div>
+                    <button class="btn btn-outline-secondary btn-sm ms-auto" onclick="resetExcelModal()">
+                        <i class="fas fa-redo me-1"></i>다시 선택
+                    </button>
+                </div>
+
+                <!-- 오류 목록 -->
+                <div id="excelErrorBox" style="display:none;" class="alert alert-warning small mb-3">
+                    <strong><i class="fas fa-exclamation-triangle me-1"></i>파싱 실패 행 (등록 제외됨):</strong>
+                    <ul id="excelErrorList" class="mb-0 mt-1"></ul>
+                </div>
+
+                <!-- 미리보기 테이블 -->
+                <div class="section-card">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-eye me-2"></i>파싱 결과 미리보기</span>
+                        <small class="text-muted">분류 항목은 자동 추정 (등록 후 수정 가능)</small>
+                    </div>
+                    <div class="table-responsive" style="max-height:420px;overflow-y:auto;">
+                        <table class="table table-hover table-sm align-middle mb-0" style="font-size:.8rem;">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th style="width:28px;"><input type="checkbox" id="excelChkAll" checked onchange="toggleAllExcelRows(this.checked)"></th>
+                                    <th>일시</th>
+                                    <th>구분</th>
+                                    <th class="text-end">금액</th>
+                                    <th>적요</th>
+                                    <th>분류항목</th>
+                                    <th class="text-end">잔액</th>
+                                </tr>
+                            </thead>
+                            <tbody id="excelPreviewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger mt-3 mb-0 d-flex align-items-center gap-3">
+                    <i class="fas fa-exclamation-circle fa-2x"></i>
+                    <div>
+                        <strong>최종 확인 후 등록하세요!</strong><br>
+                        <small>체크 해제한 항목은 등록되지 않습니다. 등록 후 되돌릴 수 없으니 내용을 꼼꼼히 확인하세요.</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 로딩 -->
+            <div id="excelLoading" style="display:none;" class="text-center py-5">
+                <div class="spinner-border text-success mb-3"></div><br>
+                <span id="excelLoadingMsg">파일을 파싱하는 중...</span>
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            <button type="button" class="btn btn-success px-4 fw-bold" id="btnDoImport" style="display:none;" onclick="doExcelImport()">
+                <i class="fas fa-check me-1"></i>선택한 항목 등록하기
+            </button>
         </div>
     </div></div>
 </div>

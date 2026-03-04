@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const BankTransaction = require('../models/BankTransaction');
+const multer = require('multer');
+const XLSX = require('xlsx');
 
 // text/plain body 파싱 지원
 router.use(express.text({ type: 'text/plain' }));
+
+// multer 메모리 저장소 (엑셀 업로드용)
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // 등록된 계좌 목록 (계좌번호 → 별칭/통화)
 const ACCOUNTS = {
@@ -502,6 +507,190 @@ router.get('/categories', (req, res) => {
         ],
     };
     res.json({ success: true, data: categories });
+});
+
+// ==================== 엑셀 파싱 유틸 ====================
+function parseExcelDate(raw) {
+    if (!raw && raw !== 0) return null;
+    // 숫자만 추출
+    const s = String(raw).replace(/[^0-9]/g, '');
+    if (s.length >= 14) {
+        // YYYYMMDDHHmmss
+        const y = parseInt(s.slice(0,4)), mo = parseInt(s.slice(4,6))-1;
+        const d = parseInt(s.slice(6,8)), h = parseInt(s.slice(8,10));
+        const mi = parseInt(s.slice(10,12)), se = parseInt(s.slice(12,14));
+        const dt = new Date(y, mo, d, h, mi, se);
+        return isNaN(dt) ? null : dt;
+    } else if (s.length === 8) {
+        // YYYYMMDD
+        const y = parseInt(s.slice(0,4)), mo = parseInt(s.slice(4,6))-1;
+        const d = parseInt(s.slice(6,8));
+        const dt = new Date(y, mo, d, 0, 0, 0);
+        return isNaN(dt) ? null : dt;
+    }
+    // xlsx 숫자 날짜 (엑셀 시리얼 넘버)
+    if (!isNaN(raw) && Number(raw) > 40000 && Number(raw) < 60000) {
+        const d = XLSX.SSF.parse_date_code(Number(raw));
+        if (d) return new Date(d.y, d.m-1, d.d, d.H||0, d.M||0, d.S||0);
+    }
+    const dt = new Date(raw);
+    return isNaN(dt) ? null : dt;
+}
+
+function parseExcelAmount(raw) {
+    if (!raw && raw !== 0) return 0;
+    const n = parseFloat(String(raw).replace(/,/g, ''));
+    return isNaN(n) ? 0 : Math.abs(n);
+}
+
+function autoClassify(memo, type) {
+    const lower = (memo || '').toLowerCase();
+    for (const rule of AUTO_CATEGORY_RULES) {
+        if (rule.type === type && rule.keywords.some(k => lower.includes(k.toLowerCase()))) {
+            return rule.category;
+        }
+    }
+    return 'uncategorized';
+}
+
+function parseExcelRows(buffer, accountNumber) {
+    const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const allRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+    // 헤더 행 자동 감지 (거래일시/날짜/일자 포함 행)
+    let headerIdx = -1;
+    let colMap = { date:-1, in:-1, out:-1, memo:-1, balance:-1 };
+
+    for (let i = 0; i < Math.min(15, allRows.length); i++) {
+        const row = allRows[i].map(c => String(c).trim().replace(/\s/g,''));
+        const joined = row.join('|');
+        if (/거래일|날짜|일시|일자|date/i.test(joined)) {
+            headerIdx = i;
+            row.forEach((cell, idx) => {
+                const c = cell.toLowerCase();
+                if (/거래일|날짜|일시|일자|date/.test(c) && colMap.date === -1)   colMap.date = idx;
+                else if (/입금/.test(c) && colMap.in === -1)                      colMap.in = idx;
+                else if (/출금/.test(c) && colMap.out === -1)                     colMap.out = idx;
+                else if (/내용|적요|메모|memo|비고/.test(c) && colMap.memo === -1) colMap.memo = idx;
+                else if (/잔액/.test(c) && colMap.balance === -1)                 colMap.balance = idx;
+            });
+            break;
+        }
+    }
+
+    // 헤더 못찾으면 첫 행 기준 위치 추정
+    if (headerIdx === -1) headerIdx = 0;
+    if (colMap.date    === -1) colMap.date    = 0;
+    if (colMap.in      === -1) colMap.in      = 1;
+    if (colMap.out     === -1) colMap.out     = 2;
+    if (colMap.memo    === -1) colMap.memo    = 3;
+    if (colMap.balance === -1) colMap.balance = 4;
+
+    const accountInfo = ACCOUNTS[accountNumber] || { alias: accountNumber, currency: 'KRW' };
+    const results = [];
+    const errors  = [];
+
+    const dataRows = allRows.slice(headerIdx + 1);
+    dataRows.forEach((row, i) => {
+        const rawDate = row[colMap.date];
+        const rawIn   = row[colMap.in];
+        const rawOut  = row[colMap.out];
+        const rawMemo = String(row[colMap.memo] || '').trim();
+        const rawBal  = colMap.balance >= 0 ? row[colMap.balance] : null;
+
+        // 빈 행 스킵
+        if (!rawDate && !rawIn && !rawOut) return;
+
+        const transaction_at = parseExcelDate(rawDate);
+        if (!transaction_at) {
+            errors.push({ row: headerIdx + i + 2, reason: `날짜 파싱 실패: "${rawDate}"` });
+            return;
+        }
+
+        const inAmt  = parseExcelAmount(rawIn);
+        const outAmt = parseExcelAmount(rawOut);
+
+        let type, amount;
+        if (inAmt > 0 && outAmt === 0)       { type = 'in';  amount = inAmt; }
+        else if (outAmt > 0 && inAmt === 0)  { type = 'out'; amount = outAmt; }
+        else if (inAmt > 0)                  { type = 'in';  amount = inAmt; }
+        else if (outAmt > 0)                 { type = 'out'; amount = outAmt; }
+        else {
+            errors.push({ row: headerIdx + i + 2, reason: `금액 없음 (입금:${rawIn}, 출금:${rawOut})` });
+            return;
+        }
+
+        results.push({
+            account_number: accountNumber,
+            account_alias:  accountInfo.alias,
+            currency:       accountInfo.currency,
+            type,
+            amount,
+            balance_after:  rawBal ? parseExcelAmount(rawBal) : null,
+            memo:           rawMemo,
+            transaction_at,
+            category:       autoClassify(rawMemo, type),
+            source:         'manual',
+            raw_message:    '',
+        });
+    });
+
+    return { rows: results, errors, colMap, headerIdx };
+}
+
+// ==================== 엑셀 미리보기 (업로드 → 파싱만, DB 저장 안 함) ====================
+router.post('/excel-preview', upload.single('excel'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: '파일이 없습니다.' });
+        const accountNumber = req.body.account_number;
+        if (!accountNumber || !ACCOUNTS[accountNumber]) {
+            return res.status(400).json({ success: false, message: '유효한 계좌번호를 선택하세요.' });
+        }
+        const { rows, errors } = parseExcelRows(req.file.buffer, accountNumber);
+        res.json({ success: true, rows, errors, total: rows.length });
+    } catch (e) {
+        console.error('[EXCEL PREVIEW]', e.message);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+// ==================== 엑셀 일괄 등록 (미리보기 확인 후 실제 저장) ====================
+router.post('/excel-import', express.json({ limit: '5mb' }), async (req, res) => {
+    try {
+        const { rows } = req.body;
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return res.status(400).json({ success: false, message: '등록할 데이터가 없습니다.' });
+        }
+        let successCount = 0, errorCount = 0;
+        const errorList = [];
+        for (const row of rows) {
+            try {
+                await BankTransaction.create({
+                    account_number: row.account_number,
+                    account_alias:  row.account_alias,
+                    currency:       row.currency,
+                    type:           row.type,
+                    amount:         row.amount,
+                    balance_after:  row.balance_after || null,
+                    memo:           row.memo || '',
+                    transaction_at: new Date(row.transaction_at),
+                    category:       row.category || 'uncategorized',
+                    source:         'manual',
+                    raw_message:    '',
+                });
+                successCount++;
+            } catch (e) {
+                errorCount++;
+                errorList.push(e.message);
+            }
+        }
+        res.json({ success: true, successCount, errorCount, errorList });
+    } catch (e) {
+        console.error('[EXCEL IMPORT]', e.message);
+        res.status(500).json({ success: false, message: e.message });
+    }
 });
 
 // 기존 데이터 시간 보정 (KST→UTC, -9시간) - 한 번만 실행

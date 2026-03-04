@@ -488,3 +488,185 @@ function copyWebhook() {
     document.execCommand('copy');
     showAlert('웹훅 URL이 복사되었습니다');
 }
+
+// ==================== 엑셀 일괄 등록 ====================
+let excelPreviewData = []; // 미리보기 파싱 결과 임시 저장
+
+function openExcelModal() {
+    resetExcelModal();
+    new bootstrap.Modal(document.getElementById('excelModal')).show();
+}
+
+function resetExcelModal() {
+    excelPreviewData = [];
+    document.getElementById('excelStep1').style.display = '';
+    document.getElementById('excelStep2').style.display = 'none';
+    document.getElementById('excelLoading').style.display = 'none';
+    document.getElementById('btnDoImport').style.display = 'none';
+    document.getElementById('excelFile').value = '';
+    document.getElementById('excelAccount').value = '';
+    document.getElementById('excelPreviewBody').innerHTML = '';
+    document.getElementById('excelErrorBox').style.display = 'none';
+}
+
+async function previewExcel() {
+    const account = document.getElementById('excelAccount').value;
+    const fileInput = document.getElementById('excelFile');
+    if (!account) { showAlert('계좌를 선택하세요.', 'warning'); return; }
+    if (!fileInput.files || !fileInput.files[0]) { showAlert('엑셀 파일을 선택하세요.', 'warning'); return; }
+
+    // 로딩 표시
+    document.getElementById('excelStep1').style.display = 'none';
+    document.getElementById('excelStep2').style.display = 'none';
+    document.getElementById('excelLoading').style.display = '';
+    document.getElementById('excelLoadingMsg').textContent = '파일을 파싱하는 중...';
+
+    try {
+        const formData = new FormData();
+        formData.append('excel', fileInput.files[0]);
+        formData.append('account_number', account);
+
+        const res = await fetch('/api/bank/excel-preview', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        excelPreviewData = data.rows;
+
+        // 요약 표시
+        const inRows  = data.rows.filter(r => r.type === 'in');
+        const outRows = data.rows.filter(r => r.type === 'out');
+        const inTotal  = inRows.reduce((s, r) => s + r.amount, 0);
+        const outTotal = outRows.reduce((s, r) => s + r.amount, 0);
+
+        const accountLabels = {
+            '140-013-623890': '신한원화1 (140-013-623890)',
+            '140-014-014440': '신한원화2 (140-014-014440)',
+            '140-014-174143': '신한원화3 (140-014-174143)',
+            '180-011-678887': '신한외환 (180-011-678887)',
+        };
+        document.getElementById('exSumAccount').textContent = accountLabels[account] || account;
+        document.getElementById('exSumTotal').textContent   = data.total + '건';
+        document.getElementById('exSumIn').textContent      = `입금 ${inRows.length}건 (${fmt(inTotal)}원)`;
+        document.getElementById('exSumOut').textContent     = `출금 ${outRows.length}건 (${fmt(outTotal)}원)`;
+        document.getElementById('exSumErr').textContent     = data.errors.length + '건';
+
+        // 오류 표시
+        if (data.errors.length > 0) {
+            document.getElementById('excelErrorBox').style.display = '';
+            const ul = document.getElementById('excelErrorList');
+            ul.innerHTML = data.errors.map(e => `<li>행 ${e.row}: ${e.reason}</li>`).join('');
+        } else {
+            document.getElementById('excelErrorBox').style.display = 'none';
+        }
+
+        // 미리보기 테이블 렌더링
+        renderExcelPreviewTable(data.rows);
+
+        // 화면 전환
+        document.getElementById('excelLoading').style.display = 'none';
+        document.getElementById('excelStep2').style.display = '';
+        document.getElementById('btnDoImport').style.display = '';
+
+    } catch (e) {
+        document.getElementById('excelLoading').style.display = 'none';
+        document.getElementById('excelStep1').style.display = '';
+        showAlert('파싱 실패: ' + e.message, 'danger');
+    }
+}
+
+function renderExcelPreviewTable(rows) {
+    const tbody = document.getElementById('excelPreviewBody');
+    if (!rows || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">파싱된 데이터가 없습니다.</td></tr>';
+        return;
+    }
+
+    const catLabel = (cat) => {
+        const map = {
+            'deposit_trust': '행사비(수탁액)', 'deposit_receivable': '미수금',
+            'deposit_refund': '환불입금', 'deposit_insurance': '보험금',
+            'deposit_other': '기타입금', 'expense_salary': '급여',
+            'expense_ground': '지상비', 'expense_airfare': '항공료',
+            'expense_hotel': '숙박비', 'expense_transport': '교통비',
+            'expense_meal': '식대', 'expense_entertainment': '접대비',
+            'expense_insurance': '여행자보험', 'expense_marketing': '광고/마케팅',
+            'expense_office': '사무용품', 'expense_communication': '통신비',
+            'expense_tax': '세금/공과금', 'expense_other': '기타경비',
+            'uncategorized': '미분류',
+        };
+        return map[cat] || cat;
+    };
+
+    tbody.innerHTML = rows.map((row, idx) => {
+        const dt = new Date(row.transaction_at);
+        const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+        const badgeClass = row.type === 'in' ? 'badge-in' : 'badge-out';
+        const badgeText  = row.type === 'in' ? '입금' : '출금';
+        const amtClass   = row.type === 'in' ? 'text-success fw-bold' : 'text-danger fw-bold';
+        const currency   = row.currency === 'USD' ? '$' : '₩';
+        const catUncat   = row.category === 'uncategorized' ? ' cat-badge uncat' : '';
+
+        return `<tr>
+            <td><input type="checkbox" class="excel-row-chk" data-idx="${idx}" checked></td>
+            <td style="white-space:nowrap">${dateStr}</td>
+            <td><span class="${badgeClass}">${badgeText}</span></td>
+            <td class="text-end ${amtClass}">${currency}${fmt(row.amount)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${row.memo}">${row.memo || '-'}</td>
+            <td><span class="cat-badge${catUncat}">${catLabel(row.category)}</span></td>
+            <td class="text-end text-muted">${row.balance_after ? fmt(row.balance_after) : '-'}</td>
+        </tr>`;
+    }).join('');
+}
+
+function toggleAllExcelRows(checked) {
+    document.querySelectorAll('.excel-row-chk').forEach(chk => chk.checked = checked);
+}
+
+async function doExcelImport() {
+    // 체크된 항목만 수집
+    const checkedIdxs = [];
+    document.querySelectorAll('.excel-row-chk:checked').forEach(chk => {
+        checkedIdxs.push(parseInt(chk.dataset.idx));
+    });
+
+    if (checkedIdxs.length === 0) {
+        showAlert('등록할 항목을 1건 이상 선택하세요.', 'warning');
+        return;
+    }
+
+    if (!confirm(`선택한 ${checkedIdxs.length}건을 등록하시겠습니까?\n등록 후 되돌릴 수 없습니다.`)) return;
+
+    const rowsToImport = checkedIdxs.map(i => excelPreviewData[i]);
+
+    // 로딩
+    document.getElementById('excelStep2').style.display = 'none';
+    document.getElementById('btnDoImport').style.display = 'none';
+    document.getElementById('excelLoading').style.display = '';
+    document.getElementById('excelLoadingMsg').textContent = `${checkedIdxs.length}건 등록 중...`;
+
+    try {
+        const res = await fetch('/api/bank/excel-import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rows: rowsToImport }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        document.getElementById('excelLoading').style.display = 'none';
+
+        let msg = `✅ ${data.successCount}건 등록 완료!`;
+        if (data.errorCount > 0) msg += `\n❌ ${data.errorCount}건 실패`;
+        alert(msg);
+
+        bootstrap.Modal.getInstance(document.getElementById('excelModal')).hide();
+        loadTransactions();
+        loadSummary();
+
+    } catch (e) {
+        document.getElementById('excelLoading').style.display = 'none';
+        document.getElementById('excelStep2').style.display = '';
+        document.getElementById('btnDoImport').style.display = '';
+        showAlert('등록 실패: ' + e.message, 'danger');
+    }
+}
