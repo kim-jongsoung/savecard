@@ -25,8 +25,6 @@ const AUTO_CATEGORY_RULES = [
     { keywords: ['항공','airfare','air','kkk','대한항공','아시아나','제주항공'], type: 'out', category: 'expense_airfare' },
     { keywords: ['호텔','hotel','숙박','리조트'],           type: 'out', category: 'expense_hotel' },
     { keywords: ['지상비','랜드','행사비'],                 type: 'out', category: 'expense_ground' },
-    { keywords: ['선급','선지급'],                         type: 'out', category: 'expense_prepaid' },
-    { keywords: ['미지급'],                                type: 'out', category: 'expense_unpaid' },
     { keywords: ['교통','차량','택시','버스'],              type: 'out', category: 'expense_transport' },
     { keywords: ['식대','점심','저녁','밥','커피','카페'],  type: 'out', category: 'expense_meal' },
     { keywords: ['접대','골프','선물'],                    type: 'out', category: 'expense_entertainment' },
@@ -483,8 +481,6 @@ router.get('/categories', (req, res) => {
         out: [
             { value: 'expense_salary',        label: '급여' },
             { value: 'expense_ground',        label: '지상비' },
-            { value: 'expense_prepaid',       label: '선급금 (출발 전 지상비)' },
-            { value: 'expense_unpaid',        label: '미지급금 (출발 후 지상비)' },
             { value: 'expense_airfare',       label: '항공료' },
             { value: 'expense_hotel',         label: '숙박비' },
             { value: 'expense_transport',     label: '차량/교통비' },
