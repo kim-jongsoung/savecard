@@ -166,7 +166,6 @@ function renderTable(list) {
                 <span class="cat-badge ${uncat ? 'uncat' : conf ? 'confirmed' : ''}">${label}</span>
                 ${conf ? '<i class="fas fa-check-circle c-green ms-1" style="font-size:.7rem"></i>' : ''}
             </td>
-            <td class="hide-sm" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem">${tx.notes || ''}</td>
             <td style="white-space:nowrap">
                 <button class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.72rem" data-id="${tx._id}" data-action="cat">분류</button>
                 <button class="btn btn-outline-danger  btn-sm py-0 px-2 ms-1" style="font-size:.72rem" data-id="${tx._id}" data-action="del">삭제</button>
@@ -400,14 +399,14 @@ async function loadCardTransactions() {
     if (start) p.set('start', start);
     if (end)   p.set('end', end);
     const tbody = document.getElementById('cardTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">조회 중...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">조회 중...</td></tr>';
     try {
         const res  = await fetch('/api/bank/card-transactions?' + p.toString());
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
         document.getElementById('cardTxCount').textContent = `총 ${data.total}건`;
         if (!data.data.length) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">내역 없음</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">내역 없음</td></tr>';
             return;
         }
         tbody.innerHTML = data.data.map(tx => {
@@ -419,10 +418,10 @@ async function loadCardTransactions() {
                 <td><small>${cardNo}</small></td>
                 <td class="text-end fw-bold c-red">${tx.amount.toLocaleString('en-US', {minimumFractionDigits:2})} USD</td>
                 <td>${tx.memo || '-'}</td>
-                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem;color:#888" title="${tx.raw_message||''}">${tx.raw_message||''}</td>
             </tr>`;
         }).join('');
     } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-danger">로드 실패: ${e.message}</td></tr>`;
         tbody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-danger">로드 실패: ${e.message}</td></tr>`;
     }
 }
@@ -577,7 +576,7 @@ async function previewExcel() {
 function renderExcelPreviewTable(rows) {
     const tbody = document.getElementById('excelPreviewBody');
     if (!rows || rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">파싱된 데이터가 없습니다.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">파싱된 데이터가 없습니다.</td></tr>';
         return;
     }
 
@@ -613,7 +612,6 @@ function renderExcelPreviewTable(rows) {
             <td class="text-end ${amtClass}">${currency}${fmt(row.amount)}</td>
             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${row.memo}">${row.memo || '-'}</td>
             <td><span class="cat-badge${catUncat}">${catLabel(row.category)}</span></td>
-            <td class="text-end text-muted">${row.balance_after ? fmt(row.balance_after) : '-'}</td>
         </tr>`;
     }).join('');
 }
