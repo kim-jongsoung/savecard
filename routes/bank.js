@@ -472,11 +472,12 @@ router.get('/accounts', (req, res) => {
 router.get('/categories', (req, res) => {
     const categories = {
         in: [
-            { value: 'deposit_trust',      label: '수탁액 (계약금/잔금)' },
-            { value: 'deposit_receivable', label: '미수금 회수' },
-            { value: 'deposit_refund',     label: '환불 입금' },
-            { value: 'deposit_insurance',  label: '보험금 수령' },
-            { value: 'deposit_other',      label: '기타 입금' },
+            { value: 'deposit_trust',        label: '행사비 (수탁액)' },
+            { value: 'deposit_refund',       label: '환불 입금' },
+            { value: 'deposit_insurance',    label: '보험금 수령' },
+            { value: 'deposit_advance_back', label: '가지급금 상환' },
+            { value: 'deposit_tax_refund',   label: '세금 환급' },
+            { value: 'deposit_other',        label: '기타 입금' },
         ],
         out: [
             { value: 'expense_salary',        label: '급여' },
@@ -487,7 +488,10 @@ router.get('/categories', (req, res) => {
             { value: 'expense_meal',          label: '식대' },
             { value: 'expense_entertainment', label: '접대비' },
             { value: 'expense_insurance',     label: '여행자보험' },
+            { value: 'expense_dev',           label: '개발수수료' },
+            { value: 'expense_marketing_fee', label: '마케팅대행료' },
             { value: 'expense_marketing',     label: '광고/마케팅비' },
+            { value: 'expense_advance',       label: '가지급금' },
             { value: 'expense_office',        label: '사무용품/장비' },
             { value: 'expense_communication', label: '통신비' },
             { value: 'expense_tax',           label: '세금/공과금' },
