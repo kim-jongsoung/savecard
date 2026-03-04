@@ -268,11 +268,78 @@
 
         <!-- ⑤ 신고 요약 탭 -->
         <div class="tab-content-area" id="tab-summary" style="display:none">
+
+            <!-- 상단: 현재 월 저장 + 기간 선택 서브탭 -->
+            <div class="section-card mb-3">
+                <div class="section-header d-flex align-items-center gap-3 flex-wrap">
+                    <span><i class="fas fa-calculator me-2 c-purple"></i>신고 요약</span>
+                    <div class="d-flex gap-1 ms-2" id="summaryModeBtns">
+                        <button class="tab-pill active" data-mode="month" onclick="switchSummaryMode('month',this)">
+                            <i class="fas fa-calendar-day me-1"></i>현재 월 (<span id="curMonthLabel">-</span>)
+                        </button>
+                        <button class="tab-pill" data-mode="q1" onclick="switchSummaryMode('q1',this)">
+                            1기 예정 <small class="opacity-75">1~3월</small>
+                        </button>
+                        <button class="tab-pill" data-mode="h1" onclick="switchSummaryMode('h1',this)">
+                            1기 확정 <small class="opacity-75">1~6월</small>
+                        </button>
+                        <button class="tab-pill" data-mode="q3" onclick="switchSummaryMode('q3',this)">
+                            2기 예정 <small class="opacity-75">7~9월</small>
+                        </button>
+                        <button class="tab-pill" data-mode="h2" onclick="switchSummaryMode('h2',this)">
+                            2기 확정 <small class="opacity-75">7~12월</small>
+                        </button>
+                    </div>
+                    <div class="ms-auto">
+                        <span id="periodLabel" class="text-muted small fw-bold"></span>
+                    </div>
+                </div>
+            </div>
+
             <div class="row g-3">
+                <!-- 좌: 계산서 -->
                 <div class="col-md-7">
+                    <!-- 기간 집계 안내 (월 모드가 아닐 때) -->
+                    <div id="periodWarning" class="alert alert-warning mb-3" style="display:none;font-size:.8rem">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong id="periodWarningText"></strong> — 저장된 월별 데이터를 합산한 집계입니다.
+                        월별 데이터가 없으면 0으로 표시됩니다. 먼저 각 월을 선택해 저장해주세요.
+                    </div>
+
                     <div class="section-card">
-                        <div class="section-header"><i class="fas fa-calculator me-2 c-purple"></i>부가가치세 신고 계산서</div>
+                        <div class="section-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-file-invoice-dollar me-2 c-purple"></i>부가가치세 신고 계산서</span>
+                            <span id="periodBadgeInCard" class="badge bg-purple text-white" style="background:#764ba2!important;font-size:.75rem"></span>
+                        </div>
                         <div class="p-4">
+                            <!-- 기간별 월별 현황 (기간 모드일 때만) -->
+                            <div id="periodMonthBreakdown" style="display:none" class="mb-3">
+                                <table class="table table-sm table-bordered" style="font-size:.78rem">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>월</th>
+                                            <th class="text-end">과세표준</th>
+                                            <th class="text-end">매출세액</th>
+                                            <th class="text-end">공제매입세액</th>
+                                            <th class="text-end">납부/환급</th>
+                                            <th class="text-center">상태</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="periodMonthRows"></tbody>
+                                    <tfoot class="fw-bold table-secondary">
+                                        <tr>
+                                            <td>합계</td>
+                                            <td class="text-end" id="ptSalesBase">-</td>
+                                            <td class="text-end c-blue" id="ptSalesTax">-</td>
+                                            <td class="text-end c-green" id="ptPurchaseTax">-</td>
+                                            <td class="text-end" id="ptPayable">-</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <!-- 신고 계산서 테이블 (항상 표시) -->
                             <table class="table table-bordered" style="font-size:.85rem">
                                 <tbody>
                                     <tr class="table-light">
@@ -311,30 +378,90 @@
                                     </tr>
                                 </tbody>
                             </table>
-                            <div class="mt-3">
-                                <label class="form-label fw-bold small">신고 메모</label>
-                                <textarea class="form-control" id="reportNotes" rows="3" placeholder="신고 관련 메모 입력..."></textarea>
+
+                            <!-- 월 모드: 메모 + 저장버튼 -->
+                            <div id="monthModeActions">
+                                <div class="mt-2">
+                                    <label class="form-label fw-bold small">신고 메모</label>
+                                    <textarea class="form-control" id="reportNotes" rows="2" placeholder="메모 입력..."></textarea>
+                                </div>
+                                <div class="mt-2 d-flex gap-2">
+                                    <button class="btn btn-success px-3" onclick="saveReport()"><i class="fas fa-save me-1"></i>이 월 저장</button>
+                                    <button class="btn btn-primary px-3" onclick="confirmReport()"><i class="fas fa-check me-1"></i>확정</button>
+                                    <button class="btn btn-outline-info px-3" onclick="markFiled()"><i class="fas fa-stamp me-1"></i>신고완료</button>
+                                </div>
                             </div>
-                            <div class="mt-2 d-flex gap-2">
-                                <button class="btn btn-success px-4" onclick="saveReport()"><i class="fas fa-save me-1"></i>저장</button>
-                                <button class="btn btn-primary px-4" onclick="confirmReport()"><i class="fas fa-check me-1"></i>확정 처리</button>
-                                <button class="btn btn-outline-info px-4" onclick="markFiled()"><i class="fas fa-stamp me-1"></i>신고 완료</button>
+
+                            <!-- 기간 모드: 신고서 출력 버튼 -->
+                            <div id="periodModeActions" style="display:none" class="mt-3">
+                                <div class="alert alert-success py-2 mb-2" style="font-size:.8rem">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    위 금액으로 홈택스 부가가치세 신고서를 작성하세요.
+                                    납부세액이 <strong id="periodPayableNote">-</strong>입니다.
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-secondary px-3" onclick="printPeriodSummary()">
+                                        <i class="fas fa-print me-1"></i>신고서 출력
+                                    </button>
+                                    <button class="btn btn-outline-primary px-3" onclick="markPeriodFiled()">
+                                        <i class="fas fa-stamp me-1"></i>기간 신고완료 처리
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- 우: 연간 월별 현황 -->
                 <div class="col-md-5">
                     <div class="section-card">
-                        <div class="section-header"><i class="fas fa-history me-2"></i>연간 신고 현황</div>
+                        <div class="section-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-history me-2"></i><span id="yearlyTableYear">-</span>년 월별 저장 현황</span>
+                            <small class="text-muted">클릭하면 해당 월로 이동</small>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-hover table-sm mb-0" style="font-size:.78rem">
                                 <thead class="table-dark">
-                                    <tr><th>월</th><th class="text-end">매출세액</th><th class="text-end">납부세액</th><th>상태</th></tr>
+                                    <tr>
+                                        <th>월</th>
+                                        <th class="text-end">과세표준</th>
+                                        <th class="text-end">매출세액</th>
+                                        <th class="text-end">납부/환급</th>
+                                        <th>상태</th>
+                                    </tr>
                                 </thead>
                                 <tbody id="yearlyTable">
-                                    <tr><td colspan="4" class="text-center py-3 text-muted">-</td></tr>
+                                    <tr><td colspan="5" class="text-center py-3 text-muted">-</td></tr>
                                 </tbody>
+                                <tfoot class="fw-bold table-secondary">
+                                    <tr>
+                                        <td>연간계</td>
+                                        <td class="text-end" id="yearlyTotalBase">-</td>
+                                        <td class="text-end c-blue" id="yearlyTotalSalesTax">-</td>
+                                        <td class="text-end" id="yearlyTotalPayable">-</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
+                        </div>
+                        <!-- 반기별 소계 -->
+                        <div class="p-2 border-top">
+                            <div class="row g-2 text-center">
+                                <div class="col-6">
+                                    <div style="background:#f0f4ff;border-radius:8px;padding:8px">
+                                        <div style="font-size:.7rem;color:#667eea;font-weight:700">1기 확정 (1~6월)</div>
+                                        <div style="font-size:.85rem;font-weight:700" id="h1SalesTax">-</div>
+                                        <div style="font-size:.7rem;color:#888">납부 <span id="h1Payable">-</span></div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div style="background:#fff3f0;border-radius:8px;padding:8px">
+                                        <div style="font-size:.7rem;color:#764ba2;font-weight:700">2기 확정 (7~12월)</div>
+                                        <div style="font-size:.85rem;font-weight:700" id="h2SalesTax">-</div>
+                                        <div style="font-size:.7rem;color:#888">납부 <span id="h2Payable">-</span></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -564,34 +691,230 @@ function renderSummaryTab(r) {
     const el = document.getElementById('sum-taxPayable');
     el.textContent = (payable >= 0 ? '납부 ' : '환급 ') + fmtW(Math.abs(payable));
     el.className   = 'text-end ' + (payable >= 0 ? 'c-red' : 'c-green');
+    // 월 레이블 업데이트
+    document.getElementById('curMonthLabel').textContent = currentMonth + '월';
 }
 
 // ==================== 연간 목록 ====================
+let yearlyCache = []; // 연간 데이터 캐시
+
 async function loadYearlyList() {
     try {
         const res  = await fetch(`/api/vat-report/list/${currentYear}`);
         const data = await res.json();
         if (!data.success) return;
-        const tbody = document.getElementById('yearlyTable');
-        const statusLabel = { draft:'작성중', confirmed:'확정', filed:'신고완료' };
-        const statusClass = { draft:'badge-draft', confirmed:'badge-confirmed', filed:'badge-filed' };
-        if (!data.data.length) { tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">저장된 신고 없음</td></tr>'; return; }
-        tbody.innerHTML = data.data.map(r => `
-            <tr style="cursor:pointer" onclick="selectMonth(${r.month})">
-                <td>${r.month}월</td>
-                <td class="text-end c-blue">${fmtW(r.sales_tax)}</td>
-                <td class="text-end ${(r.tax_payable||0)>=0?'c-red':'c-green'}">${(r.tax_payable||0)>=0?'납부 ':'환급 '}${fmtW(Math.abs(r.tax_payable||0))}</td>
-                <td><span class="${statusClass[r.status]||'badge-draft'}">${statusLabel[r.status]||'작성중'}</span></td>
-            </tr>`).join('');
+        yearlyCache = data.data;
+        renderYearlyTable(yearlyCache);
     } catch(e) { console.error(e); }
+}
+
+function renderYearlyTable(list) {
+    const tbody   = document.getElementById('yearlyTable');
+    const statusLabel = { draft:'작성중', confirmed:'확정', filed:'신고완료' };
+    const statusClass = { draft:'badge-draft', confirmed:'badge-confirmed', filed:'badge-filed' };
+    document.getElementById('yearlyTableYear').textContent = currentYear;
+
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">저장된 신고 없음</td></tr>';
+        ['yearlyTotalBase','yearlyTotalSalesTax','yearlyTotalPayable'].forEach(id => document.getElementById(id).textContent = '-');
+        ['h1SalesTax','h1Payable','h2SalesTax','h2Payable'].forEach(id => document.getElementById(id).textContent = '-');
+        return;
+    }
+
+    tbody.innerHTML = list.map(r => {
+        const payable = r.tax_payable || 0;
+        const rowStyle = r.month === currentMonth ? 'background:#f0f0ff;font-weight:700' : '';
+        return `<tr style="cursor:pointer;${rowStyle}" onclick="selectMonth(${r.month})">
+            <td>${r.month}월</td>
+            <td class="text-end">${fmtW(r.sales_base)}</td>
+            <td class="text-end c-blue">${fmtW(r.sales_tax)}</td>
+            <td class="text-end ${payable>=0?'c-red':'c-green'}">${payable>=0?'납부 ':'환급 '}${fmtW(Math.abs(payable))}</td>
+            <td><span class="${statusClass[r.status]||'badge-draft'}">${statusLabel[r.status]||'작성중'}</span></td>
+        </tr>`;
+    }).join('');
+
+    // 연간 합계
+    document.getElementById('yearlyTotalBase').textContent     = fmtW(list.reduce((s,r)=>s+(r.sales_base||0),0));
+    document.getElementById('yearlyTotalSalesTax').textContent = fmtW(list.reduce((s,r)=>s+(r.sales_tax||0),0));
+    const totalPayable = list.reduce((s,r)=>s+(r.tax_payable||0),0);
+    const tpEl = document.getElementById('yearlyTotalPayable');
+    tpEl.textContent = (totalPayable>=0?'납부 ':'환급 ') + fmtW(Math.abs(totalPayable));
+    tpEl.className   = 'text-end ' + (totalPayable>=0?'c-red':'c-green');
+
+    // 반기별 소계
+    const h1 = list.filter(r=>r.month<=6);
+    const h2 = list.filter(r=>r.month>=7);
+    const h1PayableSum = h1.reduce((s,r)=>s+(r.tax_payable||0),0);
+    const h2PayableSum = h2.reduce((s,r)=>s+(r.tax_payable||0),0);
+    document.getElementById('h1SalesTax').textContent = fmtW(h1.reduce((s,r)=>s+(r.sales_tax||0),0));
+    document.getElementById('h2SalesTax').textContent = fmtW(h2.reduce((s,r)=>s+(r.sales_tax||0),0));
+    const h1pEl = document.getElementById('h1Payable');
+    h1pEl.textContent = (h1PayableSum>=0?'납부 ':'환급 ') + fmtW(Math.abs(h1PayableSum));
+    h1pEl.className   = h1PayableSum>=0?'c-red':'c-green';
+    const h2pEl = document.getElementById('h2Payable');
+    h2pEl.textContent = (h2PayableSum>=0?'납부 ':'환급 ') + fmtW(Math.abs(h2PayableSum));
+    h2pEl.className   = h2PayableSum>=0?'c-red':'c-green';
 }
 
 // ==================== 탭 전환 ====================
 function switchTab(tab, btn) {
     document.querySelectorAll('.tab-content-area').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pill').forEach(b => {
+        // summaryModeBtns 안의 버튼은 건드리지 않음
+        if (!b.closest('#summaryModeBtns')) b.classList.remove('active');
+    });
     document.getElementById('tab-' + tab).style.display = '';
     btn.classList.add('active');
+    // 신고요약 탭 진입 시 월 레이블 갱신
+    if (tab === 'summary') {
+        document.getElementById('curMonthLabel').textContent = currentMonth + '월';
+    }
+}
+
+// ==================== 신고요약 기간 모드 전환 ====================
+const PERIOD_MONTHS = {
+    month: null,          // 현재 선택 월
+    q1:  [1,2,3],         // 1기 예정 (1~3월)
+    h1:  [1,2,3,4,5,6],   // 1기 확정 (1~6월)
+    q3:  [7,8,9],         // 2기 예정 (7~9월)
+    h2:  [7,8,9,10,11,12],// 2기 확정 (7~12월)
+};
+const PERIOD_LABELS = {
+    month: '',
+    q1:  `${currentYear}년 1기 예정신고 (1~3월)`,
+    h1:  `${currentYear}년 1기 확정신고 (1~6월)`,
+    q3:  `${currentYear}년 2기 예정신고 (7~9월)`,
+    h2:  `${currentYear}년 2기 확정신고 (7~12월)`,
+};
+let currentSummaryMode = 'month';
+
+function switchSummaryMode(mode, btn) {
+    currentSummaryMode = mode;
+    document.querySelectorAll('#summaryModeBtns .tab-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const isMonth = (mode === 'month');
+    document.getElementById('periodWarning').style.display      = isMonth ? 'none' : '';
+    document.getElementById('periodMonthBreakdown').style.display = isMonth ? 'none' : '';
+    document.getElementById('monthModeActions').style.display   = isMonth ? '' : 'none';
+    document.getElementById('periodModeActions').style.display  = isMonth ? 'none' : '';
+
+    const labelMap = {
+        month: currentMonth + '월',
+        q1:  '1기 예정 (1~3월)',
+        h1:  '1기 확정 (1~6월)',
+        q3:  '2기 예정 (7~9월)',
+        h2:  '2기 확정 (7~12월)',
+    };
+    document.getElementById('periodLabel').textContent       = isMonth ? '' : `${currentYear}년 ${labelMap[mode]}`;
+    document.getElementById('periodBadgeInCard').textContent = isMonth ? '' : labelMap[mode];
+    document.getElementById('periodWarningText').textContent = `${currentYear}년 ${labelMap[mode]}`;
+
+    if (isMonth) {
+        // 현재 월 데이터로 복원
+        if (reportData) renderSummaryTab(reportData);
+        return;
+    }
+
+    // 기간 집계
+    const months = PERIOD_MONTHS[mode];
+    const filtered = yearlyCache.filter(r => months.includes(r.month));
+
+    const totSalesBase     = filtered.reduce((s,r)=>s+(r.sales_base||0), 0);
+    const totSalesTax      = filtered.reduce((s,r)=>s+(r.sales_tax||0), 0);
+    const totBankTax       = filtered.reduce((s,r)=>s+(r.bank_deductible_tax||0), 0);
+    const totCardTax       = filtered.reduce((s,r)=>s+(r.card_deductible_tax||0), 0);
+    const totReverseTax    = filtered.reduce((s,r)=>s+(r.reverse_tax_total||0), 0);
+    const totPurchaseTax   = filtered.reduce((s,r)=>s+(r.total_purchase_tax||0), 0);
+    const totPayable       = totSalesTax - totPurchaseTax;
+
+    document.getElementById('sum-salesBase').textContent        = fmtW(totSalesBase);
+    document.getElementById('sum-salesTax').textContent         = fmtW(totSalesTax);
+    document.getElementById('sum-bankTax').textContent          = fmtW(totBankTax);
+    document.getElementById('sum-cardTax').textContent          = fmtW(totCardTax);
+    document.getElementById('sum-reverseTax').textContent       = fmtW(totReverseTax);
+    document.getElementById('sum-totalPurchaseTax').textContent = fmtW(totPurchaseTax);
+    const payEl = document.getElementById('sum-taxPayable');
+    payEl.textContent = (totPayable>=0?'납부 ':'환급 ') + fmtW(Math.abs(totPayable));
+    payEl.className   = 'text-end fw-bold ' + (totPayable>=0?'c-red':'c-green');
+
+    // 기간 납부세액 안내
+    const pNote = document.getElementById('periodPayableNote');
+    pNote.textContent = (totPayable>=0?'납부 ':'환급 ') + fmtW(Math.abs(totPayable));
+    pNote.className   = totPayable>=0?'c-red':'c-green';
+
+    // 월별 breakdown 테이블
+    const statusLabel = { draft:'작성중', confirmed:'확정', filed:'신고완료' };
+    const statusClass = { draft:'badge-draft', confirmed:'badge-confirmed', filed:'badge-filed' };
+    document.getElementById('periodMonthRows').innerHTML = months.map(m => {
+        const r = filtered.find(x=>x.month===m);
+        if (!r) return `<tr class="text-muted"><td>${m}월</td><td colspan="4" class="text-center">미저장</td><td class="text-center"><span class="badge-draft">미저장</span></td></tr>`;
+        const p = r.tax_payable||0;
+        return `<tr style="cursor:pointer" onclick="selectMonth(${m});switchTab('summary',document.querySelector('[data-tab=summary]'))">
+            <td>${m}월</td>
+            <td class="text-end">${fmtW(r.sales_base)}</td>
+            <td class="text-end c-blue">${fmtW(r.sales_tax)}</td>
+            <td class="text-end c-green">${fmtW(r.total_purchase_tax)}</td>
+            <td class="text-end ${p>=0?'c-red':'c-green'}">${p>=0?'납부 ':'환급 '}${fmtW(Math.abs(p))}</td>
+            <td class="text-center"><span class="${statusClass[r.status]||'badge-draft'}">${statusLabel[r.status]||'작성중'}</span></td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('ptSalesBase').textContent   = fmtW(totSalesBase);
+    document.getElementById('ptSalesTax').textContent    = fmtW(totSalesTax);
+    document.getElementById('ptPurchaseTax').textContent = fmtW(totPurchaseTax);
+    const ptEl = document.getElementById('ptPayable');
+    ptEl.textContent = (totPayable>=0?'납부 ':'환급 ') + fmtW(Math.abs(totPayable));
+    ptEl.className   = 'text-end ' + (totPayable>=0?'c-red':'c-green');
+}
+
+function markPeriodFiled() {
+    const months = PERIOD_MONTHS[currentSummaryMode];
+    if (!months) return;
+    const labelMap = { q1:'1기 예정', h1:'1기 확정', q3:'2기 예정', h2:'2기 확정' };
+    if (!confirm(`${currentYear}년 ${labelMap[currentSummaryMode]} 기간의 모든 월을 신고완료 처리하시겠습니까?`)) return;
+    Promise.all(months.map(m =>
+        fetch(`/api/vat-report/report/${currentYear}/${m}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ status:'filed' })
+        }).then(r=>r.json())
+    )).then(results => {
+        const ok = results.filter(r=>r.success).length;
+        showAlert(`${ok}개 월 신고완료 처리됐습니다.`);
+        loadYearlyList();
+    });
+}
+
+function printPeriodSummary() {
+    const labelMap = { q1:'1기 예정(1~3월)', h1:'1기 확정(1~6월)', q3:'2기 예정(7~9월)', h2:'2기 확정(7~12월)' };
+    const title = `${currentYear}년 ${labelMap[currentSummaryMode]} 부가가치세 신고서`;
+    const salesBase     = document.getElementById('sum-salesBase').textContent;
+    const salesTax      = document.getElementById('sum-salesTax').textContent;
+    const bankTax       = document.getElementById('sum-bankTax').textContent;
+    const cardTax       = document.getElementById('sum-cardTax').textContent;
+    const reverseTax    = document.getElementById('sum-reverseTax').textContent;
+    const totalPurchase = document.getElementById('sum-totalPurchaseTax').textContent;
+    const taxPayable    = document.getElementById('sum-taxPayable').textContent;
+    const w = window.open('','_blank','width=600,height=700');
+    w.document.write(`<html><head><title>${title}</title>
+    <style>body{font-family:Arial;padding:30px;font-size:14px}h2{color:#333}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:8px 12px}th{background:#f0f0f0}.total{background:#fff3cd;font-weight:bold;font-size:16px}.blue{color:#004085}.green{color:#155724}.red{color:#721c24}</style>
+    </head><body>
+    <h2>${title}</h2>
+    <p style="color:#666;font-size:12px">출력일: ${new Date().toLocaleDateString('ko-KR')}</p>
+    <table><tbody>
+        <tr><th colspan="2" class="blue">[ 매출세액 ]</th></tr>
+        <tr><td>과세표준 (마진합계)</td><td align="right"><b>${salesBase}</b></td></tr>
+        <tr><td>매출세액 (×10%)</td><td align="right" class="blue"><b>${salesTax}</b></td></tr>
+        <tr><th colspan="2" class="green">[ 매입세액 공제 ]</th></tr>
+        <tr><td>계좌 분류 공제매입세액</td><td align="right">${bankTax}</td></tr>
+        <tr><td>법인카드 공제매입세액</td><td align="right">${cardTax}</td></tr>
+        <tr><td>역발급 세금계산서</td><td align="right">${reverseTax}</td></tr>
+        <tr><td><b>총 공제 매입세액</b></td><td align="right" class="green"><b>${totalPurchase}</b></td></tr>
+        <tr class="total"><td>납부세액 (매출 - 매입)</td><td align="right">${taxPayable}</td></tr>
+    </tbody></table>
+    <br><p style="font-size:11px;color:#999">* 본 신고서는 ERP 시스템에서 자동 집계된 참고용 자료입니다.</p>
+    <script>window.onload=()=>window.print()<\/script></body></html>`);
+    w.document.close();
 }
 
 // ==================== 매출세액 계산 ====================
