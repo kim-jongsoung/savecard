@@ -602,15 +602,45 @@ function calcSalesTax() {
 }
 
 async function fetchIntegratedSales() {
-    const res = await fetch(`/api/integrated-settlement/summary?year=${currentYear}&month=${currentMonth}`).catch(()=>null);
-    if (!res || !res.ok) { alert('통합정산 API 연동 준비 중입니다.\n직접 마진 합계를 입력해주세요.'); return; }
-    const data = await res.json().catch(()=>null);
-    if (data && data.profit !== undefined) {
-        document.getElementById('inputSalesBase').value = Math.max(0, data.profit);
+    const btn = document.querySelector('[onclick="fetchIntegratedSales()"]');
+    const origText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>집계 중...';
+    btn.disabled = true;
+
+    try {
+        const res  = await fetch(`/api/integrated-settlement/monthly-margin?year=${currentYear}&month=${currentMonth}`);
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.message);
+
+        const d = data.data;
+        document.getElementById('inputSalesBase').value = Math.max(0, d.profit);
         calcSalesTax();
-        alert('통합정산에서 ' + currentMonth + '월 마진 ' + fmtW(data.profit) + ' 을 가져왔습니다.');
-    } else {
-        alert('해당 월 정산 데이터를 찾을 수 없습니다.\n직접 입력해주세요.');
+
+        // 상세 breakdown 표시
+        const detail = [
+            `📊 ${currentYear}년 ${currentMonth}월 통합정산 마진 집계`,
+            ``,
+            `즐길거리: ${fmtW(d.activity.margin)} (${d.activity.count}건)`,
+            `  입금확정 ${fmtW(d.activity.received)} - 송금확정 ${fmtW(d.activity.sent)}`,
+            ``,
+            `호텔:    ${fmtW(d.hotel.margin)} (${d.hotel.count}건)`,
+            `  입금확정 ${fmtW(d.hotel.received)} - 송금확정 ${fmtW(d.hotel.sent)}`,
+            ``,
+            `패키지:  ${fmtW(d.package.margin)} (${d.package.count}건)`,
+            `  입금확정 ${fmtW(d.package.received)} - 송금확정 ${fmtW(d.package.sent)}`,
+            ``,
+            `────────────────────────`,
+            `총 마진 (과세표준): ${fmtW(d.profit)}`,
+            `매출세액 (×10%):   ${fmtW(d.sales_tax)}`,
+        ].join('\n');
+
+        alert(detail);
+    } catch(e) {
+        alert('통합정산 집계 실패: ' + e.message + '\n직접 마진 합계를 입력해주세요.');
+    } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
     }
 }
 

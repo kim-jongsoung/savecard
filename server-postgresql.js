@@ -1426,6 +1426,109 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
     }
 });
 
+// 통합정산 월별 마진 집계 API (부가세 신고 페이지에서 사용)
+app.get('/api/integrated-settlement/monthly-margin', requireAuth, async (req, res) => {
+    try {
+        const year  = parseInt(req.query.year)  || new Date().getFullYear();
+        const month = parseInt(req.query.month) || (new Date().getMonth() + 1);
+
+        const startDate = new Date(year, month - 1, 1);
+        const endDate   = new Date(year, month, 1);
+
+        // ===== 즐길거리: 출발일 기준 해당 월 입금확정 - 송금확정 =====
+        const activityResult = await pool.query(`
+            SELECT
+                COALESCE(SUM(
+                    CASE WHEN s.payment_received_date IS NOT NULL THEN
+                        CASE WHEN s.sale_currency = 'USD'
+                            THEN ROUND(COALESCE(s.net_revenue, s.total_sale, 0) * COALESCE(s.exchange_rate, 1300))
+                            ELSE COALESCE(s.net_revenue, s.total_sale, 0)
+                        END
+                    ELSE 0 END
+                ), 0) as received_sum,
+                COALESCE(SUM(
+                    CASE WHEN s.payment_sent_date IS NOT NULL THEN
+                        COALESCE(s.payment_sent_cost_krw, s.cost_krw, 0)
+                    ELSE 0 END
+                ), 0) as sent_sum,
+                COUNT(*) as count
+            FROM reservations r
+            INNER JOIN settlements s ON s.reservation_id = r.id
+            WHERE r.usage_date >= $1 AND r.usage_date < $2
+              AND r.payment_status IN ('payment_completed', 'settlement_completed')
+              AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
+        `, [startDate, endDate]);
+
+        const activityReceived = parseFloat(activityResult.rows[0].received_sum) || 0;
+        const activitySent     = parseFloat(activityResult.rows[0].sent_sum)     || 0;
+        const activityMargin   = activityReceived - activitySent;
+        const activityCount    = parseInt(activityResult.rows[0].count) || 0;
+
+        // ===== 호텔: 체크인 기준 해당 월 =====
+        const hotelResult = await pool.query(`
+            SELECT
+                COALESCE(SUM(
+                    CASE WHEN hr.payment_received_date IS NOT NULL THEN
+                        COALESCE(hr.grand_total, 0) * COALESCE(hr.exchange_rate, 1300)
+                    ELSE 0 END
+                ), 0) as received_sum,
+                COALESCE(SUM(
+                    CASE WHEN hr.payment_sent_date IS NOT NULL THEN
+                        COALESCE(hr.total_cost_price, 0) * COALESCE(hr.remittance_rate, hr.exchange_rate, 1300)
+                    ELSE 0 END
+                ), 0) as sent_sum,
+                COUNT(*) as count
+            FROM hotel_reservations hr
+            WHERE hr.check_in_date >= $1 AND hr.check_in_date < $2
+              AND hr.status NOT IN ('cancelled', 'pending', 'draft')
+        `, [startDate, endDate]);
+
+        const hotelReceived = parseFloat(hotelResult.rows[0].received_sum) || 0;
+        const hotelSent     = parseFloat(hotelResult.rows[0].sent_sum)     || 0;
+        const hotelMargin   = hotelReceived - hotelSent;
+        const hotelCount    = parseInt(hotelResult.rows[0].count) || 0;
+
+        // ===== 패키지: 출발일 기준 해당 월 (MongoDB) =====
+        const packageReservations = await PackageReservation.find({
+            'travel_period.departure_date': { $gte: startDate, $lt: endDate },
+            reservation_status: { $ne: 'cancelled' }
+        });
+
+        let packageReceived = 0;
+        let packageSent     = 0;
+        packageReservations.forEach(r => {
+            const completed = (r.billings || []).filter(b => b.status === 'completed');
+            packageReceived += completed.reduce((s, b) => s + (b.actual_amount || b.amount || 0), 0);
+            const sentComps = (r.cost_components || []).filter(c => c.payment_sent_date);
+            packageSent     += sentComps.reduce((s, c) => s + (c.payment_sent_amount_krw || c.cost_krw || 0), 0);
+        });
+        const packageMargin = packageReceived - packageSent;
+
+        // ===== 합산 =====
+        const totalReceived = activityReceived + hotelReceived + packageReceived;
+        const totalSent     = activitySent     + hotelSent     + packageSent;
+        const totalMargin   = totalReceived - totalSent;
+        const salesTax      = Math.round(Math.max(0, totalMargin) * 0.1);
+
+        res.json({
+            success: true,
+            data: {
+                year, month,
+                activity: { received: activityReceived, sent: activitySent, margin: activityMargin, count: activityCount },
+                hotel:    { received: hotelReceived,    sent: hotelSent,    margin: hotelMargin,    count: hotelCount },
+                package:  { received: packageReceived,  sent: packageSent,  margin: packageMargin,  count: packageReservations.length },
+                total_received: totalReceived,
+                total_sent:     totalSent,
+                profit:         totalMargin,   // 과세표준 (마진합계)
+                sales_tax:      salesTax,      // 매출세액 (×10%)
+            }
+        });
+    } catch (e) {
+        console.error('❌ 통합정산 월별 마진 API 오류:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // 패키지 예약 등록 페이지
 app.get('/admin/package-inbox', requireAuth, (req, res) => {
     res.render('admin/package-inbox', {
