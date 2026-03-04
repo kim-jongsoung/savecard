@@ -431,6 +431,20 @@
                     </div>
                 </div>
             </div>
+        <!-- 필터 결과 매입액 합계 바 -->
+        <div class="card border-0 shadow-sm mt-3" id="filteredSummaryBar" style="display:none">
+            <div class="card-body py-2 px-4 bg-dark text-white rounded">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-4">
+                        <span style="font-size:.9rem"><i class="fas fa-filter me-1 text-warning"></i>검색결과 <strong id="filteredCount">0</strong>건</span>
+                        <span style="font-size:.9rem">총 매입액 합계: <strong id="filteredTotalCost" class="text-warning fs-6">₩0</strong></span>
+                        <span style="font-size:.9rem">미송금액: <strong id="filteredPendingCost" class="text-danger">₩0</strong></span>
+                        <span style="font-size:.9rem">송금완료액: <strong id="filteredSentCost" class="text-success">₩0</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
             <!-- 정산현황 탭 패널 -->
             <div class="tab-pane fade" id="statusPanel" role="tabpanel">
                 <!-- 요약 카드 -->
@@ -754,6 +768,30 @@
             }).join('');
 
             updateSelectionInfo();
+            updateFilteredSummary(reservations);
+        }
+
+        // 필터 결과 합계 바 업데이트
+        function updateFilteredSummary(reservations) {
+            const bar = document.getElementById('filteredSummaryBar');
+            if (!reservations || reservations.length === 0) {
+                bar.style.display = 'none';
+                return;
+            }
+            let totalCost = 0, sentCost = 0, pendingCost = 0;
+            reservations.forEach(r => {
+                (r.cost_components || []).forEach(c => {
+                    const amt = c.cost_krw || 0;
+                    totalCost += amt;
+                    if (c.payment_sent_date) sentCost += amt;
+                    else pendingCost += amt;
+                });
+            });
+            document.getElementById('filteredCount').textContent = reservations.length;
+            document.getElementById('filteredTotalCost').textContent = '₩' + totalCost.toLocaleString();
+            document.getElementById('filteredPendingCost').textContent = '₩' + pendingCost.toLocaleString();
+            document.getElementById('filteredSentCost').textContent = '₩' + sentCost.toLocaleString();
+            bar.style.display = 'block';
         }
 
         // 예약 전체 선택/해제
