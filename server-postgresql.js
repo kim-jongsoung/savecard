@@ -1326,33 +1326,39 @@ app.get('/api/integrated-settlement/status', requireAuth, async (req, res) => {
                 ? sentComponents.slice().sort((a, b) => new Date(b.payment_sent_date) - new Date(a.payment_sent_date))[0].payment_sent_date
                 : null;
 
-            // billing 건별: 입금일이 출발일 이전 → 수탁, 미완료+출발후 → 미수금
+            // billing 건별 분류
+            // - completed + 출발전 → 수탁액
+            // - completed + 출발후 → 입금확정 (수탁 아님)
+            // - 미완료 + 출발후 → 미수금
             let sutak = 0;
             let receivable = 0;
             (r.billings || []).forEach(b => {
                 const bAmt = b.actual_amount || b.amount || 0;
                 if (b.status === 'completed') {
-                    const bDate = b.date ? new Date(b.date) : null;
-                    if (!departure || !bDate || bDate < departure) {
-                        sutak += bAmt;
+                    if (!departed) {
+                        sutak += bAmt;  // 출발전 입금완료 → 수탁
                     }
+                    // 출발후 입금완료는 confirmed(입금확정)이므로 수탁에 포함 안 함
                 } else {
-                    if (departed) receivable += bAmt;
+                    if (departed) receivable += bAmt;  // 출발후 미완료 → 미수금
                 }
             });
 
-            // cost_component 건별: 송금일이 출발일 이전 → 선급금, 미송금+출발후 → 미지급금
+            // cost_component 건별 분류
+            // - 송금완료 + 출발전 → 선급금
+            // - 송금완료 + 출발후 → 송금확정 (선급 아님)
+            // - 미송금 + 출발후 → 미지급금
             let prepaid = 0;
             let payable = 0;
             (r.cost_components || []).forEach(c => {
                 const cAmt = c.payment_sent_amount_krw || c.cost_krw || 0;
                 if (c.payment_sent_date) {
-                    const cDate = new Date(c.payment_sent_date);
-                    if (!departure || cDate < departure) {
-                        prepaid += cAmt;
+                    if (!departed) {
+                        prepaid += cAmt;  // 출발전 송금완료 → 선급
                     }
+                    // 출발후 송금완료는 confirmed(송금확정)이므로 선급에 포함 안 함
                 } else {
-                    if (departed) payable += cAmt;
+                    if (departed) payable += cAmt;  // 출발후 미송금 → 미지급
                 }
             });
 

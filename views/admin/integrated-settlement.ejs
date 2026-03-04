@@ -461,12 +461,11 @@
                 // billing 건별 입금 하위행
                 billings.forEach(b => {
                     const bAmt    = b.actual_amount || b.amount || 0;
-                    const bDate   = b.date ? new Date(b.date) : null;
                     const bDt     = fmtDate(b.date);
                     const isDone  = b.status === 'completed';
-                    const isBefore= departure && bDate && bDate < departure;
-                    const bConf   = isDone ? bAmt : 0;
-                    const bSutak  = isDone && isBefore ? bAmt : 0;
+                    // 입금완료+출발전 → 수탁 / 입금완료+출발후 → 확정 / 미입금+출발후 → 미수금
+                    const bSutak  = isDone && !s.departed ? bAmt : 0;
+                    const bConf   = isDone && s.departed  ? bAmt : 0;
                     const bRecv   = !isDone && s.departed ? bAmt : 0;
                     rows += `<tr class="pkg-sub-row billing-row">
                         <td class="text-center" style="color:#888;font-size:.72rem">↳입금</td>
@@ -486,12 +485,11 @@
                 // cost 건별 송금 하위행
                 costs.forEach(c => {
                     const cAmt    = c.payment_sent_amount_krw || c.cost_krw || 0;
-                    const cDate   = c.payment_sent_date ? new Date(c.payment_sent_date) : null;
                     const cDt     = fmtDate(c.payment_sent_date);
                     const isSent  = !!c.payment_sent_date;
-                    const isBefore= departure && cDate && cDate < departure;
-                    const cConf    = isSent ? cAmt : 0;
-                    const cPrepaid = isSent && isBefore ? cAmt : 0;
+                    // 송금완료+출발전 → 선급 / 송금완료+출발후 → 확정 / 미송금+출발후 → 미지급
+                    const cPrepaid = isSent && !s.departed ? cAmt : 0;
+                    const cConf    = isSent && s.departed  ? cAmt : 0;
                     const cPayable = !isSent && s.departed ? cAmt : 0;
                     const vendor   = c.vendor_name || '-';
                     rows += `<tr class="pkg-sub-row cost-row">
