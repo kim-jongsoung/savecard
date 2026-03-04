@@ -39,11 +39,18 @@ const bankTransactionSchema = new mongoose.Schema({
             'expense_meal',         // 식대
             'expense_entertainment',// 접대비
             'expense_insurance',    // 여행자보험
-            'expense_marketing',    // 광고/마케팅비
+            'expense_marketing',     // 광고/마케팅비
+            'expense_dev',          // 개발수수료
+            'expense_marketing_fee',// 마케팅대행료
+            'expense_advance',      // 가지급금
             'expense_office',       // 사무용품/장비구매
             'expense_communication',// 통신비
             'expense_tax',          // 세금/공과금
             'expense_other',        // 기타경비
+            // 입금 추가항목
+            'deposit_event',        // 행사비 수탁액
+            'deposit_advance_refund',// 가지급금 상환
+            'deposit_tax_refund',   // 세금 환급
             'uncategorized',        // 미분류
         ],
         default: 'uncategorized'

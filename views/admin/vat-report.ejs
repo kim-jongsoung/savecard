@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부가세 신고 - 관리자</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background:#f4f6fb; }
+        .page-header { background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; padding:18px 0; margin-bottom:20px; }
+        .section-card { background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.08); margin-bottom:16px; overflow:hidden; }
+        .section-header { background:#f8f9fa; border-bottom:1px solid #e9ecef; padding:11px 18px; font-weight:700; font-size:.82rem; }
+        .stat-box { background:white; border-radius:10px; padding:14px 18px; box-shadow:0 2px 8px rgba(0,0,0,.08); text-align:center; }
+        .stat-label { font-size:.72rem; color:#888; margin-bottom:3px; }
+        .stat-value { font-size:1.1rem; font-weight:700; }
+        .c-green{color:#11998e;} .c-red{color:#dc3545;} .c-blue{color:#667eea;} .c-orange{color:#fd7e14;} .c-purple{color:#764ba2;}
+        .badge-draft    { background:#fff3cd; color:#856404; padding:2px 8px; border-radius:20px; font-size:.7rem; }
+        .badge-confirmed{ background:#d4edda; color:#155724; padding:2px 8px; border-radius:20px; font-size:.7rem; }
+        .badge-filed    { background:#cce5ff; color:#004085; padding:2px 8px; border-radius:20px; font-size:.7rem; }
+        .month-btn { border:2px solid #dee2e6; border-radius:8px; padding:6px 12px; font-size:.78rem; font-weight:600; cursor:pointer; background:white; transition:all .15s; min-width:52px; text-align:center; }
+        .month-btn:hover { border-color:#667eea; background:#f0f0ff; }
+        .month-btn.active { border-color:#667eea; background:#667eea; color:white; }
+        .month-btn.has-data { border-color:#11998e; }
+        .month-btn.has-data.active { background:#11998e; border-color:#11998e; }
+        .summary-box { border-radius:10px; padding:16px 20px; }
+        .deductible-yes { color:#11998e; font-weight:700; }
+        .deductible-no  { color:#adb5bd; }
+        .tax-payable-positive { color:#dc3545; font-size:1.3rem; font-weight:700; }
+        .tax-payable-negative { color:#11998e; font-size:1.3rem; font-weight:700; }
+        .upload-zone { border:2px dashed #dee2e6; border-radius:10px; padding:24px; text-align:center; cursor:pointer; transition:all .2s; }
+        .upload-zone:hover { border-color:#667eea; background:#f8f0ff; }
+        .tab-pill { border-radius:20px; padding:5px 16px; font-size:.78rem; font-weight:600; cursor:pointer; border:2px solid #dee2e6; background:white; transition:all .15s; }
+        .tab-pill.active { background:#667eea; color:white; border-color:#667eea; }
+    </style>
+</head>
+<body>
+<%- include('../partials/navbar', { currentPage: 'vat-report' }) %>
+
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h4 class="mb-1 fw-bold"><i class="fas fa-file-invoice-dollar me-2"></i>부가가치세 신고 관리</h4>
+                <small class="opacity-75">월별 매출세액 · 매입세액 · 역발급계산서 · 법인카드 통합 관리</small>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm" id="selYear" style="width:100px"></select>
+                <span id="halfBadge" class="badge bg-light text-dark"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+
+    <!-- 월 선택 -->
+    <div class="section-card">
+        <div class="section-header"><i class="fas fa-calendar-alt me-2 c-purple"></i>신고 월 선택</div>
+        <div class="p-3 d-flex flex-wrap gap-2" id="monthBtns"></div>
+    </div>
+
+    <!-- 요약 카드 -->
+    <div class="row g-3 mb-3" id="summaryRow" style="display:none!important">
+        <div class="col-6 col-md-3">
+            <div class="stat-box">
+                <div class="stat-label"><i class="fas fa-arrow-up c-blue me-1"></i>매출세액 (과세표준×10%)</div>
+                <div class="stat-value c-blue" id="sSalesTax">-</div>
+                <div style="font-size:.7rem;color:#888;margin-top:2px">과세표준 <span id="sSalesBase" class="fw-bold">-</span></div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-box">
+                <div class="stat-label"><i class="fas fa-arrow-down c-green me-1"></i>공제 매입세액 합계</div>
+                <div class="stat-value c-green" id="sPurchaseTax">-</div>
+                <div style="font-size:.7rem;color:#888;margin-top:2px">계좌+카드+역발급</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-box">
+                <div class="stat-label"><i class="fas fa-file-alt c-orange me-1"></i>역발급 계산서 세액</div>
+                <div class="stat-value c-orange" id="sReverseTax">-</div>
+                <div style="font-size:.7rem;color:#888;margin-top:2px" id="sReverseCount">-건</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-box">
+                <div class="stat-label"><i class="fas fa-balance-scale me-1"></i>납부세액 / 환급액</div>
+                <div class="stat-value" id="sTaxPayable">-</div>
+                <div style="font-size:.7rem;color:#888;margin-top:2px" id="sTaxNote">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 탭 콘텐츠 -->
+    <div id="mainContent" style="display:none">
+        <div class="d-flex gap-2 mb-3 flex-wrap">
+            <button class="tab-pill active" data-tab="sales" onclick="switchTab('sales',this)"><i class="fas fa-chart-line me-1"></i>매출세액</button>
+            <button class="tab-pill" data-tab="bank" onclick="switchTab('bank',this)"><i class="fas fa-university me-1"></i>계좌분류 매입</button>
+            <button class="tab-pill" data-tab="card" onclick="switchTab('card',this)"><i class="fas fa-credit-card me-1"></i>법인카드</button>
+            <button class="tab-pill" data-tab="reverse" onclick="switchTab('reverse',this)"><i class="fas fa-file-invoice me-1"></i>역발급 계산서</button>
+            <button class="tab-pill" data-tab="summary" onclick="switchTab('summary',this)"><i class="fas fa-calculator me-1"></i>신고 요약</button>
+            <div class="ms-auto d-flex gap-2">
+                <span id="statusBadgeTop"></span>
+                <button class="btn btn-sm btn-success px-3" onclick="saveReport()"><i class="fas fa-save me-1"></i>저장</button>
+                <button class="btn btn-sm btn-outline-primary px-3" onclick="confirmReport()"><i class="fas fa-check me-1"></i>확정</button>
+            </div>
+        </div>
+
+        <!-- ① 매출세액 탭 -->
+        <div class="tab-content-area" id="tab-sales">
+            <div class="section-card">
+                <div class="section-header"><i class="fas fa-chart-line me-2 c-blue"></i>매출세액 입력 (통합정산 마진 기준)</div>
+                <div class="p-4">
+                    <div class="alert alert-info" style="font-size:.8rem">
+                        <i class="fas fa-info-circle me-1"></i>
+                        여행사 부가세 과세표준 = <strong>여행알선수수료(마진)</strong> = 고객수령액 - 원가(항공·숙박·지상비)<br>
+                        통합정산회계의 해당 월 <strong>확정 수익(손익)</strong> 합계를 입력하세요.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">과세표준 (마진 합계) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₩</span>
+                                <input type="number" class="form-control" id="inputSalesBase" placeholder="0" min="0" oninput="calcSalesTax()">
+                            </div>
+                            <small class="text-muted">통합정산에서 해당 월 손익 합계 입력</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">매출세액 (과세표준 × 10%)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₩</span>
+                                <input type="number" class="form-control bg-light" id="inputSalesTax" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-outline-primary btn-sm w-100" onclick="fetchIntegratedSales()">
+                                <i class="fas fa-sync me-1"></i>통합정산에서 자동 가져오기
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-3 rounded" style="background:#f8f9ff;border:1px solid #e0e0ff">
+                        <div class="fw-bold small mb-2">📌 신고 참고사항</div>
+                        <ul class="mb-0 small text-muted">
+                            <li>1기 확정신고: 1~6월 매출 → 7월 25일까지</li>
+                            <li>2기 확정신고: 7~12월 매출 → 다음해 1월 25일까지</li>
+                            <li>예정신고: 1기 예정(1~3월)→4월 25일, 2기 예정(7~9월)→10월 25일</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ② 계좌분류 매입 탭 -->
+        <div class="tab-content-area" id="tab-bank" style="display:none">
+            <div class="section-card">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-university me-2 c-green"></i>계좌 출금 분류별 매입세액</span>
+                    <small class="text-muted">계좌입출금 분류항목 자동 집계 · 공제가능 항목만 매입세액 산정</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle" style="font-size:.8rem">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>분류 항목</th>
+                                <th class="text-end">건수</th>
+                                <th class="text-end">지출합계</th>
+                                <th class="text-center">공제가능</th>
+                                <th class="text-end">매입세액(÷11)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bankTable">
+                            <tr><td colspan="5" class="text-center py-4 text-muted">월을 선택하면 자동 집계됩니다</td></tr>
+                        </tbody>
+                        <tfoot class="table-secondary fw-bold">
+                            <tr>
+                                <td colspan="2">공제 가능 합계</td>
+                                <td class="text-end" id="bankTotalAmount">-</td>
+                                <td></td>
+                                <td class="text-end c-green" id="bankTotalTax">-</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="p-3">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i>
+                    공제 가능: 개발수수료, 마케팅대행료, 광고비, 사무용품, 통신비, 식대, 접대비, 기타경비 (세금계산서/카드전표 수취 시)<br>
+                    공제 불가: 급여, 항공료, 숙박비(해외), 지상비(해외), 여행자보험, 세금/공과금, 가지급금</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- ③ 법인카드 탭 -->
+        <div class="tab-content-area" id="tab-card" style="display:none">
+            <div class="section-card">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-credit-card me-2 c-orange"></i>법인카드 사용내역</span>
+                    <span class="text-muted small">엑셀(CSV) 업로드 · 공제여부 개별 설정</span>
+                </div>
+                <div class="p-3">
+                    <div class="upload-zone mb-3" id="uploadZone" onclick="document.getElementById('cardFileInput').click()">
+                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                        <div class="fw-bold small">신한 법인카드 이용내역 CSV 업로드</div>
+                        <div class="text-muted" style="font-size:.75rem">클릭하여 파일 선택 · 형식: 이용일,가맹점명,이용금액,카드번호</div>
+                        <input type="file" id="cardFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadCardFile(this)">
+                    </div>
+                    <div class="d-flex gap-2 mb-2 align-items-center">
+                        <span class="text-muted small">총 <strong id="cardCount">0</strong>건 · 공제 합계: <strong id="cardDeductibleTotal" class="c-green">₩0</strong></span>
+                        <button class="btn btn-sm btn-outline-danger ms-auto" onclick="clearCardExpenses()"><i class="fas fa-trash me-1"></i>전체 삭제</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle" style="font-size:.78rem">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>이용일</th>
+                                <th>가맹점명</th>
+                                <th class="text-end">결제금액</th>
+                                <th class="text-end">공급가액</th>
+                                <th class="text-end">부가세</th>
+                                <th class="text-center">공제</th>
+                                <th>메모</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cardTable">
+                            <tr><td colspan="7" class="text-center py-4 text-muted">카드 내역을 업로드해주세요</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ④ 역발급 계산서 탭 -->
+        <div class="tab-content-area" id="tab-reverse" style="display:none">
+            <div class="section-card">
+                <div class="section-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-file-invoice me-2 c-orange"></i>역발급 세금계산서 (국세청 수취분)</span>
+                    <button class="btn btn-sm btn-success" onclick="openReverseModal()"><i class="fas fa-plus me-1"></i>계산서 추가</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle" style="font-size:.8rem">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>발급일</th>
+                                <th>업체명 (공급자)</th>
+                                <th class="text-end">세금계산서 발행금액</th>
+                                <th class="text-end">공급가액</th>
+                                <th class="text-end">부가세</th>
+                                <th>메모</th>
+                                <th class="text-center">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reverseTable">
+                            <tr><td colspan="7" class="text-center py-4 text-muted">등록된 역발급 계산서가 없습니다</td></tr>
+                        </tbody>
+                        <tfoot class="table-secondary fw-bold">
+                            <tr>
+                                <td colspan="3">합계</td>
+                                <td class="text-end" id="reverseTotalSupply">-</td>
+                                <td class="text-end c-orange" id="reverseTotalTax">-</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ⑤ 신고 요약 탭 -->
+        <div class="tab-content-area" id="tab-summary" style="display:none">
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <div class="section-card">
+                        <div class="section-header"><i class="fas fa-calculator me-2 c-purple"></i>부가가치세 신고 계산서</div>
+                        <div class="p-4">
+                            <table class="table table-bordered" style="font-size:.85rem">
+                                <tbody>
+                                    <tr class="table-light">
+                                        <td colspan="2" class="fw-bold c-blue">[ 매출세액 ]</td>
+                                    </tr>
+                                    <tr>
+                                        <td>과세표준 (마진합계)</td>
+                                        <td class="text-end fw-bold" id="sum-salesBase">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>매출세액 (과세표준 × 10%)</td>
+                                        <td class="text-end fw-bold c-blue" id="sum-salesTax">-</td>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <td colspan="2" class="fw-bold c-green">[ 매입세액 공제 ]</td>
+                                    </tr>
+                                    <tr>
+                                        <td>계좌 분류 공제가능 매입세액</td>
+                                        <td class="text-end" id="sum-bankTax">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>법인카드 공제가능 매입세액</td>
+                                        <td class="text-end" id="sum-cardTax">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>역발급 세금계산서 세액</td>
+                                        <td class="text-end" id="sum-reverseTax">-</td>
+                                    </tr>
+                                    <tr class="fw-bold">
+                                        <td>총 공제 매입세액</td>
+                                        <td class="text-end c-green" id="sum-totalPurchaseTax">-</td>
+                                    </tr>
+                                    <tr class="table-warning fw-bold" style="font-size:1rem">
+                                        <td>납부세액 (매출 - 매입)</td>
+                                        <td class="text-end" id="sum-taxPayable">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="mt-3">
+                                <label class="form-label fw-bold small">신고 메모</label>
+                                <textarea class="form-control" id="reportNotes" rows="3" placeholder="신고 관련 메모 입력..."></textarea>
+                            </div>
+                            <div class="mt-2 d-flex gap-2">
+                                <button class="btn btn-success px-4" onclick="saveReport()"><i class="fas fa-save me-1"></i>저장</button>
+                                <button class="btn btn-primary px-4" onclick="confirmReport()"><i class="fas fa-check me-1"></i>확정 처리</button>
+                                <button class="btn btn-outline-info px-4" onclick="markFiled()"><i class="fas fa-stamp me-1"></i>신고 완료</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="section-card">
+                        <div class="section-header"><i class="fas fa-history me-2"></i>연간 신고 현황</div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0" style="font-size:.78rem">
+                                <thead class="table-dark">
+                                    <tr><th>월</th><th class="text-end">매출세액</th><th class="text-end">납부세액</th><th>상태</th></tr>
+                                </thead>
+                                <tbody id="yearlyTable">
+                                    <tr><td colspan="4" class="text-center py-3 text-muted">-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /mainContent -->
+
+</div><!-- /container -->
+
+<!-- 역발급 계산서 추가 모달 -->
+<div class="modal fade" id="reverseModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header" style="background:linear-gradient(135deg,#fd7e14,#ffc107);color:white;">
+            <h5 class="modal-title fw-bold"><i class="fas fa-file-invoice me-2"></i>역발급 계산서 추가</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small">발급일 <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="rv-date">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small">업체명 (공급자) <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="rv-supplier" placeholder="예: 신한카드">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small">세금계산서 발행금액</label>
+                    <input type="number" class="form-control" id="rv-total" placeholder="0" oninput="calcReverseAuto()">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small">공급가액</label>
+                    <input type="number" class="form-control" id="rv-supply" placeholder="0" oninput="calcReverseTax()">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small">부가세</label>
+                    <input type="number" class="form-control" id="rv-tax" placeholder="0">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold small">메모</label>
+                    <input type="text" class="form-control" id="rv-notes" placeholder="">
+                </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0" style="font-size:.78rem">
+                <i class="fas fa-info-circle me-1"></i>
+                세금계산서 발행금액 입력 시 공급가액(÷1.1)·부가세(÷11) 자동계산됩니다.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+            <button type="button" class="btn btn-warning px-4" onclick="saveReverseInvoice()"><i class="fas fa-save me-1"></i>추가</button>
+        </div>
+    </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const fmt  = n => Math.round(n||0).toLocaleString('ko-KR');
+const fmtW = n => '₩' + fmt(n);
+
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth() + 1;
+let reportData   = null;
+
+// ==================== 초기화 ====================
+document.addEventListener('DOMContentLoaded', () => {
+    // 연도 셀렉트
+    const sel = document.getElementById('selYear');
+    for (let y = currentYear + 1; y >= 2024; y--) {
+        const o = document.createElement('option');
+        o.value = y; o.textContent = y + '년';
+        if (y === currentYear) o.selected = true;
+        sel.appendChild(o);
+    }
+    sel.addEventListener('change', () => { currentYear = parseInt(sel.value); renderMonthBtns(); loadYearlyList(); });
+
+    renderMonthBtns();
+    loadYearlyList();
+    selectMonth(currentMonth);
+});
+
+function renderMonthBtns() {
+    const wrap = document.getElementById('monthBtns');
+    wrap.innerHTML = '';
+    const halfLabel = ['1~6월 (1기)', '7~12월 (2기)'];
+    [0,1].forEach(h => {
+        const div = document.createElement('div');
+        div.className = 'd-flex flex-column align-items-center me-3';
+        div.innerHTML = `<small class="text-muted fw-bold mb-1">${halfLabel[h]}</small><div class="d-flex gap-1" id="halfBtns${h}"></div>`;
+        wrap.appendChild(div);
+        for (let m = h*6+1; m <= h*6+6; m++) {
+            const btn = document.createElement('button');
+            btn.className = 'month-btn' + (m === currentMonth ? ' active' : '');
+            btn.textContent = m + '월';
+            btn.dataset.month = m;
+            btn.onclick = () => selectMonth(m);
+            document.getElementById('halfBtns'+h).appendChild(btn);
+        }
+    });
+    document.getElementById('halfBadge').textContent = currentMonth <= 6 ? '1기 (1~6월)' : '2기 (7~12월)';
+}
+
+async function selectMonth(m) {
+    currentMonth = m;
+    document.querySelectorAll('.month-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.month) === m));
+    document.getElementById('halfBadge').textContent = m <= 6 ? '1기 (1~6월)' : '2기 (7~12월)';
+    await loadReport();
+}
+
+// ==================== 리포트 로드 ====================
+async function loadReport() {
+    try {
+        const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        reportData = data.data;
+        renderReport(reportData);
+        document.getElementById('summaryRow').style.display = '';
+        document.getElementById('mainContent').style.display = '';
+    } catch(e) {
+        alert('리포트 로드 실패: ' + e.message);
+    }
+}
+
+function renderReport(r) {
+    document.getElementById('inputSalesBase').value = r.sales_base || 0;
+    document.getElementById('inputSalesTax').value  = r.sales_tax  || 0;
+    document.getElementById('reportNotes').value    = r.notes || '';
+
+    // 요약 카드
+    document.getElementById('sSalesBase').textContent   = fmtW(r.sales_base);
+    document.getElementById('sSalesTax').textContent    = fmtW(r.sales_tax);
+    document.getElementById('sPurchaseTax').textContent = fmtW(r.total_purchase_tax);
+    document.getElementById('sReverseTax').textContent  = fmtW(r.reverse_tax_total);
+    document.getElementById('sReverseCount').textContent = (r.reverse_invoices||[]).length + '건';
+
+    const payable = r.tax_payable || 0;
+    const payEl = document.getElementById('sTaxPayable');
+    payEl.textContent = (payable >= 0 ? '납부 ' : '환급 ') + fmtW(Math.abs(payable));
+    payEl.className = 'stat-value ' + (payable >= 0 ? 'c-red' : 'c-green');
+    document.getElementById('sTaxNote').textContent = payable >= 0 ? '세무서에 납부' : '환급 신청 가능';
+
+    // 상태 배지
+    const statusMap = { draft:'badge-draft', confirmed:'badge-confirmed', filed:'badge-filed' };
+    const statusLabel = { draft:'작성중', confirmed:'확정', filed:'신고완료' };
+    document.getElementById('statusBadgeTop').innerHTML = `<span class="${statusMap[r.status]||'badge-draft'}">${statusLabel[r.status]||'작성중'}</span>`;
+
+    // 계좌 매입 테이블
+    renderBankTable(r.bank_purchase_items || []);
+    // 카드 테이블
+    renderCardTable(r.card_expenses || []);
+    // 역발급 테이블
+    renderReverseTable(r.reverse_invoices || []);
+    // 신고요약
+    renderSummaryTab(r);
+}
+
+function renderBankTable(items) {
+    const tbody = document.getElementById('bankTable');
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">해당 월 계좌 출금 내역이 없습니다</td></tr>'; return; }
+    tbody.innerHTML = items.map(i => `
+        <tr>
+            <td>${i.label || i.category}</td>
+            <td class="text-end">${i.count}건</td>
+            <td class="text-end">${fmtW(i.total_amount)}</td>
+            <td class="text-center">${i.deductible ? '<span class="deductible-yes"><i class="fas fa-check-circle"></i> 공제</span>' : '<span class="deductible-no"><i class="fas fa-minus-circle"></i> 불가</span>'}</td>
+            <td class="text-end ${i.deductible ? 'c-green fw-bold' : 'text-muted'}">${i.deductible ? fmtW(i.tax_amount) : '-'}</td>
+        </tr>`).join('');
+
+    const deductItems = items.filter(i => i.deductible);
+    document.getElementById('bankTotalAmount').textContent = fmtW(deductItems.reduce((s,i)=>s+i.total_amount,0));
+    document.getElementById('bankTotalTax').textContent    = fmtW(deductItems.reduce((s,i)=>s+i.tax_amount,0));
+}
+
+function renderCardTable(items) {
+    const tbody = document.getElementById('cardTable');
+    document.getElementById('cardCount').textContent = items.length;
+    const deductTotal = items.filter(c=>c.deductible).reduce((s,c)=>s+(c.tax_amount||0),0);
+    document.getElementById('cardDeductibleTotal').textContent = fmtW(deductTotal);
+
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">카드 내역을 업로드해주세요</td></tr>'; return; }
+    tbody.innerHTML = items.map(c => {
+        const dt = c.date ? new Date(c.date).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}) : '-';
+        return `<tr>
+            <td style="white-space:nowrap">${dt}</td>
+            <td>${c.merchant || '-'}</td>
+            <td class="text-end">${fmtW(c.amount)}</td>
+            <td class="text-end">${fmtW(c.supply_amount)}</td>
+            <td class="text-end ${c.deductible?'c-green fw-bold':'text-muted'}">${fmtW(c.tax_amount)}</td>
+            <td class="text-center">
+                <div class="form-check form-switch d-flex justify-content-center mb-0">
+                    <input class="form-check-input" type="checkbox" ${c.deductible?'checked':''} onchange="toggleCardDeductible('${c._id}',this.checked)" style="cursor:pointer">
+                </div>
+            </td>
+            <td><input type="text" class="form-control form-control-sm" value="${c.notes||''}" placeholder="메모" onchange="updateCardNote('${c._id}',this.value)" style="min-width:80px"></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderReverseTable(items) {
+    const tbody = document.getElementById('reverseTable');
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">등록된 역발급 계산서가 없습니다</td></tr>'; return; }
+    tbody.innerHTML = items.map(i => {
+        const dt = i.date ? new Date(i.date).toLocaleDateString('ko-KR') : '-';
+        return `<tr>
+            <td style="white-space:nowrap">${dt}</td>
+            <td class="fw-bold">${i.supplier_name}</td>
+            <td class="text-end">${fmtW(i.total_amount)}</td>
+            <td class="text-end">${fmtW(i.supply_amount)}</td>
+            <td class="text-end c-orange fw-bold">${fmtW(i.tax_amount)}</td>
+            <td>${i.notes||''}</td>
+            <td class="text-center"><button class="btn btn-outline-danger btn-sm py-0 px-2" onclick="deleteReverseInvoice('${i._id}')"><i class="fas fa-trash"></i></button></td>
+        </tr>`;
+    }).join('');
+    document.getElementById('reverseTotalSupply').textContent = fmtW(items.reduce((s,i)=>s+(i.supply_amount||0),0));
+    document.getElementById('reverseTotalTax').textContent    = fmtW(items.reduce((s,i)=>s+(i.tax_amount||0),0));
+}
+
+function renderSummaryTab(r) {
+    document.getElementById('sum-salesBase').textContent        = fmtW(r.sales_base);
+    document.getElementById('sum-salesTax').textContent         = fmtW(r.sales_tax);
+    document.getElementById('sum-bankTax').textContent          = fmtW(r.bank_deductible_tax);
+    document.getElementById('sum-cardTax').textContent          = fmtW(r.card_deductible_tax);
+    document.getElementById('sum-reverseTax').textContent       = fmtW(r.reverse_tax_total);
+    document.getElementById('sum-totalPurchaseTax').textContent = fmtW(r.total_purchase_tax);
+    const payable = r.tax_payable || 0;
+    const el = document.getElementById('sum-taxPayable');
+    el.textContent = (payable >= 0 ? '납부 ' : '환급 ') + fmtW(Math.abs(payable));
+    el.className   = 'text-end ' + (payable >= 0 ? 'c-red' : 'c-green');
+}
+
+// ==================== 연간 목록 ====================
+async function loadYearlyList() {
+    try {
+        const res  = await fetch(`/api/vat-report/list/${currentYear}`);
+        const data = await res.json();
+        if (!data.success) return;
+        const tbody = document.getElementById('yearlyTable');
+        const statusLabel = { draft:'작성중', confirmed:'확정', filed:'신고완료' };
+        const statusClass = { draft:'badge-draft', confirmed:'badge-confirmed', filed:'badge-filed' };
+        if (!data.data.length) { tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3 text-muted">저장된 신고 없음</td></tr>'; return; }
+        tbody.innerHTML = data.data.map(r => `
+            <tr style="cursor:pointer" onclick="selectMonth(${r.month})">
+                <td>${r.month}월</td>
+                <td class="text-end c-blue">${fmtW(r.sales_tax)}</td>
+                <td class="text-end ${(r.tax_payable||0)>=0?'c-red':'c-green'}">${(r.tax_payable||0)>=0?'납부 ':'환급 '}${fmtW(Math.abs(r.tax_payable||0))}</td>
+                <td><span class="${statusClass[r.status]||'badge-draft'}">${statusLabel[r.status]||'작성중'}</span></td>
+            </tr>`).join('');
+    } catch(e) { console.error(e); }
+}
+
+// ==================== 탭 전환 ====================
+function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-content-area').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).style.display = '';
+    btn.classList.add('active');
+}
+
+// ==================== 매출세액 계산 ====================
+function calcSalesTax() {
+    const base = parseFloat(document.getElementById('inputSalesBase').value) || 0;
+    const tax  = Math.round(base * 0.1);
+    document.getElementById('inputSalesTax').value = tax;
+}
+
+async function fetchIntegratedSales() {
+    const res = await fetch(`/api/integrated-settlement/summary?year=${currentYear}&month=${currentMonth}`).catch(()=>null);
+    if (!res || !res.ok) { alert('통합정산 API 연동 준비 중입니다.\n직접 마진 합계를 입력해주세요.'); return; }
+    const data = await res.json().catch(()=>null);
+    if (data && data.profit !== undefined) {
+        document.getElementById('inputSalesBase').value = Math.max(0, data.profit);
+        calcSalesTax();
+        alert('통합정산에서 ' + currentMonth + '월 마진 ' + fmtW(data.profit) + ' 을 가져왔습니다.');
+    } else {
+        alert('해당 월 정산 데이터를 찾을 수 없습니다.\n직접 입력해주세요.');
+    }
+}
+
+// ==================== 저장 ====================
+async function saveReport() {
+    const sales_base = parseFloat(document.getElementById('inputSalesBase').value) || 0;
+    const sales_tax  = parseFloat(document.getElementById('inputSalesTax').value)  || 0;
+    const notes      = document.getElementById('reportNotes').value;
+
+    try {
+        const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sales_base, sales_tax, notes })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        reportData = data.data;
+        renderReport(data.data);
+        loadYearlyList();
+        showAlert('저장되었습니다.');
+    } catch(e) { showAlert('저장 실패: ' + e.message, 'danger'); }
+}
+
+async function confirmReport() {
+    if (!confirm('이 월의 부가세를 확정 처리하시겠습니까?')) return;
+    await saveReport();
+    const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'confirmed' })
+    });
+    const data = await res.json();
+    if (data.success) { reportData = data.data; renderReport(data.data); loadYearlyList(); showAlert('확정 처리되었습니다.'); }
+}
+
+async function markFiled() {
+    if (!confirm('신고 완료 처리하시겠습니까?')) return;
+    const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'filed' })
+    });
+    const data = await res.json();
+    if (data.success) { reportData = data.data; renderReport(data.data); loadYearlyList(); showAlert('신고완료 처리됐습니다.'); }
+}
+
+// ==================== 역발급 계산서 ====================
+function openReverseModal() {
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('rv-date').value     = today;
+    document.getElementById('rv-supplier').value = '';
+    document.getElementById('rv-total').value    = '';
+    document.getElementById('rv-supply').value   = '';
+    document.getElementById('rv-tax').value      = '';
+    document.getElementById('rv-notes').value    = '';
+    new bootstrap.Modal(document.getElementById('reverseModal')).show();
+}
+
+function calcReverseAuto() {
+    const total = parseFloat(document.getElementById('rv-total').value) || 0;
+    if (total > 0) {
+        const supply = Math.round(total / 1.1);
+        const tax    = total - supply;
+        document.getElementById('rv-supply').value = supply;
+        document.getElementById('rv-tax').value    = tax;
+    }
+}
+
+function calcReverseTax() {
+    const supply = parseFloat(document.getElementById('rv-supply').value) || 0;
+    const tax    = Math.round(supply * 0.1);
+    document.getElementById('rv-tax').value    = tax;
+    document.getElementById('rv-total').value  = supply + tax;
+}
+
+async function saveReverseInvoice() {
+    const date     = document.getElementById('rv-date').value;
+    const supplier = document.getElementById('rv-supplier').value.trim();
+    if (!date || !supplier) { alert('발급일과 업체명은 필수입니다.'); return; }
+
+    const payload = {
+        date,
+        supplier_name:  supplier,
+        total_amount:   parseFloat(document.getElementById('rv-total').value)  || 0,
+        supply_amount:  parseFloat(document.getElementById('rv-supply').value) || 0,
+        tax_amount:     parseFloat(document.getElementById('rv-tax').value)    || 0,
+        notes:          document.getElementById('rv-notes').value,
+    };
+
+    try {
+        const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}/reverse-invoice`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        reportData = data.data;
+        renderReport(data.data);
+        bootstrap.Modal.getInstance(document.getElementById('reverseModal')).hide();
+        showAlert('역발급 계산서가 추가됐습니다.');
+    } catch(e) { showAlert('추가 실패: ' + e.message, 'danger'); }
+}
+
+async function deleteReverseInvoice(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}/reverse-invoice/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) { reportData = data.data; renderReport(data.data); showAlert('삭제됐습니다.'); }
+}
+
+// ==================== 법인카드 업로드 ====================
+async function uploadCardFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}/upload-card`, { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        reportData = data.data;
+        renderReport(data.data);
+        switchTab('card', document.querySelector('[data-tab="card"]'));
+        showAlert(`${data.added}건 추가됐습니다. (총 ${data.total}건)`);
+    } catch(e) { showAlert('업로드 실패: ' + e.message, 'danger'); }
+    input.value = '';
+}
+
+async function toggleCardDeductible(id, val) {
+    const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}/card/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deductible: val })
+    });
+    const data = await res.json();
+    if (data.success) { reportData = data.data; renderReport(data.data); }
+}
+
+async function updateCardNote(id, notes) {
+    await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}/card/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes })
+    });
+}
+
+async function clearCardExpenses() {
+    if (!confirm('법인카드 내역을 전체 삭제하시겠습니까?')) return;
+    const res  = await fetch(`/api/vat-report/report/${currentYear}/${currentMonth}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ card_expenses: [] })
+    });
+    const data = await res.json();
+    if (data.success) { reportData = data.data; renderReport(data.data); showAlert('삭제됐습니다.'); }
+}
+
+// ==================== 알림 ====================
+function showAlert(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    el.style.cssText = 'top:80px;right:20px;z-index:9999;min-width:260px;font-size:.85rem';
+    el.innerHTML = msg + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>

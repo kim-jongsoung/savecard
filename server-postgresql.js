@@ -876,6 +876,16 @@ try {
     console.error('⚠️ 패키지 정산관리 라우트 연결 실패:', error.message);
 }
 
+// 부가세 신고 라우트 연결
+try {
+    const vatReportRouter = require('./routes/vat-report');
+    app.use('/admin/vat-report', vatReportRouter);
+    app.use('/api/vat-report', vatReportRouter);
+    console.log('✅ 부가세 신고 라우트 연결 완료');
+} catch (error) {
+    console.error('⚠️ 부가세 신고 라우트 연결 실패:', error.message);
+}
+
 // 요금 RAG API 라우트 연결
 try {
     const pricingRouter = require('./routes/pricing')(pool);
