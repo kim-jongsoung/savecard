@@ -1136,31 +1136,40 @@
                 });
 
                 // 각 예약별로 업데이트
+                let failCount = 0;
                 for (const [reservationId, indices] of Object.entries(reservationGroups)) {
-                    const response = await fetch(`/api/package-reservations/${reservationId}`);
-                    const result = await response.json();
-                    
-                    if (!result.success) continue;
+                    const getRes = await fetch(`/api/package-reservations/${reservationId}`);
+                    const getResult = await getRes.json();
 
-                    const reservation = result.data;
+                    if (!getResult.success) { failCount++; continue; }
+
+                    const reservation = getResult.data;
                     indices.forEach(index => {
-                        reservation.cost_components[index].payment_sent_date = sentDate;
+                        if (reservation.cost_components[index]) {
+                            reservation.cost_components[index].payment_sent_date = sentDate;
+                        }
                     });
 
-                    await fetch(`/api/package-reservations/${reservationId}`, {
+                    const putRes = await fetch(`/api/package-reservations/${reservationId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ cost_components: reservation.cost_components })
                     });
+                    const putResult = await putRes.json();
+                    if (!putResult.success) failCount++;
                 }
 
-                alert('일괄 송금 처리가 완료되었습니다.');
+                if (failCount > 0) {
+                    alert(`${failCount}건 처리 실패. 나머지는 완료됐습니다.`);
+                } else {
+                    alert('일괄 송금 처리가 완료되었습니다.');
+                }
                 clearSelection();
                 loadSettlements();
 
             } catch (error) {
                 console.error('일괄 송금 처리 실패:', error);
-                alert('일괄 송금 처리 중 오류가 발생했습니다.');
+                alert('송금 처리 오류: ' + error.message);
             }
         }
 
