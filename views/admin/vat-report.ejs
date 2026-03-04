@@ -273,21 +273,25 @@
             <div class="section-card mb-3">
                 <div class="section-header d-flex align-items-center gap-3 flex-wrap">
                     <span><i class="fas fa-calculator me-2 c-purple"></i>신고 요약</span>
-                    <div class="d-flex gap-1 ms-2" id="summaryModeBtns">
+                    <div class="d-flex gap-1 ms-2 flex-wrap" id="summaryModeBtns">
                         <button class="tab-pill active" data-mode="month" onclick="switchSummaryMode('month',this)">
                             <i class="fas fa-calendar-day me-1"></i>현재 월 (<span id="curMonthLabel">-</span>)
                         </button>
-                        <button class="tab-pill" data-mode="q1" onclick="switchSummaryMode('q1',this)">
-                            1기 예정 <small class="opacity-75">1~3월</small>
+                        <button class="tab-pill" data-mode="q1" onclick="switchSummaryMode('q1',this)" title="신고기한: 4월 25일">
+                            <i class="fas fa-file-alt me-1"></i>1기 예정신고
+                            <small class="d-block opacity-75" style="font-size:.65rem">1~3월 · 4/25까지</small>
                         </button>
-                        <button class="tab-pill" data-mode="h1" onclick="switchSummaryMode('h1',this)">
-                            1기 확정 <small class="opacity-75">1~6월</small>
+                        <button class="tab-pill" data-mode="h1" onclick="switchSummaryMode('h1',this)" title="신고기한: 7월 25일">
+                            <i class="fas fa-file-invoice-dollar me-1"></i>1기 확정신고
+                            <small class="d-block opacity-75" style="font-size:.65rem">1~6월 · 7/25까지</small>
                         </button>
-                        <button class="tab-pill" data-mode="q3" onclick="switchSummaryMode('q3',this)">
-                            2기 예정 <small class="opacity-75">7~9월</small>
+                        <button class="tab-pill" data-mode="q3" onclick="switchSummaryMode('q3',this)" title="신고기한: 10월 25일">
+                            <i class="fas fa-file-alt me-1"></i>2기 예정신고
+                            <small class="d-block opacity-75" style="font-size:.65rem">7~9월 · 10/25까지</small>
                         </button>
-                        <button class="tab-pill" data-mode="h2" onclick="switchSummaryMode('h2',this)">
-                            2기 확정 <small class="opacity-75">7~12월</small>
+                        <button class="tab-pill" data-mode="h2" onclick="switchSummaryMode('h2',this)" title="신고기한: 다음해 1월 25일">
+                            <i class="fas fa-file-invoice-dollar me-1"></i>2기 확정신고
+                            <small class="d-block opacity-75" style="font-size:.65rem">7~12월 · 1/25까지</small>
                         </button>
                     </div>
                     <div class="ms-auto">
