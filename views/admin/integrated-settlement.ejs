@@ -177,7 +177,7 @@
                         <!-- 입금 구역 -->
                         <th class="thead-in text-center" colspan="5">입금</th>
                         <!-- 송금 구역 -->
-                        <th class="thead-out text-center" colspan="5">송금</th>
+                        <th class="thead-out text-center" colspan="6">송금</th>
                         <!-- 손익 구역 -->
                         <th class="thead-pnl text-center" colspan="3">손익</th>
                     </tr>
@@ -189,6 +189,7 @@
                         <th class="thead-in num">미수금</th>
 
                         <th class="thead-out num">송금예정액</th>
+                        <th class="thead-out">송금업체</th>
                         <th class="thead-out text-center">송금일</th>
                         <th class="thead-out num">송금확정금</th>
                         <th class="thead-out num">선급금</th>
@@ -200,7 +201,7 @@
                     </tr>
                 </thead>
                 <tbody id="mainTableBody">
-                    <tr><td colspan="17" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
+                    <tr><td colspan="18" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>
                 </tbody>
                 <tfoot id="mainTableFoot" style="font-size:.8rem">
                     <tr style="background:#f0f0f0;font-weight:700">
@@ -211,6 +212,7 @@
                         <td class="num" id="ft_sutak" style="color:#1565c0">-</td>
                         <td class="num" id="ft_recv" style="color:#c62828">-</td>
                         <td class="num" id="ft_out_exp">-</td>
+                        <td class="text-center" style="color:#999;font-weight:400">-</td>
                         <td class="text-center" style="color:#999;font-weight:400">-</td>
                         <td class="num" id="ft_out_conf" style="color:#1b5e20">-</td>
                         <td class="num" id="ft_prepaid" style="color:#1565c0">-</td>
@@ -364,84 +366,151 @@
             document.getElementById('rowCount').textContent = `총 ${list.length}건`;
             const tbody = document.getElementById('mainTableBody');
             if (!list.length) {
-                tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="18" class="text-center py-4 text-muted">데이터가 없습니다.</td></tr>';
                 updateFoot([]);
                 return;
             }
 
             updateFoot(list);
+            const z = '<span class="amt-zero">-</span>';
             tbody.innerHTML = list.map(r => {
-                const s = getStatus(r);
-                const depStr  = fmtDateFull(r.departure_date) || '-';
-                const payDt   = fmtDate(r.payment_date);
-                const transDt = fmtDate(r.transfer_date);
+                const s          = getStatus(r);
+                const depStr     = fmtDateFull(r.departure_date) || '-';
+                const inExp      = r.total_selling || r.received_amount || 0;
+                const outExp     = r.total_cost || 0;
+                const estPnl     = inExp - outExp;
+                const estColor   = estPnl >= 0 ? 'text-success' : 'text-danger';
+                const trCls      = s.departed ? 'tbl-departed' : 'tbl-notdep';
+                const erpBadge   = `<span class="badge erp-badge-${r.erp} px-2 py-1">${r.erp_label}</span>`;
+                const departure  = r.departure_date ? new Date(r.departure_date) : null;
 
-                const inExp  = r.total_selling || r.received_amount || 0;   // 입금예정액 (항상)
-                const inAmt  = r.received_amount || 0;                         // 입금확정액 (입금일 있는 경우만)
-                const outExp = r.total_cost || 0;                              // 송금예정액 (항상)
-                const outAmt = r.sent_amount || 0;                             // 송금확정액 (송금일 있는 경우만)
+                if (r.erp !== 'package') {
+                    // ── 비패키지: 단일행 (18컬럼) ──
+                    const payDt      = fmtDate(r.payment_date);
+                    const transDt    = fmtDate(r.transfer_date);
+                    const inAmt      = r.received_amount || 0;
+                    const outAmt     = r.sent_amount || 0;
+                    const vendor     = r.vendor_name || '-';
+                    const sutak      = s.inKey === 'sutak'         ? inAmt : 0;
+                    const inConf     = s.inKey === 'in_confirmed'  ? inAmt : 0;
+                    const recv       = s.inKey === 'receivable'    ? inExp  : 0;
+                    const prepaid    = s.outKey === 'prepaid'      ? outAmt : 0;
+                    const outConf    = s.outKey === 'out_confirmed'? outAmt : 0;
+                    const payable    = s.outKey === 'payable'      ? outExp  : 0;
+                    const confPnl    = inConf - outConf;
+                    const confColor  = confPnl >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+                    const inDone     = s.inKey  === 'in_confirmed';
+                    const outDone    = s.outKey === 'out_confirmed';
+                    let badge = '';
+                    if (inDone && outDone)       badge = '<span class="badge badge-settled">확정완료</span>';
+                    else if (inDone || outDone)  badge = '<span class="badge badge-partial">부분확정</span>';
+                    else if (s.inKey==='receivable'||s.outKey==='payable') badge = '<span class="badge bg-danger">미처리</span>';
+                    else if (s.inKey==='sutak'||s.outKey==='prepaid')      badge = '<span class="badge bg-primary">진행중</span>';
+                    return `<tr class="${trCls}">
+                        <td class="text-center">${erpBadge}</td>
+                        <td class="text-center fw-bold" style="font-size:.8rem">${depStr}</td>
+                        <td><div style="font-size:.78rem;font-weight:600">${r.reservation_number||'-'}</div><div class="text-muted" style="font-size:.73rem">${r.platform_name||'-'}</div></td>
+                        <td>${r.customer_name||'-'}${r.detail_label?`<div class="text-muted" style="font-size:.72rem">${r.detail_label}</div>`:''}</td>
+                        <td class="num">${inExp>0?krw(inExp):z}</td>
+                        <td class="text-center date-cell ${payDt?'date-present':''}">${payDt||'-'}</td>
+                        <td class="num"><span class="${inConf>0?'amt-confirmed':'amt-zero'}">${inConf>0?krw(inConf):'-'}</span></td>
+                        <td class="num"><span class="${sutak>0?'amt-sutak':'amt-zero'}">${sutak>0?krw(sutak):'-'}</span></td>
+                        <td class="num"><span class="${recv>0?'amt-receivable':'amt-zero'}">${recv>0?krw(recv):'-'}</span></td>
+                        <td class="num">${outExp>0?krw(outExp):z}</td>
+                        <td style="font-size:.77rem;color:#555">${vendor}</td>
+                        <td class="text-center date-cell ${transDt?'date-present':''}">${transDt||'-'}</td>
+                        <td class="num"><span class="${outConf>0?'amt-out-confirmed':'amt-zero'}">${outConf>0?krw(outConf):'-'}</span></td>
+                        <td class="num"><span class="${prepaid>0?'amt-prepaid':'amt-zero'}">${prepaid>0?krw(prepaid):'-'}</span></td>
+                        <td class="num"><span class="${payable>0?'amt-payable':'amt-zero'}">${payable>0?krw(payable):'-'}</span></td>
+                        <td class="num ${estColor}" style="font-size:.79rem">${krw(estPnl)}</td>
+                        <td class="num ${confColor}" style="font-size:.79rem">${(inDone||outDone)?krw(confPnl):z}</td>
+                        <td class="text-center">${badge}</td>
+                    </tr>`;
+                }
 
-                // 입금 컬럼 값
-                const sutak      = s.inKey === 'sutak'        ? inAmt : 0;
-                const inConfirm  = s.inKey === 'in_confirmed' ? inAmt : 0;
-                const receivable = s.inKey === 'receivable'   ? inExp  : 0;
+                // ── 패키지: 메인 1행 + billing 건별 입금 하위행 + cost 건별 송금 하위행 ──
+                const billings = r.billings || [];
+                const costs    = r.cost_components || [];
+                const allBillDone = billings.length > 0 && billings.every(b => b.status === 'completed');
+                const allCostDone = costs.length > 0   && costs.every(c => c.payment_sent_date);
+                const pkgInConf   = billings.reduce((s,b)=>s+(b.status==='completed'?(b.actual_amount||b.amount||0):0),0);
+                const pkgOutConf  = costs.reduce((s,c)=>s+(c.payment_sent_date?(c.payment_sent_amount_krw||c.cost_krw||0):0),0);
+                const confPnl_p   = pkgInConf - pkgOutConf;
+                const confColor_p = confPnl_p >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
+                let pkgBadge = '';
+                if (allBillDone && allCostDone)       pkgBadge = '<span class="badge badge-settled">확정완료</span>';
+                else if (allBillDone || allCostDone)  pkgBadge = '<span class="badge badge-partial">부분확정</span>';
+                else if (s.departed)                  pkgBadge = '<span class="badge bg-danger">미처리</span>';
+                else                                  pkgBadge = '<span class="badge bg-primary">진행중</span>';
 
-                // 송금 컬럼 값
-                const prepaid    = s.outKey === 'prepaid'      ? outAmt : 0;
-                const outConfirm = s.outKey === 'out_confirmed'? outAmt : 0;
-                const payable    = s.outKey === 'payable'      ? outExp  : 0;
-
-                // 손익
-                const estPnl  = inExp - outExp;
-                const confPnl = inConfirm - outConfirm;
-                const estColor  = estPnl  >= 0 ? 'text-success' : 'text-danger';
-                const confColor = confPnl >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
-
-                // 상태 배지
-                const inDone  = s.inKey  === 'in_confirmed';
-                const outDone = s.outKey === 'out_confirmed';
-                let badge = '';
-                if (inDone && outDone)   badge = '<span class="badge badge-settled">확정완료</span>';
-                else if (inDone || outDone) badge = '<span class="badge badge-partial">부분확정</span>';
-                else if (s.inKey === 'receivable' || s.outKey === 'payable')
-                    badge = '<span class="badge bg-danger">미처리</span>';
-                else if (s.inKey === 'sutak' || s.outKey === 'prepaid')
-                    badge = '<span class="badge bg-primary">진행중</span>';
-
-                const trCls = s.departed ? 'tbl-departed' : 'tbl-notdep';
-                const erpBadge = `<span class="badge erp-badge-${r.erp} px-2 py-1">${r.erp_label}</span>`;
-
-                return `<tr class="${trCls}">
+                // 메인 1행: 예정액/예상손익/확정손익/상태만 표시
+                let rows = `<tr class="${trCls}">
                     <td class="text-center">${erpBadge}</td>
                     <td class="text-center fw-bold" style="font-size:.8rem">${depStr}</td>
-                    <td>
-                        <div style="font-size:.78rem;font-weight:600">${r.reservation_number || '-'}</div>
-                        <div class="text-muted" style="font-size:.73rem">${r.platform_name || '-'}</div>
-                    </td>
-                    <td>
-                        <div>${r.customer_name || '-'}</div>
-                        ${r.detail_label ? `<div class="text-muted" style="font-size:.72rem">${r.detail_label}</div>` : ''}
-                    </td>
-
-                    <!-- 입금 구역 -->
-                    <td class="num">${inExp > 0 ? krw(inExp) : '<span class="amt-zero">-</span>'}</td>
-                    <td class="text-center date-cell ${payDt ? 'date-present' : ''}">${payDt || '-'}</td>
-                    <td class="num"><span class="${inConfirm > 0 ? 'amt-confirmed' : 'amt-zero'}">${inConfirm > 0 ? krw(inConfirm) : '-'}</span></td>
-                    <td class="num"><span class="${sutak > 0 ? 'amt-sutak' : 'amt-zero'}">${sutak > 0 ? krw(sutak) : '-'}</span></td>
-                    <td class="num"><span class="${receivable > 0 ? 'amt-receivable' : 'amt-zero'}">${receivable > 0 ? krw(receivable) : '-'}</span></td>
-
-                    <!-- 송금 구역 -->
-                    <td class="num">${outExp > 0 ? krw(outExp) : '<span class="amt-zero">-</span>'}</td>
-                    <td class="text-center date-cell ${transDt ? 'date-present' : ''}">${transDt || '-'}</td>
-                    <td class="num"><span class="${outConfirm > 0 ? 'amt-out-confirmed' : 'amt-zero'}">${outConfirm > 0 ? krw(outConfirm) : '-'}</span></td>
-                    <td class="num"><span class="${prepaid > 0 ? 'amt-prepaid' : 'amt-zero'}">${prepaid > 0 ? krw(prepaid) : '-'}</span></td>
-                    <td class="num"><span class="${payable > 0 ? 'amt-payable' : 'amt-zero'}">${payable > 0 ? krw(payable) : '-'}</span></td>
-
-                    <!-- 손익 구역 -->
+                    <td><div style="font-size:.78rem;font-weight:600">${r.reservation_number||'-'}</div><div class="text-muted" style="font-size:.73rem">${r.platform_name||'-'}</div></td>
+                    <td>${r.customer_name||'-'}</td>
+                    <td class="num">${inExp>0?krw(inExp):z}</td>
+                    <td class="text-center amt-zero">-</td><td class="num amt-zero">-</td><td class="num amt-zero">-</td><td class="num amt-zero">-</td>
+                    <td class="num">${outExp>0?krw(outExp):z}</td>
+                    <td class="amt-zero">-</td><td class="text-center amt-zero">-</td><td class="num amt-zero">-</td><td class="num amt-zero">-</td><td class="num amt-zero">-</td>
                     <td class="num ${estColor}" style="font-size:.79rem">${krw(estPnl)}</td>
-                    <td class="num ${confColor}" style="font-size:.79rem">${(inDone || outDone) ? krw(confPnl) : '<span class="amt-zero">-</span>'}</td>
-                    <td class="text-center">${badge}</td>
+                    <td class="num ${confColor_p}" style="font-size:.79rem">${(allBillDone||allCostDone)?krw(confPnl_p):z}</td>
+                    <td class="text-center">${pkgBadge}</td>
                 </tr>`;
+
+                // billing 건별 입금 하위행
+                billings.forEach(b => {
+                    const bAmt    = b.actual_amount || b.amount || 0;
+                    const bDate   = b.date ? new Date(b.date) : null;
+                    const bDt     = fmtDate(b.date);
+                    const isDone  = b.status === 'completed';
+                    const isBefore= departure && bDate && bDate < departure;
+                    const bConf   = isDone ? bAmt : 0;
+                    const bSutak  = isDone && isBefore ? bAmt : 0;
+                    const bRecv   = !isDone && s.departed ? bAmt : 0;
+                    rows += `<tr class="pkg-sub-row billing-row">
+                        <td class="text-center" style="color:#888;font-size:.72rem">↳입금</td>
+                        <td class="text-center amt-zero">-</td>
+                        <td colspan="2" style="color:#1565c0;font-size:.77rem;font-weight:600">${b.description||'입금'}</td>
+                        <td class="num amt-zero">-</td>
+                        <td class="text-center date-cell ${bDt?'date-present':''}">${bDt||'-'}</td>
+                        <td class="num"><span class="${bConf>0?'amt-confirmed':'amt-zero'}">${bConf>0?krw(bConf):'-'}</span></td>
+                        <td class="num"><span class="${bSutak>0?'amt-sutak':'amt-zero'}">${bSutak>0?krw(bSutak):'-'}</span></td>
+                        <td class="num"><span class="${bRecv>0?'amt-receivable':'amt-zero'}">${bRecv>0?krw(bRecv):'-'}</span></td>
+                        <td class="num amt-zero">-</td><td class="amt-zero">-</td><td class="text-center amt-zero">-</td>
+                        <td class="num amt-zero">-</td><td class="num amt-zero">-</td><td class="num amt-zero">-</td>
+                        <td class="amt-zero">-</td><td class="amt-zero">-</td><td class="amt-zero">-</td>
+                    </tr>`;
+                });
+
+                // cost 건별 송금 하위행
+                costs.forEach(c => {
+                    const cAmt    = c.payment_sent_amount_krw || c.cost_krw || 0;
+                    const cDate   = c.payment_sent_date ? new Date(c.payment_sent_date) : null;
+                    const cDt     = fmtDate(c.payment_sent_date);
+                    const isSent  = !!c.payment_sent_date;
+                    const isBefore= departure && cDate && cDate < departure;
+                    const cConf    = isSent ? cAmt : 0;
+                    const cPrepaid = isSent && isBefore ? cAmt : 0;
+                    const cPayable = !isSent && s.departed ? cAmt : 0;
+                    const vendor   = c.vendor_name || '-';
+                    rows += `<tr class="pkg-sub-row cost-row">
+                        <td class="text-center" style="color:#888;font-size:.72rem">↳송금</td>
+                        <td class="text-center amt-zero">-</td>
+                        <td colspan="2" style="color:#2e7d32;font-size:.77rem;font-weight:600">${vendor} <span class="text-muted fw-normal">(${c.component_type||'-'})</span></td>
+                        <td class="num amt-zero">-</td><td class="text-center amt-zero">-</td>
+                        <td class="num amt-zero">-</td><td class="num amt-zero">-</td><td class="num amt-zero">-</td>
+                        <td class="num amt-zero">-</td>
+                        <td style="font-size:.77rem;color:#2e7d32">${vendor}</td>
+                        <td class="text-center date-cell ${cDt?'date-present':''}">${cDt||'-'}</td>
+                        <td class="num"><span class="${cConf>0?'amt-out-confirmed':'amt-zero'}">${cConf>0?krw(cConf):'-'}</span></td>
+                        <td class="num"><span class="${cPrepaid>0?'amt-prepaid':'amt-zero'}">${cPrepaid>0?krw(cPrepaid):'-'}</span></td>
+                        <td class="num"><span class="${cPayable>0?'amt-payable':'amt-zero'}">${cPayable>0?krw(cPayable):'-'}</span></td>
+                        <td class="amt-zero">-</td><td class="amt-zero">-</td><td class="amt-zero">-</td>
+                    </tr>`;
+                });
+
+                return rows;
             }).join('');
         }
 
