@@ -367,10 +367,18 @@ router.put('/:id', requireAuth, async (req, res) => {
         
         // 구성요소 원화 환산
         if (req.body.cost_components) {
-            reservation.cost_components = req.body.cost_components.map(component => {
+            reservation.cost_components = req.body.cost_components.map((component, idx) => {
+                // cost_amount가 없으면 기존 cost_krw 유지 (payment_sent_date만 업데이트하는 경우)
+                if (component.cost_amount == null || component.cost_amount === undefined) {
+                    const existing = (reservation.cost_components || [])[idx];
+                    return {
+                        ...component,
+                        cost_krw: component.cost_krw ?? (existing ? existing.cost_krw : 0)
+                    };
+                }
                 const cost_krw = component.cost_currency === 'KRW'
                     ? component.cost_amount
-                    : component.cost_amount * reservation.pricing.exchange_rate;
+                    : component.cost_amount * (reservation.pricing.exchange_rate || 1300);
                 
                 return {
                     ...component,
