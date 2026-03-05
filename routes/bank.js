@@ -305,7 +305,9 @@ router.get('/card-limit', async (req, res) => {
             { $match: { account_number: '180-011-678887', type: 'in', currency: 'USD' } },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
-        const totalIn = inAgg.length ? inAgg[0].total : 0;
+        const TOTAL_IN_OFFSET = 153246; // 과거 데이터 일괄 등록으로 인한 보정값 차감
+        const totalInRaw = inAgg.length ? inAgg[0].total : 0;
+        const totalIn = Math.max(0, totalInRaw - TOTAL_IN_OFFSET);
 
         // 카드승인 출금 합계
         const cardAgg = await BankTransaction.aggregate([
