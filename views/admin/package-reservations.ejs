@@ -345,19 +345,19 @@
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">환율</label>
-                                    <input type="text" class="form-control" id="edit_exchange_rate" value="1,300" oninput="formatCurrency(this); calculateEditSummary();">
+                                    <input type="text" class="form-control" id="edit_exchange_rate" value="1,300" oninput="calculateEditSummary();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">성인 1인 요금 *</label>
-                                    <input type="text" class="form-control" id="edit_price_adult" placeholder="500,000" oninput="formatCurrency(this); calculateEditTotalPrice();">
+                                    <input type="text" class="form-control" id="edit_price_adult" placeholder="500,000" oninput="calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">소아 1인 요금</label>
-                                    <input type="text" class="form-control" id="edit_price_child" placeholder="400,000" oninput="formatCurrency(this); calculateEditTotalPrice();">
+                                    <input type="text" class="form-control" id="edit_price_child" placeholder="400,000" oninput="calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">유아 1인 요금</label>
-                                    <input type="text" class="form-control" id="edit_price_infant" placeholder="100,000" oninput="formatCurrency(this); calculateEditTotalPrice();">
+                                    <input type="text" class="form-control" id="edit_price_infant" placeholder="100,000" oninput="calculateEditTotalPrice();">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label" style="font-size: 0.875rem;">총 판매가</label>
@@ -1215,6 +1215,8 @@
                         
                         // 금액 변동 내역 불러오기
                         renderEditPriceAdjustments(r.pricing.adjustments || []);
+                        // 총 판매가 재계산
+                        calculateEditTotalPrice();
                     }
                     
                     // 결제 빌링
@@ -1538,7 +1540,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" class="form-control form-control-sm" id="edit-cost-${currentCount}" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
+                                        <input type="text" class="form-control form-control-sm" id="edit-cost-${currentCount}" value="${(comp.cost_amount || 0).toLocaleString()}" placeholder="매입가" oninput="calculateEditSummary();">
                                     </div>
                                     <div class="col-md-1">
                                         <select class="form-select form-select-sm" id="edit-cost-currency-${editComponentCount}" onchange="calculateEditSummary()">
@@ -1690,7 +1692,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="text" class="form-control form-control-sm" id="edit-cost-${editComponentCount}" placeholder="매입가" oninput="formatCurrency(this); calculateEditSummary();">
+                                <input type="text" class="form-control form-control-sm" id="edit-cost-${editComponentCount}" placeholder="매입가" oninput="calculateEditSummary();">
                             </div>
                             <div class="col-md-1">
                                 <select class="form-select form-select-sm" id="edit-cost-currency-${editComponentCount}" onchange="calculateEditSummary()">
@@ -1789,7 +1791,7 @@
                                                id="edit_adjustment_amount_${editPriceAdjustmentCount}" 
                                                placeholder="금액"
                                                value="${amount.toLocaleString()}"
-                                               oninput="formatCurrency(this); calculateEditTotalPrice();">
+                                               oninput="calculateEditTotalPrice();">
                                     </div>
                                     <div class="col-md-2">
                                         <button type="button" class="btn btn-sm btn-danger w-100" 
@@ -1832,7 +1834,7 @@
                                 <input type="text" class="form-control form-control-sm" 
                                        id="edit_adjustment_amount_${editPriceAdjustmentCount}" 
                                        placeholder="금액" 
-                                       oninput="formatCurrency(this); calculateEditTotalPrice();">
+                                       oninput="calculateEditTotalPrice();">
                             </div>
                             <div class="col-md-2">
                                 <input type="text" class="form-control form-control-sm" 
