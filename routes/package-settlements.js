@@ -34,9 +34,8 @@ router.get('/list', requireAuth, async (req, res) => {
             // 모든 빌링이 완료 상태인지 확인
             const allCompleted = billings.every(b => b.status === 'completed');
             
-            // 총 받아야 할 금액 계산
-            const totalAmount = (r.pricing.total_selling_price || 0) + 
-                              ((r.pricing.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0));
+            // 총 받아야 할 금액 계산 (total_selling_price는 이미 adjustments 포함)
+            const totalAmount = r.pricing.total_selling_price || 0;
             
             // 입금 완료 금액 계산
             const receivedAmount = billings
@@ -105,8 +104,7 @@ router.get('/status', requireAuth, async (req, res) => {
             const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
             const departed = departure ? departure < now : false;
 
-            const totalSelling = (r.pricing?.total_selling_price || 0) +
-                ((r.pricing?.adjustments || []).reduce((s, a) => s + (a.amount || 0), 0));
+            const totalSelling = r.pricing?.total_selling_price || 0;
             const totalCost = (r.cost_components || []).reduce((s, c) => s + (c.cost_krw || 0), 0);
 
             const completedBillings = (r.billings || []).filter(b => b.status === 'completed');
