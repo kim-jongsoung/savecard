@@ -896,12 +896,10 @@
                 const updateResult = await updateResponse.json();
                 
                 if (updateResult.success) {
-                    if (changeReason) alert(`✅ 금액이 수정되었습니다.\n변경이력이 기록되었습니다.`);
-                    else alert('매입액이 수정되었습니다.');
-                    loadSettlements();
+                    await loadSettlements();
                 } else {
                     alert('매입액 수정에 실패했습니다.');
-                    loadSettlements();
+                    await loadSettlements();
                 }
             } catch (error) {
                 console.error('매입액 수정 실패:', error);
@@ -954,8 +952,7 @@
                 const updateResult = await updateResponse.json();
                 
                 if (updateResult.success) {
-                    if (reason) alert('✅ 송금일이 수정되었습니다.\n변경이력이 기록되었습니다.');
-                    loadSettlements();
+                    await loadSettlements();
                 } else {
                     alert('송금일 업데이트에 실패했습니다.');
                 }
@@ -1004,8 +1001,7 @@
 
                 const updateResult = await updateResponse.json();
                 if (updateResult.success) {
-                    alert(`✅ 송금취소 완료\n[${vendorName}]이 송금전 탭으로 이동되었습니다.\n취소이력이 기록되었습니다.`);
-                    loadSettlements();
+                    await loadSettlements();
                 } else {
                     alert('송금취소 처리에 실패했습니다.');
                 }
@@ -1159,13 +1155,11 @@
                     if (!putResult.success) failCount++;
                 }
 
+                clearSelection();
+                await loadSettlements();
                 if (failCount > 0) {
                     alert(`${failCount}건 처리 실패. 나머지는 완료됐습니다.`);
-                } else {
-                    alert('일괄 송금 처리가 완료되었습니다.');
                 }
-                clearSelection();
-                loadSettlements();
 
             } catch (error) {
                 console.error('일괄 송금 처리 실패:', error);
