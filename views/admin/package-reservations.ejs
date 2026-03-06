@@ -3045,10 +3045,9 @@
                 document.getElementById('settle_reservation_number').textContent = r.reservation_number;
                 document.getElementById('settle_customer_name').textContent = r.customer.korean_name;
                 
-                // 총 받아야 할 금액 (상품총액 + 변동액)
+                // 총 받아야 할 금액 (total_selling_price는 이미 adjustments 포함된 최종 판매가)
                 const totalSellingPrice = r.pricing.total_selling_price || 0;
-                const adjustments = (r.pricing.adjustments || []).reduce((sum, adj) => sum + (adj.amount || 0), 0);
-                const totalAmount = totalSellingPrice + adjustments;
+                const totalAmount = totalSellingPrice;
                 document.getElementById('settle_total_amount').textContent = `₩${totalAmount.toLocaleString()}`;
                 
                 // 입금 내역 렌더링
