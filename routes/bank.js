@@ -350,7 +350,7 @@ router.get('/card-test', (req, res) => {
 // ==================== 거래 내역 조회 ====================
 router.get('/transactions', async (req, res) => {
     try {
-        const { account, type, category, start, end, page = 1, limit = 50 } = req.query;
+        const { account, type, category, start, end, memo, page = 1, limit = 50 } = req.query;
         const filter = { source: { $ne: 'card' } };
         if (account && account !== 'all') filter.account_number = account;
         if (type && type !== 'all') filter.type = type;
@@ -360,6 +360,7 @@ router.get('/transactions', async (req, res) => {
             if (start) filter.transaction_at.$gte = new Date(start);
             if (end)   filter.transaction_at.$lte = new Date(end + 'T23:59:59');
         }
+        if (memo) filter.memo = { $regex: memo, $options: 'i' };
         const skip = (parseInt(page) - 1) * parseInt(limit);
         const [data, total] = await Promise.all([
             BankTransaction.find(filter).sort({ transaction_at: -1 }).skip(skip).limit(parseInt(limit)),

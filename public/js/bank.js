@@ -39,6 +39,8 @@ function resetFilters() {
     setDefaultDates();
     document.getElementById('filterType').value     = 'all';
     document.getElementById('filterCategory').value = 'all';
+    const memoEl = document.getElementById('filterMemo');
+    if (memoEl) memoEl.value = '';
     currentAccount = 'all';
     currentPage    = 1;
     document.querySelectorAll('.account-tab').forEach(t => t.classList.toggle('active', t.dataset.account === 'all'));
@@ -121,11 +123,13 @@ function buildQuery() {
     const end   = document.getElementById('filterEnd').value;
     const type  = document.getElementById('filterType').value;
     const cat   = document.getElementById('filterCategory').value;
+    const memo  = document.getElementById('filterMemo')?.value.trim();
     if (currentAccount !== 'all') p.set('account', currentAccount);
     if (type !== 'all')           p.set('type', type);
     if (cat  !== 'all')           p.set('category', cat);
     if (start)                    p.set('start', start);
     if (end)                      p.set('end', end);
+    if (memo)                     p.set('memo', memo);
     return p.toString();
 }
 
