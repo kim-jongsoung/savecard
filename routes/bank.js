@@ -799,6 +799,66 @@ router.post('/excel-import', express.json({ limit: '5mb' }), async (req, res) =>
     }
 });
 
+// ==================== 자동 분류 일괄 적용 ====================
+// is_confirmed=false 이면서 category='uncategorized' 인 거래에 DB 키워드 룰 적용
+// force=true 이면 uncategorized 포함 미확정(is_confirmed=false) 전체 재분류
+router.post('/auto-classify', async (req, res) => {
+    try {
+        const { force = false } = req.body;
+
+        // 분류 대상 쿼리: is_confirmed=false 거래 (확정 거래는 보존)
+        const filter = { is_confirmed: false, source: { $ne: 'card' } };
+        if (!force) filter.category = 'uncategorized'; // 기본: 미분류만
+
+        const txList = await BankTransaction.find(filter);
+        if (!txList.length) {
+            return res.json({ success: true, updated: 0, message: '분류 대상 거래가 없습니다.' });
+        }
+
+        // 활성 카테고리 키워드 전체 로드 (DB 1회 조회)
+        const cats = await BankCategory.find({ is_active: true }).sort({ sort_order: 1 });
+
+        let updated = 0;
+        const bulkOps = [];
+
+        for (const tx of txList) {
+            const lower = (tx.memo || '').toLowerCase();
+            let matched = 'uncategorized';
+
+            for (const cat of cats) {
+                if (!cat.keywords || !cat.keywords.length) continue;
+                const typeMatch = cat.type === 'both' || cat.type === tx.type;
+                if (!typeMatch) continue;
+                if (cat.keywords.some(k => k && lower.includes(k.toLowerCase()))) {
+                    matched = cat.code;
+                    break;
+                }
+            }
+
+            // 변경 있을 때만 업데이트
+            if (matched !== tx.category) {
+                bulkOps.push({
+                    updateOne: {
+                        filter: { _id: tx._id },
+                        update: { $set: { category: matched } },
+                    },
+                });
+                updated++;
+            }
+        }
+
+        if (bulkOps.length) {
+            await BankTransaction.bulkWrite(bulkOps);
+        }
+
+        console.log(`[AUTO-CLASSIFY] 대상:${txList.length}건 / 변경:${updated}건`);
+        res.json({ success: true, total: txList.length, updated, message: `${updated}건 분류 적용 완료` });
+    } catch (e) {
+        console.error('[AUTO-CLASSIFY]', e.message);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // 기존 데이터 시간 보정 (KST→UTC, -9시간) - 한 번만 실행
 router.post('/fix-timezone', async (req, res) => {
     try {

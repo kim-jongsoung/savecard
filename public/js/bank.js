@@ -646,6 +646,29 @@ async function toggleCatActive(id, activate) {
     } catch (e) { showAlert('처리 실패: ' + e.message, 'danger'); }
 }
 
+// ==================== 자동 분류 일괄 적용 ====================
+async function applyAutoClassify(force = false) {
+    const msg = force
+        ? '미확정 거래 전체를 현재 키워드 룰로 재분류합니다.\n(이미 분류된 미확정 거래도 변경될 수 있습니다)\n계속하시겠습니까?'
+        : '미분류(uncategorized) 거래에 현재 키워드 룰을 적용합니다.\n계속하시겠습니까?';
+    if (!confirm(msg)) return;
+
+    try {
+        const res  = await fetch('/api/bank/auto-classify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        showAlert(`✅ ${data.message} (대상 ${data.total}건 중 ${data.updated}건 변경)`);
+        // 거래 목록 새로고침
+        await loadTransactions();
+    } catch (e) {
+        showAlert('자동 분류 실패: ' + e.message, 'danger');
+    }
+}
+
 // ==================== 엑셀 일괄 등록 ====================
 let excelPreviewData = []; // 미리보기 파싱 결과 임시 저장
 
