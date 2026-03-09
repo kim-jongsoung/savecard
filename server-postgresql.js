@@ -19108,6 +19108,35 @@ async function startServer() {
             }
         });
         
+        // 호텔 정산 완료 건 날짜 수정 (입금일/송금일)
+        app.post('/api/hotel-settlements/:id/update-date', requireAuth, async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { type, date } = req.body; // type: 'received' or 'sent'
+
+                if (!type || !['received', 'sent'].includes(type)) {
+                    return res.status(400).json({ success: false, message: '올바른 type을 입력하세요.' });
+                }
+                if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                    return res.status(400).json({ success: false, message: '올바른 날짜 형식을 입력하세요.' });
+                }
+
+                const field = type === 'received' ? 'payment_received_date' : 'payment_sent_date';
+
+                await pool.query(
+                    `UPDATE hotel_reservations SET ${field} = $1, updated_at = NOW() WHERE id = $2`,
+                    [date, id]
+                );
+
+                console.log(`✅ 호텔 정산 날짜 수정: id=${id}, type=${type}, date=${date}`);
+                res.json({ success: true });
+
+            } catch (error) {
+                console.error('❌ 호텔 정산 날짜 수정 실패:', error);
+                res.status(500).json({ success: false, message: '날짜 수정 중 오류가 발생했습니다.' });
+            }
+        });
+
         // ==================== 정산관리 목록 및 처리 API ====================
         
         // 정산 목록 조회 (상태별)

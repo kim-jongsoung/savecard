@@ -564,8 +564,14 @@
                             <td class="text-end">₩${agencyFeeKRW.toLocaleString()}<br><small class="text-muted">(×${settlementRate.toFixed(2)})</small></td>
                             <td class="text-end ${marginKRW >= 0 ? 'text-primary' : 'text-danger'}">₩${marginKRW.toLocaleString()}</td>
                             <td class="text-end">₩${tax.toLocaleString()}</td>
-                            <td class="text-center">${paymentReceivedDate}</td>
-                            <td class="text-center">${paymentSentDate}</td>
+                            <td class="text-center" style="cursor:pointer;" onclick="editPaymentDate(${s.id}, 'received', '${s.payment_received_date ? new Date(s.payment_received_date).toISOString().split('T')[0] : ''}')" title="클릭하여 입금일 수정">
+                                <span class="text-decoration-underline">${paymentReceivedDate}</span>
+                                <i class="fas fa-edit ms-1 text-muted" style="font-size:0.75rem;"></i>
+                            </td>
+                            <td class="text-center" style="cursor:pointer;" onclick="editPaymentDate(${s.id}, 'sent', '${s.payment_sent_date ? new Date(s.payment_sent_date).toISOString().split('T')[0] : ''}')" title="클릭하여 송금일 수정">
+                                <span class="text-decoration-underline">${paymentSentDate}</span>
+                                <i class="fas fa-edit ms-1 text-muted" style="font-size:0.75rem;"></i>
+                            </td>
                         </tr>
                     `;
                 }
@@ -615,6 +621,36 @@
                 document.getElementById('receivedOnlyCount').textContent = receivedOnlyCount + '건';
                 document.getElementById('sentOnlyTotal').textContent = '₩' + Math.round(sentOnlyTotal).toLocaleString();
                 document.getElementById('sentOnlyCount').textContent = sentOnlyCount + '건';
+            }
+        }
+
+        // 완료 탭 입금일/송금일 수정
+        async function editPaymentDate(settlementId, type, currentDate) {
+            const typeText = type === 'received' ? '입금일' : '송금일';
+            const newDate = prompt(`${typeText}을 수정하세요 (YYYY-MM-DD):`, currentDate);
+            if (!newDate || newDate === currentDate) return;
+
+            // 날짜 형식 검증
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+                alert('날짜 형식이 올바르지 않습니다. (예: 2025-03-01)');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/hotel-settlements/${settlementId}/update-date`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, date: newDate })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    await loadSettlements();
+                } else {
+                    alert('날짜 수정 실패: ' + result.message);
+                }
+            } catch (error) {
+                console.error('날짜 수정 실패:', error);
+                alert('날짜 수정 중 오류가 발생했습니다.');
             }
         }
 
