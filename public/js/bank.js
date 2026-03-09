@@ -166,6 +166,7 @@ function renderTable(list) {
                 <span class="cat-badge ${uncat ? 'uncat' : conf ? 'confirmed' : ''}">${label}</span>
                 ${conf ? '<i class="fas fa-check-circle c-green ms-1" style="font-size:.7rem"></i>' : ''}
             </td>
+            <td class="hide-sm" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;color:#555" title="${tx.notes || ''}">${tx.notes || ''}</td>
             <td style="white-space:nowrap">
                 <button class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size:.72rem" data-id="${tx._id}" data-action="cat">분류</button>
                 <button class="btn btn-outline-danger  btn-sm py-0 px-2 ms-1" style="font-size:.72rem" data-id="${tx._id}" data-action="del">삭제</button>
