@@ -1287,7 +1287,7 @@ router.post('/login', async (req, res) => {
   
   // 환경변수에서 관리자 계정 확인
   const adminUsername = process.env.ADMIN_USERNAME || 'guammate';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'guamtaxi@';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'guamtaxi24';
   
   if (username === adminUsername && password === adminPassword) {
     // 세션 설정
