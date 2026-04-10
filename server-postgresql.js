@@ -1167,6 +1167,229 @@ app.get('/admin/hotel-settlements', requireAuth, (req, res) => {
     });
 });
 
+// 회계장부 / 신고자료 페이지
+app.get('/admin/accounting-ledger', requireAuth, (req, res) => {
+    res.render('admin/accounting-ledger', {
+        title: '회계장부 / 신고자료',
+        adminUsername: req.session.adminUsername,
+        currentPage: 'accounting-ledger'
+    });
+});
+
+// 회계장부 API - 출발일(departure_date) 기준 신고자료 집계
+// 시점의 역설 해결: 돈이 언제 들어왔는지와 무관하게 출발일이 속한 기간으로 매출/매입 귀속
+// ?year=2026&month=3  → 3월 출발 건 전체
+// ?year=2026          → 2026년 전체
+app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
+    try {
+        const year  = parseInt(req.query.year)  || new Date().getFullYear();
+        const month = req.query.month ? parseInt(req.query.month) : null;
+
+        let depStart, depEnd;
+        if (month) {
+            depStart = new Date(year, month - 1, 1);
+            depEnd   = new Date(year, month, 1);
+        } else {
+            depStart = new Date(year, 0, 1);
+            depEnd   = new Date(year + 1, 0, 1);
+        }
+        const depStartStr = depStart.toISOString().split('T')[0];
+        const depEndStr   = depEnd.toISOString().split('T')[0];
+        const now = new Date();
+
+        // ── 즐길거리 (출발일 = usage_date) ──
+        const actResult = await pool.query(`
+            SELECT
+                r.reservation_number, r.platform_name, r.korean_name,
+                r.usage_date                    AS departure_date,
+                s.total_sale, s.net_revenue, s.sale_currency,
+                s.cost_krw, s.exchange_rate,
+                s.payment_received_date, s.payment_sent_date,
+                s.payment_sent_cost_krw,
+                v.vendor_name
+            FROM reservations r
+            INNER JOIN settlements s ON s.reservation_id = r.id
+            LEFT JOIN assignments a  ON a.reservation_id = r.id
+            LEFT JOIN vendors v      ON a.vendor_id = v.id
+            WHERE r.payment_status IN ('payment_completed','settlement_completed')
+              AND r.usage_date >= $1 AND r.usage_date < $2
+              AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
+            ORDER BY r.usage_date
+        `, [depStartStr, depEndStr]);
+
+        const actRows = actResult.rows.map(r => {
+            const exRate  = parseFloat(r.exchange_rate) || 1300;
+            const rawNet  = r.net_revenue != null ? parseFloat(r.net_revenue) : parseFloat(r.total_sale) || 0;
+            const revenue = r.sale_currency === 'USD' ? Math.round(rawNet * exRate) : rawNet;
+            const cost    = parseFloat(r.cost_krw) || 0;
+            const sentCost = parseFloat(r.payment_sent_cost_krw) || cost;
+            const departed = r.departure_date ? new Date(r.departure_date) < now : false;
+            return {
+                erp: 'activity', erp_label: '즐길거리',
+                departure_date: r.departure_date,
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name || '-',
+                customer_name: r.korean_name   || '-',
+                vendor_name:   r.vendor_name   || '-',
+                revenue, cost,
+                revenue_confirmed: r.payment_received_date ? revenue : 0,
+                cost_confirmed:    r.payment_sent_date     ? sentCost : 0,
+                payment_received_date: r.payment_received_date || null,
+                payment_sent_date:     r.payment_sent_date     || null,
+                departed,
+            };
+        });
+
+        // ── 호텔 (출발일 = check_in_date) ──
+        const hotelResult = await pool.query(`
+            SELECT
+                hr.reservation_number,
+                ba.agency_name AS platform_name,
+                (SELECT hrg.guest_name_ko
+                 FROM hotel_reservation_guests hrg
+                 INNER JOIN hotel_reservation_rooms hrr ON hrg.reservation_room_id = hrr.id
+                 WHERE hrr.reservation_id = hr.id AND hrg.guest_type = 'primary'
+                 LIMIT 1) AS customer_name,
+                hr.check_in_date AS departure_date,
+                COALESCE(hr.grand_total,0) * COALESCE(hr.exchange_rate,1300) AS revenue,
+                COALESCE(hr.total_cost_price,0) * COALESCE(hr.exchange_rate,1300) AS cost,
+                CASE WHEN hr.payment_received_date IS NOT NULL
+                     THEN COALESCE(hr.grand_total,0)*COALESCE(hr.exchange_rate,1300) ELSE 0 END AS revenue_confirmed,
+                CASE WHEN hr.payment_sent_date IS NOT NULL
+                     THEN COALESCE(hr.total_cost_price,0)*COALESCE(hr.remittance_rate,hr.exchange_rate,1300) ELSE 0 END AS cost_confirmed,
+                hr.payment_received_date, hr.payment_sent_date,
+                h.hotel_name AS vendor_name
+            FROM hotel_reservations hr
+            LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
+            LEFT JOIN hotels h            ON hr.hotel_id = h.id
+            WHERE hr.status NOT IN ('cancelled','pending','draft')
+              AND hr.check_in_date >= $1 AND hr.check_in_date < $2
+            ORDER BY hr.check_in_date
+        `, [depStartStr, depEndStr]);
+
+        const hotelRows = hotelResult.rows.map(r => {
+            const departed = r.departure_date ? new Date(r.departure_date) < now : false;
+            return {
+                erp: 'hotel', erp_label: '호텔',
+                departure_date: r.departure_date,
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name || '-',
+                customer_name: r.customer_name || '-',
+                vendor_name:   r.vendor_name   || '-',
+                revenue:           parseFloat(r.revenue)           || 0,
+                cost:              parseFloat(r.cost)              || 0,
+                revenue_confirmed: parseFloat(r.revenue_confirmed) || 0,
+                cost_confirmed:    parseFloat(r.cost_confirmed)    || 0,
+                payment_received_date: r.payment_received_date || null,
+                payment_sent_date:     r.payment_sent_date     || null,
+                departed,
+            };
+        });
+
+        // ── 패키지 (출발일 = travel_period.departure_date, MongoDB) ──
+        const pkgDocs = await PackageReservation.find({
+            reservation_status: { $ne: 'cancelled' },
+            'travel_period.departure_date': { $gte: depStart, $lt: depEnd }
+        }).sort({ 'travel_period.departure_date': 1 });
+
+        const pkgRows = pkgDocs.map(r => {
+            const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
+            const departed  = departure ? departure < now : false;
+            const revenue   = r.pricing?.total_selling_price || 0;
+            const cost      = (r.cost_components || []).reduce((s,c) => s+(c.cost_krw||0), 0);
+            const revConf   = (r.billings||[]).filter(b=>b.status==='completed')
+                                .reduce((s,b)=>s+(b.actual_amount||b.amount||0), 0);
+            const costConf  = (r.cost_components||[]).filter(c=>c.payment_sent_date)
+                                .reduce((s,c)=>s+(c.payment_sent_amount_krw||c.cost_krw||0), 0);
+            const lastPayDate  = (r.billings||[]).filter(b=>b.status==='completed'&&b.date)
+                                .sort((a,b)=>new Date(b.date)-new Date(a.date))[0]?.date || null;
+            const lastSentDate = (r.cost_components||[]).filter(c=>c.payment_sent_date)
+                                .sort((a,b)=>new Date(b.payment_sent_date)-new Date(a.payment_sent_date))[0]?.payment_sent_date || null;
+            const vendorDetails = (r.cost_components||[]).map(c=>({
+                vendor_name:    c.vendor_name||'-',
+                component_type: c.component_type||'-',
+                cost:           c.cost_krw||0,
+                cost_confirmed: c.payment_sent_date ? (c.payment_sent_amount_krw||c.cost_krw||0) : 0,
+                sent_date:      c.payment_sent_date||null,
+            }));
+            return {
+                erp: 'package', erp_label: '패키지',
+                departure_date: departure,
+                reservation_number: r.reservation_number,
+                platform_name: r.platform_name || '-',
+                customer_name: r.customer?.korean_name || '-',
+                vendor_name: [...new Set((r.cost_components||[]).map(c=>c.vendor_name).filter(Boolean))].join(', ') || '-',
+                revenue, cost, revenue_confirmed: revConf, cost_confirmed: costConf,
+                payment_received_date: lastPayDate,
+                payment_sent_date:     lastSentDate,
+                departed,
+                vendor_details: vendorDetails,
+            };
+        });
+
+        const allRows = [...actRows, ...hotelRows, ...pkgRows]
+            .sort((a,b) => new Date(a.departure_date||0) - new Date(b.departure_date||0));
+
+        // ── I/S 집계 (출발일 기준 귀속) ──
+        const is = {
+            revenue:           allRows.reduce((s,r)=>s+r.revenue, 0),
+            cost:              allRows.reduce((s,r)=>s+r.cost, 0),
+            revenue_confirmed: allRows.reduce((s,r)=>s+r.revenue_confirmed, 0),
+            cost_confirmed:    allRows.reduce((s,r)=>s+r.cost_confirmed, 0),
+        };
+        is.margin           = is.revenue - is.cost;
+        is.margin_confirmed = is.revenue_confirmed - is.cost_confirmed;
+
+        // ── B/S 잔액 (선택 기간 기준) ──
+        // 미수금(자산): 출발일이 해당 기간이지만 아직 입금 안 된 건
+        // 미지급금(부채): 출발일이 해당 기간이지만 아직 송금 안 된 건
+        // 선수금(부채): 해당 기간 이후 출발인데 이미 입금된 건 ← 별도 전체 DB 조회 필요
+        const bs = {
+            receivable: allRows.filter(r=>r.departed&&!r.payment_received_date).reduce((s,r)=>s+r.revenue,0),
+            payable:    allRows.filter(r=>r.departed&&!r.payment_sent_date).reduce((s,r)=>s+r.cost,0),
+            deposit_trust: allRows.filter(r=>!r.departed&&r.payment_received_date).reduce((s,r)=>s+r.revenue_confirmed,0),
+            prepaid_cost:  allRows.filter(r=>!r.departed&&r.payment_sent_date).reduce((s,r)=>s+r.cost_confirmed,0),
+        };
+
+        // ── 판매처별 매출 집계 ──
+        const byPlatform = {};
+        allRows.forEach(r => {
+            const k = r.platform_name || '기타';
+            if (!byPlatform[k]) byPlatform[k] = { platform:k, count:0, revenue:0, revenue_confirmed:0, margin:0 };
+            byPlatform[k].count++;
+            byPlatform[k].revenue           += r.revenue;
+            byPlatform[k].revenue_confirmed += r.revenue_confirmed;
+            byPlatform[k].margin            += (r.revenue - r.cost);
+        });
+
+        // ── 공급업체별 매입 집계 ──
+        const byVendor = {};
+        allRows.forEach(r => {
+            const details = r.vendor_details || [{ vendor_name: r.vendor_name||'기타', cost: r.cost, cost_confirmed: r.cost_confirmed, sent_date: r.payment_sent_date }];
+            details.forEach(v => {
+                const k = v.vendor_name || '기타';
+                if (!byVendor[k]) byVendor[k] = { vendor:k, count:0, cost:0, cost_confirmed:0 };
+                byVendor[k].count++;
+                byVendor[k].cost           += v.cost;
+                byVendor[k].cost_confirmed += v.cost_confirmed;
+            });
+        });
+
+        res.json({
+            success: true,
+            period: { year, month },
+            is, bs,
+            by_platform: Object.values(byPlatform).sort((a,b)=>b.revenue-a.revenue),
+            by_vendor:   Object.values(byVendor).sort((a,b)=>b.cost-a.cost),
+            rows: allRows,
+            count: allRows.length,
+        });
+    } catch(e) {
+        console.error('❌ 회계장부 API 오류:', e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
 // 통합정산회계 페이지
 app.get('/admin/integrated-settlement', requireAuth, (req, res) => {
     res.render('admin/integrated-settlement', {
