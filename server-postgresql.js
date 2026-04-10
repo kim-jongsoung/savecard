@@ -1382,16 +1382,14 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         `, [depEndStr]);
 
         bsActRes.rows.forEach(r => {
-            const depStr  = r.departure_date instanceof Date
-                ? `${r.departure_date.getFullYear()}-${String(r.departure_date.getMonth()+1).padStart(2,'0')}-${String(r.departure_date.getDate()).padStart(2,'0')}`
-                : String(r.departure_date).slice(0,10);
-            if (depStr <= baseDateStr) return; // 이미 departed → allRows에서 처리
+            const depStr  = toDateStr(r.departure_date);
+            if (!depStr || depStr <= baseDateStr) return; // 이미 departed → allRows에서 처리
             const exRate   = parseFloat(r.exchange_rate) || 1300;
             const rawNet   = r.net_revenue != null ? parseFloat(r.net_revenue) : parseFloat(r.total_sale) || 0;
             const revenue  = r.sale_currency === 'USD' ? Math.round(rawNet * exRate) : rawNet;
             const sentCost = parseFloat(r.payment_sent_cost_krw) || parseFloat(r.cost_krw) || 0;
-            const recvStr  = r.payment_received_date ? String(r.payment_received_date).slice(0,10) : null;
-            const sentStr  = r.payment_sent_date     ? String(r.payment_sent_date).slice(0,10)     : null;
+            const recvStr  = toDateStr(r.payment_received_date);
+            const sentStr  = toDateStr(r.payment_sent_date);
             if (recvStr && recvStr <= baseDateStr) bs_deposit_extra += revenue;
             if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += sentCost;
         });
@@ -1408,14 +1406,12 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         `, [depEndStr]);
 
         bsHotelRes.rows.forEach(r => {
-            const depStr  = r.departure_date instanceof Date
-                ? `${r.departure_date.getFullYear()}-${String(r.departure_date.getMonth()+1).padStart(2,'0')}-${String(r.departure_date.getDate()).padStart(2,'0')}`
-                : String(r.departure_date).slice(0,10);
-            if (depStr <= baseDateStr) return;
+            const depStr  = toDateStr(r.departure_date);
+            if (!depStr || depStr <= baseDateStr) return;
             const revenue = parseFloat(r.revenue) || 0;
             const cost    = parseFloat(r.cost)    || 0;
-            const recvStr = r.payment_received_date ? String(r.payment_received_date).slice(0,10) : null;
-            const sentStr = r.payment_sent_date     ? String(r.payment_sent_date).slice(0,10)     : null;
+            const recvStr = toDateStr(r.payment_received_date);
+            const sentStr = toDateStr(r.payment_sent_date);
             if (recvStr && recvStr <= baseDateStr) bs_deposit_extra += revenue;
             if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += cost;
         });
@@ -1426,16 +1422,14 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         });
         bsPkgDocs.forEach(r => {
             const departure = r.travel_period?.departure_date;
-            const depStr    = departure instanceof Date
-                ? `${departure.getFullYear()}-${String(departure.getMonth()+1).padStart(2,'0')}-${String(departure.getDate()).padStart(2,'0')}`
-                : String(departure||'').slice(0,10);
+            const depStr    = toDateStr(departure);
             if (!depStr || depStr <= baseDateStr) return;
             const revConf  = (r.billings||[]).filter(b=>b.status==='completed').reduce((s,b)=>s+(b.actual_amount||b.amount||0), 0);
             const costConf = (r.cost_components||[]).filter(c=>c.payment_sent_date).reduce((s,c)=>s+(c.payment_sent_amount_krw||c.cost_krw||0), 0);
             const lastRecv = (r.billings||[]).filter(b=>b.status==='completed'&&b.date).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]?.date || null;
             const lastSent = (r.cost_components||[]).filter(c=>c.payment_sent_date).sort((a,b)=>new Date(b.payment_sent_date)-new Date(a.payment_sent_date))[0]?.payment_sent_date || null;
-            const recvStr  = lastRecv ? String(lastRecv).slice(0,10) : null;
-            const sentStr  = lastSent ? String(lastSent).slice(0,10) : null;
+            const recvStr  = toDateStr(lastRecv);
+            const sentStr  = toDateStr(lastSent);
             if (recvStr && recvStr <= baseDateStr) bs_deposit_extra += revConf;
             if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += costConf;
         });
