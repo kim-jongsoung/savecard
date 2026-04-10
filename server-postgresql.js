@@ -1225,6 +1225,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             SELECT
                 r.reservation_number, r.platform_name, r.korean_name,
                 r.usage_date                    AS departure_date,
+                r.payment_status,
                 s.total_sale, s.net_revenue, s.sale_currency,
                 s.cost_krw, s.exchange_rate,
                 s.payment_received_date, s.payment_sent_date,
@@ -1249,8 +1250,10 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             const recvDate = toDateStr(r.payment_received_date) || null;
             const sentDate = toDateStr(r.payment_sent_date)     || null;
             const departed = isDeparted(r.departure_date);
+            const settlementDone = ['payment_completed','settlement_completed','정산완료','완료'].includes(r.payment_status);
             return {
                 erp: 'activity', erp_label: '즐길거리',
+                payment_status: r.payment_status,
                 departure_date: r.departure_date,
                 reservation_number: r.reservation_number,
                 platform_name: r.platform_name || '-',
@@ -1261,6 +1264,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 cost_confirmed:    sentDate ? sentCost : 0,
                 payment_received_date: recvDate,
                 payment_sent_date:     sentDate,
+                settlementDone,
                 departed,
             };
         });
@@ -1283,6 +1287,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 CASE WHEN hr.payment_sent_date IS NOT NULL
                      THEN COALESCE(hr.total_cost_price,0)*COALESCE(hr.remittance_rate,hr.exchange_rate,1300) ELSE 0 END AS cost_confirmed,
                 hr.payment_received_date, hr.payment_sent_date,
+                hr.status AS payment_status,
                 h.hotel_name AS vendor_name
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
@@ -1293,9 +1298,13 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         `, [depStartStr, depEndStr]);
 
         const hotelRows = hotelResult.rows.map(r => {
-            const departed = isDeparted(r.departure_date);
+            const departed  = isDeparted(r.departure_date);
+            const recvDate  = toDateStr(r.payment_received_date) || null;
+            const sentDate  = toDateStr(r.payment_sent_date)     || null;
+            const settlementDone = ['confirmed','completed','settlement_completed'].includes(r.payment_status);
             return {
                 erp: 'hotel', erp_label: '호텔',
+                payment_status: r.payment_status,
                 departure_date: r.departure_date,
                 reservation_number: r.reservation_number,
                 platform_name: r.platform_name || '-',
@@ -1305,8 +1314,9 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 cost:              parseFloat(r.cost)              || 0,
                 revenue_confirmed: parseFloat(r.revenue_confirmed) || 0,
                 cost_confirmed:    parseFloat(r.cost_confirmed)    || 0,
-                payment_received_date: toDateStr(r.payment_received_date) || null,
-                payment_sent_date:     toDateStr(r.payment_sent_date)     || null,
+                payment_received_date: recvDate,
+                payment_sent_date:     sentDate,
+                settlementDone,
                 departed,
             };
         });
@@ -1337,14 +1347,17 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 cost_confirmed: c.payment_sent_date ? (c.payment_sent_amount_krw||c.cost_krw||0) : 0,
                 sent_date:      c.payment_sent_date||null,
             }));
+            const settlementDone = ['completed','settlement_completed','confirmed'].includes(r.reservation_status);
             return {
                 erp: 'package', erp_label: '패키지',
+                payment_status: r.reservation_status,
                 departure_date: departure,
                 reservation_number: r.reservation_number,
                 platform_name: r.platform_name || '-',
                 customer_name: r.customer?.korean_name || '-',
                 vendor_name: [...new Set((r.cost_components||[]).map(c=>c.vendor_name).filter(Boolean))].join(', ') || '-',
                 revenue, cost, revenue_confirmed: revConf, cost_confirmed: costConf,
+                settlementDone,
                 payment_received_date: lastPayDate,
                 payment_sent_date:     lastSentDate,
                 departed,
@@ -1441,10 +1454,14 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         // 미지급금: 출발완료 + (송금없음 OR 기준일 이후 송금)
         // 선수금: 미출발 + 기준일 이전 입금
         // 선급비용: 미출발 + 기준일 이전 송금
+        // recvBeforeBase: 기준일 이전에 입금된 건 (입금일 있고 기준일 이하)
+        // sentBeforeBase: 기준일 이전에 송금된 건
+        // 미수금: 출발완료 + 정산미완료 + 기준일까지 입금없음
+        // 미지급금: 출발완료 + 기준일까지 송금없음 (정산완료여도 송금일 없으면 미지급)
         const recvBeforeBase = (r) => r.payment_received_date && r.payment_received_date <= baseDateStr;
         const sentBeforeBase = (r) => r.payment_sent_date     && r.payment_sent_date     <= baseDateStr;
         const bs = {
-            receivable:    allRows.filter(r=> r.departed && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
+            receivable:    allRows.filter(r=> r.departed && !r.settlementDone && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
             payable:       allRows.filter(r=> r.departed && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
             deposit_trust: allRows.filter(r=>!r.departed &&  recvBeforeBase(r)).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
             prepaid_cost:  allRows.filter(r=>!r.departed &&  sentBeforeBase(r)).reduce((s,r)=>s+r.cost_confirmed,0)    + bs_prepaid_extra,
@@ -1486,11 +1503,13 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 depStartStr, depEndStr, baseDateStr,
                 total: allRows.length,
                 departed_count: allRows.filter(r=>r.departed).length,
-                not_departed_count: allRows.filter(r=>!r.departed).length,
-                receivable_candidates: allRows.filter(r=>r.departed && !r.payment_received_date).length,
-                payable_candidates:    allRows.filter(r=>r.departed && !r.payment_sent_date).length,
-                sample_departed: allRows.filter(r=>r.departed).slice(0,3).map(r=>({
-                    dep: toDateStr(r.departure_date), recv: r.payment_received_date, sent: r.payment_sent_date
+                settlementDone_count: allRows.filter(r=>r.settlementDone).length,
+                receivable_candidates: allRows.filter(r=>r.departed && !r.settlementDone && !(r.payment_received_date && r.payment_received_date <= baseDateStr)).length,
+                payable_candidates:    allRows.filter(r=>r.departed && !(r.payment_sent_date && r.payment_sent_date <= baseDateStr)).length,
+                status_dist: allRows.reduce((acc,r)=>{ acc[r.payment_status||'null']=(acc[r.payment_status||'null']||0)+1; return acc; }, {}),
+                sample_departed: allRows.filter(r=>r.departed).slice(0,5).map(r=>({
+                    dep: toDateStr(r.departure_date), status: r.payment_status, done: r.settlementDone,
+                    recv: r.payment_received_date, sent: r.payment_sent_date
                 })),
             },
         });
