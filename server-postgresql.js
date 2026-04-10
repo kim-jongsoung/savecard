@@ -1250,7 +1250,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             const recvDate = toDateStr(r.payment_received_date) || null;
             const sentDate = toDateStr(r.payment_sent_date)     || null;
             const departed = isDeparted(r.departure_date);
-            const settlementDone = ['payment_completed','settlement_completed','정산완료','완료'].includes(r.payment_status);
+            const settlementDone = ['payment_completed','settlement_completed','settlement','정산완료','완료'].includes(r.payment_status);
             return {
                 erp: 'activity', erp_label: '즐길거리',
                 payment_status: r.payment_status,
@@ -1301,7 +1301,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             const departed  = isDeparted(r.departure_date);
             const recvDate  = toDateStr(r.payment_received_date) || null;
             const sentDate  = toDateStr(r.payment_sent_date)     || null;
-            const settlementDone = ['confirmed','completed','settlement_completed'].includes(r.payment_status);
+            const settlementDone = ['confirmed','completed','settlement_completed','settlement'].includes(r.payment_status);
             return {
                 erp: 'hotel', erp_label: '호텔',
                 payment_status: r.payment_status,
@@ -1347,7 +1347,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 cost_confirmed: c.payment_sent_date ? (c.payment_sent_amount_krw||c.cost_krw||0) : 0,
                 sent_date:      c.payment_sent_date||null,
             }));
-            const settlementDone = ['completed','settlement_completed','confirmed'].includes(r.reservation_status);
+            const settlementDone = ['completed','settlement_completed','confirmed','settlement'].includes(r.reservation_status);
             return {
                 erp: 'package', erp_label: '패키지',
                 payment_status: r.reservation_status,
@@ -1462,7 +1462,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         const sentBeforeBase = (r) => r.payment_sent_date     && r.payment_sent_date     <= baseDateStr;
         const bs = {
             receivable:    allRows.filter(r=> r.departed && !r.settlementDone && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
-            payable:       allRows.filter(r=> r.departed && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
+            payable:       allRows.filter(r=> r.departed && !r.settlementDone && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
             deposit_trust: allRows.filter(r=>!r.departed &&  recvBeforeBase(r)).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
             prepaid_cost:  allRows.filter(r=>!r.departed &&  sentBeforeBase(r)).reduce((s,r)=>s+r.cost_confirmed,0)    + bs_prepaid_extra,
         };
