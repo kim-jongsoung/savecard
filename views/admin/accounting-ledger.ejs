@@ -62,24 +62,29 @@
         </div>
 
         <!-- 핵심 안내 -->
-        <div class="alert alert-info py-2 mb-3 no-print" style="font-size:.8rem;">
-            <i class="fas fa-info-circle me-1"></i>
-            <strong>여행업 순액법 신고 원칙:</strong>
-            과세표준 = 총 수탁액(고객 납입액) − 매입비용(랜드비·항공비 등) = <strong>용역수입(마진)</strong>
-            &nbsp;|&nbsp; 출발일 기준 귀속: 3월 출발 → 3월 신고 &nbsp;|&nbsp; 4월 출발 선수 입금 → 선수금(부채), 신고 제외
+        <div class="alert alert-warning py-2 mb-3 no-print" style="font-size:.8rem;">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            <strong>시점의 역설 방지:</strong>
+            ① <strong>신고 대상 기간</strong>(연·월) = 출발일이 해당 기간인 건만 집계
+            &nbsp;&nbsp;② <strong>신고 기준일</strong> = 이 날짜까지 출발한 건을 "출발완료"로 인식 → 미수금·미지급금 계상
+            &nbsp;&nbsp;③ 기준일 이후 출발 예약의 선수금·선급비용은 신고 대상 제외(B/S 처리)
         </div>
 
-        <!-- 기간 선택 -->
-        <div class="card shadow-sm mb-3 no-print">
-            <div class="card-body py-2">
-                <div class="d-flex gap-3 align-items-end flex-wrap">
-                    <div>
-                        <label class="form-label small fw-bold mb-1">연도</label>
-                        <select class="form-select form-select-sm" id="selYear" style="width:90px"></select>
+        <!-- 기간 + 기준일 선택 -->
+        <div class="card shadow-sm mb-3 no-print border-primary">
+            <div class="card-header bg-primary text-white py-2" style="font-size:.83rem;">
+                <i class="fas fa-calendar-check me-1"></i>
+                <strong>신고 조건 설정</strong> — 아래 3가지를 설정한 후 조회하세요
+            </div>
+            <div class="card-body py-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label small fw-bold mb-1">① 신고 연도</label>
+                        <select class="form-select form-select-sm" id="selYear" style="width:100px"></select>
                     </div>
-                    <div>
-                        <label class="form-label small fw-bold mb-1">월 <span class="text-muted fw-normal">(전체=연간)</span></label>
-                        <select class="form-select form-select-sm" id="selMonth" style="width:100px">
+                    <div class="col-auto">
+                        <label class="form-label small fw-bold mb-1">② 신고 월 <span class="text-muted fw-normal">(빈칸=연간)</span></label>
+                        <select class="form-select form-select-sm" id="selMonth" style="width:110px">
                             <option value="">전체(연간)</option>
                             <option value="1">1월</option><option value="2">2월</option>
                             <option value="3">3월</option><option value="4">4월</option>
@@ -89,12 +94,35 @@
                             <option value="11">11월</option><option value="12">12월</option>
                         </select>
                     </div>
-                    <button class="btn btn-primary btn-sm px-4" onclick="loadReport()">
-                        <i class="fas fa-search me-1"></i>신고자료 조회
-                    </button>
-                    <span class="ms-2 text-muted small align-self-center" id="periodLabel"></span>
+                    <div class="col-auto">
+                        <label class="form-label small fw-bold mb-1">
+                            ③ 신고 기준일
+                            <span class="text-danger">*</span>
+                            <span class="text-muted fw-normal ms-1" style="font-size:.72rem">이 날까지 출발=완료로 인식</span>
+                        </label>
+                        <input type="date" class="form-control form-control-sm" id="selBaseDate" style="width:160px">
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary btn-sm px-4" onclick="loadReport()">
+                            <i class="fas fa-search me-1"></i>신고자료 조회
+                        </button>
+                    </div>
+                    <div class="col-auto align-self-center">
+                        <span class="text-muted small" id="periodLabel"></span>
+                    </div>
+                </div>
+                <div class="mt-2" style="font-size:.75rem; color:#666;">
+                    <i class="fas fa-lightbulb text-warning me-1"></i>
+                    예) 2025년 3월 신고자료 → ① 2025년 &nbsp;② 3월 &nbsp;③ 기준일: 2025-04-25 (신고서 작성일)
                 </div>
             </div>
+        </div>
+
+        <!-- 조회 전 안내 -->
+        <div id="emptyGuide" class="text-center py-5">
+            <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+            <div class="text-muted">위에서 신고 연도·월·기준일을 설정한 후 <strong>신고자료 조회</strong> 버튼을 누르세요.</div>
+            <div class="text-muted small mt-1">기준일을 정확히 설정해야 미수금·미지급금이 올바르게 계상됩니다.</div>
         </div>
 
         <!-- 로딩 -->
@@ -329,8 +357,8 @@
 
         let reportData = null;
 
-        // 연도 옵션 생성
-        (function initYear() {
+        // 초기화: 연도 옵션 + 기준일 기본값, 자동 로드 없음
+        (function init() {
             const sel = document.getElementById('selYear');
             const cur = new Date().getFullYear();
             for (let y = cur; y >= cur - 3; y--) {
@@ -338,26 +366,38 @@
                 o.value = y; o.textContent = y + '년';
                 sel.appendChild(o);
             }
-            // 현재 월 선택
-            document.getElementById('selMonth').value = String(new Date().getMonth() + 1);
+            // 기준일 기본값: 오늘
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm   = String(today.getMonth()+1).padStart(2,'0');
+            const dd   = String(today.getDate()).padStart(2,'0');
+            document.getElementById('selBaseDate').value = `${yyyy}-${mm}-${dd}`;
         })();
 
         async function loadReport() {
-            const year  = document.getElementById('selYear').value;
-            const month = document.getElementById('selMonth').value;
+            const year     = document.getElementById('selYear').value;
+            const month    = document.getElementById('selMonth').value;
+            const baseDate = document.getElementById('selBaseDate').value;
 
+            if (!baseDate) {
+                alert('신고 기준일을 반드시 입력하세요.\n(예: 신고서 작성일 또는 신고 마감일)');
+                return;
+            }
+
+            document.getElementById('emptyGuide').classList.add('d-none');
             document.getElementById('loadingArea').classList.remove('d-none');
             document.getElementById('resultArea').classList.add('d-none');
 
-            const q = month ? `year=${year}&month=${month}` : `year=${year}`;
+            const q = (month ? `year=${year}&month=${month}` : `year=${year}`) + `&baseDate=${baseDate}`;
             try {
                 const res  = await fetch(`/api/accounting-ledger/report?${q}`);
                 const data = await res.json();
                 if (!data.success) throw new Error(data.message);
                 reportData = data;
 
-                const periodTxt = month ? `${year}년 ${month}월 (출발일 기준)` : `${year}년 전체 (출발일 기준)`;
-                document.getElementById('periodLabel').textContent = `📅 ${periodTxt} | 총 ${data.count}건`;
+                const periodTxt = month ? `${year}년 ${month}월` : `${year}년 전체`;
+                document.getElementById('periodLabel').textContent =
+                    `📅 ${periodTxt} | 기준일: ${baseDate} | 총 ${data.count}건`;
 
                 renderIS(data.is, data.bs);
                 renderBS(data.bs);
@@ -369,6 +409,7 @@
                 document.getElementById('resultArea').classList.remove('d-none');
             } catch(e) {
                 document.getElementById('loadingArea').classList.add('d-none');
+                document.getElementById('emptyGuide').classList.remove('d-none');
                 alert('조회 실패: ' + e.message);
             }
         }
@@ -567,8 +608,7 @@
             XLSX.writeFile(wb, `여행업신고자료_순액법_${periodStr}_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // 초기 로드
-        window.addEventListener('load', loadReport);
+        // 자동 로드 없음 — 사용자가 기간+기준일 설정 후 직접 조회
     </script>
 </body>
 </html>

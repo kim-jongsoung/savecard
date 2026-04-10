@@ -1195,7 +1195,11 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         }
         const depStartStr = depStart.toISOString().split('T')[0];
         const depEndStr   = depEnd.toISOString().split('T')[0];
-        const now = new Date();
+
+        // 신고 기준일: 이 날짜까지 출발한 건을 "출발완료"로 인식
+        // 기준일 미지정 시 오늘 사용 (시점의 역설 방지 핵심)
+        const baseDateStr = req.query.baseDate || new Date().toISOString().split('T')[0];
+        const now = new Date(baseDateStr + 'T23:59:59');
 
         // ── 즐길거리 (출발일 = usage_date) ──
         const actResult = await pool.query(`
