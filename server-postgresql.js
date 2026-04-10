@@ -1480,6 +1480,8 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             by_vendor:   Object.values(byVendor).sort((a,b)=>b.cost-a.cost),
             rows: allRows,
             count: allRows.length,
+            _bs_debug: { depEndStr, baseDateStr, bsActCount: bsActRes.rows.length, bsHotelCount: bsHotelRes.rows.length, bs_deposit_extra, bs_prepaid_extra,
+                hotelSample: bsHotelRes.rows.slice(0,3).map(r=>({ dep: toDateStr(r.departure_date), recv: r.payment_received_date ? String(r.payment_received_date).slice(0,10) : null })) },
         });
     } catch(e) {
         console.error('❌ 회계장부 API 오류:', e);

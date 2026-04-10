@@ -434,6 +434,7 @@
                 const data = await res.json();
                 if (!data.success) throw new Error(data.message);
                 reportData = data;
+                if (data._bs_debug) console.log('[BS_DEBUG]', JSON.stringify(data._bs_debug, null, 2));
 
                 document.getElementById('periodLabel').textContent =
                     `📅 ${periodTxt} | 기준일: ${baseDate} | 총 ${data.count}건`;
