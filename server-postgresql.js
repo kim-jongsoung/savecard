@@ -1449,39 +1449,33 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += costConf;
         });
 
-        // ── B/S 최종 집계 (기준일 시점 기준) ──
-        // 미수금: 출발완료 + (입금없음 OR 기준일 이후 입금)
-        // 미지급금: 출발완료 + (송금없음 OR 기준일 이후 송금)
-        // 선수금: 미출발 + 기준일 이전 입금
-        // 선급비용: 미출발 + 기준일 이전 송금
-        // recvBeforeBase: 기준일 이전에 입금된 건 (입금일 있고 기준일 이하)
-        // sentBeforeBase: 기준일 이전에 송금된 건
-        // 미수금: 출발완료 + 정산미완료 + 기준일까지 입금없음
-        // 미지급금: 출발완료 + 기준일까지 송금없음 (정산완료여도 송금일 없으면 미지급)
-        const recvBeforeBase = (r) => r.payment_received_date && r.payment_received_date <= baseDateStr;
-        const sentBeforeBase = (r) => r.payment_sent_date     && r.payment_sent_date     <= baseDateStr;
+        // ── B/S 계산: 날짜만으로 판단 (상태값 무시) ──
+        // 미수금:  출발일 ≤ 기준일  AND  입금일 없음 or 입금일 > 기준일
+        // 미지급금: 출발일 ≤ 기준일  AND  송금일 없음 or 송금일 > 기준일
+        // 선수금:  출발일 > 기준일  AND  입금일 ≤ 기준일
+        // 선급비용: 출발일 > 기준일  AND  송금일 ≤ 기준일
+        const recvBeforeBase = (r) => r.payment_received_date && String(r.payment_received_date).slice(0,10) <= baseDateStr;
+        const sentBeforeBase = (r) => r.payment_sent_date     && String(r.payment_sent_date).slice(0,10)     <= baseDateStr;
         const bs = {
-            receivable:    allRows.filter(r=> r.departed && !r.settlementDone && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
-            payable:       allRows.filter(r=> r.departed && !r.settlementDone && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
-            deposit_trust: allRows.filter(r=>!r.departed &&  recvBeforeBase(r)).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
-            prepaid_cost:  allRows.filter(r=>!r.departed &&  sentBeforeBase(r)).reduce((s,r)=>s+r.cost_confirmed,0)    + bs_prepaid_extra,
+            receivable:    allRows.filter(r=>  r.departed && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
+            payable:       allRows.filter(r=>  r.departed && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
+            deposit_trust: allRows.filter(r=> !r.departed &&  recvBeforeBase(r)).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
+            prepaid_cost:  allRows.filter(r=> !r.departed &&  sentBeforeBase(r)).reduce((s,r)=>s+r.cost_confirmed,0)    + bs_prepaid_extra,
         };
 
-        // ── 판매처별 매출 집계 (B/S와 동일 기준: settlementDone + 기준일 이전 입금) ──
+        // ── 판매처별 매출 집계 ──
         const byPlatform = {};
         allRows.forEach(r => {
             const k = r.platform_name || '기타';
             if (!byPlatform[k]) byPlatform[k] = { platform:k, count:0, revenue:0, revenue_confirmed:0, receivable:0, margin:0 };
             byPlatform[k].count++;
             byPlatform[k].revenue += r.revenue;
-            // 수령확정: 기준일 이전에 입금된 건
             if (recvBeforeBase(r)) byPlatform[k].revenue_confirmed += r.revenue_confirmed;
-            // 미수금: 출발완료 + 정산미완료 + 기준일까지 미입금
-            if (r.departed && !r.settlementDone && !recvBeforeBase(r)) byPlatform[k].receivable += r.revenue;
+            if (r.departed && !recvBeforeBase(r)) byPlatform[k].receivable += r.revenue;
             byPlatform[k].margin += (r.revenue - r.cost);
         });
 
-        // ── 공급업체별 매입 집계 (B/S와 동일 기준: settlementDone + 기준일 이전 송금) ──
+        // ── 공급업체별 매입 집계 ──
         const byVendor = {};
         allRows.forEach(r => {
             const details = r.vendor_details || [{ vendor_name: r.vendor_name||'기타', cost: r.cost, cost_confirmed: r.cost_confirmed, sent_date: r.payment_sent_date }];
@@ -1490,11 +1484,9 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 if (!byVendor[k]) byVendor[k] = { vendor:k, count:0, cost:0, cost_confirmed:0, payable:0 };
                 byVendor[k].count++;
                 byVendor[k].cost += v.cost;
-                // 지급확정: 기준일 이전에 송금된 건
                 const vSentStr = v.sent_date ? String(v.sent_date).slice(0,10) : null;
                 if (vSentStr && vSentStr <= baseDateStr) byVendor[k].cost_confirmed += v.cost_confirmed;
-                // 미지급금: 출발완료 + 정산미완료 + 기준일까지 미송금
-                if (r.departed && !r.settlementDone && !(vSentStr && vSentStr <= baseDateStr)) byVendor[k].payable += v.cost;
+                if (r.departed && !(vSentStr && vSentStr <= baseDateStr)) byVendor[k].payable += v.cost;
             });
         });
 
