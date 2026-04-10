@@ -1246,6 +1246,8 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             const revenue = r.sale_currency === 'USD' ? Math.round(rawNet * exRate) : rawNet;
             const cost    = parseFloat(r.cost_krw) || 0;
             const sentCost = parseFloat(r.payment_sent_cost_krw) || cost;
+            const recvDate = toDateStr(r.payment_received_date) || null;
+            const sentDate = toDateStr(r.payment_sent_date)     || null;
             const departed = isDeparted(r.departure_date);
             return {
                 erp: 'activity', erp_label: '즐길거리',
@@ -1255,10 +1257,10 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 customer_name: r.korean_name   || '-',
                 vendor_name:   r.vendor_name   || '-',
                 revenue, cost,
-                revenue_confirmed: r.payment_received_date ? revenue : 0,
-                cost_confirmed:    r.payment_sent_date     ? sentCost : 0,
-                payment_received_date: r.payment_received_date || null,
-                payment_sent_date:     r.payment_sent_date     || null,
+                revenue_confirmed: recvDate ? revenue : 0,
+                cost_confirmed:    sentDate ? sentCost : 0,
+                payment_received_date: recvDate,
+                payment_sent_date:     sentDate,
                 departed,
             };
         });
@@ -1303,8 +1305,8 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 cost:              parseFloat(r.cost)              || 0,
                 revenue_confirmed: parseFloat(r.revenue_confirmed) || 0,
                 cost_confirmed:    parseFloat(r.cost_confirmed)    || 0,
-                payment_received_date: r.payment_received_date || null,
-                payment_sent_date:     r.payment_sent_date     || null,
+                payment_received_date: toDateStr(r.payment_received_date) || null,
+                payment_sent_date:     toDateStr(r.payment_sent_date)     || null,
                 departed,
             };
         });
