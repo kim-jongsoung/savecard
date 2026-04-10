@@ -1182,14 +1182,22 @@ app.get('/admin/accounting-ledger', requireAuth, (req, res) => {
 // ?year=2026          → 2026년 전체
 app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
     try {
-        const year  = parseInt(req.query.year)  || new Date().getFullYear();
-        const month = req.query.month ? parseInt(req.query.month) : null;
+        const year    = parseInt(req.query.year)    || new Date().getFullYear();
+        const month   = req.query.month   ? parseInt(req.query.month)   : null;
+        const quarter = req.query.quarter ? parseInt(req.query.quarter) : null;
 
         let depStart, depEnd;
         if (month) {
+            // 월 신고
             depStart = new Date(year, month - 1, 1);
             depEnd   = new Date(year, month, 1);
+        } else if (quarter) {
+            // 분기 신고: 1분기=1~3월, 2분기=4~6월, 3분기=7~9월, 4분기=10~12월
+            const startMonth = (quarter - 1) * 3;      // 0-indexed: 0,3,6,9
+            depStart = new Date(year, startMonth, 1);
+            depEnd   = new Date(year, startMonth + 3, 1);
         } else {
+            // 연간 신고
             depStart = new Date(year, 0, 1);
             depEnd   = new Date(year + 1, 0, 1);
         }

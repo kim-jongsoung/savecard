@@ -83,15 +83,31 @@
                         <select class="form-select form-select-sm" id="selYear" style="width:100px"></select>
                     </div>
                     <div class="col-auto">
-                        <label class="form-label small fw-bold mb-1">② 신고 월 <span class="text-muted fw-normal">(빈칸=연간)</span></label>
-                        <select class="form-select form-select-sm" id="selMonth" style="width:110px">
-                            <option value="">전체(연간)</option>
+                        <label class="form-label small fw-bold mb-1">② 신고 단위</label>
+                        <select class="form-select form-select-sm" id="selPeriodType" style="width:90px" onchange="onPeriodTypeChange()">
+                            <option value="all">연간</option>
+                            <option value="quarter">분기</option>
+                            <option value="month" selected>월</option>
+                        </select>
+                    </div>
+                    <div class="col-auto" id="colMonth">
+                        <label class="form-label small fw-bold mb-1">월 선택</label>
+                        <select class="form-select form-select-sm" id="selMonth" style="width:90px">
                             <option value="1">1월</option><option value="2">2월</option>
                             <option value="3">3월</option><option value="4">4월</option>
                             <option value="5">5월</option><option value="6">6월</option>
                             <option value="7">7월</option><option value="8">8월</option>
                             <option value="9">9월</option><option value="10">10월</option>
                             <option value="11">11월</option><option value="12">12월</option>
+                        </select>
+                    </div>
+                    <div class="col-auto d-none" id="colQuarter">
+                        <label class="form-label small fw-bold mb-1">분기 선택</label>
+                        <select class="form-select form-select-sm" id="selQuarter" style="width:110px">
+                            <option value="1">1분기 (1~3월)</option>
+                            <option value="2">2분기 (4~6월)</option>
+                            <option value="3">3분기 (7~9월)</option>
+                            <option value="4">4분기 (10~12월)</option>
                         </select>
                     </div>
                     <div class="col-auto">
@@ -113,7 +129,8 @@
                 </div>
                 <div class="mt-2" style="font-size:.75rem; color:#666;">
                     <i class="fas fa-lightbulb text-warning me-1"></i>
-                    예) 2025년 3월 신고자료 → ① 2025년 &nbsp;② 3월 &nbsp;③ 기준일: 2025-04-25 (신고서 작성일)
+                    <span id="periodExample">예) 2025년 3월 신고 → ① 2025년 &nbsp;② 단위:월 &nbsp;② 3월 &nbsp;③ 기준일: 2025-04-25 (신고서 작성일)</span><br>
+                    <span style="color:#e65100">⚠ 분기 예) 2025년 1분기(1~3월) 신고 → ① 2025년 &nbsp;② 분기 &nbsp;② 1분기 &nbsp;③ 기준일: 2025-04-25</span>
                 </div>
             </div>
         </div>
@@ -366,6 +383,8 @@
                 o.value = y; o.textContent = y + '년';
                 sel.appendChild(o);
             }
+            // 현재 월 선택
+            document.getElementById('selMonth').value = String(new Date().getMonth() + 1);
             // 기준일 기본값: 오늘
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -374,9 +393,15 @@
             document.getElementById('selBaseDate').value = `${yyyy}-${mm}-${dd}`;
         })();
 
+        function onPeriodTypeChange() {
+            const type = document.getElementById('selPeriodType').value;
+            document.getElementById('colMonth').classList.toggle('d-none',   type !== 'month');
+            document.getElementById('colQuarter').classList.toggle('d-none', type !== 'quarter');
+        }
+
         async function loadReport() {
             const year     = document.getElementById('selYear').value;
-            const month    = document.getElementById('selMonth').value;
+            const type     = document.getElementById('selPeriodType').value;
             const baseDate = document.getElementById('selBaseDate').value;
 
             if (!baseDate) {
@@ -384,18 +409,32 @@
                 return;
             }
 
+            // 파라미터 구성
+            let q = `year=${year}&baseDate=${baseDate}`;
+            let periodTxt = '';
+            if (type === 'month') {
+                const month = document.getElementById('selMonth').value;
+                q += `&month=${month}`;
+                periodTxt = `${year}년 ${month}월`;
+            } else if (type === 'quarter') {
+                const quarter = document.getElementById('selQuarter').value;
+                q += `&quarter=${quarter}`;
+                const qLabels = {1:'1분기(1~3월)',2:'2분기(4~6월)',3:'3분기(7~9월)',4:'4분기(10~12월)'};
+                periodTxt = `${year}년 ${qLabels[quarter]}`;
+            } else {
+                periodTxt = `${year}년 전체`;
+            }
+
             document.getElementById('emptyGuide').classList.add('d-none');
             document.getElementById('loadingArea').classList.remove('d-none');
             document.getElementById('resultArea').classList.add('d-none');
 
-            const q = (month ? `year=${year}&month=${month}` : `year=${year}`) + `&baseDate=${baseDate}`;
             try {
                 const res  = await fetch(`/api/accounting-ledger/report?${q}`);
                 const data = await res.json();
                 if (!data.success) throw new Error(data.message);
                 reportData = data;
 
-                const periodTxt = month ? `${year}년 ${month}월` : `${year}년 전체`;
                 document.getElementById('periodLabel').textContent =
                     `📅 ${periodTxt} | 기준일: ${baseDate} | 총 ${data.count}건`;
 
