@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>회계장부 / 신고자료 - 괌세이브카드 관리자</title>
+    <title>여행업 회계장부 / 신고자료 - 괌세이브카드 관리자</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -54,7 +54,7 @@
 
         <!-- 헤더 -->
         <div class="d-flex align-items-center justify-content-between mb-3 no-print">
-            <h4 class="mb-0 fw-bold"><i class="fas fa-file-invoice me-2 text-primary"></i>회계장부 / 신고자료</h4>
+            <h4 class="mb-0 fw-bold"><i class="fas fa-file-invoice me-2 text-primary"></i>여행업 회계장부 / 신고자료 <small class="text-muted fs-6 fw-normal">(순액법 기준)</small></h4>
             <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-success" onclick="exportExcel()"><i class="fas fa-file-excel me-1"></i>엑셀 다운로드</button>
                 <button class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="fas fa-print me-1"></i>인쇄</button>
@@ -64,9 +64,9 @@
         <!-- 핵심 안내 -->
         <div class="alert alert-info py-2 mb-3 no-print" style="font-size:.8rem;">
             <i class="fas fa-info-circle me-1"></i>
-            <strong>출발일 기준 귀속 원칙:</strong>
-            돈이 언제 들어왔는지와 무관하게, <strong>출발일(Departure Date)</strong>이 속한 기간에 매출·매입을 인식합니다.
-            &nbsp;|&nbsp; 3월 출발 → 3월 매출 &nbsp;|&nbsp; 4월 출발 미리 입금 → 3월 선수금(부채)
+            <strong>여행업 순액법 신고 원칙:</strong>
+            과세표준 = 총 수탁액(고객 납입액) − 매입비용(랜드비·항공비 등) = <strong>용역수입(마진)</strong>
+            &nbsp;|&nbsp; 출발일 기준 귀속: 3월 출발 → 3월 신고 &nbsp;|&nbsp; 4월 출발 선수 입금 → 선수금(부채), 신고 제외
         </div>
 
         <!-- 기간 선택 -->
@@ -108,35 +108,35 @@
 
             <!-- ① 손익계산서 (I/S) -->
             <div class="mb-4">
-                <div class="section-title"><i class="fas fa-chart-line me-1"></i>손익계산서 (I/S) — 출발일 기준 귀속</div>
+                <div class="section-title"><i class="fas fa-chart-line me-1"></i>용역손익계산서 (I/S) — 출발일 기준 귀속 · 순액법</div>
                 <div class="row g-3 mb-2">
                     <div class="col-12 col-md-4">
                         <div class="is-box is-revenue h-100">
-                            <div class="small opacity-80 mb-1">매출 (출발일 기준)</div>
+                            <div class="small opacity-80 mb-1">총 수탁액 <span class="badge bg-white text-primary ms-1" style="font-size:.68rem">고객 납입 총액</span></div>
                             <div class="fw-bold fs-4" id="is_revenue">-</div>
                             <div class="small opacity-75 mt-1">
-                                확정 입금: <span id="is_revenue_conf" class="fw-bold">-</span>
-                                &nbsp;|&nbsp; 미수: <span id="is_revenue_unconf">-</span>
+                                수령 확정: <span id="is_revenue_conf" class="fw-bold">-</span>
+                                &nbsp;|&nbsp; 미수금: <span id="is_revenue_unconf">-</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
                         <div class="is-box is-cost h-100">
-                            <div class="small opacity-80 mb-1">매출원가 (출발일 기준)</div>
+                            <div class="small opacity-80 mb-1">매입비용 <span class="badge bg-white text-danger ms-1" style="font-size:.68rem">랜드비·항공비 등</span></div>
                             <div class="fw-bold fs-4" id="is_cost">-</div>
                             <div class="small opacity-75 mt-1">
-                                확정 송금: <span id="is_cost_conf" class="fw-bold">-</span>
+                                지급 확정: <span id="is_cost_conf" class="fw-bold">-</span>
                                 &nbsp;|&nbsp; 미지급: <span id="is_cost_unconf">-</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
                         <div class="is-box is-margin h-100">
-                            <div class="small opacity-80 mb-1">영업이익 (마진)</div>
+                            <div class="small opacity-80 mb-1">용역수입 (과세표준) <span class="badge bg-warning text-dark ms-1" style="font-size:.68rem">순액=부가세 신고기준</span></div>
                             <div class="fw-bold fs-4" id="is_margin">-</div>
                             <div class="small opacity-75 mt-1">
-                                확정마진: <span id="is_margin_conf" class="fw-bold">-</span>
-                                &nbsp;|&nbsp; 마진율: <span id="is_margin_rate">-</span>
+                                확정 용역수입: <span id="is_margin_conf" class="fw-bold">-</span>
+                                &nbsp;|&nbsp; 수수료율: <span id="is_margin_rate">-</span>
                             </div>
                         </div>
                     </div>
@@ -146,46 +146,46 @@
                     <div class="card-body p-0">
                         <table class="table table-sm mb-0" style="font-size:.8rem;">
                             <tbody>
-                                <tr class="table-light"><td class="fw-bold" colspan="3">손익계산서 요약</td></tr>
+                                <tr class="table-light"><td class="fw-bold" colspan="3">용역손익계산서 요약 (순액법 · 출발일 기준)</td></tr>
                                 <tr>
-                                    <td style="padding-left:20px">I. 매출액 (출발일 기준)</td>
+                                    <td style="padding-left:20px">I. 총 수탁액 <span class="text-muted" style="font-size:.72rem">(고객 납입 총액 · 출발일 귀속)</span></td>
                                     <td class="num text-primary fw-bold" id="is_tbl_revenue">-</td>
-                                    <td class="num text-muted" style="font-size:.73rem">예정 총액</td>
+                                    <td class="num text-muted" style="font-size:.73rem">수탁 예정</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left:36px" class="text-muted">ㄴ 입금 확정액</td>
+                                    <td style="padding-left:36px" class="text-muted">ㄴ 수령 확정액</td>
                                     <td class="num text-conf" id="is_tbl_rev_conf">-</td>
                                     <td class="num text-muted" style="font-size:.73rem">실제 수령</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left:36px" class="text-muted">ㄴ 미수금 (출발후 미입금)</td>
+                                    <td style="padding-left:36px" class="text-muted">ㄴ 미수금 (출발후 미수령)</td>
                                     <td class="num text-danger" id="is_tbl_rev_unconf">-</td>
-                                    <td class="num text-muted" style="font-size:.73rem">B/S 자산</td>
+                                    <td class="num text-muted" style="font-size:.73rem">B/S 유동자산</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left:20px">II. 매출원가 (출발일 기준)</td>
+                                    <td style="padding-left:20px">II. 매입비용 <span class="text-muted" style="font-size:.72rem">(랜드비·항공비·숙박비 등)</span></td>
                                     <td class="num text-danger fw-bold" id="is_tbl_cost">-</td>
-                                    <td class="num text-muted" style="font-size:.73rem">예정 총액</td>
+                                    <td class="num text-muted" style="font-size:.73rem">지급 예정</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left:36px" class="text-muted">ㄴ 송금 확정액</td>
+                                    <td style="padding-left:36px" class="text-muted">ㄴ 지급 확정액</td>
                                     <td class="num text-conf" id="is_tbl_cost_conf">-</td>
                                     <td class="num text-muted" style="font-size:.73rem">실제 지급</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left:36px" class="text-muted">ㄴ 미지급금 (출발후 미송금)</td>
+                                    <td style="padding-left:36px" class="text-muted">ㄴ 미지급금 (출발후 미지급)</td>
                                     <td class="num text-danger" id="is_tbl_cost_unconf">-</td>
-                                    <td class="num text-muted" style="font-size:.73rem">B/S 부채</td>
+                                    <td class="num text-muted" style="font-size:.73rem">B/S 유동부채</td>
                                 </tr>
                                 <tr class="table-success fw-bold">
-                                    <td style="padding-left:20px">III. 영업이익 (I - II)</td>
+                                    <td style="padding-left:20px">III. 용역수입 (I − II) <span class="badge bg-warning text-dark ms-1" style="font-size:.7rem">부가세 과세표준</span></td>
                                     <td class="num" id="is_tbl_margin">-</td>
-                                    <td class="num text-muted" style="font-size:.73rem">예정마진</td>
+                                    <td class="num text-muted" style="font-size:.73rem">순액 예정</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left:36px" class="text-muted">ㄴ 확정마진 (확정입금 - 확정송금)</td>
+                                    <td style="padding-left:36px" class="text-muted">ㄴ 확정 용역수입 (수령확정 − 지급확정)</td>
                                     <td class="num text-conf" id="is_tbl_margin_conf">-</td>
-                                    <td class="num text-muted" style="font-size:.73rem">실현마진</td>
+                                    <td class="num text-muted" style="font-size:.73rem">실현 순액</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -195,34 +195,34 @@
 
             <!-- ② 재무상태표 잔액 (B/S) -->
             <div class="mb-4">
-                <div class="section-title"><i class="fas fa-balance-scale me-1"></i>재무상태표 잔액 (B/S) — 시점의 역설 반영</div>
+                <div class="section-title"><i class="fas fa-balance-scale me-1"></i>재무상태표 주요 잔액 (B/S) — 출발일 기준 시점 구분</div>
                 <div class="row g-3">
                     <div class="col-6 col-md-3">
                         <div class="bs-box bs-asset h-100">
-                            <div class="small fw-bold mb-1">📥 미수금 (자산)</div>
+                            <div class="small fw-bold mb-1">📥 미수금 <span class="fw-normal">(유동자산)</span></div>
                             <div class="fw-bold fs-5" id="bs_receivable">-</div>
-                            <div class="small mt-1 opacity-75">출발 후 미입금 건</div>
+                            <div class="small mt-1 opacity-75">출발 완료 · 수령 미완료<br><span style="font-size:.7rem">→ 신고 대상 포함, 미수령 상태</span></div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="bs-box bs-asset h-100">
-                            <div class="small fw-bold mb-1">💰 선급비용 (자산)</div>
+                            <div class="small fw-bold mb-1">💰 선급비용 <span class="fw-normal">(유동자산)</span></div>
                             <div class="fw-bold fs-5" id="bs_prepaid">-</div>
-                            <div class="small mt-1 opacity-75">출발 전 송금 완료</div>
+                            <div class="small mt-1 opacity-75">출발 전 지급 완료<br><span style="font-size:.7rem">→ 행사 전 미리 송금한 매입비</span></div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="bs-box bs-liability h-100">
-                            <div class="small fw-bold mb-1">📤 선수금 (부채)</div>
+                            <div class="small fw-bold mb-1">📤 선수금 <span class="fw-normal">(유동부채)</span></div>
                             <div class="fw-bold fs-5" id="bs_deposit">-</div>
-                            <div class="small mt-1 opacity-75">출발 전 입금 완료</div>
+                            <div class="small mt-1 opacity-75">출발 전 수령 완료<br><span style="font-size:.7rem">→ 아직 신고 대상 아님 (미출발)</span></div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="bs-box bs-liability h-100">
-                            <div class="small fw-bold mb-1">💸 미지급금 (부채)</div>
+                            <div class="small fw-bold mb-1">💸 미지급금 <span class="fw-normal">(유동부채)</span></div>
                             <div class="fw-bold fs-5" id="bs_payable">-</div>
-                            <div class="small mt-1 opacity-75">출발 후 미송금 건</div>
+                            <div class="small mt-1 opacity-75">출발 완료 · 지급 미완료<br><span style="font-size:.7rem">→ 랜드사 등 미지급 매입비</span></div>
                         </div>
                     </div>
                 </div>
@@ -230,8 +230,8 @@
 
             <!-- ③ 탭: 판매처별 / 공급업체별 / 거래 상세 -->
             <ul class="nav nav-tabs mb-3 no-print" id="detailTabs">
-                <li class="nav-item"><button class="nav-link active" onclick="switchTab('platform',this)"><i class="fas fa-store me-1"></i>판매처별 매출</button></li>
-                <li class="nav-item"><button class="nav-link" onclick="switchTab('vendor',this)"><i class="fas fa-building me-1"></i>공급업체별 매입</button></li>
+                <li class="nav-item"><button class="nav-link active" onclick="switchTab('platform',this)"><i class="fas fa-store me-1"></i>판매처별 수탁액</button></li>
+                <li class="nav-item"><button class="nav-link" onclick="switchTab('vendor',this)"><i class="fas fa-building me-1"></i>공급업체별 매입비용</button></li>
                 <li class="nav-item"><button class="nav-link" onclick="switchTab('detail',this)"><i class="fas fa-list me-1"></i>거래 상세</button></li>
             </ul>
 
@@ -244,11 +244,11 @@
                                 <tr>
                                     <th>판매처 (채널)</th>
                                     <th class="num">건수</th>
-                                    <th class="num">매출 예정액</th>
-                                    <th class="num">입금 확정액</th>
+                                    <th class="num">수탁액 (총 납입)</th>
+                                    <th class="num">수령 확정액</th>
                                     <th class="num">미수금</th>
-                                    <th class="num">마진</th>
-                                    <th class="num">마진율</th>
+                                    <th class="num">용역수입 (순액)</th>
+                                    <th class="num">수수료율</th>
                                 </tr>
                             </thead>
                             <tbody id="tbl_platform"></tbody>
@@ -265,10 +265,10 @@
                         <table class="table table-hover table-sm align-middle mb-0" style="font-size:.8rem;">
                             <thead class="table-dark">
                                 <tr>
-                                    <th>공급업체</th>
+                                    <th>공급업체 (랜드사·호텔 등)</th>
                                     <th class="num">건수</th>
-                                    <th class="num">매입 예정액</th>
-                                    <th class="num">송금 확정액</th>
+                                    <th class="num">매입비용 (예정)</th>
+                                    <th class="num">지급 확정액</th>
                                     <th class="num">미지급금</th>
                                     <th class="num">미지급율</th>
                                 </tr>
@@ -293,15 +293,15 @@
                                     <th>고객명</th>
                                     <th>판매처</th>
                                     <th>공급업체</th>
-                                    <th class="num">매출예정</th>
-                                    <th class="num">입금확정</th>
-                                    <th>입금일</th>
-                                    <th class="num">매입예정</th>
-                                    <th class="num">송금확정</th>
-                                    <th>송금일</th>
-                                    <th class="num">마진</th>
-                                    <th class="text-center">입금상태</th>
-                                    <th class="text-center">송금상태</th>
+                                    <th class="num">수탁액</th>
+                                    <th class="num">수령확정</th>
+                                    <th>수령일</th>
+                                    <th class="num">매입비용</th>
+                                    <th class="num">지급확정</th>
+                                    <th>지급일</th>
+                                    <th class="num">용역수입(순액)</th>
+                                    <th class="text-center">수탁상태</th>
+                                    <th class="text-center">지급상태</th>
                                 </tr>
                             </thead>
                             <tbody id="tbl_detail"></tbody>
@@ -458,11 +458,11 @@
                 totMargin  += (r.revenue - r.cost);
                 const margin = r.revenue - r.cost;
                 const inStatus  = r.payment_received_date
-                    ? `<span class="status-paid">입금완료</span>`
-                    : (r.departed ? `<span class="status-unpaid">미수금</span>` : `<span class="badge bg-primary" style="font-size:.7rem">선수대기</span>`);
+                    ? `<span class="status-paid">수령완료</span>`
+                    : (r.departed ? `<span class="status-unpaid">미수금</span>` : `<span class="badge bg-primary" style="font-size:.7rem">선수금(미출발)</span>`);
                 const outStatus = r.payment_sent_date
-                    ? `<span class="status-paid">송금완료</span>`
-                    : (r.departed ? `<span class="status-unpaid">미지급</span>` : `<span class="badge bg-secondary" style="font-size:.7rem">미출발</span>`);
+                    ? `<span class="status-paid">지급완료</span>`
+                    : (r.departed ? `<span class="status-unpaid">미지급금</span>` : `<span class="badge bg-secondary" style="font-size:.7rem">미출발</span>`);
                 return `<tr>
                     <td><span class="badge erp-badge-${r.erp} px-2">${r.erp_label}</span></td>
                     <td style="white-space:nowrap">${fmtD(r.departure_date)}</td>
@@ -510,46 +510,46 @@
             // I/S 시트
             const is = reportData.is; const bs = reportData.bs;
             const isData = [
-                ['손익계산서 (출발일 기준)',''],
+                ['여행업 용역손익계산서 (순액법 · 출발일 기준)',''],
                 ['기간', periodStr],
                 ['',''],
-                ['항목','금액'],
-                ['I. 매출액 (출발일 기준)', is.revenue],
-                ['  ㄴ 입금 확정액', is.revenue_confirmed],
-                ['  ㄴ 미수금 (B/S 자산)', bs.receivable],
-                ['II. 매출원가 (출발일 기준)', is.cost],
-                ['  ㄴ 송금 확정액', is.cost_confirmed],
-                ['  ㄴ 미지급금 (B/S 부채)', bs.payable],
-                ['III. 영업이익 (I-II)', is.margin],
-                ['  ㄴ 확정마진', is.margin_confirmed],
-                ['',''],
-                ['[B/S 잔액]',''],
-                ['미수금 (자산)', bs.receivable],
-                ['선급비용 (자산)', bs.prepaid_cost],
-                ['선수금 (부채)', bs.deposit_trust],
-                ['미지급금 (부채)', bs.payable],
+                ['항목','금액','비고'],
+                ['I. 총 수탁액 (고객 납입 총액)', is.revenue, '출발일 귀속'],
+                ['  ㄴ 수령 확정액', is.revenue_confirmed, '실제 수령'],
+                ['  ㄴ 미수금 (B/S 유동자산)', bs.receivable, '신고 대상 포함'],
+                ['II. 매입비용 (랜드비·항공비·숙박비 등)', is.cost, '출발일 귀속'],
+                ['  ㄴ 지급 확정액', is.cost_confirmed, '실제 지급'],
+                ['  ㄴ 미지급금 (B/S 유동부채)', bs.payable, '랜드사 등 미지급'],
+                ['III. 용역수입 (부가세 과세표준) = I - II', is.margin, '순액법 신고기준'],
+                ['  ㄴ 확정 용역수입', is.margin_confirmed, '실현 순액'],
+                ['','',''],
+                ['[재무상태표 주요 잔액 B/S]','',''],
+                ['미수금 (유동자산)', bs.receivable, '출발완료·미수령'],
+                ['선급비용 (유동자산)', bs.prepaid_cost, '출발전·지급완료'],
+                ['선수금 (유동부채)', bs.deposit_trust, '출발전·수령완료(신고제외)'],
+                ['미지급금 (유동부채)', bs.payable, '출발완료·미지급'],
             ];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(isData), 'I_S_요약');
 
             // 판매처별 시트
-            const platData = [['판매처','건수','매출예정','입금확정','미수금','마진','마진율']];
+            const platData = [['판매처(채널)','건수','수탁액(총납입)','수령확정액','미수금','용역수입(순액)','수수료율']];
             reportData.by_platform.forEach(p => {
                 platData.push([p.platform, p.count, p.revenue, p.revenue_confirmed, p.revenue-p.revenue_confirmed, p.margin, p.revenue>0?(p.margin/p.revenue*100).toFixed(1)+'%':'-']);
             });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(platData), '판매처별_매출');
 
             // 공급업체별 시트
-            const vendData = [['공급업체','건수','매입예정','송금확정','미지급금']];
+            const vendData = [['공급업체(랜드사·호텔등)','건수','매입비용(예정)','지급확정액','미지급금']];
             reportData.by_vendor.forEach(v => {
                 vendData.push([v.vendor, v.count, v.cost, v.cost_confirmed, v.cost-v.cost_confirmed]);
             });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(vendData), '공급업체별_매입');
 
             // 거래 상세 시트
-            const detailData = [['ERP','출발일','예약번호','고객명','판매처','공급업체','매출예정','입금확정','입금일','매입예정','송금확정','송금일','마진','입금상태','송금상태']];
+            const detailData = [['ERP','출발일','예약번호','고객명','판매처','공급업체','수탁액','수령확정','수령일','매입비용','지급확정','지급일','용역수입(순액)','수탁상태','지급상태']];
             reportData.rows.forEach(r => {
-                const inSt = r.payment_received_date ? '입금완료' : (r.departed ? '미수금' : '선수대기');
-                const outSt= r.payment_sent_date ? '송금완료' : (r.departed ? '미지급' : '미출발');
+                const inSt = r.payment_received_date ? '수령완료' : (r.departed ? '미수금' : '선수금(미출발)');
+                const outSt= r.payment_sent_date ? '지급완료' : (r.departed ? '미지급금' : '미출발');
                 detailData.push([
                     r.erp_label,
                     r.departure_date ? new Date(r.departure_date).toISOString().split('T')[0] : '-',
@@ -564,7 +564,7 @@
             });
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detailData), '거래상세');
 
-            XLSX.writeFile(wb, `신고자료_${periodStr}_${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `여행업신고자료_순액법_${periodStr}_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
         // 초기 로드
