@@ -1206,8 +1206,16 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
 
         // 신고 기준일: 이 날짜까지 출발한 건을 "출발완료"로 인식
         // 기준일 미지정 시 오늘 사용 (시점의 역설 방지 핵심)
+        // 문자열 비교(YYYY-MM-DD) 사용 → 타임존 오류 없음
         const baseDateStr = req.query.baseDate || new Date().toISOString().split('T')[0];
-        const now = new Date(baseDateStr + 'T23:59:59');
+        const isDeparted = (depDate) => {
+            if (!depDate) return false;
+            // PostgreSQL Date → 'YYYY-MM-DD' 문자열로 정규화
+            const d = depDate instanceof Date
+                ? depDate.toISOString().split('T')[0]
+                : String(depDate).slice(0, 10);
+            return d <= baseDateStr;
+        };
 
         // ── 즐길거리 (출발일 = usage_date) ──
         const actResult = await pool.query(`
@@ -1235,7 +1243,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             const revenue = r.sale_currency === 'USD' ? Math.round(rawNet * exRate) : rawNet;
             const cost    = parseFloat(r.cost_krw) || 0;
             const sentCost = parseFloat(r.payment_sent_cost_krw) || cost;
-            const departed = r.departure_date ? new Date(r.departure_date) < now : false;
+            const departed = isDeparted(r.departure_date);
             return {
                 erp: 'activity', erp_label: '즐길거리',
                 departure_date: r.departure_date,
@@ -1280,7 +1288,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         `, [depStartStr, depEndStr]);
 
         const hotelRows = hotelResult.rows.map(r => {
-            const departed = r.departure_date ? new Date(r.departure_date) < now : false;
+            const departed = isDeparted(r.departure_date);
             return {
                 erp: 'hotel', erp_label: '호텔',
                 departure_date: r.departure_date,
@@ -1306,7 +1314,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
 
         const pkgRows = pkgDocs.map(r => {
             const departure = r.travel_period?.departure_date ? new Date(r.travel_period.departure_date) : null;
-            const departed  = departure ? departure < now : false;
+            const departed  = isDeparted(departure);
             const revenue   = r.pricing?.total_selling_price || 0;
             const cost      = (r.cost_components || []).reduce((s,c) => s+(c.cost_krw||0), 0);
             const revConf   = (r.billings||[]).filter(b=>b.status==='completed')
