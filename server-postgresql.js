@@ -1499,21 +1499,6 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             by_vendor:   Object.values(byVendor).sort((a,b)=>b.cost-a.cost),
             rows: allRows,
             count: allRows.length,
-            _bs_debug: {
-                depStartStr, depEndStr, baseDateStr,
-                total: allRows.length,
-                departed_count: allRows.filter(r=>r.departed).length,
-                settlementDone_count: allRows.filter(r=>r.settlementDone).length,
-                receivable_candidates: allRows.filter(r=>r.departed && !r.settlementDone && !(r.payment_received_date && r.payment_received_date <= baseDateStr)).length,
-                payable_candidates:    allRows.filter(r=>r.departed && !r.settlementDone && !(r.payment_sent_date && r.payment_sent_date <= baseDateStr)).length,
-                status_dist: allRows.reduce((acc,r)=>{ acc[r.payment_status||'null']=(acc[r.payment_status||'null']||0)+1; return acc; }, {}),
-                bs_receivable: bs.receivable, bs_payable: bs.payable,
-                sample_payable: allRows.filter(r=>r.departed && !r.settlementDone && !(r.payment_sent_date && r.payment_sent_date <= baseDateStr)).slice(0,5).map(r=>({dep:toDateStr(r.departure_date),status:r.payment_status,done:r.settlementDone,sent:r.payment_sent_date,cost:r.cost})),
-                sample_departed: allRows.filter(r=>r.departed).slice(0,5).map(r=>({
-                    dep: toDateStr(r.departure_date), status: r.payment_status, done: r.settlementDone,
-                    recv: r.payment_received_date, sent: r.payment_sent_date
-                })),
-            },
         });
     } catch(e) {
         console.error('❌ 회계장부 API 오류:', e);
