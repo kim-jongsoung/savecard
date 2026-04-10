@@ -1436,12 +1436,18 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += costConf;
         });
 
-        // ── B/S 최종 집계 ──
+        // ── B/S 최종 집계 (기준일 시점 기준) ──
+        // 미수금: 출발완료 + (입금없음 OR 기준일 이후 입금)
+        // 미지급금: 출발완료 + (송금없음 OR 기준일 이후 송금)
+        // 선수금: 미출발 + 기준일 이전 입금
+        // 선급비용: 미출발 + 기준일 이전 송금
+        const recvBeforeBase = (r) => r.payment_received_date && r.payment_received_date <= baseDateStr;
+        const sentBeforeBase = (r) => r.payment_sent_date     && r.payment_sent_date     <= baseDateStr;
         const bs = {
-            receivable:    allRows.filter(r=> r.departed && !r.payment_received_date).reduce((s,r)=>s+r.revenue,0),
-            payable:       allRows.filter(r=> r.departed && !r.payment_sent_date).reduce((s,r)=>s+r.cost,0),
-            deposit_trust: allRows.filter(r=>!r.departed &&  r.payment_received_date).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
-            prepaid_cost:  allRows.filter(r=>!r.departed &&  r.payment_sent_date).reduce((s,r)=>s+r.cost_confirmed,0)        + bs_prepaid_extra,
+            receivable:    allRows.filter(r=> r.departed && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
+            payable:       allRows.filter(r=> r.departed && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
+            deposit_trust: allRows.filter(r=>!r.departed &&  recvBeforeBase(r)).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
+            prepaid_cost:  allRows.filter(r=>!r.departed &&  sentBeforeBase(r)).reduce((s,r)=>s+r.cost_confirmed,0)    + bs_prepaid_extra,
         };
 
         // ── 판매처별 매출 집계 ──
@@ -1476,6 +1482,17 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             by_vendor:   Object.values(byVendor).sort((a,b)=>b.cost-a.cost),
             rows: allRows,
             count: allRows.length,
+            _bs_debug: {
+                depStartStr, depEndStr, baseDateStr,
+                total: allRows.length,
+                departed_count: allRows.filter(r=>r.departed).length,
+                not_departed_count: allRows.filter(r=>!r.departed).length,
+                receivable_candidates: allRows.filter(r=>r.departed && !r.payment_received_date).length,
+                payable_candidates:    allRows.filter(r=>r.departed && !r.payment_sent_date).length,
+                sample_departed: allRows.filter(r=>r.departed).slice(0,3).map(r=>({
+                    dep: toDateStr(r.departure_date), recv: r.payment_received_date, sent: r.payment_sent_date
+                })),
+            },
         });
     } catch(e) {
         console.error('❌ 회계장부 API 오류:', e);
