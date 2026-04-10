@@ -1456,6 +1456,15 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         // 선급비용: 출발일 > 기준일  AND  송금일 ≤ 기준일
         const recvBeforeBase = (r) => r.payment_received_date && String(r.payment_received_date).slice(0,10) <= baseDateStr;
         const sentBeforeBase = (r) => r.payment_sent_date     && String(r.payment_sent_date).slice(0,10)     <= baseDateStr;
+
+        // 디버그: 입금일 있는데 미수금으로 잡히는 건
+        const recvDebug = allRows.filter(r => r.departed && !recvBeforeBase(r) && r.payment_received_date);
+        if (recvDebug.length) console.log('[RECV_DEBUG] 입금일 있는데 미수금 잡힘:', recvDebug.slice(0,3).map(r=>({recv: r.payment_received_date, recvStr: String(r.payment_received_date).slice(0,10), base: baseDateStr, dep: r.departure_date})));
+        // 디버그: 송금일 있는데 미지급금으로 잡히는 건
+        const sentDebug = allRows.filter(r => r.departed && !sentBeforeBase(r) && r.payment_sent_date);
+        if (sentDebug.length) console.log('[SENT_DEBUG] 송금일 있는데 미지급금 잡힘:', sentDebug.slice(0,3).map(r=>({sent: r.payment_sent_date, sentStr: String(r.payment_sent_date).slice(0,10), base: baseDateStr, dep: r.departure_date})));
+        console.log('[BS_COUNT] total:', allRows.length, '/ departed:', allRows.filter(r=>r.departed).length, '/ recv건:', recvDebug.length, '/ sent건:', sentDebug.length);
+
         const bs = {
             receivable:    allRows.filter(r=>  r.departed && !recvBeforeBase(r)).reduce((s,r)=>s+r.revenue,0),
             payable:       allRows.filter(r=>  r.departed && !sentBeforeBase(r)).reduce((s,r)=>s+r.cost,0),
