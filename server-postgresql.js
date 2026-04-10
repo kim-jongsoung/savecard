@@ -1463,28 +1463,6 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             });
         });
 
-        // ── 디버그: departed 분포 확인 (개발용, 나중에 제거) ──
-        const _debug = {
-            baseDateStr,
-            total: allRows.length,
-            departed_true:  allRows.filter(r=>r.departed).length,
-            departed_false: allRows.filter(r=>!r.departed).length,
-            has_recv_date:  allRows.filter(r=>r.payment_received_date).length,
-            has_sent_date:  allRows.filter(r=>r.payment_sent_date).length,
-            bs_receivable_count:  allRows.filter(r=>r.departed&&!r.payment_received_date).length,
-            bs_payable_count:     allRows.filter(r=>r.departed&&!r.payment_sent_date).length,
-            bs_deposit_count:     allRows.filter(r=>!r.departed&&r.payment_received_date).length,
-            bs_prepaid_count:     allRows.filter(r=>!r.departed&&r.payment_sent_date).length,
-            sample: allRows.slice(0,3).map(r=>({
-                dep: r.departure_date instanceof Date
-                    ? r.departure_date.toISOString().split('T')[0]
-                    : String(r.departure_date).slice(0,10),
-                departed: r.departed,
-                recv: r.payment_received_date,
-                sent: r.payment_sent_date,
-            })),
-        };
-
         res.json({
             success: true,
             period: { year, month },
@@ -1493,7 +1471,6 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             by_vendor:   Object.values(byVendor).sort((a,b)=>b.cost-a.cost),
             rows: allRows,
             count: allRows.length,
-            _debug,
         });
     } catch(e) {
         console.error('❌ 회계장부 API 오류:', e);
