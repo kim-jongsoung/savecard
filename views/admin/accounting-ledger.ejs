@@ -490,42 +490,43 @@
             const tbody = document.getElementById('tbl_platform');
             const tfoot = document.getElementById('tbl_platform_foot');
             if (!list.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">데이터 없음</td></tr>'; return; }
-            let totRev=0, totConf=0, totMargin=0, totCount=0;
+            let totRev=0, totConf=0, totRecv=0, totMargin=0, totCount=0;
             tbody.innerHTML = list.map(p => {
-                const unconf = p.revenue - p.revenue_confirmed;
+                const recv = p.receivable || 0;
                 totRev   += p.revenue; totConf += p.revenue_confirmed;
+                totRecv  += recv;
                 totMargin+= p.margin;  totCount+= p.count;
                 return `<tr>
                     <td class="fw-bold">${p.platform}</td>
                     <td class="num">${p.count}</td>
                     <td class="num text-primary fw-bold">${krw0(p.revenue)}</td>
                     <td class="num text-conf">${krw0(p.revenue_confirmed)}</td>
-                    <td class="num text-danger">${unconf>0?krw0(unconf):'-'}</td>
+                    <td class="num text-danger">${recv>0?krw0(recv):'-'}</td>
                     <td class="num ${p.margin>=0?'text-success':'text-danger'} fw-bold">${krw0(p.margin)}</td>
                     <td class="num">${pct(p.margin,p.revenue)}</td>
                 </tr>`;
             }).join('');
-            tfoot.innerHTML = `<tr><td>합계</td><td class="num">${totCount}</td><td class="num text-primary">${krw0(totRev)}</td><td class="num text-conf">${krw0(totConf)}</td><td class="num text-danger">${krw0(totRev-totConf)||'-'}</td><td class="num">${krw0(totMargin)}</td><td class="num">${pct(totMargin,totRev)}</td></tr>`;
+            tfoot.innerHTML = `<tr><td>합계</td><td class="num">${totCount}</td><td class="num text-primary">${krw0(totRev)}</td><td class="num text-conf">${krw0(totConf)}</td><td class="num text-danger">${totRecv>0?krw0(totRecv):'-'}</td><td class="num">${krw0(totMargin)}</td><td class="num">${pct(totMargin,totRev)}</td></tr>`;
         }
 
         function renderVendor(list) {
             const tbody = document.getElementById('tbl_vendor');
             const tfoot = document.getElementById('tbl_vendor_foot');
             if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">데이터 없음</td></tr>'; return; }
-            let totCost=0, totConf=0, totCount=0;
+            let totCost=0, totConf=0, totPayable=0, totCount=0;
             tbody.innerHTML = list.map(v => {
-                const unpaid = v.cost - v.cost_confirmed;
-                totCost += v.cost; totConf += v.cost_confirmed; totCount += v.count;
+                const payable = v.payable || 0;
+                totCost += v.cost; totConf += v.cost_confirmed; totPayable += payable; totCount += v.count;
                 return `<tr>
                     <td class="fw-bold">${v.vendor}</td>
                     <td class="num">${v.count}</td>
                     <td class="num text-danger fw-bold">${krw0(v.cost)}</td>
                     <td class="num text-conf">${krw0(v.cost_confirmed)}</td>
-                    <td class="num text-danger">${unpaid>0?krw0(unpaid):'-'}</td>
-                    <td class="num">${pct(unpaid,v.cost)}</td>
+                    <td class="num text-danger">${payable>0?krw0(payable):'-'}</td>
+                    <td class="num">${pct(payable,v.cost)}</td>
                 </tr>`;
             }).join('');
-            tfoot.innerHTML = `<tr><td>합계</td><td class="num">${totCount}</td><td class="num text-danger">${krw0(totCost)}</td><td class="num text-conf">${krw0(totConf)}</td><td class="num text-danger">${krw0(totCost-totConf)}</td><td class="num">${pct(totCost-totConf,totCost)}</td></tr>`;
+            tfoot.innerHTML = `<tr><td>합계</td><td class="num">${totCount}</td><td class="num text-danger">${krw0(totCost)}</td><td class="num text-conf">${krw0(totConf)}</td><td class="num text-danger">${totPayable>0?krw0(totPayable):'-'}</td><td class="num">${pct(totPayable,totCost)}</td></tr>`;
         }
 
         function renderDetail(rows) {
