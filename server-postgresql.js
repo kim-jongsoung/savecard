@@ -1350,7 +1350,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         const allRows = [...actRows, ...hotelRows, ...pkgRows]
             .sort((a,b) => new Date(a.departure_date||0) - new Date(b.departure_date||0));
 
-        // ── I/S 집계 (출발일 기준 귀속) ──
+        // ── I/S 집계 (신고 기간 출발 건, 출발일 기준 귀속) ──
         const is = {
             revenue:           allRows.reduce((s,r)=>s+r.revenue, 0),
             cost:              allRows.reduce((s,r)=>s+r.cost, 0),
@@ -1360,15 +1360,83 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         is.margin           = is.revenue - is.cost;
         is.margin_confirmed = is.revenue_confirmed - is.cost_confirmed;
 
-        // ── B/S 잔액 (선택 기간 기준) ──
-        // 미수금(자산): 출발일이 해당 기간이지만 아직 입금 안 된 건
-        // 미지급금(부채): 출발일이 해당 기간이지만 아직 송금 안 된 건
-        // 선수금(부채): 해당 기간 이후 출발인데 이미 입금된 건 ← 별도 전체 DB 조회 필요
+        // ── B/S 선수금/선급비용: 신고기간 이후 출발이지만 기준일 이전에 이미 입금/송금된 건 별도 조회 ──
+        // 예) 1분기(1~3월) + 기준일 3/31 → 4월 이후 출발인데 3/31 이전 입금된 건 = 선수금
+        let bs_deposit_extra = 0;
+        let bs_prepaid_extra = 0;
+
+        const bsActRes = await pool.query(`
+            SELECT r.usage_date AS departure_date,
+                   s.payment_received_date, s.payment_sent_date,
+                   s.net_revenue, s.total_sale, s.sale_currency,
+                   s.cost_krw, s.exchange_rate, s.payment_sent_cost_krw
+            FROM reservations r
+            INNER JOIN settlements s ON s.reservation_id = r.id
+            WHERE r.payment_status NOT IN ('cancelled','취소')
+              AND r.usage_date >= $1
+              AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
+              AND (s.payment_received_date IS NOT NULL OR s.payment_sent_date IS NOT NULL)
+        `, [depEndStr]);
+
+        bsActRes.rows.forEach(r => {
+            const depStr  = r.departure_date instanceof Date ? r.departure_date.toISOString().split('T')[0] : String(r.departure_date).slice(0,10);
+            if (depStr <= baseDateStr) return; // 이미 departed → allRows에서 처리
+            const exRate   = parseFloat(r.exchange_rate) || 1300;
+            const rawNet   = r.net_revenue != null ? parseFloat(r.net_revenue) : parseFloat(r.total_sale) || 0;
+            const revenue  = r.sale_currency === 'USD' ? Math.round(rawNet * exRate) : rawNet;
+            const sentCost = parseFloat(r.payment_sent_cost_krw) || parseFloat(r.cost_krw) || 0;
+            const recvStr  = r.payment_received_date ? String(r.payment_received_date).slice(0,10) : null;
+            const sentStr  = r.payment_sent_date     ? String(r.payment_sent_date).slice(0,10)     : null;
+            if (recvStr && recvStr <= baseDateStr) bs_deposit_extra += revenue;
+            if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += sentCost;
+        });
+
+        const bsHotelRes = await pool.query(`
+            SELECT hr.check_in_date AS departure_date,
+                   hr.payment_received_date, hr.payment_sent_date,
+                   COALESCE(hr.grand_total,0) * COALESCE(hr.exchange_rate,1300) AS revenue,
+                   COALESCE(hr.total_cost_price,0) * COALESCE(hr.remittance_rate,hr.exchange_rate,1300) AS cost
+            FROM hotel_reservations hr
+            WHERE hr.status NOT IN ('cancelled','draft')
+              AND hr.check_in_date >= $1
+              AND (hr.payment_received_date IS NOT NULL OR hr.payment_sent_date IS NOT NULL)
+        `, [depEndStr]);
+
+        bsHotelRes.rows.forEach(r => {
+            const depStr  = r.departure_date instanceof Date ? r.departure_date.toISOString().split('T')[0] : String(r.departure_date).slice(0,10);
+            if (depStr <= baseDateStr) return;
+            const revenue = parseFloat(r.revenue) || 0;
+            const cost    = parseFloat(r.cost)    || 0;
+            const recvStr = r.payment_received_date ? String(r.payment_received_date).slice(0,10) : null;
+            const sentStr = r.payment_sent_date     ? String(r.payment_sent_date).slice(0,10)     : null;
+            if (recvStr && recvStr <= baseDateStr) bs_deposit_extra += revenue;
+            if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += cost;
+        });
+
+        const bsPkgDocs = await PackageReservation.find({
+            reservation_status: { $ne: 'cancelled' },
+            'travel_period.departure_date': { $gte: depEnd },
+        });
+        bsPkgDocs.forEach(r => {
+            const departure = r.travel_period?.departure_date;
+            const depStr    = departure instanceof Date ? departure.toISOString().split('T')[0] : String(departure||'').slice(0,10);
+            if (!depStr || depStr <= baseDateStr) return;
+            const revConf  = (r.billings||[]).filter(b=>b.status==='completed').reduce((s,b)=>s+(b.actual_amount||b.amount||0), 0);
+            const costConf = (r.cost_components||[]).filter(c=>c.payment_sent_date).reduce((s,c)=>s+(c.payment_sent_amount_krw||c.cost_krw||0), 0);
+            const lastRecv = (r.billings||[]).filter(b=>b.status==='completed'&&b.date).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]?.date || null;
+            const lastSent = (r.cost_components||[]).filter(c=>c.payment_sent_date).sort((a,b)=>new Date(b.payment_sent_date)-new Date(a.payment_sent_date))[0]?.payment_sent_date || null;
+            const recvStr  = lastRecv ? String(lastRecv).slice(0,10) : null;
+            const sentStr  = lastSent ? String(lastSent).slice(0,10) : null;
+            if (recvStr && recvStr <= baseDateStr) bs_deposit_extra += revConf;
+            if (sentStr && sentStr <= baseDateStr) bs_prepaid_extra += costConf;
+        });
+
+        // ── B/S 최종 집계 ──
         const bs = {
-            receivable: allRows.filter(r=>r.departed&&!r.payment_received_date).reduce((s,r)=>s+r.revenue,0),
-            payable:    allRows.filter(r=>r.departed&&!r.payment_sent_date).reduce((s,r)=>s+r.cost,0),
-            deposit_trust: allRows.filter(r=>!r.departed&&r.payment_received_date).reduce((s,r)=>s+r.revenue_confirmed,0),
-            prepaid_cost:  allRows.filter(r=>!r.departed&&r.payment_sent_date).reduce((s,r)=>s+r.cost_confirmed,0),
+            receivable:    allRows.filter(r=> r.departed && !r.payment_received_date).reduce((s,r)=>s+r.revenue,0),
+            payable:       allRows.filter(r=> r.departed && !r.payment_sent_date).reduce((s,r)=>s+r.cost,0),
+            deposit_trust: allRows.filter(r=>!r.departed &&  r.payment_received_date).reduce((s,r)=>s+r.revenue_confirmed,0) + bs_deposit_extra,
+            prepaid_cost:  allRows.filter(r=>!r.departed &&  r.payment_sent_date).reduce((s,r)=>s+r.cost_confirmed,0)        + bs_prepaid_extra,
         };
 
         // ── 판매처별 매출 집계 ──
