@@ -1201,20 +1201,23 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             depStart = new Date(year, 0, 1);
             depEnd   = new Date(year + 1, 0, 1);
         }
-        const depStartStr = depStart.toISOString().split('T')[0];
-        const depEndStr   = depEnd.toISOString().split('T')[0];
+        const fmtLocal = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const depStartStr = fmtLocal(depStart);
+        const depEndStr   = fmtLocal(depEnd);
 
         // 신고 기준일: 이 날짜까지 출발한 건을 "출발완료"로 인식
         // 기준일 미지정 시 오늘 사용 (시점의 역설 방지 핵심)
         // 문자열 비교(YYYY-MM-DD) 사용 → 타임존 오류 없음
         const baseDateStr = req.query.baseDate || new Date().toISOString().split('T')[0];
+        const toDateStr = (d) => {
+            if (!d) return null;
+            if (d instanceof Date)
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            return String(d).slice(0, 10);
+        };
         const isDeparted = (depDate) => {
-            if (!depDate) return false;
-            // PostgreSQL Date → 'YYYY-MM-DD' 문자열로 정규화
-            const d = depDate instanceof Date
-                ? depDate.toISOString().split('T')[0]
-                : String(depDate).slice(0, 10);
-            return d <= baseDateStr;
+            const d = toDateStr(depDate);
+            return d ? d <= baseDateStr : false;
         };
 
         // ── 즐길거리 (출발일 = usage_date) ──
@@ -1379,7 +1382,9 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         `, [depEndStr]);
 
         bsActRes.rows.forEach(r => {
-            const depStr  = r.departure_date instanceof Date ? r.departure_date.toISOString().split('T')[0] : String(r.departure_date).slice(0,10);
+            const depStr  = r.departure_date instanceof Date
+                ? `${r.departure_date.getFullYear()}-${String(r.departure_date.getMonth()+1).padStart(2,'0')}-${String(r.departure_date.getDate()).padStart(2,'0')}`
+                : String(r.departure_date).slice(0,10);
             if (depStr <= baseDateStr) return; // 이미 departed → allRows에서 처리
             const exRate   = parseFloat(r.exchange_rate) || 1300;
             const rawNet   = r.net_revenue != null ? parseFloat(r.net_revenue) : parseFloat(r.total_sale) || 0;
@@ -1403,7 +1408,9 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         `, [depEndStr]);
 
         bsHotelRes.rows.forEach(r => {
-            const depStr  = r.departure_date instanceof Date ? r.departure_date.toISOString().split('T')[0] : String(r.departure_date).slice(0,10);
+            const depStr  = r.departure_date instanceof Date
+                ? `${r.departure_date.getFullYear()}-${String(r.departure_date.getMonth()+1).padStart(2,'0')}-${String(r.departure_date.getDate()).padStart(2,'0')}`
+                : String(r.departure_date).slice(0,10);
             if (depStr <= baseDateStr) return;
             const revenue = parseFloat(r.revenue) || 0;
             const cost    = parseFloat(r.cost)    || 0;
@@ -1419,7 +1426,9 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
         });
         bsPkgDocs.forEach(r => {
             const departure = r.travel_period?.departure_date;
-            const depStr    = departure instanceof Date ? departure.toISOString().split('T')[0] : String(departure||'').slice(0,10);
+            const depStr    = departure instanceof Date
+                ? `${departure.getFullYear()}-${String(departure.getMonth()+1).padStart(2,'0')}-${String(departure.getDate()).padStart(2,'0')}`
+                : String(departure||'').slice(0,10);
             if (!depStr || depStr <= baseDateStr) return;
             const revConf  = (r.billings||[]).filter(b=>b.status==='completed').reduce((s,b)=>s+(b.actual_amount||b.amount||0), 0);
             const costConf = (r.cost_components||[]).filter(c=>c.payment_sent_date).reduce((s,c)=>s+(c.payment_sent_amount_krw||c.cost_krw||0), 0);
