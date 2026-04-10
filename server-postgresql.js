@@ -1231,7 +1231,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             INNER JOIN settlements s ON s.reservation_id = r.id
             LEFT JOIN assignments a  ON a.reservation_id = r.id
             LEFT JOIN vendors v      ON a.vendor_id = v.id
-            WHERE r.payment_status IN ('payment_completed','settlement_completed')
+            WHERE r.payment_status NOT IN ('cancelled','취소')
               AND r.usage_date >= $1 AND r.usage_date < $2
               AND (r.assigned_to IS NULL OR r.assigned_to NOT ILIKE '%바스코%')
             ORDER BY r.usage_date
@@ -1282,7 +1282,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
             FROM hotel_reservations hr
             LEFT JOIN booking_agencies ba ON hr.booking_agency_id = ba.id
             LEFT JOIN hotels h            ON hr.hotel_id = h.id
-            WHERE hr.status NOT IN ('cancelled','pending','draft')
+            WHERE hr.status NOT IN ('cancelled','draft')
               AND hr.check_in_date >= $1 AND hr.check_in_date < $2
             ORDER BY hr.check_in_date
         `, [depStartStr, depEndStr]);
