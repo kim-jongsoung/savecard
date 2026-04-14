@@ -1345,7 +1345,7 @@ app.get('/api/accounting-ledger/report', requireAuth, async (req, res) => {
                 component_type: c.component_type||'-',
                 cost:           c.cost_krw||0,
                 cost_confirmed: c.payment_sent_date ? (c.payment_sent_amount_krw||c.cost_krw||0) : 0,
-                sent_date:      c.payment_sent_date||null,
+                sent_date:      toDateStr(c.payment_sent_date)||null,
             }));
             const settlementDone = ['completed','settlement_completed','confirmed','settlement'].includes(r.reservation_status);
             return {
