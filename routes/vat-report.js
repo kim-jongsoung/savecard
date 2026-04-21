@@ -253,7 +253,6 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
         }
         rawContent = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         const lines   = rawContent.split('\n').map(l => l.trim()).filter(Boolean);
-        console.log('[CARD_CSV] lines[0]:', lines[0], '| lines[1]:', lines[1]);
 
         // 구분자 자동 감지: 탭이 더 많으면 탭, 아니면 쉼표
         const sampleLine = lines[1] || lines[0] || '';
@@ -274,9 +273,11 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
             return result;
         }
 
-        // 금액 문자열 → 숫자 (₩, 쉼표, 공백 제거)
+        // 금액 문자열 → 숫자 (₩, 쉼표, 공백 제거 후 소수점 반올림, 음수는 절댓값)
         function parseAmount(str) {
-            return parseInt((str || '0').replace(/[^\d]/g, '')) || 0;
+            const cleaned = (str || '0').replace(/[₩,\s]/g, '');
+            const val = parseFloat(cleaned);
+            return isNaN(val) ? 0 : Math.round(Math.abs(val));
         }
 
         const parsed = [];
@@ -293,8 +294,6 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
             const supplyAmt = cols[3] ? parseAmount(cols[3]) : Math.round(amount / 1.1);
             const taxAmt    = cols[4] ? parseAmount(cols[4]) : (amount - supplyAmt);
             const cardNum   = cols[5] ? cols[5].replace(/[^0-9*]/g, '').slice(-4) : '';
-
-            if (i <= 3) console.log(`[CARD_ROW${i}] cols:`, JSON.stringify(cols), '| amount:', amount, '| supply:', supplyAmt, '| tax:', taxAmt);
 
             if (!dateStr || amount === 0) continue;
 
