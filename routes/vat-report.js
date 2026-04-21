@@ -1,7 +1,8 @@
 const express = require('express');
 const router  = express.Router();
-const VatReport     = require('../models/VatReport');
+const VatReport       = require('../models/VatReport');
 const BankTransaction = require('../models/BankTransaction');
+const BankCategory    = require('../models/BankCategory');
 const multer  = require('multer');
 const upload  = multer({ storage: multer.memoryStorage() });
 
@@ -10,17 +11,13 @@ function requireAuth(req, res, next) {
     res.status(401).json({ success: false, message: '인증이 필요합니다.' });
 }
 
-// 계좌분류 → 매입세액 공제 가능 여부
-const DEDUCTIBLE_CATEGORIES = new Set([
-    'expense_dev',
-    'expense_marketing_fee',
-    'expense_marketing',
-    'expense_office',
-    'expense_communication',
-    'expense_entertainment',
-    'expense_meal',
-    'expense_other',
-]);
+// BankCategory DB에서 vat_deductible 맵 로드
+async function getDeductibleMap() {
+    const cats = await BankCategory.find({}, 'code vat_deductible').lean();
+    const map = {};
+    cats.forEach(c => { map[c.code] = !!c.vat_deductible; });
+    return map;
+}
 
 const CATEGORY_LABELS = {
     expense_salary:        '급여',
@@ -83,8 +80,9 @@ router.get('/report/:year/:month', requireAuth, async (req, res) => {
             }
         ]);
 
+        const deductibleMap = await getDeductibleMap();
         report.bank_purchase_items = bankAgg.map(row => {
-            const deductible = DEDUCTIBLE_CATEGORIES.has(row._id);
+            const deductible = !!(deductibleMap[row._id]);
             const tax_amount = deductible ? Math.round(row.total_amount / 11) : 0;
             return {
                 category:     row._id,
@@ -164,8 +162,9 @@ router.post('/report/:year/:month', requireAuth, async (req, res) => {
             { $match: { type: 'out', transaction_at: { $gte: startDate, $lt: endDate }, category: { $ne: 'uncategorized' } } },
             { $group: { _id: '$category', total_amount: { $sum: '$amount' }, count: { $sum: 1 } } }
         ]);
+        const deductibleMap2 = await getDeductibleMap();
         report.bank_purchase_items = bankAgg.map(row => {
-            const deductible = DEDUCTIBLE_CATEGORIES.has(row._id);
+            const deductible = !!(deductibleMap2[row._id]);
             const tax_amount = deductible ? Math.round(row.total_amount / 11) : 0;
             return { category: row._id, label: CATEGORY_LABELS[row._id] || row._id, total_amount: row.total_amount, tax_amount, deductible, count: row.count };
         });
