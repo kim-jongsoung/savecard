@@ -234,14 +234,18 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
 
         if (!req.file) return res.status(400).json({ success: false, message: '파일이 없습니다.' });
 
-        // CSV/엑셀 파싱 (신한카드 형식 기준: UTF-8 CSV)
-        // BOM 제거
-        const rawContent = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
-        const content = rawContent;
-        const lines   = content.split('\n').map(l => l.trim()).filter(Boolean);
+        // CSV/TSV 파싱 (신한카드: 탭 구분, 금액에 ₩ 및 쉼표 포함)
+        // BOM 제거 + CRLF 정규화
+        const rawContent = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const lines   = rawContent.split('\n').map(l => l.trim()).filter(Boolean);
 
-        // quoted CSV 파서: "7,000" 같은 쉼표 포함 필드 정확히 처리
-        function parseCSVLine(line) {
+        // 구분자 자동 감지: 탭이 더 많으면 탭, 아니면 쉼표
+        const sampleLine = lines[1] || lines[0] || '';
+        const delimiter  = (sampleLine.split('\t').length > sampleLine.split(',').length) ? '\t' : ',';
+
+        // quoted CSV 파서 (쉼표 구분자일 때 "7,000" 처리)
+        function parseCSVLine(line, sep) {
+            if (sep === '\t') return line.split('\t').map(c => c.trim());
             const result = [];
             let cur = '', inQuote = false;
             for (let ci = 0; ci < line.length; ci++) {
@@ -254,18 +258,25 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
             return result;
         }
 
+        // 금액 문자열 → 숫자 (₩, 쉼표, 공백 제거)
+        function parseAmount(str) {
+            return parseInt((str || '0').replace(/[^\d]/g, '')) || 0;
+        }
+
         const parsed = [];
         // 헤더 행 스킵 (첫 행)
         for (let i = 1; i < lines.length; i++) {
-            const cols = parseCSVLine(lines[i]);
+            const cols = parseCSVLine(lines[i], delimiter);
             if (cols.length < 3) continue;
 
-            // 신한법인카드 CSV 형식: 이용일, 가맹점명, 이용금액, 카드번호(옵션)
-            const dateStr  = cols[0];
-            const merchant = cols[1] || '';
-            const amountStr = (cols[2] || '0').replace(/[^0-9]/g, '');
-            const amount   = parseInt(amountStr) || 0;
-            const cardNum  = cols[3] ? cols[3].replace(/[^0-9*]/g, '').slice(-4) : '';
+            // 신한법인카드 형식: 이용일 / 가맹점명 / 결제금액 / 공급가액 / 부가세공제 (탭 구분)
+            const dateStr   = cols[0];
+            const merchant  = cols[1] || '';
+            const amount    = parseAmount(cols[2]);
+            // 공급가액·부가세가 있으면 그대로 사용, 없으면 역산
+            const supplyAmt = cols[3] ? parseAmount(cols[3]) : Math.round(amount / 1.1);
+            const taxAmt    = cols[4] ? parseAmount(cols[4]) : (amount - supplyAmt);
+            const cardNum   = cols[5] ? cols[5].replace(/[^0-9*]/g, '').slice(-4) : '';
 
             if (!dateStr || amount === 0) continue;
 
@@ -274,10 +285,7 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
             const date = new Date(cleanDate);
             if (isNaN(date)) continue;
 
-            const supply_amount = Math.round(amount / 1.1);
-            const tax_amount    = amount - supply_amount;
-
-            parsed.push({ date, merchant, amount, supply_amount, tax_amount, category: '', deductible: true, card_number: cardNum, notes: '' });
+            parsed.push({ date, merchant, amount, supply_amount: supplyAmt, tax_amount: taxAmt, category: '', deductible: true, card_number: cardNum, notes: '' });
         }
 
         let report = await VatReport.findOne({ year, month });
