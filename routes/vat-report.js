@@ -234,10 +234,26 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
 
         if (!req.file) return res.status(400).json({ success: false, message: '파일이 없습니다.' });
 
-        // CSV/TSV 파싱 (신한카드: 탭 구분, 금액에 ₩ 및 쉼표 포함)
-        // BOM 제거 + CRLF 정규화
-        const rawContent = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        // CSV/TSV 파싱 (신한카드: 탭 구분, EUC-KR or UTF-8, 금액에 ₩ 및 쉼표 포함)
+        // 인코딩 감지: UTF-8 BOM 없으면 EUC-KR 시도
+        let rawContent;
+        const buf = req.file.buffer;
+        // UTF-8 BOM 있거나 UTF-8 유효하면 UTF-8, 아니면 latin1(바이트 보존 후 iconv로 변환)
+        const hasUtf8Bom = buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF;
+        if (hasUtf8Bom) {
+            rawContent = buf.toString('utf-8').replace(/^\uFEFF/, '');
+        } else {
+            // EUC-KR 파일을 latin1(binary)로 읽어 iconv-lite로 디코딩
+            try {
+                const iconv = require('iconv-lite');
+                rawContent = iconv.decode(buf, 'euc-kr');
+            } catch(e) {
+                rawContent = buf.toString('utf-8');
+            }
+        }
+        rawContent = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         const lines   = rawContent.split('\n').map(l => l.trim()).filter(Boolean);
+        console.log('[CARD_CSV] lines[0]:', lines[0], '| lines[1]:', lines[1]);
 
         // 구분자 자동 감지: 탭이 더 많으면 탭, 아니면 쉼표
         const sampleLine = lines[1] || lines[0] || '';
@@ -278,12 +294,19 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
             const taxAmt    = cols[4] ? parseAmount(cols[4]) : (amount - supplyAmt);
             const cardNum   = cols[5] ? cols[5].replace(/[^0-9*]/g, '').slice(-4) : '';
 
+            if (i <= 3) console.log(`[CARD_ROW${i}] cols:`, JSON.stringify(cols), '| amount:', amount, '| supply:', supplyAmt, '| tax:', taxAmt);
+
             if (!dateStr || amount === 0) continue;
 
-            // 날짜 파싱 (YYYY-MM-DD or YYYY/MM/DD or YYYYMMDD)
-            const cleanDate = dateStr.replace(/\//g, '-').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+            // 날짜 파싱 (YYYY-MM-DD or YYYY/MM/DD or YYYYMMDD or "MM. DD.")
+            let cleanDate = dateStr.replace(/\//g, '-').replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+            // "01. 01." 형식 처리 → 업로드한 연도/월 사용
+            if (/^\d{2}\.\s*\d{2}\.$/.test(cleanDate)) {
+                const parts = cleanDate.match(/(\d{2})\.\s*(\d{2})\./);
+                cleanDate = `${year}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+            }
             const date = new Date(cleanDate);
-            if (isNaN(date)) continue;
+            if (isNaN(date)) { console.log('[CARD_DATE_SKIP] invalid date:', dateStr, '→', cleanDate); continue; }
 
             parsed.push({ date, merchant, amount, supply_amount: supplyAmt, tax_amount: taxAmt, category: '', deductible: true, card_number: cardNum, notes: '' });
         }
