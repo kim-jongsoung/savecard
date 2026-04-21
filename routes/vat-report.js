@@ -235,13 +235,29 @@ router.post('/report/:year/:month/upload-card', requireAuth, upload.single('file
         if (!req.file) return res.status(400).json({ success: false, message: '파일이 없습니다.' });
 
         // CSV/엑셀 파싱 (신한카드 형식 기준: UTF-8 CSV)
-        const content = req.file.buffer.toString('utf-8');
+        // BOM 제거
+        const rawContent = req.file.buffer.toString('utf-8').replace(/^\uFEFF/, '');
+        const content = rawContent;
         const lines   = content.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // quoted CSV 파서: "7,000" 같은 쉼표 포함 필드 정확히 처리
+        function parseCSVLine(line) {
+            const result = [];
+            let cur = '', inQuote = false;
+            for (let ci = 0; ci < line.length; ci++) {
+                const ch = line[ci];
+                if (ch === '"') { inQuote = !inQuote; }
+                else if (ch === ',' && !inQuote) { result.push(cur.trim()); cur = ''; }
+                else { cur += ch; }
+            }
+            result.push(cur.trim());
+            return result;
+        }
 
         const parsed = [];
         // 헤더 행 스킵 (첫 행)
         for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(',').map(c => c.replace(/^"|"$/g, '').trim());
+            const cols = parseCSVLine(lines[i]);
             if (cols.length < 3) continue;
 
             // 신한법인카드 CSV 형식: 이용일, 가맹점명, 이용금액, 카드번호(옵션)
