@@ -44,6 +44,7 @@
             .no-print { display:none !important; }
             body { background:#fff; font-size:.78rem; }
             .container-fluid { padding:0 !important; }
+            #printHeader { display:block !important; }
         }
     </style>
 </head>
@@ -150,6 +151,14 @@
 
         <!-- 결과 영역 -->
         <div id="resultArea" class="d-none">
+
+            <!-- 인쇄용 헤더 (화면에서는 숨김) -->
+            <div id="printHeader" style="display:none;">
+                <div style="text-align:center; margin-bottom:12px; border-bottom:2px solid #333; padding-bottom:8px;">
+                    <div style="font-size:1.1rem; font-weight:700;">여행업 회계장부 / 신고자료 <span style="font-size:.85rem; font-weight:400;">(순액법 기준)</span></div>
+                    <div id="printPeriodLabel" style="font-size:.9rem; margin-top:4px; color:#333;"></div>
+                </div>
+            </div>
 
             <!-- ① 손익계산서 (I/S) -->
             <div class="mb-4">
@@ -436,8 +445,9 @@
                 reportData = data;
                 if (data._bs_debug) console.log('[BS_DEBUG]', JSON.stringify(data._bs_debug, null, 2));
 
-                document.getElementById('periodLabel').textContent =
-                    `📅 ${periodTxt} | 기준일: ${baseDate} | 총 ${data.count}건`;
+                const labelText = `신고기간: ${periodTxt}  |  기준일: ${baseDate}  |  총 ${data.count}건`;
+                document.getElementById('periodLabel').textContent = '📅 ' + labelText;
+                document.getElementById('printPeriodLabel').textContent = labelText;
 
                 renderIS(data.is, data.bs);
                 renderBS(data.bs);
